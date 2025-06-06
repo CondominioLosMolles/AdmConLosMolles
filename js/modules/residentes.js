@@ -1,5 +1,5 @@
 /**
- * CondoAdmin - Sistema de Administración de Condominios
+ * CondoAdminLosMolles - Sistema de Administración de Condominios
  * Módulo de Residentes
  */
 
@@ -55,7 +55,7 @@ async function initResidentesModule(container) {
         const searchInput = document.createElement('input');
         searchInput.type = 'text';
         searchInput.className = 'form-control';
-        searchInput.placeholder = 'Buscar residente...';
+        searchInput.placeholder = 'Buscar por nombre, RUT, parcela, etc...';
         searchInput.id = 'search-residente';
         
         const searchButton = document.createElement('button');
@@ -101,37 +101,29 @@ async function initResidentesModule(container) {
         
         // Definir las columnas de la tabla
         const columns = [
-            { field: 'ID', title: 'ID', width: '80px' },
             { field: 'Nombre', title: 'Nombre' },
-            { field: 'Unidad', title: 'Unidad', width: '100px' },
+            { field: 'Rut', title: 'RUT' },
             { field: 'Email', title: 'Email' },
-            { field: 'Teléfono', title: 'Teléfono', width: '120px' },
+            { field: 'Telefono', title: 'Teléfono' },
+            { field: 'Numero_Parcela', title: 'Nº Parcela', width: '120px' },
             { 
                 field: 'Estado', 
                 title: 'Estado', 
                 width: '120px',
                 formatter: (value) => {
                     let badgeClass = 'bg-secondary';
-                    
-                    if (value === 'Activo') {
-                        badgeClass = 'bg-success';
-                    } else if (value === 'Inactivo') {
-                        badgeClass = 'bg-danger';
-                    } else if (value === 'Moroso') {
-                        badgeClass = 'bg-warning text-dark';
-                    }
-                    
+                    if (value === 'Activo') badgeClass = 'bg-success';
+                    else if (value === 'Inactivo') badgeClass = 'bg-danger';
+                    else if (value === 'Moroso') badgeClass = 'bg-warning text-dark';
                     return `<span class="badge ${badgeClass}">${value || 'No definido'}</span>`;
                 }
             },
             { 
-                field: 'Saldo', 
-                title: 'Saldo', 
-                width: '120px',
+                field: 'Valor_Gasto_Comun', 
+                title: 'Gasto Común', 
+                width: '130px',
                 formatter: (value) => {
-                    const saldo = parseFloat(value) || 0;
-                    const textClass = saldo < 0 ? 'text-danger' : 'text-success';
-                    return `<span class="${textClass}">${formatCurrency(saldo)}</span>`;
+                    return formatCurrency(parseFloat(value) || 0);
                 }
             }
         ];
@@ -140,13 +132,13 @@ async function initResidentesModule(container) {
         const rowActions = (item, index) => {
             return `
                 <div class="btn-group btn-group-sm" role="group">
-                    <button type="button" class="btn btn-outline-primary btn-view" data-index="${index}">
+                    <button type="button" class="btn btn-outline-primary btn-view" data-index="${index}" title="Ver Detalles">
                         <i class="fas fa-eye"></i>
                     </button>
-                    <button type="button" class="btn btn-outline-secondary btn-edit" data-index="${index}">
+                    <button type="button" class="btn btn-outline-secondary btn-edit" data-index="${index}" title="Editar">
                         <i class="fas fa-edit"></i>
                     </button>
-                    <button type="button" class="btn btn-outline-danger btn-delete" data-index="${index}">
+                    <button type="button" class="btn btn-outline-danger btn-delete" data-index="${index}" title="Eliminar">
                         <i class="fas fa-trash"></i>
                     </button>
                 </div>
@@ -156,16 +148,6 @@ async function initResidentesModule(container) {
         // Crear la tabla
         const table = createDataTable(residentes, columns, rowActions);
         tableCard.appendChild(table);
-        
-        // Agregar paginación
-        const totalPages = Math.ceil(residentes.length / 10);
-        if (totalPages > 1) {
-            const pagination = createPagination(1, totalPages, (page) => {
-                // Implementar paginación
-                console.log('Cambiar a página', page);
-            });
-            tableCard.appendChild(pagination);
-        }
         
         tableContainer.appendChild(tableCard);
         content.appendChild(tableContainer);
@@ -196,7 +178,6 @@ async function initResidentesModule(container) {
  * @param {Array} residentes - Datos de residentes
  */
 function setupActionButtons(residentes) {
-    // Botones de ver
     document.querySelectorAll('.btn-view').forEach(button => {
         button.addEventListener('click', () => {
             const index = parseInt(button.getAttribute('data-index'));
@@ -204,7 +185,6 @@ function setupActionButtons(residentes) {
         });
     });
     
-    // Botones de editar
     document.querySelectorAll('.btn-edit').forEach(button => {
         button.addEventListener('click', () => {
             const index = parseInt(button.getAttribute('data-index'));
@@ -212,7 +192,6 @@ function setupActionButtons(residentes) {
         });
     });
     
-    // Botones de eliminar
     document.querySelectorAll('.btn-delete').forEach(button => {
         button.addEventListener('click', () => {
             const index = parseInt(button.getAttribute('data-index'));
@@ -226,12 +205,13 @@ function setupActionButtons(residentes) {
  * @param {Object} residente - Datos del residente a editar (null para nuevo)
  */
 function showResidenteForm(residente = null) {
-    // Definir los campos del formulario
     const fields = [
-        { id: 'nombre', label: 'Nombre', type: 'text', required: true },
-        { id: 'unidad', label: 'Unidad', type: 'text', required: true },
+        { id: 'nombre', label: 'Nombre Completo', type: 'text', required: true },
+        { id: 'rut', label: 'RUT (con guion y dígito verificador)', type: 'text', required: true },
+        { id: 'direccion', label: 'Dirección', type: 'text', required: true },
         { id: 'email', label: 'Email', type: 'email' },
         { id: 'telefono', label: 'Teléfono', type: 'tel' },
+        { id: 'numero_parcela', label: 'Número de Parcela', type: 'text', required: true },
         { 
             id: 'estado', 
             label: 'Estado', 
@@ -243,49 +223,46 @@ function showResidenteForm(residente = null) {
             ],
             required: true
         },
-        { id: 'saldo', label: 'Saldo', type: 'number', step: '0.01' }
+        { id: 'valor_gasto_comun', label: 'Valor Gasto Común', type: 'number', step: '1', required: true, placeholder: 'Ej: 40000' }
     ];
     
-    // Valores iniciales
     const values = residente ? {
         nombre: residente.Nombre,
-        unidad: residente.Unidad,
+        rut: residente.Rut,
+        direccion: residente.Direccion,
         email: residente.Email,
-        telefono: residente.Teléfono,
+        telefono: residente.Telefono,
+        numero_parcela: residente.Numero_Parcela,
         estado: residente.Estado,
-        saldo: residente.Saldo
+        valor_gasto_comun: residente.Valor_Gasto_Comun
     } : {
         estado: 'Activo',
-        saldo: '0'
+        valor_gasto_comun: '0'
     };
     
-    // Crear el formulario
     const form = createForm(fields, values, async (formData) => {
         try {
-            // Mostrar indicador de carga
             const submitButton = form.querySelector('button[type="submit"]');
             const originalText = submitButton.textContent;
             submitButton.disabled = true;
             submitButton.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Guardando...';
             
-            // Preparar los datos
             const rowData = [
                 residente ? residente.ID : generateUniqueId(),
                 formData.nombre,
-                formData.unidad,
+                formData.rut,
+                formData.direccion,
                 formData.email,
                 formData.telefono,
+                formData.numero_parcela,
                 formData.estado,
-                formData.saldo
+                formData.valor_gasto_comun
             ];
             
-            // Guardar los datos
             if (residente) {
-                // Encontrar el índice de la fila en la hoja
                 const index = window.residentesData.findIndex(r => r.ID === residente.ID);
-                
                 if (index !== -1) {
-                    await sheetsAPI.updateRow(CONFIG.SHEETS.RESIDENTES, index + 1, rowData);
+                    await sheetsAPI.updateRow(CONFIG.SHEETS.RESIDENTES, index + 2, rowData); // +2 para ajustar a la fila real (1-based + header)
                 } else {
                     throw new Error('No se encontró el residente a actualizar');
                 }
@@ -293,24 +270,19 @@ function showResidenteForm(residente = null) {
                 await sheetsAPI.appendRow(CONFIG.SHEETS.RESIDENTES, rowData);
             }
             
-            // Cerrar el modal
             modal.hide();
-            
-            // Recargar el módulo
             initResidentesModule(document.getElementById('module-container'));
             
         } catch (error) {
             console.error('Error al guardar residente:', error);
             showError('Error al guardar residente: ' + error.message);
             
-            // Restaurar el botón
             const submitButton = form.querySelector('button[type="submit"]');
             submitButton.disabled = false;
             submitButton.textContent = originalText;
         }
     });
     
-    // Mostrar el formulario en un modal
     const modal = createModal(
         residente ? 'Editar Residente' : 'Nuevo Residente',
         form,
@@ -325,41 +297,40 @@ function showResidenteForm(residente = null) {
  * @param {Object} residente - Datos del residente
  */
 function showResidenteDetails(residente) {
-    // Crear el contenido del modal
     const content = document.createElement('div');
-    
-    // Información básica
-    const infoCard = document.createElement('div');
-    infoCard.className = 'card mb-3';
     
     const infoCardBody = document.createElement('div');
     infoCardBody.className = 'card-body';
     
     infoCardBody.innerHTML = `
-        <h5 class="card-title">${residente.Nombre}</h5>
-        <p class="card-text"><strong>Unidad:</strong> ${residente.Unidad}</p>
-        <p class="card-text"><strong>Email:</strong> ${residente.Email || 'No especificado'}</p>
-        <p class="card-text"><strong>Teléfono:</strong> ${residente.Teléfono || 'No especificado'}</p>
-        <p class="card-text">
-            <strong>Estado:</strong> 
-            <span class="badge ${residente.Estado === 'Activo' ? 'bg-success' : residente.Estado === 'Inactivo' ? 'bg-danger' : 'bg-warning text-dark'}">
-                ${residente.Estado || 'No definido'}
-            </span>
-        </p>
-        <p class="card-text">
-            <strong>Saldo:</strong> 
-            <span class="${parseFloat(residente.Saldo) < 0 ? 'text-danger' : 'text-success'}">
-                ${formatCurrency(parseFloat(residente.Saldo) || 0)}
-            </span>
-        </p>
+        <h5 class="card-title mb-3">${residente.Nombre}</h5>
+        <div class="row">
+            <div class="col-md-6">
+                <p><strong>RUT:</strong> ${residente.Rut || 'No especificado'}</p>
+                <p><strong>Dirección:</strong> ${residente.Direccion || 'No especificado'}</p>
+                <p><strong>Nº Parcela:</strong> ${residente.Numero_Parcela || 'No especificado'}</p>
+            </div>
+            <div class="col-md-6">
+                <p><strong>Email:</strong> ${residente.Email || 'No especificado'}</p>
+                <p><strong>Teléfono:</strong> ${residente.Telefono || 'No especificado'}</p>
+                <p><strong>Estado:</strong> 
+                    <span class="badge ${residente.Estado === 'Activo' ? 'bg-success' : residente.Estado === 'Inactivo' ? 'bg-danger' : 'bg-warning text-dark'}">
+                        ${residente.Estado || 'No definido'}
+                    </span>
+                </p>
+                <p><strong>Valor Gasto Común:</strong> 
+                    <span class="text-primary fw-bold">
+                        ${formatCurrency(parseFloat(residente.Valor_Gasto_Comun) || 0)}
+                    </span>
+                </p>
+            </div>
+        </div>
     `;
     
-    infoCard.appendChild(infoCardBody);
-    content.appendChild(infoCard);
+    content.appendChild(infoCardBody);
     
-    // Botones de acción
     const actionsDiv = document.createElement('div');
-    actionsDiv.className = 'd-flex justify-content-end';
+    actionsDiv.className = 'd-flex justify-content-end p-3';
     
     const editButton = document.createElement('button');
     editButton.className = 'btn btn-primary me-2';
@@ -378,13 +349,7 @@ function showResidenteDetails(residente) {
     actionsDiv.appendChild(closeButton);
     content.appendChild(actionsDiv);
     
-    // Mostrar el modal
-    const modal = createModal(
-        'Detalles del Residente',
-        content,
-        'lg'
-    );
-    
+    const modal = createModal('Detalles del Residente', content, 'lg');
     modal.show();
 }
 
@@ -393,15 +358,12 @@ function showResidenteDetails(residente) {
  * @param {Object} residente - Datos del residente a eliminar
  */
 function confirmDeleteResidente(residente) {
-    // Crear el contenido del modal
     const content = document.createElement('div');
-    
     content.innerHTML = `
         <p>¿Está seguro de que desea eliminar al residente <strong>${residente.Nombre}</strong>?</p>
         <p>Esta acción no se puede deshacer.</p>
     `;
     
-    // Botones de acción
     const actionsDiv = document.createElement('div');
     actionsDiv.className = 'd-flex justify-content-end mt-4';
     
@@ -415,20 +377,14 @@ function confirmDeleteResidente(residente) {
     deleteButton.innerHTML = '<i class="fas fa-trash"></i> Eliminar';
     deleteButton.addEventListener('click', async () => {
         try {
-            // Mostrar indicador de carga
             deleteButton.disabled = true;
             deleteButton.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Eliminando...';
             
-            // Encontrar el índice de la fila en la hoja
             const index = window.residentesData.findIndex(r => r.ID === residente.ID);
             
             if (index !== -1) {
-                await sheetsAPI.deleteRow(CONFIG.SHEETS.RESIDENTES, index + 1);
-                
-                // Cerrar el modal
+                await sheetsAPI.deleteRow(CONFIG.SHEETS.RESIDENTES, index + 2); // +2 para ajustar
                 modal.hide();
-                
-                // Recargar el módulo
                 initResidentesModule(document.getElementById('module-container'));
             } else {
                 throw new Error('No se encontró el residente a eliminar');
@@ -437,8 +393,6 @@ function confirmDeleteResidente(residente) {
         } catch (error) {
             console.error('Error al eliminar residente:', error);
             showError('Error al eliminar residente: ' + error.message);
-            
-            // Restaurar el botón
             deleteButton.disabled = false;
             deleteButton.innerHTML = '<i class="fas fa-trash"></i> Eliminar';
         }
@@ -448,13 +402,7 @@ function confirmDeleteResidente(residente) {
     actionsDiv.appendChild(deleteButton);
     content.appendChild(actionsDiv);
     
-    // Mostrar el modal
-    const modal = createModal(
-        'Confirmar Eliminación',
-        content,
-        'sm'
-    );
-    
+    const modal = createModal('Confirmar Eliminación', content, 'sm');
     modal.show();
 }
 
@@ -464,23 +412,18 @@ function confirmDeleteResidente(residente) {
 function filterResidentes() {
     const searchText = document.getElementById('search-residente').value.toLowerCase();
     
-    // Si no hay texto de búsqueda, mostrar todos los residentes
-    if (!searchText) {
-        initResidentesModule(document.getElementById('module-container'));
-        return;
-    }
-    
-    // Filtrar los residentes
     const filteredResidentes = window.residentesData.filter(residente => {
-        return (
-            residente.Nombre.toLowerCase().includes(searchText) ||
-            residente.Unidad.toLowerCase().includes(searchText) ||
-            (residente.Email && residente.Email.toLowerCase().includes(searchText)) ||
-            (residente.Teléfono && residente.Teléfono.toLowerCase().includes(searchText))
-        );
+        const searchFields = [
+            residente.Nombre,
+            residente.Rut,
+            residente.Direccion,
+            residente.Email,
+            residente.Telefono,
+            residente.Numero_Parcela
+        ];
+        return searchFields.some(field => field && field.toLowerCase().includes(searchText));
     });
     
-    // Actualizar la tabla
     updateResidentesTable(filteredResidentes);
 }
 
@@ -490,89 +433,60 @@ function filterResidentes() {
  */
 function updateResidentesTable(residentes) {
     const tableContainer = document.getElementById('residentes-table-container');
-    
-    if (!tableContainer) {
-        return;
-    }
+    if (!tableContainer) return;
     
     const tableCard = tableContainer.querySelector('.card-body');
+    if (!tableCard) return;
     
-    if (!tableCard) {
-        return;
-    }
-    
-    // Limpiar el contenido actual
     tableCard.innerHTML = '';
     
-    // Definir las columnas de la tabla
     const columns = [
-        { field: 'ID', title: 'ID', width: '80px' },
         { field: 'Nombre', title: 'Nombre' },
-        { field: 'Unidad', title: 'Unidad', width: '100px' },
+        { field: 'Rut', title: 'RUT' },
         { field: 'Email', title: 'Email' },
-        { field: 'Teléfono', title: 'Teléfono', width: '120px' },
+        { field: 'Telefono', title: 'Teléfono' },
+        { field: 'Numero_Parcela', title: 'Nº Parcela', width: '120px' },
         { 
             field: 'Estado', 
             title: 'Estado', 
             width: '120px',
             formatter: (value) => {
                 let badgeClass = 'bg-secondary';
-                
-                if (value === 'Activo') {
-                    badgeClass = 'bg-success';
-                } else if (value === 'Inactivo') {
-                    badgeClass = 'bg-danger';
-                } else if (value === 'Moroso') {
-                    badgeClass = 'bg-warning text-dark';
-                }
-                
+                if (value === 'Activo') badgeClass = 'bg-success';
+                else if (value === 'Inactivo') badgeClass = 'bg-danger';
+                else if (value === 'Moroso') badgeClass = 'bg-warning text-dark';
                 return `<span class="badge ${badgeClass}">${value || 'No definido'}</span>`;
             }
         },
         { 
-            field: 'Saldo', 
-            title: 'Saldo', 
-            width: '120px',
+            field: 'Valor_Gasto_Comun', 
+            title: 'Gasto Común', 
+            width: '130px',
             formatter: (value) => {
-                const saldo = parseFloat(value) || 0;
-                const textClass = saldo < 0 ? 'text-danger' : 'text-success';
-                return `<span class="${textClass}">${formatCurrency(saldo)}</span>`;
+                return formatCurrency(parseFloat(value) || 0);
             }
         }
     ];
     
-    // Función para generar las acciones por fila
     const rowActions = (item, index) => {
         return `
             <div class="btn-group btn-group-sm" role="group">
-                <button type="button" class="btn btn-outline-primary btn-view" data-index="${index}">
+                <button type="button" class="btn btn-outline-primary btn-view" data-index="${index}" title="Ver Detalles">
                     <i class="fas fa-eye"></i>
                 </button>
-                <button type="button" class="btn btn-outline-secondary btn-edit" data-index="${index}">
+                <button type="button" class="btn btn-outline-secondary btn-edit" data-index="${index}" title="Editar">
                     <i class="fas fa-edit"></i>
                 </button>
-                <button type="button" class="btn btn-outline-danger btn-delete" data-index="${index}">
+                <button type="button" class="btn btn-outline-danger btn-delete" data-index="${index}" title="Eliminar">
                     <i class="fas fa-trash"></i>
                 </button>
             </div>
         `;
     };
     
-    // Crear la tabla
     const table = createDataTable(residentes, columns, rowActions);
     tableCard.appendChild(table);
     
-    // Agregar paginación
-    const totalPages = Math.ceil(residentes.length / 10);
-    if (totalPages > 1) {
-        const pagination = createPagination(1, totalPages, (page) => {
-            // Implementar paginación
-            console.log('Cambiar a página', page);
-        });
-        tableCard.appendChild(pagination);
-    }
-    
-    // Configurar eventos para los botones de acción
     setupActionButtons(residentes);
 }
 
@@ -581,28 +495,34 @@ function updateResidentesTable(residentes) {
  * @param {Array} residentes - Datos de residentes
  */
 function exportResidentes(residentes) {
-    // Crear el contenido CSV
     let csvContent = 'data:text/csv;charset=utf-8,';
     
-    // Encabezados
-    csvContent += 'ID,Nombre,Unidad,Email,Teléfono,Estado,Saldo\n';
+    const headers = ['ID', 'Nombre', 'Rut', 'Direccion', 'Email', 'Telefono', 'Numero_Parcela', 'Estado', 'Valor_Gasto_Comun'];
+    csvContent += headers.join(',') + '\n';
     
-    // Datos
     residentes.forEach(residente => {
-        csvContent += `${residente.ID},${residente.Nombre},${residente.Unidad},${residente.Email || ''},${residente.Teléfono || ''},${residente.Estado || ''},${residente.Saldo || '0'}\n`;
+        const row = [
+            residente.ID,
+            residente.Nombre,
+            residente.Rut,
+            residente.Direccion,
+            residente.Email,
+            residente.Telefono,
+            residente.Numero_Parcela,
+            residente.Estado,
+            residente.Valor_Gasto_Comun
+        ];
+        const csvRow = row.map(val => `"${(val || '').toString().replace(/"/g, '""')}"`).join(',');
+        csvContent += csvRow + '\n';
     });
     
-    // Crear un enlace para descargar el archivo
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement('a');
     link.setAttribute('href', encodedUri);
     link.setAttribute('download', 'residentes.csv');
     document.body.appendChild(link);
     
-    // Simular clic en el enlace
     link.click();
     
-    // Eliminar el enlace
     document.body.removeChild(link);
 }
-
