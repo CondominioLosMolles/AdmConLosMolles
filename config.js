@@ -27,7 +27,7 @@ const CONFIG = {
     
     // Configuración de la aplicación
     APP: {
-        NAME: 'CondoAdmin',
+        NAME: 'LosMolles',
         VERSION: '1.0.0',
         MAX_RESIDENTES: 30,
         CURRENCY: '$',
