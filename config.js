@@ -8,7 +8,7 @@ const CONFIG = {
     CLIENT_ID: '997872453031-5o8s2o6v3qt722fb3p51a2r7bo24ncee.apps.googleusercontent.com',
     
     // API Key de Google Cloud Platform (opcional)
-    API_KEY: 'YOUR_API_KEY',
+    API_KEY: 'AIzaSyA4nUkMycf_CHZE7TaBBD_WUyWMvSXUwoU',
     
     // ID del documento de Google Sheets
     SPREADSHEET_ID: '1bFo5dBC3HM0xupginTBe-hrrUNgkiuUn4fkXXzHide8',
