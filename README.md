@@ -1,6 +1,6 @@
-# CondoAdmin - Sistema de Administración de Condominios
+# CondoAdminLosMolles - Sistema de Administración de Condominios
 
-CondoAdmin es un sistema completo para la administración de condominios que utiliza Google Sheets como base de datos, lo que permite un fácil acceso y gestión de los datos sin necesidad de implementar un sistema de base de datos complejo.
+CondoAdminLosMolles es un sistema completo para la administración de condominios que utiliza Google Sheets como base de datos, lo que permite un fácil acceso y gestión de los datos sin necesidad de implementar un sistema de base de datos complejo.
 
 ## Características
 
@@ -43,97 +43,31 @@ CondoAdmin es un sistema completo para la administración de condominios que uti
 
 ### 2. Crear las hojas de Google Sheets
 
-1. Ve a [Google Sheets](https://sheets.google.com)
-2. Crea un nuevo archivo de Google Sheets
-3. Renombra la hoja como "Residentes" y configura las columnas: ID, Nombre, Unidad, Email, Teléfono, Estado
-4. Añade nuevas hojas para:
-   - Gastos_Comunes: Periodo, Monto_Base, Fondo_Reserva, Total_Unidad, Vencimiento, Estado
-   - Pagos: ID, Fecha, Residente, Concepto, Monto, Método_Pago
-   - Gastos: ID, Fecha, Concepto, Monto, Proveedor, Categoría, Estado
-   - Mantenciones: ID, Fecha, Tipo, Descripción, Responsable, Estado
-   - Comunicaciones: ID, Fecha, Asunto, Contenido, Destinatarios, Estado
-   - Multas: ID, Fecha, Residente, Motivo, Monto, Estado
-   - Asambleas: ID, Fecha, Tipo, Descripción, Asistentes, Estado
-5. Comparte la hoja de cálculo:
-   - Haz clic en "Compartir" en la esquina superior derecha
-   - Cambia la configuración a "Cualquier persona con el enlace puede editar"
-   - Copia el ID del documento (la parte larga en la URL entre "d/" y "/edit")
+1.  Ve a [Google Sheets](https://sheets.google.com)
+2.  Crea un nuevo archivo de Google Sheets
+3.  Renombra la primera hoja como "**Residentes**" y configura las siguientes columnas en este orden exacto: `ID`, `Nombre`, `Rut`, `Direccion`, `Email`, `Telefono`, `Numero_Parcela`, `Estado`, `Valor_Gasto_Comun`.
+4.  Añade nuevas hojas para:
+    * **Gastos_Comunes**: Periodo, Monto_Base, Fondo_Reserva, Total_Unidad, Vencimiento, Estado
+    * **Pagos**: ID, Fecha, Residente, Concepto, Monto, Método_Pago
+    * **Gastos**: ID, Fecha, Concepto, Monto, Proveedor, Categoría, Estado
+    * **Mantenciones**: ID, Fecha, Tipo, Descripción, Responsable, Estado
+    * **Comunicaciones**: ID, Fecha, Asunto, Contenido, Destinatarios, Estado
+    * **Multas**: ID, Fecha, Residente, Motivo, Monto, Estado
+    * **Asambleas**: ID, Fecha, Tipo, Descripción, Asistentes, Estado
+5.  Comparte la hoja de cálculo:
+    * Haz clic en "Compartir" en la esquina superior derecha
+    * Cambia la configuración a "Cualquier persona con el enlace puede editar"
+    * Copia el ID del documento (la parte larga en la URL entre "d/" y "/edit")
 
 ### 3. Configurar la aplicación
 
-1. Edita el archivo `config.js`:
-   - Reemplaza `YOUR_CLIENT_ID` con el ID de cliente de OAuth que obtuviste
-   - Reemplaza `YOUR_SPREADSHEET_ID` con el ID del documento de Google Sheets que creaste
-2. Guarda los cambios
+1.  Edita el archivo `config.js`:
+    * Reemplaza `YOUR_CLIENT_ID` con el ID de cliente de OAuth que obtuviste
+    * Reemplaza `YOUR_SPREADSHEET_ID` con el ID del documento de Google Sheets que creaste
+2.  Guarda los cambios
 
 ## Uso
 
-1. Accede a la aplicación a través de la URL donde está alojada
-2. Inicia sesión con tu cuenta de Google cuando se te solicite
-3. Utiliza el menú lateral para navegar entre las diferentes secciones del sistema
-
-## Secciones principales
-
-### Dashboard
-
-El dashboard muestra un resumen de la información más importante del condominio, incluyendo:
-
-- Número total de residentes
-- Ingresos y gastos
-- Saldo actual
-- Mantenciones pendientes y urgentes
-- Gráfico de ingresos vs gastos por mes
-- Últimos pagos y gastos registrados
-
-### Residentes
-
-En esta sección puedes:
-
-- Ver la lista de todos los residentes
-- Agregar nuevos residentes
-- Editar la información de los residentes existentes
-- Eliminar residentes
-- Buscar residentes por nombre, unidad, email o teléfono
-- Exportar la lista de residentes a CSV
-
-### Gastos Comunes
-
-En esta sección puedes:
-
-- Configurar los gastos comunes por periodo
-- Generar cobros automáticos
-- Registrar pagos
-- Enviar avisos de cobro
-- Ver el estado de pago de cada unidad
-
-### Contabilidad
-
-En esta sección puedes:
-
-- Registrar ingresos y gastos
-- Categorizar las transacciones
-- Ver el balance general
-- Generar informes contables
-- Exportar datos para declaraciones fiscales
-
-### Mantenciones
-
-En esta sección puedes:
-
-- Programar mantenciones preventivas
-- Registrar mantenciones correctivas
-- Asignar responsables
-- Hacer seguimiento del estado de las mantenciones
-- Recibir alertas de mantenciones urgentes
-
-## Soporte
-
-Si tienes alguna pregunta o problema con la aplicación, puedes contactarnos a través de:
-
-- Email: soporte@condoadmin.com
-- Teléfono: +56 9 1234 5678
-
-## Licencia
-
-Este proyecto está licenciado bajo la Licencia MIT - ver el archivo LICENSE para más detalles.
-
+1.  Accede a la aplicación a través de la URL donde está alojada
+2.  Inicia sesión con tu cuenta de Google cuando se te solicite
+3.  Utiliza el menú lateral para navegar entre las diferentes secciones del sistema
