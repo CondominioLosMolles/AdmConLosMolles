@@ -1,7 +1,36 @@
 /**
- * CondoAdmin - Sistema de Administración de Condominios
- * Módulo de Residentes (Usa RUT como ID)
+ * CondoAdminLosMolles - Sistema de Administración de Condominios
+ * Módulo de Residentes (Usa RUT como ID y con manejo de errores mejorado)
  */
+
+/**
+ * Muestra un error de forma clara en un modal.
+ * @param {string} contextMessage - Mensaje que describe dónde ocurrió el error.
+ * @param {Error} error - El objeto de error capturado.
+ */
+function showDetailedError(contextMessage, error) {
+    console.error(contextMessage, error); // Mantiene el error completo en la consola para depuración
+    const modalElement = document.getElementById('errorModal');
+    const modalBody = document.getElementById('errorModalBody');
+    
+    // Intenta obtener el mensaje más detallado posible del objeto de error
+    let detailedMessage = 'No hay detalles disponibles.';
+    if (error) {
+        if (error.message) {
+            detailedMessage = error.message;
+        } else if (error.result && error.result.error) {
+            detailedMessage = error.result.error.message;
+        } else {
+            detailedMessage = JSON.stringify(error);
+        }
+    }
+    
+    modalBody.innerHTML = `<strong>${contextMessage}</strong><br><pre style="white-space: pre-wrap; word-break: break-all;">${detailedMessage}</pre>`;
+    
+    const modal = new bootstrap.Modal(modalElement);
+    modal.show();
+}
+
 
 /**
  * Inicializa el módulo de Residentes
@@ -72,57 +101,33 @@ async function initResidentesModule(container) {
         window.residentesData = residentes;
         
     } catch (error) {
-        console.error('Error al inicializar el módulo de Residentes:', error);
-        container.innerHTML = `<div class="alert alert-danger" role="alert"><i class="fas fa-exclamation-circle me-2"></i>Error al cargar los residentes: ${error.message}</div>`;
+        showDetailedError('Error al inicializar el módulo de Residentes', error);
     }
 }
 
-/**
- * Configura los eventos para los botones de acción
- * @param {Array} residentes - Datos de residentes
- */
 function setupActionButtons(residentes) {
-    document.querySelectorAll('.btn-view').forEach(button => {
-        button.addEventListener('click', () => {
-            const index = parseInt(button.getAttribute('data-index'));
-            showResidenteDetails(residentes[index]);
-        });
-    });
-    
-    document.querySelectorAll('.btn-edit').forEach(button => {
-        button.addEventListener('click', () => {
-            const index = parseInt(button.getAttribute('data-index'));
-            showResidenteForm(residentes[index]);
-        });
-    });
-    
-    document.querySelectorAll('.btn-delete').forEach(button => {
-        button.addEventListener('click', () => {
-            const index = parseInt(button.getAttribute('data-index'));
-            confirmDeleteResidente(residentes[index]);
+    document.querySelectorAll('.btn-view, .btn-edit, .btn-delete').forEach(button => {
+        button.addEventListener('click', (e) => {
+            const buttonEl = e.currentTarget;
+            const index = parseInt(buttonEl.getAttribute('data-index'));
+            const residente = residentes[index];
+
+            if (buttonEl.classList.contains('btn-view')) showResidenteDetails(residente);
+            if (buttonEl.classList.contains('btn-edit')) showResidenteForm(residente);
+            if (buttonEl.classList.contains('btn-delete')) confirmDeleteResidente(residente);
         });
     });
 }
 
-/**
- * Muestra el formulario para agregar o editar un residente
- * @param {Object} residente - Datos del residente a editar (null para nuevo)
- */
 function showResidenteForm(residente = null) {
     const fields = [
         { id: 'nombre', label: 'Nombre Completo', type: 'text', required: true },
-        { id: 'rut', label: 'RUT (con guion y dígito verificador)', type: 'text', required: true, disabled: !!residente }, // CAMBIO: Deshabilitar RUT en edición
+        { id: 'rut', label: 'RUT (con guion y dígito verificador)', type: 'text', required: true, disabled: !!residente },
         { id: 'direccion', label: 'Dirección', type: 'text', required: true },
         { id: 'email', label: 'Email', type: 'email' },
         { id: 'telefono', label: 'Teléfono', type: 'tel' },
         { id: 'numero_parcela', label: 'Número de Parcela', type: 'text', required: true },
-        { 
-            id: 'estado', 
-            label: 'Estado', 
-            type: 'select',
-            options: [ { value: 'Activo', label: 'Activo' }, { value: 'Inactivo', label: 'Inactivo' }, { value: 'Moroso', label: 'Moroso' } ],
-            required: true
-        },
+        { id: 'estado', label: 'Estado', type: 'select', options: [ { value: 'Activo', label: 'Activo' }, { value: 'Inactivo', label: 'Inactivo' }, { value: 'Moroso', label: 'Moroso' } ], required: true },
         { id: 'valor_gasto_comun', label: 'Valor Gasto Común', type: 'number', step: '1', required: true, placeholder: 'Ej: 40000' }
     ];
     
@@ -134,20 +139,12 @@ function showResidenteForm(residente = null) {
             submitButton.disabled = true;
             submitButton.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Guardando...';
             
-            // CAMBIO: El array de datos ya no incluye un ID generado
             const rowData = [
-                formData.nombre,
-                formData.rut,
-                formData.direccion,
-                formData.email,
-                formData.telefono,
-                formData.numero_parcela,
-                formData.estado,
-                formData.valor_gasto_comun
+                formData.nombre, formData.rut, formData.direccion, formData.email,
+                formData.telefono, formData.numero_parcela, formData.estado, formData.valor_gasto_comun
             ];
             
             if (residente) {
-                // CAMBIO: Buscar el residente por RUT para actualizarlo
                 const index = window.residentesData.findIndex(r => r.Rut === residente.Rut);
                 if (index !== -1) {
                     await sheetsAPI.updateRow(CONFIG.SHEETS.RESIDENTES, index + 2, rowData);
@@ -155,20 +152,15 @@ function showResidenteForm(residente = null) {
                     throw new Error('No se encontró el residente a actualizar');
                 }
             } else {
-                // Validar que el RUT no exista ya
                 const rutExists = window.residentesData.some(r => r.Rut === formData.rut);
-                if (rutExists) {
-                    throw new Error(`El RUT ${formData.rut} ya existe.`);
-                }
+                if (rutExists) throw new Error(`El RUT ${formData.rut} ya existe.`);
                 await sheetsAPI.appendRow(CONFIG.SHEETS.RESIDENTES, rowData);
             }
             
             modal.hide();
             initResidentesModule(document.getElementById('module-container'));
-            
         } catch (error) {
-            console.error('Error al guardar residente:', error);
-            showError('Error al guardar residente: ' + error.message);
+            showDetailedError('Error al guardar residente', error);
             const submitButton = form.querySelector('button[type="submit"]');
             submitButton.disabled = false;
             submitButton.textContent = 'Guardar';
@@ -179,10 +171,6 @@ function showResidenteForm(residente = null) {
     modal.show();
 }
 
-/**
- * Muestra los detalles de un residente
- * @param {Object} residente - Datos del residente
- */
 function showResidenteDetails(residente) {
     const content = document.createElement('div');
     const infoCardBody = document.createElement('div');
@@ -220,10 +208,6 @@ function showResidenteDetails(residente) {
     modal.show();
 }
 
-/**
- * Confirma la eliminación de un residente
- * @param {Object} residente - Datos del residente a eliminar
- */
 function confirmDeleteResidente(residente) {
     const content = document.createElement('div');
     content.innerHTML = `<p>¿Está seguro de que desea eliminar al residente <strong>${residente.Nombre}</strong> (RUT: ${residente.Rut})?</p><p>Esta acción no se puede deshacer.</p>`;
@@ -240,7 +224,6 @@ function confirmDeleteResidente(residente) {
         try {
             deleteButton.disabled = true;
             deleteButton.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Eliminando...';
-            // CAMBIO: Buscar residente por RUT para eliminarlo
             const index = window.residentesData.findIndex(r => r.Rut === residente.Rut);
             if (index !== -1) {
                 await sheetsAPI.deleteRow(CONFIG.SHEETS.RESIDENTES, index + 2);
@@ -250,8 +233,7 @@ function confirmDeleteResidente(residente) {
                 throw new Error('No se encontró el residente a eliminar');
             }
         } catch (error) {
-            console.error('Error al eliminar residente:', error);
-            showError('Error al eliminar residente: ' + error.message);
+            showDetailedError('Error al eliminar residente', error);
             deleteButton.disabled = false;
             deleteButton.innerHTML = '<i class="fas fa-trash"></i> Eliminar';
         }
@@ -263,21 +245,14 @@ function confirmDeleteResidente(residente) {
     modal.show();
 }
 
-/**
- * Filtra los residentes según el texto de búsqueda
- */
 function filterResidentes() {
     const searchText = document.getElementById('search-residente').value.toLowerCase();
-    const filteredResidentes = window.residentesData.filter(residente => {
-        return Object.values(residente).some(val => val && val.toLowerCase().includes(searchText));
-    });
+    const filteredResidentes = window.residentesData.filter(residente => 
+        Object.values(residente).some(val => val && String(val).toLowerCase().includes(searchText))
+    );
     updateResidentesTable(filteredResidentes);
 }
 
-/**
- * Actualiza la tabla de residentes con los datos
- * @param {Array} residentes - Datos de residentes
- */
 function updateResidentesTable(residentes) {
     const tableCard = document.querySelector('#residentes-table-container .card-body');
     if (!tableCard) return;
@@ -300,17 +275,12 @@ function updateResidentesTable(residentes) {
     setupActionButtons(residentes);
 }
 
-/**
- * Exporta los datos de residentes a CSV
- * @param {Array} residentes - Datos de residentes
- */
 function exportResidentes(residentes) {
     let csvContent = 'data:text/csv;charset=utf-8,';
-    // CAMBIO: Quitar ID de la exportación
     const headers = ['Nombre', 'Rut', 'Direccion', 'Email', 'Telefono', 'Numero_Parcela', 'Estado', 'Valor_Gasto_Comun'];
     csvContent += headers.join(',') + '\n';
     residentes.forEach(residente => {
-        const row = headers.map(header => residente[header]);
+        const row = headers.map(header => residente[header.replace(/ /g, '_')] || residente[header]);
         const csvRow = row.map(val => `"${(val || '').toString().replace(/"/g, '""')}"`).join(',');
         csvContent += csvRow + '\n';
     });
