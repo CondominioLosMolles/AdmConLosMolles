@@ -1,0 +1,232 @@
+/* Estilos generales */
+:root {
+    --primary-color: #4a6fdc;
+    --secondary-color: #6c757d;
+    --success-color: #28a745;
+    --danger-color: #dc3545;
+    --warning-color: #ffc107;
+    --info-color: #17a2b8;
+    --light-color: #f8f9fa;
+    --dark-color: #343a40;
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: #f5f7fb;
+    margin: 0;
+    padding: 0;
+}
+
+/* Estilos de login */
+.login-box {
+    max-width: 400px;
+    margin: 100px auto;
+    padding: 20px;
+}
+
+.logo {
+    font-weight: bold;
+    color: var(--primary-color);
+    font-size: 1.5rem;
+}
+
+/* Estilos de sidebar */
+.sidebar {
+    background-color: #ffffff;
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+    height: 100vh;
+    position: fixed;
+    width: 250px;
+    display: flex;
+    flex-direction: column;
+}
+
+.sidebar .nav-link {
+    color: #495057;
+    padding: 0.75rem 1.25rem;
+    border-radius: 0.25rem;
+    margin: 0.25rem 0;
+}
+
+.sidebar .nav-link:hover {
+    background-color: #f8f9fa;
+}
+
+.sidebar .nav-link.active {
+    background-color: var(--primary-color);
+    color: white;
+}
+
+.sidebar .nav-link i {
+    margin-right: 0.5rem;
+    width: 20px;
+    text-align: center;
+}
+
+/* Estilos de contenido */
+.content {
+    margin-left: 250px;
+    padding: 2rem;
+}
+
+/* Estilos de tarjetas */
+.card {
+    border: none;
+    border-radius: 0.5rem;
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+    margin-bottom: 1.5rem;
+}
+
+.card-header {
+    background-color: #ffffff;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.125);
+    padding: 1rem;
+}
+
+/* Estilos de tablas */
+.table th {
+    border-top: none;
+}
+
+.table-hover tbody tr:hover {
+    background-color: rgba(74, 111, 220, 0.05);
+}
+
+/* Estilos de badges */
+.badge {
+    padding: 0.5em 0.75em;
+}
+
+/* Estilos de botones */
+.btn-icon {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.875rem;
+}
+
+/* Estilos de pestañas */
+.nav-tabs .nav-link {
+    border: none;
+    color: var(--secondary-color);
+    padding: 0.75rem 1rem;
+}
+
+.nav-tabs .nav-link.active {
+    color: var(--primary-color);
+    border-bottom: 2px solid var(--primary-color);
+    background-color: transparent;
+}
+
+/* Estilos responsivos */
+@media (max-width: 768px) {
+    .sidebar {
+        width: 60px;
+        overflow: hidden;
+    }
+    
+    .sidebar .nav-link span {
+        display: none;
+    }
+    
+    .sidebar .nav-link i {
+        margin-right: 0;
+    }
+    
+    .content {
+        margin-left: 60px;
+    }
+    
+    .sidebar:hover {
+        width: 250px;
+    }
+    
+    .sidebar:hover .nav-link span {
+        display: inline;
+    }
+    
+    .sidebar:hover .nav-link i {
+        margin-right: 0.5rem;
+    }
+}
+
+/* Animaciones */
+.fade-in {
+    animation: fadeIn 0.3s ease-in;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+/* Estilos de dashboard */
+.stat-card {
+    border-radius: 10px;
+    padding: 20px;
+    margin-bottom: 20px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    transition: transform 0.3s ease;
+}
+
+.stat-card:hover {
+    transform: translateY(-5px);
+}
+
+.stat-card .stat-value {
+    font-size: 2rem;
+    font-weight: bold;
+}
+
+.stat-card .stat-label {
+    color: #6c757d;
+    font-size: 0.9rem;
+}
+
+/* Estilos de gráficos */
+.chart-container {
+    position: relative;
+    height: 300px;
+    margin-bottom: 20px;
+}
+
+/* Estilos de formularios */
+.form-floating > label {
+    padding: 1rem 0.75rem;
+}
+
+.form-floating > .form-control {
+    padding: 1rem 0.75rem;
+}
+
+.form-floating > .form-control:focus ~ label,
+.form-floating > .form-control:not(:placeholder-shown) ~ label {
+    opacity: 0.65;
+    transform: scale(0.85) translateY(-0.5rem) translateX(0.15rem);
+}
+
+/* Estilos de alertas */
+.alert {
+    border-radius: 0.5rem;
+    border: none;
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+}
+
+/* Estilos de paginación */
+.pagination .page-link {
+    border-radius: 0.25rem;
+    margin: 0 0.125rem;
+}
+
+/* Estilos de modales */
+.modal-content {
+    border-radius: 0.5rem;
+    border: none;
+}
+
+.modal-header {
+    border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.modal-footer {
+    border-top: 1px solid rgba(0, 0, 0, 0.1);
+}
+
