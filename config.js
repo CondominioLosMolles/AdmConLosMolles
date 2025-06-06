@@ -5,13 +5,13 @@
 
 const CONFIG = {
     // ID de cliente de OAuth de Google Cloud Platform
-    CLIENT_ID: 'YOUR_CLIENT_ID',
+    CLIENT_ID: '997872453031-5o8s2o6v3qt722fb3p51a2r7bo24ncee.apps.googleusercontent.com',
     
     // API Key de Google Cloud Platform (opcional)
     API_KEY: 'YOUR_API_KEY',
     
     // ID del documento de Google Sheets
-    SPREADSHEET_ID: 'YOUR_SPREADSHEET_ID',
+    SPREADSHEET_ID: '1bFo5dBC3HM0xupginTBe-hrrUNgkiuUn4fkXXzHide8',
     
     // Nombres de las hojas en el documento de Google Sheets
     SHEETS: {
