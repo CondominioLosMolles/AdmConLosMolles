@@ -1,41 +1,30 @@
 /**
  * CondoAdminLosMolles - Sistema de Administración de Condominios
- * Módulo de Residentes (Usa RUT como ID y con manejo de errores mejorado)
+ * Módulo de Residentes (Usa RUT como ID y con correcciones de mapeo y parsing)
  */
 
-/**
- * Muestra un error de forma clara en un modal.
- * @param {string} contextMessage - Mensaje que describe dónde ocurrió el error.
- * @param {Error} error - El objeto de error capturado.
- */
-function showDetailedError(contextMessage, error) {
-    console.error(contextMessage, error); // Mantiene el error completo en la consola para depuración
-    const modalElement = document.getElementById('errorModal');
-    const modalBody = document.getElementById('errorModalBody');
-    
-    // Intenta obtener el mensaje más detallado posible del objeto de error
-    let detailedMessage = 'No hay detalles disponibles.';
-    if (error) {
-        if (error.message) {
-            detailedMessage = error.message;
-        } else if (error.result && error.result.error) {
-            detailedMessage = error.result.error.message;
-        } else {
-            detailedMessage = JSON.stringify(error);
+// Esta función de ayuda debe estar disponible globalmente.
+if (typeof showDetailedError === 'undefined') {
+    function showDetailedError(contextMessage, error) {
+        console.error(contextMessage, error);
+        const modalElement = document.getElementById('errorModal');
+        const modalBody = document.getElementById('errorModalBody');
+        let detailedMessage = 'No hay detalles disponibles.';
+        if (error) {
+            if (error.message) {
+                detailedMessage = error.message;
+            } else if (error.result && error.result.error) {
+                detailedMessage = `Code ${error.result.error.code}: ${error.result.error.message}`;
+            } else {
+                detailedMessage = JSON.stringify(error);
+            }
         }
+        modalBody.innerHTML = `<strong>${contextMessage}:</strong><br><pre style="white-space: pre-wrap; word-break: break-all;">${detailedMessage}</pre>`;
+        const modal = new bootstrap.Modal(modalElement);
+        modal.show();
     }
-    
-    modalBody.innerHTML = `<strong>${contextMessage}</strong><br><pre style="white-space: pre-wrap; word-break: break-all;">${detailedMessage}</pre>`;
-    
-    const modal = new bootstrap.Modal(modalElement);
-    modal.show();
 }
 
-
-/**
- * Inicializa el módulo de Residentes
- * @param {HTMLElement} container - Contenedor donde se renderizará el módulo
- */
 async function initResidentesModule(container) {
     try {
         container.innerHTML = `<div class="d-flex justify-content-center my-5"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Cargando...</span></div></div>`;
@@ -128,10 +117,23 @@ function showResidenteForm(residente = null) {
         { id: 'telefono', label: 'Teléfono', type: 'tel' },
         { id: 'numero_parcela', label: 'Número de Parcela', type: 'text', required: true },
         { id: 'estado', label: 'Estado', type: 'select', options: [ { value: 'Activo', label: 'Activo' }, { value: 'Inactivo', label: 'Inactivo' }, { value: 'Moroso', label: 'Moroso' } ], required: true },
-        { id: 'valor_gasto_comun', label: 'Valor Gasto Común', type: 'number', step: '1', required: true, placeholder: 'Ej: 40000' }
+        { id: 'valor_gasto_comun', label: 'Valor Gasto Común', type: 'text', required: true, placeholder: 'Ej: 40000' } // CAMBIO: Usar tipo texto para aceptar puntos
     ];
     
-    const values = residente ? residente : { estado: 'Activo', valor_gasto_comun: '0' };
+    // CAMBIO: Mapear explícitamente los valores para el formulario de edición
+    let values = { estado: 'Activo', valor_gasto_comun: '0' }; // Default para nuevo residente
+    if (residente) {
+        values = {
+            nombre: residente.Nombre,
+            rut: residente.Rut,
+            direccion: residente.Direccion,
+            email: residente.Email,
+            telefono: residente.Telefono,
+            numero_parcela: residente.Numero_Parcela,
+            estado: residente.Estado,
+            valor_gasto_comun: residente.Valor_Gasto_Comun
+        };
+    }
     
     const form = createForm(fields, values, async (formData) => {
         try {
@@ -139,9 +141,12 @@ function showResidenteForm(residente = null) {
             submitButton.disabled = true;
             submitButton.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Guardando...';
             
+            // CAMBIO: Limpiar el valor del Gasto Común antes de guardarlo
+            const valorGastoComunLimpio = String(formData.valor_gasto_comun).replace(/\./g, '');
+            
             const rowData = [
                 formData.nombre, formData.rut, formData.direccion, formData.email,
-                formData.telefono, formData.numero_parcela, formData.estado, formData.valor_gasto_comun
+                formData.telefono, formData.numero_parcela, formData.estado, valorGastoComunLimpio
             ];
             
             if (residente) {
@@ -280,7 +285,10 @@ function exportResidentes(residentes) {
     const headers = ['Nombre', 'Rut', 'Direccion', 'Email', 'Telefono', 'Numero_Parcela', 'Estado', 'Valor_Gasto_Comun'];
     csvContent += headers.join(',') + '\n';
     residentes.forEach(residente => {
-        const row = headers.map(header => residente[header.replace(/ /g, '_')] || residente[header]);
+        const row = headers.map(headerKey => {
+            const jsKey = headerKey.replace(/ /g, '_'); // ej: "Numero Parcela" -> "Numero_Parcela"
+            return residente[jsKey] || residente[headerKey];
+        });
         const csvRow = row.map(val => `"${(val || '').toString().replace(/"/g, '""')}"`).join(',');
         csvContent += csvRow + '\n';
     });
