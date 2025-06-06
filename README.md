@@ -45,7 +45,10 @@ CondoAdminLosMolles es un sistema completo para la administración de condominio
 
 1.  Ve a [Google Sheets](https://sheets.google.com)
 2.  Crea un nuevo archivo de Google Sheets
-3.  Renombra la primera hoja como "**Residentes**" y configura las siguientes columnas en este orden exacto: `ID`, `Nombre`, `Rut`, `Direccion`, `Email`, `Telefono`, `Numero_Parcela`, `Estado`, `Valor_Gasto_Comun`.
+3.  Renombra la primera hoja como "**Residentes**" y configura las siguientes columnas en este orden exacto. **La columna `ID` ya no es necesaria**:
+
+    `Nombre`, `Rut`, `Direccion`, `Email`, `Telefono`, `Numero_Parcela`, `Estado`, `Valor_Gasto_Comun`
+
 4.  Añade nuevas hojas para:
     * **Gastos_Comunes**: Periodo, Monto_Base, Fondo_Reserva, Total_Unidad, Vencimiento, Estado
     * **Pagos**: ID, Fecha, Residente, Concepto, Monto, Método_Pago
