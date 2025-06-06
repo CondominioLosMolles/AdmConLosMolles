@@ -212,39 +212,69 @@ function showResidenteDetails(residente) {
 }
 
 function confirmDeleteResidente(residente) {
+    // MENSAJE 1: Indica que la función se inició correctamente.
+    console.log("PASO 1: Abriendo diálogo para eliminar a:", residente);
+
     const content = document.createElement('div');
     content.innerHTML = `<p>¿Está seguro de que desea eliminar al residente <strong>${residente.Nombre}</strong> (RUT: ${residente.Rut})?</p><p>Esta acción no se puede deshacer.</p>`;
+    
     const actionsDiv = document.createElement('div');
     actionsDiv.className = 'd-flex justify-content-end mt-4';
+    
     const cancelButton = document.createElement('button');
     cancelButton.className = 'btn btn-secondary me-2';
     cancelButton.textContent = 'Cancelar';
     cancelButton.setAttribute('data-bs-dismiss', 'modal');
+    
     const deleteButton = document.createElement('button');
     deleteButton.className = 'btn btn-danger';
     deleteButton.innerHTML = '<i class="fas fa-trash"></i> Eliminar';
+
     deleteButton.addEventListener('click', async () => {
+        // MENSAJE 2: Confirma que el clic en el botón final fue registrado.
+        console.log("PASO 2: Botón 'Eliminar' final presionado.");
         try {
             deleteButton.disabled = true;
             deleteButton.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Eliminando...';
+            
+            console.log("PASO 3: Buscando índice del residente en los datos locales...");
             const index = window.residentesData.findIndex(r => r.Rut === residente.Rut);
+            
+            // MENSAJE 3: Muestra el resultado de la búsqueda.
+            console.log(`PASO 4: Índice encontrado: ${index}. Se intentará borrar la fila número ${index + 2} de la hoja.`);
+
             if (index !== -1) {
+                console.log("PASO 5: Enviando comando deleteRow a la API de Google Sheets...");
                 await sheetsAPI.deleteRow(CONFIG.SHEETS.RESIDENTES, index + 2);
+                
+                // MENSAJE 4: Si ves este mensaje, la eliminación en Google Sheets fue exitosa.
+                console.log("PASO 6: Comando deleteRow completado sin errores.");
+                
                 modal.hide();
                 initResidentesModule(document.getElementById('module-container'));
             } else {
-                throw new Error('No se encontró el residente a eliminar');
+                throw new Error('No se encontró el residente en los datos locales. La lista puede estar desactualizada.');
             }
         } catch (error) {
+            // MENSAJE 5: Si ves este mensaje, algo falló y el error fue capturado.
+            console.log("PASO 7: Ocurrió un error en el proceso de eliminación.");
             showDetailedError('Error al eliminar residente', error);
+            
             deleteButton.disabled = false;
             deleteButton.innerHTML = '<i class="fas fa-trash"></i> Eliminar';
         }
     });
+    
     actionsDiv.appendChild(cancelButton);
     actionsDiv.appendChild(deleteButton);
     content.appendChild(actionsDiv);
-    const modal = createModal('Confirmar Eliminación', content, 'sm');
+    
+    const modal = createModal(
+        'Confirmar Eliminación',
+        content,
+        'sm'
+    );
+    
     modal.show();
 }
 
