@@ -1,9 +1,8 @@
 /**
  * CondoAdminLosMolles - Sistema de Administración de Condominios
- * Módulo de Residentes (Usa RUT como ID y con correcciones de mapeo y parsing)
+ * Módulo de Residentes (Corrección de duplicación en edición)
  */
 
-// Esta función de ayuda debe estar disponible globalmente.
 if (typeof showDetailedError === 'undefined') {
     function showDetailedError(contextMessage, error) {
         console.error(contextMessage, error);
@@ -117,21 +116,15 @@ function showResidenteForm(residente = null) {
         { id: 'telefono', label: 'Teléfono', type: 'tel' },
         { id: 'numero_parcela', label: 'Número de Parcela', type: 'text', required: true },
         { id: 'estado', label: 'Estado', type: 'select', options: [ { value: 'Activo', label: 'Activo' }, { value: 'Inactivo', label: 'Inactivo' }, { value: 'Moroso', label: 'Moroso' } ], required: true },
-        { id: 'valor_gasto_comun', label: 'Valor Gasto Común', type: 'text', required: true, placeholder: 'Ej: 40000' } // CAMBIO: Usar tipo texto para aceptar puntos
+        { id: 'valor_gasto_comun', label: 'Valor Gasto Común', type: 'text', required: true, placeholder: 'Ej: 40000' }
     ];
     
-    // CAMBIO: Mapear explícitamente los valores para el formulario de edición
-    let values = { estado: 'Activo', valor_gasto_comun: '0' }; // Default para nuevo residente
+    let values = { estado: 'Activo', valor_gasto_comun: '0' };
     if (residente) {
         values = {
-            nombre: residente.Nombre,
-            rut: residente.Rut,
-            direccion: residente.Direccion,
-            email: residente.Email,
-            telefono: residente.Telefono,
-            numero_parcela: residente.Numero_Parcela,
-            estado: residente.Estado,
-            valor_gasto_comun: residente.Valor_Gasto_Comun
+            nombre: residente.Nombre, rut: residente.Rut, direccion: residente.Direccion,
+            email: residente.Email, telefono: residente.Telefono, numero_parcela: residente.Numero_Parcela,
+            estado: residente.Estado, valor_gasto_comun: residente.Valor_Gasto_Comun
         };
     }
     
@@ -141,24 +134,29 @@ function showResidenteForm(residente = null) {
             submitButton.disabled = true;
             submitButton.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Guardando...';
             
-            // CAMBIO: Limpiar el valor del Gasto Común antes de guardarlo
             const valorGastoComunLimpio = String(formData.valor_gasto_comun).replace(/\./g, '');
             
+            // CAMBIO: Asegurarnos de usar el RUT correcto, incluso si el campo del formulario está deshabilitado.
+            const rutParaGuardar = residente ? residente.Rut : formData.rut;
+
             const rowData = [
-                formData.nombre, formData.rut, formData.direccion, formData.email,
+                formData.nombre, rutParaGuardar, formData.direccion, formData.email,
                 formData.telefono, formData.numero_parcela, formData.estado, valorGastoComunLimpio
             ];
             
+            // La lógica para decidir si actualizar o crear ahora es más robusta.
             if (residente) {
                 const index = window.residentesData.findIndex(r => r.Rut === residente.Rut);
                 if (index !== -1) {
                     await sheetsAPI.updateRow(CONFIG.SHEETS.RESIDENTES, index + 2, rowData);
                 } else {
-                    throw new Error('No se encontró el residente a actualizar');
+                    throw new Error('No se encontró el residente a actualizar. El RUT original no fue hallado.');
                 }
             } else {
-                const rutExists = window.residentesData.some(r => r.Rut === formData.rut);
-                if (rutExists) throw new Error(`El RUT ${formData.rut} ya existe.`);
+                const rutExists = window.residentesData.some(r => r.Rut === rutParaGuardar);
+                if (rutExists) {
+                    throw new Error(`El RUT ${rutParaGuardar} ya existe.`);
+                }
                 await sheetsAPI.appendRow(CONFIG.SHEETS.RESIDENTES, rowData);
             }
             
@@ -286,7 +284,7 @@ function exportResidentes(residentes) {
     csvContent += headers.join(',') + '\n';
     residentes.forEach(residente => {
         const row = headers.map(headerKey => {
-            const jsKey = headerKey.replace(/ /g, '_'); // ej: "Numero Parcela" -> "Numero_Parcela"
+            const jsKey = headerKey.replace(/ /g, '_');
             return residente[jsKey] || residente[headerKey];
         });
         const csvRow = row.map(val => `"${(val || '').toString().replace(/"/g, '""')}"`).join(',');
