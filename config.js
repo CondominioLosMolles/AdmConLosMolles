@@ -1,5 +1,5 @@
 /**
- * CondoAdmin - Sistema de Administración de Condominios
+ * CondoAdminLosMolles - Sistema de Administración de Condominios
  * Configuración de la aplicación
  */
 
@@ -27,7 +27,7 @@ const CONFIG = {
     
     // Configuración de la aplicación
     APP: {
-        NAME: 'LosMolles',
+        NAME: 'CondoAdminLosMolles',
         VERSION: '1.0.0',
         MAX_RESIDENTES: 30,
         CURRENCY: '$',
@@ -35,4 +35,3 @@ const CONFIG = {
         TIMEZONE: 'America/Santiago'
     }
 };
-
