@@ -1,5 +1,5 @@
 /**
- * CondoAdmin - Sistema de Administración de Condominios
+ * CondoAdminLosMolles - Sistema de Administración de Condominios
  * Módulo de autenticación con Google
  */
 
