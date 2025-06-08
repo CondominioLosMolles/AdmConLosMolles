@@ -1,10 +1,7 @@
 /**
  * CondoAdminLosMolles - Sistema de Administración de Condominios
- * Módulo de Residentes (Corrección de carga y edición con estado global)
+ * Módulo de Residentes (Solución corregida - sin duplicación)
  */
-
-// ✅ CORRECCIÓN: Se declara la variable global de forma explícita en el objeto 'window' para máxima compatibilidad.
-window.residenteEnEdicion = null;
 
 if (typeof showDetailedError === 'undefined') {
     function showDetailedError(contextMessage, error) {
@@ -32,6 +29,11 @@ async function initResidentesModule(container) {
         container.innerHTML = `<div class="d-flex justify-content-center my-5"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Cargando...</span></div></div>`;
         const residentes = await sheetsAPI.getSheetData(CONFIG.SHEETS.RESIDENTES);
         
+        // ✅ CORREGIDO: Asignar un ID temporal y único a cada residente al cargar.
+        residentes.forEach((residente, index) => {
+            residente._tempId = index; 
+        });
+
         const content = document.createElement('div');
         
         const header = document.createElement('div');
@@ -114,9 +116,6 @@ function setupActionButtons(residentes) {
 }
 
 function showResidenteForm(residente = null) {
-    // Se anota en la "pizarra" global si estamos editando o creando.
-    window.residenteEnEdicion = residente;
-
     const fields = [
         { id: 'nombre', label: 'Nombre Completo', type: 'text', required: true },
         { id: 'rut', label: 'RUT (con guion y dígito verificador)', type: 'text', required: true, disabled: !!residente },
@@ -124,72 +123,117 @@ function showResidenteForm(residente = null) {
         { id: 'email', label: 'Email', type: 'email' },
         { id: 'telefono', label: 'Teléfono', type: 'tel' },
         { id: 'numero_parcela', label: 'Número de Parcela', type: 'text', required: true },
-        { id: 'estado', label: 'Estado', type: 'select', options: [ { value: 'Activo', label: 'Activo' }, { value: 'Inactivo', label: 'Inactivo' }, { value: 'Moroso', label: 'Moroso' } ], required: true },
+        { id: 'estado', label: 'Estado', type: 'select', options: [ 
+            { value: 'Activo', label: 'Activo' }, 
+            { value: 'Inactivo', label: 'Inactivo' }, 
+            { value: 'Moroso', label: 'Moroso' } 
+        ], required: true },
         { id: 'valor_gasto_comun', label: 'Valor Gasto Común', type: 'number', required: true, placeholder: 'Ej: 30000' }
     ];
     
     let values = { estado: 'Activo', valor_gasto_comun: '0' }; 
+    let isEditing = false;
+    let tempId = null;
     
+    // ✅ CORREGIDO: Manejo consistente de los datos del residente
     if (residente) {
+        isEditing = true;
+        tempId = residente._tempId;
+        
+        // Normalizar los nombres de los campos para manejar tanto versiones con guion bajo como con espacios
+        const getNormalizedValue = (obj, field) => {
+            return obj[field] || obj[field.replace(/_/g, ' ')] || obj[field.replace(/ /g, '_')] || '';
+        };
+        
         values = {
-            nombre: residente.Nombre, 
-            rut: residente.Rut, 
-            direccion: residente.Direccion,
-            email: residente.Email, 
-            telefono: residente.Telefono, 
-            numero_parcela: residente.Numero_Parcela || residente['Numero Parcela'],
-            estado: residente.Estado, 
-            valor_gasto_comun: residente.Valor_Gasto_Comun || residente['Valor Gasto Comun'],
+            nombre: getNormalizedValue(residente, 'Nombre'),
+            rut: getNormalizedValue(residente, 'Rut'),
+            direccion: getNormalizedValue(residente, 'Direccion'),
+            email: getNormalizedValue(residente, 'Email'),
+            telefono: getNormalizedValue(residente, 'Telefono'),
+            numero_parcela: getNormalizedValue(residente, 'Numero_Parcela') || getNormalizedValue(residente, 'Numero Parcela'),
+            estado: getNormalizedValue(residente, 'Estado'),
+            valor_gasto_comun: getNormalizedValue(residente, 'Valor_Gasto_Comun') || getNormalizedValue(residente, 'Valor Gasto Comun') || '0'
         };
     }
     
     const form = createForm(fields, values, async (formData) => {
-        const submitButton = form.querySelector('button[type="submit"]');
         try {
+            const submitButton = form.querySelector('button[type="submit"]');
             submitButton.disabled = true;
             submitButton.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Guardando...';
             
             const valorGastoComunNumerico = Number(formData.valor_gasto_comun) || 0;
-            const rutParaGuardar = window.residenteEnEdicion ? window.residenteEnEdicion.Rut : formData.rut;
-
+            
             const rowData = [
-                formData.nombre, rutParaGuardar, formData.direccion, formData.email,
-                formData.telefono, formData.numero_parcela, formData.estado, valorGastoComunNumerico
+                formData.nombre, 
+                formData.rut, 
+                formData.direccion, 
+                formData.email,
+                formData.telefono, 
+                formData.numero_parcela, 
+                formData.estado, 
+                valorGastoComunNumerico
             ];
             
-            // La decisión se toma mirando la "pizarra" global.
-            if (window.residenteEnEdicion) {
-                // Si hay alguien en la pizarra, actualizamos.
-                const index = window.residentesData.findIndex(r => r === window.residenteEnEdicion);
-
-                if (index !== -1) {
-                    await sheetsAPI.updateRow(CONFIG.SHEETS.RESIDENTES, index + 2, rowData);
+            // ✅ CORREGIDO: Lógica clara de actualización vs creación
+            if (isEditing && tempId !== null) {
+                // Buscar el índice actual del residente usando el tempId
+                const currentIndex = window.residentesData.findIndex(r => r._tempId === tempId);
+                
+                if (currentIndex !== -1) {
+                    // Actualizar fila existente (índice + 2 porque las hojas empiezan en 1 y tienen header)
+                    await sheetsAPI.updateRow(CONFIG.SHEETS.RESIDENTES, currentIndex + 2, rowData);
+                    console.log(`Residente actualizado en fila ${currentIndex + 2}`);
                 } else {
-                    throw new Error('Error Crítico: El residente que se estaba editando se perdió del listado principal.');
+                    throw new Error('Error de actualización: No se encontró el residente con el ID temporal.');
                 }
-            } else { 
-                // Si la pizarra está vacía, creamos uno nuevo.
-                const rutExists = window.residentesData.some(r => r.Rut === rutParaGuardar);
+            } else {
+                // ✅ CORREGIDO: Verificar duplicados solo para nuevos residentes
+                const rutExists = window.residentesData.some(r => r.Rut === formData.rut);
                 if (rutExists) {
-                    throw new Error(`El RUT ${rutParaGuardar} ya existe.`);
+                    throw new Error(`El RUT ${formData.rut} ya existe.`);
                 }
+                
+                // Crear nuevo residente
                 await sheetsAPI.appendRow(CONFIG.SHEETS.RESIDENTES, rowData);
+                console.log('Nuevo residente creado');
             }
             
             modal.hide();
-            initResidentesModule(document.getElementById('module-container'));
+            
+            // Mostrar mensaje de éxito
+            const toast = document.createElement('div');
+            toast.className = 'toast align-items-center text-white bg-success border-0 position-fixed top-0 end-0 m-3';
+            toast.style.zIndex = '9999';
+            toast.innerHTML = `
+                <div class="d-flex">
+                    <div class="toast-body">
+                        ${isEditing ? 'Residente actualizado exitosamente' : 'Residente creado exitosamente'}
+                    </div>
+                    <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+                </div>
+            `;
+            document.body.appendChild(toast);
+            const bsToast = new bootstrap.Toast(toast);
+            bsToast.show();
+            
+            // Recargar módulo
+            await initResidentesModule(document.getElementById('module-container'));
 
         } catch (error) {
             showDetailedError('Error al guardar residente', error);
+            const submitButton = form.querySelector('button[type="submit"]');
             submitButton.disabled = false;
             submitButton.textContent = 'Guardar';
-        } finally {
-            // Pase lo que pase (éxito o error), limpiamos la pizarra.
-            window.residenteEnEdicion = null;
         }
     });
     
-    const modal = createModal(residente ? 'Editar Residente' : 'Nuevo Residente', form, 'lg');
+    const modal = createModal(
+        isEditing ? 'Editar Residente' : 'Nuevo Residente', 
+        form, 
+        'lg'
+    );
     modal.show();
 }
 
@@ -197,22 +241,29 @@ function showResidenteDetails(residente) {
     const content = document.createElement('div');
     const infoCardBody = document.createElement('div');
     infoCardBody.className = 'card-body';
+    
+    // ✅ CORREGIDO: Función helper para obtener valores normalizados
+    const getNormalizedValue = (obj, field) => {
+        return obj[field] || obj[field.replace(/_/g, ' ')] || obj[field.replace(/ /g, '_')] || 'No especificado';
+    };
+    
     infoCardBody.innerHTML = `
-        <h5 class="card-title mb-3">${residente.Nombre}</h5>
+        <h5 class="card-title mb-3">${getNormalizedValue(residente, 'Nombre')}</h5>
         <div class="row">
             <div class="col-md-6">
-                <p><strong>RUT:</strong> ${residente.Rut || 'No especificado'}</p>
-                <p><strong>Dirección:</strong> ${residente.Direccion || 'No especificado'}</p>
-                <p><strong>Nº Parcela:</strong> ${residente.Numero_Parcela || residente['Numero Parcela'] || 'No especificado'}</p>
+                <p><strong>RUT:</strong> ${getNormalizedValue(residente, 'Rut')}</p>
+                <p><strong>Dirección:</strong> ${getNormalizedValue(residente, 'Direccion')}</p>
+                <p><strong>Nº Parcela:</strong> ${getNormalizedValue(residente, 'Numero_Parcela') || getNormalizedValue(residente, 'Numero Parcela')}</p>
             </div>
             <div class="col-md-6">
-                <p><strong>Email:</strong> ${residente.Email || 'No especificado'}</p>
-                <p><strong>Teléfono:</strong> ${residente.Telefono || 'No especificado'}</p>
-                <p><strong>Estado:</strong> <span class="badge ${residente.Estado === 'Activo' ? 'bg-success' : residente.Estado === 'Inactivo' ? 'bg-danger' : 'bg-warning text-dark'}">${residente.Estado || 'No definido'}</span></p>
-                <p><strong>Valor Gasto Común:</strong> <span class="text-primary fw-bold">${formatCurrency(parseFloat(residente.Valor_Gasto_Comun || residente['Valor Gasto Comun']) || 0)}</span></p>
+                <p><strong>Email:</strong> ${getNormalizedValue(residente, 'Email')}</p>
+                <p><strong>Teléfono:</strong> ${getNormalizedValue(residente, 'Telefono')}</p>
+                <p><strong>Estado:</strong> <span class="badge ${residente.Estado === 'Activo' ? 'bg-success' : residente.Estado === 'Inactivo' ? 'bg-danger' : 'bg-warning text-dark'}">${getNormalizedValue(residente, 'Estado')}</span></p>
+                <p><strong>Valor Gasto Común:</strong> <span class="text-primary fw-bold">${formatCurrency(parseFloat(getNormalizedValue(residente, 'Valor_Gasto_Comun') || getNormalizedValue(residente, 'Valor Gasto Comun')) || 0)}</span></p>
             </div>
         </div>`;
     content.appendChild(infoCardBody);
+    
     const actionsDiv = document.createElement('div');
     actionsDiv.className = 'd-flex justify-content-end p-3';
     const editButton = document.createElement('button');
@@ -226,13 +277,18 @@ function showResidenteDetails(residente) {
     actionsDiv.appendChild(editButton);
     actionsDiv.appendChild(closeButton);
     content.appendChild(actionsDiv);
+    
     const modal = createModal('Detalles del Residente', content, 'lg');
     modal.show();
 }
 
 function confirmDeleteResidente(residente) {
     const content = document.createElement('div');
-    content.innerHTML = `<p>¿Está seguro de que desea eliminar al residente <strong>${residente.Nombre}</strong> (RUT: ${residente.Rut})?</p><p>Esta acción no se puede deshacer.</p>`;
+    const getNormalizedValue = (obj, field) => {
+        return obj[field] || obj[field.replace(/_/g, ' ')] || obj[field.replace(/ /g, '_')] || 'N/A';
+    };
+    
+    content.innerHTML = `<p>¿Está seguro de que desea eliminar al residente <strong>${getNormalizedValue(residente, 'Nombre')}</strong> (RUT: ${getNormalizedValue(residente, 'Rut')})?</p><p>Esta acción no se puede deshacer.</p>`;
     
     const actionsDiv = document.createElement('div');
     actionsDiv.className = 'd-flex justify-content-end mt-4';
@@ -251,19 +307,18 @@ function confirmDeleteResidente(residente) {
             deleteButton.disabled = true;
             deleteButton.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Eliminando...';
             
-            const index = window.residentesData.findIndex(r => r === residente);
+            // Buscar por el ID temporal
+            const index = window.residentesData.findIndex(r => r._tempId === residente._tempId);
             
             if (index !== -1) {
                 await sheetsAPI.deleteRow(CONFIG.SHEETS.RESIDENTES, index + 2);
-                
                 modal.hide();
-                initResidentesModule(document.getElementById('module-container'));
+                await initResidentesModule(document.getElementById('module-container'));
             } else {
-                 throw new Error('No se encontró el residente en los datos locales. La lista puede estar desactualizada.');
+                throw new Error('No se encontró el residente en los datos locales. La lista puede estar desactualizada.');
             }
         } catch (error) {
             showDetailedError('Error al eliminar residente', error);
-            
             deleteButton.disabled = false;
             deleteButton.innerHTML = '<i class="fas fa-trash"></i> Eliminar';
         }
@@ -284,12 +339,15 @@ function filterResidentes() {
             if (valor === null || typeof valor === 'undefined') {
                 return false;
             }
+            // Excluir el _tempId de la búsqueda
+            if (typeof valor === 'number' && residente._tempId === valor) {
+                return false;
+            }
             return String(valor).toLowerCase().includes(searchText);
         });
     });
     updateResidentesTable(filteredResidentes);
 }
-
 
 function updateResidentesTable(residentes) {
     const tableCard = document.querySelector('#residentes-table-container .card-body');
@@ -297,18 +355,22 @@ function updateResidentesTable(residentes) {
     tableCard.innerHTML = '';
     
     const columns = [
-        { field: 'Nombre', title: 'Nombre' }, { field: 'Rut', title: 'RUT' },
-        { field: 'Email', title: 'Email' }, { field: 'Telefono', title: 'Teléfono' },
+        { field: 'Nombre', title: 'Nombre' }, 
+        { field: 'Rut', title: 'RUT' },
+        { field: 'Email', title: 'Email' }, 
+        { field: 'Telefono', title: 'Teléfono' },
         { field: 'Numero Parcela', title: 'Nº Parcela', width: '120px' },
         { field: 'Estado', title: 'Estado', width: '120px', formatter: (value) => `<span class="badge ${value === 'Activo' ? 'bg-success' : value === 'Inactivo' ? 'bg-danger' : 'bg-warning text-dark'}">${value || 'No definido'}</span>` },
         { field: 'Valor Gasto Comun', title: 'Gasto Común', width: '130px', formatter: (value) => formatCurrency(parseFloat(value) || 0) }
     ];
+    
     const rowActions = (item, index) => `
         <div class="btn-group btn-group-sm" role="group">
             <button type="button" class="btn btn-outline-primary btn-view" data-index="${index}" title="Ver Detalles"><i class="fas fa-eye"></i></button>
             <button type="button" class="btn btn-outline-secondary btn-edit" data-index="${index}" title="Editar"><i class="fas fa-edit"></i></button>
             <button type="button" class="btn btn-outline-danger btn-delete" data-index="${index}" title="Eliminar"><i class="fas fa-trash"></i></button>
         </div>`;
+        
     const table = createDataTable(residentes, columns, rowActions);
     tableCard.appendChild(table);
     setupActionButtons(residentes);
@@ -318,13 +380,16 @@ function exportResidentes(residentes) {
     let csvContent = 'data:text/csv;charset=utf-8,';
     const headers = ['Nombre', 'Rut', 'Direccion', 'Email', 'Telefono', 'Numero Parcela', 'Estado', 'Valor Gasto Comun'];
     csvContent += headers.join(',') + '\n';
+    
     residentes.forEach(residente => {
         const row = headers.map(headerKey => {
-            return residente[headerKey];
+            // Normalizar el acceso a los campos
+            return residente[headerKey] || residente[headerKey.replace(/ /g, '_')] || residente[headerKey.replace(/_/g, ' ')] || '';
         });
         const csvRow = row.map(val => `"${(val || '').toString().replace(/"/g, '""')}"`).join(',');
         csvContent += csvRow + '\n';
     });
+    
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement('a');
     link.setAttribute('href', encodedUri);
