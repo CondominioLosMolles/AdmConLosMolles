@@ -1,6 +1,6 @@
 /**
  * CondoAdminLosMolles - Sistema de Administración de Condominios
- * Módulo de Residentes (Corrección de eliminación de duplicados)
+ * Módulo de Residentes (con depuración para gasto común)
  */
 
 if (typeof showDetailedError === 'undefined') {
@@ -18,7 +18,7 @@ if (typeof showDetailedError === 'undefined') {
                 detailedMessage = JSON.stringify(error);
             }
         }
-        modalBody.innerHTML = `<strong>${contextMessage}:</strong><br><pre style="white-space: pre-wrap; word-break: break-all;">${detailedMessage}</pre>`;
+        modalBody.innerHTML = `<strong><span class="math-inline">\{contextMessage\}\:</strong\><br\><pre style\="white\-space\: pre\-wrap; word\-break\: break\-all;"\></span>{detailedMessage}</pre>`;
         const modal = new bootstrap.Modal(modalElement);
         modal.show();
     }
@@ -135,12 +135,19 @@ function showResidenteForm(residente = null) {
     }
     
     const form = createForm(fields, values, async (formData) => {
+        // ---- INICIO DE LA DEPURACIÓN ----
+        // Esta es la línea "espía". Nos dirá exactamente qué valor tiene 'valor_gasto_comun'.
+        console.log("Datos CRUDOS recibidos del formulario:", formData);
+        // ---- FIN DE LA DEPURACIÓN ----
+
         try {
             const submitButton = form.querySelector('button[type="submit"]');
             submitButton.disabled = true;
             submitButton.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Guardando...';
             
-            const valorGastoComunNumerico = parseInt(String(formData.valor_gasto_comun || '0').replace(/\D/g, ''), 10);
+            // ✅ CORRECCIÓN: Método de conversión de número simplificado y más directo.
+            const valorGastoComunNumerico = Number(formData.valor_gasto_comun) || 0;
+
             const rutParaGuardar = residente ? residente.Rut : formData.rut;
 
             const rowData = [
@@ -193,7 +200,7 @@ function showResidenteDetails(residente) {
             <div class="col-md-6">
                 <p><strong>Email:</strong> ${residente.Email || 'No especificado'}</p>
                 <p><strong>Teléfono:</strong> ${residente.Telefono || 'No especificado'}</p>
-                <p><strong>Estado:</strong> <span class="badge ${residente.Estado === 'Activo' ? 'bg-success' : residente.Estado === 'Inactivo' ? 'bg-danger' : 'bg-warning text-dark'}">${residente.Estado || 'No definido'}</span></p>
+                <p><strong>Estado:</strong> <span class="badge <span class="math-inline">\{residente\.Estado \=\=\= 'Activo' ? 'bg\-success' \: residente\.Estado \=\=\= 'Inactivo' ? 'bg\-danger' \: 'bg\-warning text\-dark'\}"\></span>{residente.Estado || 'No definido'}</span></p>
                 <p><strong>Valor Gasto Común:</strong> <span class="text-primary fw-bold">${formatCurrency(parseFloat(residente.Valor_Gasto_Comun || residente['Valor Gasto Comun']) || 0)}</span></p>
             </div>
         </div>`;
@@ -231,101 +238,4 @@ function confirmDeleteResidente(residente) {
     deleteButton.className = 'btn btn-danger';
     deleteButton.innerHTML = '<i class="fas fa-trash"></i> Eliminar';
 
-    deleteButton.addEventListener('click', async () => {
-        try {
-            deleteButton.disabled = true;
-            deleteButton.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Eliminando...';
-            
-            // ✅ CORRECCIÓN: Encontrar el índice por referencia exacta del objeto, no por RUT.
-            // Esto asegura que se elimina el residente correcto, incluso si hay duplicados.
-            const index = window.residentesData.findIndex(r => r === residente);
-            
-            console.log(`Residente encontrado en el índice: ${index}. Se intentará borrar la fila de la hoja: ${index + 2}`);
-
-            if (index !== -1) {
-                // El índice de la fila en Google Sheet es el índice del array + 2 (fila 1 para cabeceras, índice 0 es la fila 2)
-                await sheetsAPI.deleteRow(CONFIG.SHEETS.RESIDENTES, index + 2);
-                
-                modal.hide();
-                // Recargamos el módulo para que muestre los datos actualizados de la hoja.
-                initResidentesModule(document.getElementById('module-container'));
-            } else {
-                throw new Error('No se encontró el residente en los datos locales. La lista puede estar desactualizada.');
-            }
-        } catch (error) {
-            showDetailedError('Error al eliminar residente', error);
-            
-            deleteButton.disabled = false;
-            deleteButton.innerHTML = '<i class="fas fa-trash"></i> Eliminar';
-        }
-    });
-    
-    actionsDiv.appendChild(cancelButton);
-    actionsDiv.appendChild(deleteButton);
-    content.appendChild(actionsDiv);
-    
-    const modal = createModal(
-        'Confirmar Eliminación',
-        content,
-        'sm'
-    );
-    
-    modal.show();
-}
-
-function filterResidentes() {
-    const searchText = document.getElementById('search-residente').value.toLowerCase();
-    const filteredResidentes = window.residentesData.filter(residente => {
-        return Object.values(residente).some(valor => {
-            if (valor === null || typeof valor === 'undefined') {
-                return false;
-            }
-            return String(valor).toLowerCase().includes(searchText);
-        });
-    });
-    updateResidentesTable(filteredResidentes);
-}
-
-
-function updateResidentesTable(residentes) {
-    const tableCard = document.querySelector('#residentes-table-container .card-body');
-    if (!tableCard) return;
-    tableCard.innerHTML = '';
-    
-    const columns = [
-        { field: 'Nombre', title: 'Nombre' }, { field: 'Rut', title: 'RUT' },
-        { field: 'Email', title: 'Email' }, { field: 'Telefono', title: 'Teléfono' },
-        { field: 'Numero Parcela', title: 'Nº Parcela', width: '120px' },
-        { field: 'Estado', title: 'Estado', width: '120px', formatter: (value) => `<span class="badge ${value === 'Activo' ? 'bg-success' : value === 'Inactivo' ? 'bg-danger' : 'bg-warning text-dark'}">${value || 'No definido'}</span>` },
-        { field: 'Valor Gasto Comun', title: 'Gasto Común', width: '130px', formatter: (value) => formatCurrency(parseFloat(value) || 0) }
-    ];
-    const rowActions = (item, index) => `
-        <div class="btn-group btn-group-sm" role="group">
-            <button type="button" class="btn btn-outline-primary btn-view" data-index="${index}" title="Ver Detalles"><i class="fas fa-eye"></i></button>
-            <button type="button" class="btn btn-outline-secondary btn-edit" data-index="${index}" title="Editar"><i class="fas fa-edit"></i></button>
-            <button type="button" class="btn btn-outline-danger btn-delete" data-index="${index}" title="Eliminar"><i class="fas fa-trash"></i></button>
-        </div>`;
-    const table = createDataTable(residentes, columns, rowActions);
-    tableCard.appendChild(table);
-    setupActionButtons(residentes);
-}
-
-function exportResidentes(residentes) {
-    let csvContent = 'data:text/csv;charset=utf-8,';
-    const headers = ['Nombre', 'Rut', 'Direccion', 'Email', 'Telefono', 'Numero Parcela', 'Estado', 'Valor Gasto Comun'];
-    csvContent += headers.join(',') + '\n';
-    residentes.forEach(residente => {
-        const row = headers.map(headerKey => {
-            return residente[headerKey];
-        });
-        const csvRow = row.map(val => `"${(val || '').toString().replace(/"/g, '""')}"`).join(',');
-        csvContent += csvRow + '\n';
-    });
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement('a');
-    link.setAttribute('href', encodedUri);
-    link.setAttribute('download', 'residentes.csv');
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-}
+    deleteButton.addEventListener('
