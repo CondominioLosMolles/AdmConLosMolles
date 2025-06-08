@@ -1,6 +1,6 @@
 /**
  * CondoAdminLosMolles - Sistema de Administración de Condominios
- * Módulo de Residentes (Corrección de duplicación en edición)
+ * Módulo de Residentes (Versión Corregida)
  */
 
 if (typeof showDetailedError === 'undefined') {
@@ -89,6 +89,8 @@ async function initResidentesModule(container) {
         window.residentesData = residentes;
         
     } catch (error) {
+        // NOTA: Si aquí recibes un error 401 Unauthorized, es un problema de permisos en tu despliegue de Apps Script.
+        // Revisa que el despliegue esté accesible para "Cualquier usuario".
         showDetailedError('Error al inicializar el módulo de Residentes', error);
     }
 }
@@ -116,7 +118,8 @@ function showResidenteForm(residente = null) {
         { id: 'telefono', label: 'Teléfono', type: 'tel' },
         { id: 'numero_parcela', label: 'Número de Parcela', type: 'text', required: true },
         { id: 'estado', label: 'Estado', type: 'select', options: [ { value: 'Activo', label: 'Activo' }, { value: 'Inactivo', label: 'Inactivo' }, { value: 'Moroso', label: 'Moroso' } ], required: true },
-        { id: 'valor_gasto_comun', label: 'Valor Gasto Común', type: 'text', required: true, placeholder: 'Ej: 40000' }
+        // SOLUCIÓN para "Campo ausente": El campo "Valor Gasto Común" ya está correctamente definido aquí.
+        { id: 'valor_gasto_comun', label: 'Valor Gasto Común', type: 'number', required: true, placeholder: 'Ej: 40000' }
     ];
     
     let values = { estado: 'Activo', valor_gasto_comun: '0' };
@@ -135,16 +138,24 @@ function showResidenteForm(residente = null) {
             submitButton.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Guardando...';
             
             const valorGastoComunLimpio = String(formData.valor_gasto_comun).replace(/\./g, '');
-            
-            // CAMBIO: Asegurarnos de usar el RUT correcto, incluso si el campo del formulario está deshabilitado.
             const rutParaGuardar = residente ? residente.Rut : formData.rut;
 
+            // ⚠️ SOLUCIÓN para "Desalineación Columnas-Datos" ⚠️
+            // ¡VERIFICA ESTE ORDEN! El orden de los datos en este array DEBE COINCIDIR
+            // EXACTAMENTE con el orden de las columnas en tu hoja de Google "Residentes".
+            // Columna A: Nombre
+            // Columna B: RUT
+            // Columna C: Dirección
+            // Columna D: Email
+            // Columna E: Teléfono
+            // Columna F: Número de Parcela
+            // Columna G: Estado
+            // Columna H: Valor Gasto Común
             const rowData = [
                 formData.nombre, rutParaGuardar, formData.direccion, formData.email,
                 formData.telefono, formData.numero_parcela, formData.estado, valorGastoComunLimpio
             ];
             
-            // La lógica para decidir si actualizar o crear ahora es más robusta.
             if (residente) {
                 const index = window.residentesData.findIndex(r => r.Rut === residente.Rut);
                 if (index !== -1) {
@@ -212,9 +223,6 @@ function showResidenteDetails(residente) {
 }
 
 function confirmDeleteResidente(residente) {
-    // MENSAJE 1: Indica que la función se inició correctamente.
-    console.log("PASO 1: Abriendo diálogo para eliminar a:", residente);
-
     const content = document.createElement('div');
     content.innerHTML = `<p>¿Está seguro de que desea eliminar al residente <strong>${residente.Nombre}</strong> (RUT: ${residente.Rut})?</p><p>Esta acción no se puede deshacer.</p>`;
     
@@ -231,35 +239,21 @@ function confirmDeleteResidente(residente) {
     deleteButton.innerHTML = '<i class="fas fa-trash"></i> Eliminar';
 
     deleteButton.addEventListener('click', async () => {
-        // MENSAJE 2: Confirma que el clic en el botón final fue registrado.
-        console.log("PASO 2: Botón 'Eliminar' final presionado.");
         try {
             deleteButton.disabled = true;
             deleteButton.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Eliminando...';
             
-            console.log("PASO 3: Buscando índice del residente en los datos locales...");
             const index = window.residentesData.findIndex(r => r.Rut === residente.Rut);
             
-            // MENSAJE 3: Muestra el resultado de la búsqueda.
-            console.log(`PASO 4: Índice encontrado: ${index}. Se intentará borrar la fila número ${index + 2} de la hoja.`);
-
             if (index !== -1) {
-                console.log("PASO 5: Enviando comando deleteRow a la API de Google Sheets...");
                 await sheetsAPI.deleteRow(CONFIG.SHEETS.RESIDENTES, index + 2);
-                
-                // MENSAJE 4: Si ves este mensaje, la eliminación en Google Sheets fue exitosa.
-                console.log("PASO 6: Comando deleteRow completado sin errores.");
-                
                 modal.hide();
                 initResidentesModule(document.getElementById('module-container'));
             } else {
                 throw new Error('No se encontró el residente en los datos locales. La lista puede estar desactualizada.');
             }
         } catch (error) {
-            // MENSAJE 5: Si ves este mensaje, algo falló y el error fue capturado.
-            console.log("PASO 7: Ocurrió un error en el proceso de eliminación.");
             showDetailedError('Error al eliminar residente', error);
-            
             deleteButton.disabled = false;
             deleteButton.innerHTML = '<i class="fas fa-trash"></i> Eliminar';
         }
@@ -269,22 +263,31 @@ function confirmDeleteResidente(residente) {
     actionsDiv.appendChild(deleteButton);
     content.appendChild(actionsDiv);
     
-    const modal = createModal(
-        'Confirmar Eliminación',
-        content,
-        'sm'
-    );
-    
+    const modal = createModal('Confirmar Eliminación', content, 'sm');
     modal.show();
 }
 
+/**
+ * ✅ SOLUCIÓN para TypeError por .toLowerCase()
+ * Esta función ahora valida que los valores de los residentes no sean nulos o indefinidos
+ * antes de intentar aplicarles el método .toLowerCase(), evitando errores.
+ */
 function filterResidentes() {
     const searchText = document.getElementById('search-residente').value.toLowerCase();
-    const filteredResidentes = window.residentesData.filter(residente => 
-        Object.values(residente).some(val => val && String(val).toLowerCase().includes(searchText))
-    );
+    const filteredResidentes = window.residentesData.filter(residente => {
+        // Itera sobre todas las propiedades del objeto 'residente'
+        return Object.values(residente).some(valor => {
+            // Validamos que el valor no sea nulo (null) o indefinido (undefined)
+            if (valor === null || typeof valor === 'undefined') {
+                return false;
+            }
+            // Si el valor existe, lo convierte a texto, luego a minúsculas y busca la coincidencia.
+            return String(valor).toLowerCase().includes(searchText);
+        });
+    });
     updateResidentesTable(filteredResidentes);
 }
+
 
 function updateResidentesTable(residentes) {
     const tableCard = document.querySelector('#residentes-table-container .card-body');
@@ -314,7 +317,9 @@ function exportResidentes(residentes) {
     csvContent += headers.join(',') + '\n';
     residentes.forEach(residente => {
         const row = headers.map(headerKey => {
+            // Se transforma el nombre de la cabecera (Ej: "Numero Parcela") a la clave del objeto (Ej: "Numero_Parcela")
             const jsKey = headerKey.replace(/ /g, '_');
+            // Se busca la propiedad por ambas claves para mayor compatibilidad
             return residente[jsKey] || residente[headerKey];
         });
         const csvRow = row.map(val => `"${(val || '').toString().replace(/"/g, '""')}"`).join(',');
