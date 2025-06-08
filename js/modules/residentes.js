@@ -1,12 +1,38 @@
+// Al inicio de tu archivo de residentes, agrega este debug:
+console.log('🔍 DEBUG: Archivo de residentes cargado correctamente');
+
+// Verifica si las dependencias están disponibles
+console.log('🔍 DEBUG: sheetsAPI disponible?', typeof sheetsAPI !== 'undefined');
+console.log('🔍 DEBUG: CONFIG disponible?', typeof CONFIG !== 'undefined');
+console.log('🔍 DEBUG: createForm disponible?', typeof createForm !== 'undefined');
+console.log('🔍 DEBUG: createModal disponible?', typeof createModal !== 'undefined');
+console.log('🔍 DEBUG: createDataTable disponible?', typeof createDataTable !== 'undefined');
+console.log('🔍 DEBUG: formatCurrency disponible?', typeof formatCurrency !== 'undefined');
+
+// Agregar al objeto global para verificar
+window.ResidentesModule = {
+    init: initResidentesModule,
+    loaded: true,
+    timestamp: new Date().toISOString()
+};
+
+console.log('🔍 DEBUG: Módulo de residentes registrado en window.ResidentesModule');
+
 /**
  * CondoAdminLosMolles - Sistema de Administración de Condominios
- * Módulo de Residentes (Solución corregida - sin duplicación)
+ * Módulo de Residentes (Versión con Debug)
  */
 
 if (typeof showDetailedError === 'undefined') {
     function showDetailedError(contextMessage, error) {
-        console.error(contextMessage, error);
+        console.error('❌ ERROR:', contextMessage, error);
         const modalElement = document.getElementById('errorModal');
+        if (!modalElement) {
+            console.error('❌ ERROR: Modal de error no encontrado');
+            alert(`${contextMessage}: ${error.message || error}`);
+            return;
+        }
+        
         const modalBody = document.getElementById('errorModalBody');
         let detailedMessage = 'No hay detalles disponibles.';
         if (error) {
@@ -25,11 +51,26 @@ if (typeof showDetailedError === 'undefined') {
 }
 
 async function initResidentesModule(container) {
+    console.log('🚀 Inicializando módulo de residentes...');
+    
     try {
-        container.innerHTML = `<div class="d-flex justify-content-center my-5"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Cargando...</span></div></div>`;
-        const residentes = await sheetsAPI.getSheetData(CONFIG.SHEETS.RESIDENTES);
+        // Verificar dependencias críticas
+        if (typeof sheetsAPI === 'undefined') {
+            throw new Error('sheetsAPI no está disponible. Verifica que se haya cargado correctamente.');
+        }
         
-        // ✅ CORREGIDO: Asignar un ID temporal y único a cada residente al cargar.
+        if (typeof CONFIG === 'undefined' || !CONFIG.SHEETS || !CONFIG.SHEETS.RESIDENTES) {
+            throw new Error('CONFIG.SHEETS.RESIDENTES no está definido. Verifica la configuración.');
+        }
+        
+        console.log('✅ Dependencias verificadas, cargando datos...');
+        
+        container.innerHTML = `<div class="d-flex justify-content-center my-5"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Cargando...</span></div></div>`;
+        
+        const residentes = await sheetsAPI.getSheetData(CONFIG.SHEETS.RESIDENTES);
+        console.log('✅ Datos cargados:', residentes.length, 'residentes');
+        
+        // Asignar un ID temporal y único a cada residente al cargar
         residentes.forEach((residente, index) => {
             residente._tempId = index; 
         });
@@ -94,7 +135,10 @@ async function initResidentesModule(container) {
         updateResidentesTable(residentes);
         window.residentesData = residentes;
         
+        console.log('✅ Módulo de residentes inicializado correctamente');
+        
     } catch (error) {
+        console.error('❌ Error al inicializar módulo de residentes:', error);
         showDetailedError('Error al inicializar el módulo de Residentes', error);
     }
 }
@@ -116,6 +160,14 @@ function setupActionButtons(residentes) {
 }
 
 function showResidenteForm(residente = null) {
+    console.log('📝 Mostrando formulario de residente:', residente ? 'EDITAR' : 'NUEVO');
+    
+    // Verificar dependencias del formulario
+    if (typeof createForm === 'undefined') {
+        showDetailedError('Error de dependencias', new Error('createForm no está disponible'));
+        return;
+    }
+    
     const fields = [
         { id: 'nombre', label: 'Nombre Completo', type: 'text', required: true },
         { id: 'rut', label: 'RUT (con guion y dígito verificador)', type: 'text', required: true, disabled: !!residente },
@@ -135,15 +187,16 @@ function showResidenteForm(residente = null) {
     let isEditing = false;
     let tempId = null;
     
-    // ✅ CORREGIDO: Manejo consistente de los datos del residente
+    // Función helper para obtener valores normalizados
+    const getNormalizedValue = (obj, field) => {
+        return obj[field] || obj[field.replace(/_/g, ' ')] || obj[field.replace(/ /g, '_')] || '';
+    };
+    
     if (residente) {
         isEditing = true;
         tempId = residente._tempId;
         
-        // Normalizar los nombres de los campos para manejar tanto versiones con guion bajo como con espacios
-        const getNormalizedValue = (obj, field) => {
-            return obj[field] || obj[field.replace(/_/g, ' ')] || obj[field.replace(/ /g, '_')] || '';
-        };
+        console.log('📝 Editando residente con tempId:', tempId);
         
         values = {
             nombre: getNormalizedValue(residente, 'Nombre'),
@@ -155,9 +208,13 @@ function showResidenteForm(residente = null) {
             estado: getNormalizedValue(residente, 'Estado'),
             valor_gasto_comun: getNormalizedValue(residente, 'Valor_Gasto_Comun') || getNormalizedValue(residente, 'Valor Gasto Comun') || '0'
         };
+        
+        console.log('📝 Valores para edición:', values);
     }
     
     const form = createForm(fields, values, async (formData) => {
+        console.log('💾 Guardando residente...', { isEditing, tempId, formData });
+        
         try {
             const submitButton = form.querySelector('button[type="submit"]');
             submitButton.disabled = true;
@@ -176,28 +233,29 @@ function showResidenteForm(residente = null) {
                 valorGastoComunNumerico
             ];
             
-            // ✅ CORREGIDO: Lógica clara de actualización vs creación
+            console.log('💾 Datos a guardar:', rowData);
+            
             if (isEditing && tempId !== null) {
                 // Buscar el índice actual del residente usando el tempId
                 const currentIndex = window.residentesData.findIndex(r => r._tempId === tempId);
                 
+                console.log('💾 Actualizando residente en índice:', currentIndex);
+                
                 if (currentIndex !== -1) {
-                    // Actualizar fila existente (índice + 2 porque las hojas empiezan en 1 y tienen header)
                     await sheetsAPI.updateRow(CONFIG.SHEETS.RESIDENTES, currentIndex + 2, rowData);
-                    console.log(`Residente actualizado en fila ${currentIndex + 2}`);
+                    console.log('✅ Residente actualizado exitosamente');
                 } else {
                     throw new Error('Error de actualización: No se encontró el residente con el ID temporal.');
                 }
             } else {
-                // ✅ CORREGIDO: Verificar duplicados solo para nuevos residentes
+                // Verificar duplicados solo para nuevos residentes
                 const rutExists = window.residentesData.some(r => r.Rut === formData.rut);
                 if (rutExists) {
                     throw new Error(`El RUT ${formData.rut} ya existe.`);
                 }
                 
-                // Crear nuevo residente
                 await sheetsAPI.appendRow(CONFIG.SHEETS.RESIDENTES, rowData);
-                console.log('Nuevo residente creado');
+                console.log('✅ Nuevo residente creado exitosamente');
             }
             
             modal.hide();
@@ -222,6 +280,7 @@ function showResidenteForm(residente = null) {
             await initResidentesModule(document.getElementById('module-container'));
 
         } catch (error) {
+            console.error('❌ Error al guardar residente:', error);
             showDetailedError('Error al guardar residente', error);
             const submitButton = form.querySelector('button[type="submit"]');
             submitButton.disabled = false;
@@ -242,7 +301,6 @@ function showResidenteDetails(residente) {
     const infoCardBody = document.createElement('div');
     infoCardBody.className = 'card-body';
     
-    // ✅ CORREGIDO: Función helper para obtener valores normalizados
     const getNormalizedValue = (obj, field) => {
         return obj[field] || obj[field.replace(/_/g, ' ')] || obj[field.replace(/ /g, '_')] || 'No especificado';
     };
@@ -307,7 +365,6 @@ function confirmDeleteResidente(residente) {
             deleteButton.disabled = true;
             deleteButton.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Eliminando...';
             
-            // Buscar por el ID temporal
             const index = window.residentesData.findIndex(r => r._tempId === residente._tempId);
             
             if (index !== -1) {
@@ -339,7 +396,6 @@ function filterResidentes() {
             if (valor === null || typeof valor === 'undefined') {
                 return false;
             }
-            // Excluir el _tempId de la búsqueda
             if (typeof valor === 'number' && residente._tempId === valor) {
                 return false;
             }
@@ -383,7 +439,6 @@ function exportResidentes(residentes) {
     
     residentes.forEach(residente => {
         const row = headers.map(headerKey => {
-            // Normalizar el acceso a los campos
             return residente[headerKey] || residente[headerKey.replace(/ /g, '_')] || residente[headerKey.replace(/_/g, ' ')] || '';
         });
         const csvRow = row.map(val => `"${(val || '').toString().replace(/"/g, '""')}"`).join(',');
@@ -398,3 +453,6 @@ function exportResidentes(residentes) {
     link.click();
     document.body.removeChild(link);
 }
+
+// Verificar que el módulo se cargó correctamente
+console.log('🔍 DEBUG: initResidentesModule definido?', typeof initResidentesModule !== 'undefined');
