@@ -1,7 +1,10 @@
 /**
  * CondoAdminLosMolles - Sistema de Administración de Condominios
- * Módulo de Residentes (Solución robusta de edición con ID temporal)
+ * Módulo de Residentes (Solución robusta de edición con estado global)
  */
+
+// ✅ NUEVA LÓGICA: Nuestra "pizarra" global. Almacenará al residente que se está editando.
+let residenteEnEdicion = null;
 
 if (typeof showDetailedError === 'undefined') {
     function showDetailedError(contextMessage, error) {
@@ -29,12 +32,6 @@ async function initResidentesModule(container) {
         container.innerHTML = `<div class="d-flex justify-content-center my-5"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Cargando...</span></div></div>`;
         const residentes = await sheetsAPI.getSheetData(CONFIG.SHEETS.RESIDENTES);
         
-        // ✅ NUEVA LÓGICA: Asignar un ID temporal y único a cada residente al cargar.
-        // Esto nos permitirá identificarlo de forma única más adelante.
-        residentes.forEach((residente, index) => {
-            residente._tempId = index; 
-        });
-
         const content = document.createElement('div');
         
         const header = document.createElement('div');
@@ -107,7 +104,7 @@ function setupActionButtons(residentes) {
             const index = parseInt(buttonEl.getAttribute('data-index'));
             const residente = residentes[index];
 
-            if (residente) { // Pequeña verificación para evitar errores
+            if (residente) {
                 if (buttonEl.classList.contains('btn-view')) showResidenteDetails(residente);
                 if (buttonEl.classList.contains('btn-edit')) showResidenteForm(residente);
                 if (buttonEl.classList.contains('btn-delete')) confirmDeleteResidente(residente);
@@ -117,6 +114,9 @@ function setupActionButtons(residentes) {
 }
 
 function showResidenteForm(residente = null) {
+    // ✅ NUEVA LÓGICA: Se anota en la "pizarra" si estamos editando o creando.
+    residenteEnEdicion = residente;
+
     const fields = [
         { id: 'nombre', label: 'Nombre Completo', type: 'text', required: true },
         { id: 'rut', label: 'RUT (con guion y dígito verificador)', type: 'text', required: true, disabled: !!residente },
@@ -125,4 +125,132 @@ function showResidenteForm(residente = null) {
         { id: 'telefono', label: 'Teléfono', type: 'tel' },
         { id: 'numero_parcela', label: 'Número de Parcela', type: 'text', required: true },
         { id: 'estado', label: 'Estado', type: 'select', options: [ { value: 'Activo', label: 'Activo' }, { value: 'Inactivo', label: 'Inactivo' }, { value: 'Moroso', label: 'Moroso' } ], required: true },
-        { id: 'valor_gasto_comun', label: 'Valor Gasto Común', type: 'number', required: true, placeholder: 'Ej: 3000
+        { id: 'valor_gasto_comun', label: 'Valor Gasto Común', type: 'number', required: true, placeholder: 'Ej: 30000' }
+    ];
+    
+    let values = { estado: 'Activo', valor_gasto_comun: '0' }; 
+    
+    if (residente) {
+        values = {
+            nombre: residente.Nombre, 
+            rut: residente.Rut, 
+            direccion: residente.Direccion,
+            email: residente.Email, 
+            telefono: residente.Telefono, 
+            numero_parcela: residente.Numero_Parcela || residente['Numero Parcela'],
+            estado: residente.Estado, 
+            valor_gasto_comun: residente.Valor_Gasto_Comun || residente['Valor Gasto Comun'],
+        };
+    }
+    
+    const form = createForm(fields, values, async (formData) => {
+        const submitButton = form.querySelector('button[type="submit"]');
+        try {
+            submitButton.disabled = true;
+            submitButton.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Guardando...';
+            
+            const valorGastoComunNumerico = Number(formData.valor_gasto_comun) || 0;
+            const rutParaGuardar = residenteEnEdicion ? residenteEnEdicion.Rut : formData.rut;
+
+            const rowData = [
+                formData.nombre, rutParaGuardar, formData.direccion, formData.email,
+                formData.telefono, formData.numero_parcela, formData.estado, valorGastoComunNumerico
+            ];
+            
+            // ✅ NUEVA LÓGICA: La decisión se toma mirando la "pizarra" global.
+            if (residenteEnEdicion) {
+                // Si hay alguien en la pizarra, actualizamos.
+                const index = window.residentesData.findIndex(r => r === residenteEnEdicion);
+
+                if (index !== -1) {
+                    await sheetsAPI.updateRow(CONFIG.SHEETS.RESIDENTES, index + 2, rowData);
+                } else {
+                    throw new Error('Error Crítico: El residente que se estaba editando se perdió del listado principal.');
+                }
+            } else { 
+                // Si la pizarra está vacía, creamos uno nuevo.
+                const rutExists = window.residentesData.some(r => r.Rut === rutParaGuardar);
+                if (rutExists) {
+                    throw new Error(`El RUT ${rutParaGuardar} ya existe.`);
+                }
+                await sheetsAPI.appendRow(CONFIG.SHEETS.RESIDENTES, rowData);
+            }
+            
+            modal.hide();
+            initResidentesModule(document.getElementById('module-container'));
+
+        } catch (error) {
+            showDetailedError('Error al guardar residente', error);
+            submitButton.disabled = false;
+            submitButton.textContent = 'Guardar';
+        } finally {
+            // ✅ NUEVA LÓGICA: Pase lo que pase (éxito o error), limpiamos la pizarra.
+            residenteEnEdicion = null;
+        }
+    });
+    
+    const modal = createModal(residente ? 'Editar Residente' : 'Nuevo Residente', form, 'lg');
+    modal.show();
+}
+
+function showResidenteDetails(residente) {
+    const content = document.createElement('div');
+    const infoCardBody = document.createElement('div');
+    infoCardBody.className = 'card-body';
+    infoCardBody.innerHTML = `
+        <h5 class="card-title mb-3">${residente.Nombre}</h5>
+        <div class="row">
+            <div class="col-md-6">
+                <p><strong>RUT:</strong> ${residente.Rut || 'No especificado'}</p>
+                <p><strong>Dirección:</strong> ${residente.Direccion || 'No especificado'}</p>
+                <p><strong>Nº Parcela:</strong> ${residente.Numero_Parcela || residente['Numero Parcela'] || 'No especificado'}</p>
+            </div>
+            <div class="col-md-6">
+                <p><strong>Email:</strong> ${residente.Email || 'No especificado'}</p>
+                <p><strong>Teléfono:</strong> ${residente.Telefono || 'No especificado'}</p>
+                <p><strong>Estado:</strong> <span class="badge <span class="math-inline">\{residente\.Estado \=\=\= 'Activo' ? 'bg\-success' \: residente\.Estado \=\=\= 'Inactivo' ? 'bg\-danger' \: 'bg\-warning text\-dark'\}"\></span>{residente.Estado || 'No definido'}</span></p>
+                <p><strong>Valor Gasto Común:</strong> <span class="text-primary fw-bold">${formatCurrency(parseFloat(residente.Valor_Gasto_Comun || residente['Valor Gasto Comun']) || 0)}</span></p>
+            </div>
+        </div>`;
+    content.appendChild(infoCardBody);
+    const actionsDiv = document.createElement('div');
+    actionsDiv.className = 'd-flex justify-content-end p-3';
+    const editButton = document.createElement('button');
+    editButton.className = 'btn btn-primary me-2';
+    editButton.innerHTML = '<i class="fas fa-edit"></i> Editar';
+    editButton.addEventListener('click', () => { modal.hide(); showResidenteForm(residente); });
+    const closeButton = document.createElement('button');
+    closeButton.className = 'btn btn-secondary';
+    closeButton.innerHTML = 'Cerrar';
+    closeButton.setAttribute('data-bs-dismiss', 'modal');
+    actionsDiv.appendChild(editButton);
+    actionsDiv.appendChild(closeButton);
+    content.appendChild(actionsDiv);
+    const modal = createModal('Detalles del Residente', content, 'lg');
+    modal.show();
+}
+
+function confirmDeleteResidente(residente) {
+    const content = document.createElement('div');
+    content.innerHTML = `<p>¿Está seguro de que desea eliminar al residente <strong>${residente.Nombre}</strong> (RUT: ${residente.Rut})?</p><p>Esta acción no se puede deshacer.</p>`;
+    
+    const actionsDiv = document.createElement('div');
+    actionsDiv.className = 'd-flex justify-content-end mt-4';
+    
+    const cancelButton = document.createElement('button');
+    cancelButton.className = 'btn btn-secondary me-2';
+    cancelButton.textContent = 'Cancelar';
+    cancelButton.setAttribute('data-bs-dismiss', 'modal');
+    
+    const deleteButton = document.createElement('button');
+    deleteButton.className = 'btn btn-danger';
+    deleteButton.innerHTML = '<i class="fas fa-trash"></i> Eliminar';
+
+    deleteButton.addEventListener('click', async () => {
+        try {
+            deleteButton.disabled = true;
+            deleteButton.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Eliminando...';
+            
+            const index = window.residentesData.findIndex(r => r === residente);
+            
+            if
