@@ -45,7 +45,9 @@ function gisLoaded() {
  */
 function maybeEnableButtons() {
     if (gapiInited && gisInited) {
-        document.getElementById('authorize_button').style.display = 'block';
+        document.getElementById('authorize_button').classList.remove('d-none');
+        document.getElementById('authorize_button').disabled = false;
+        document.getElementById('authorize_button').onclick = handleAuthClick;
         
         // Verificar si ya hay un token almacenado
         const token = localStorage.getItem('gapi_access_token');
@@ -66,18 +68,16 @@ function handleAuthClick() {
         if (resp.error !== undefined) {
             throw (resp);
         }
-        
+
         // Guardar el token en localStorage
         localStorage.setItem('gapi_access_token', JSON.stringify(gapi.client.getToken()));
         handleAuthSuccess();
     };
 
     if (gapi.client.getToken() === null) {
-        // Solicitar un token de acceso
-        tokenClient.requestAccessToken({prompt: 'consent'});
+        tokenClient.requestAccessToken({ prompt: 'consent' });
     } else {
-        // Reutilizar el token existente
-        tokenClient.requestAccessToken({prompt: ''});
+        tokenClient.requestAccessToken({ prompt: '' });
     }
 }
 
@@ -101,9 +101,6 @@ function showLoginScreen() {
     document.getElementById('loading').classList.add('d-none');
     document.getElementById('login-container').classList.remove('d-none');
     document.getElementById('main-container').classList.add('d-none');
-    
-    // Configurar el evento de clic para el botón de autorización
-    document.getElementById('authorize_button').onclick = handleAuthClick;
 }
 
 /**
@@ -113,11 +110,9 @@ function handleAuthSuccess() {
     document.getElementById('loading').classList.add('d-none');
     document.getElementById('login-container').classList.add('d-none');
     document.getElementById('main-container').classList.remove('d-none');
-    
-    // Configurar el evento de clic para el botón de cierre de sesión
+
     document.getElementById('signout_button').onclick = handleSignoutClick;
-    
-    // Inicializar la aplicación
+
     initApp();
 }
 
@@ -136,4 +131,3 @@ function showError(message) {
 function isAuthenticated() {
     return gapi.client.getToken() !== null;
 }
-
