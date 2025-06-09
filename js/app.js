@@ -190,3 +190,55 @@ async function checkAndCreateSheets() {
                     case 'MANTENCIONES':
                         headers = ['Fecha', 'Tipo', 'Descripcion', 'Responsable', 'Estado'];
                         break;
+                    case 'COMUNICACIONES':
+                        headers = ['Fecha', 'Asunto', 'Contenido', 'Destinatarios', 'Estado'];
+                        break;
+                    case 'MULTAS':
+                        headers = ['Fecha', 'Residente', 'Motivo', 'Monto', 'Estado'];
+                        break;
+                    case 'ASAMBLEAS':
+                        headers = ['Fecha', 'Tipo', 'Descripcion', 'Asistentes', 'Estado'];
+                        break;
+                    default:
+                        headers = ['Nombre', 'Descripcion'];
+                }
+                await sheetsAPI.createSheet(sheetName, headers);
+                console.log(`✅ Hoja "${sheetName}" creada con encabezados:`, headers);
+            }
+        }
+        console.log('✅ Verificación de hojas completada');
+    } catch (error) {
+        console.error('❌ Error al verificar/crear hojas:', error);
+        throw error;
+    }
+}
+
+/**
+ * Genera un ID único
+ * @returns {string} - ID único
+ */
+function generateUniqueId() {
+    return Date.now().toString(36) + Math.random().toString(36).substring(2);
+}
+
+/**
+ * Formatea una fecha en formato DD/MM/YYYY
+ * @param {Date} date - Fecha a formatear
+ * @returns {string} - Fecha formateada
+ */
+function formatDate(date) {
+    const d = new Date(date);
+    const day = String(d.getDate()).padStart(2, '0');
+    const month = String(d.getMonth() + 1).padStart(2, '0'); // Meses son base 0
+    const year = d.getFullYear();
+    return `${day}/${month}/${year}`;
+}
+
+/**
+ * Formatea un número como moneda
+ * @param {number} amount - Monto a formatear
+ * @returns {string} - Monto formateado
+ */
+function formatCurrency(amount) {
+    return CONFIG.APP.CURRENCY + amount.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+}
