@@ -1,9 +1,9 @@
 /**
- * CondoAdmin - Módulo de Residentes (Versión final sin columna ID)
+ * CondoAdmin - Módulo de Residentes (Versión con guardado explícito y definitivo)
  */
 
 let originalResidentesData = [];
-let residenteHeaders = []; // Variable para guardar las columnas una sola vez
+let residenteHeaders = [];
 
 async function initResidentesModule(container) {
     console.log("🚀 Inicializando módulo de residentes...");
@@ -15,6 +15,7 @@ async function initResidentesModule(container) {
             </div>
         `;
 
+        // Se obtienen los datos y las cabeceras de la hoja
         const [residentes, headers] = await Promise.all([
             sheetsAPI.getSheetData(CONFIG.SHEETS.RESIDENTES),
             sheetsAPI.getSheetHeaders(CONFIG.SHEETS.RESIDENTES)
@@ -73,17 +74,20 @@ function updateResidentesTable(residentes) {
         return;
     }
 
-    const columns = [
-        { field: "Nombre", title: "Nombre Completo" },
-        { field: "Rut", title: "RUT" },
-        { field: "Numero_Parcela", title: "Nº Parcela", formatter: (value) => `<span class="badge bg-secondary">${value || "N/A"}</span>` },
-        { field: "Email", title: "Email" },
-        { field: "Telefono", title: "Teléfono" },
-        { field: "Estado", title: "Estado", formatter: (value) => {
-            const classMap = { "Activo": "bg-success", "Inactivo": "bg-danger", "Moroso": "bg-warning text-dark" };
-            return `<span class="badge ${classMap[value] || 'bg-secondary'}">${value || "No definido"}</span>`;
-        }}
-    ];
+    // Se usan las cabeceras reales de la hoja para construir la tabla dinámicamente
+    const columns = residenteHeaders.map(header => {
+        const columnDef = { field: header, title: header };
+        if (header === "Numero_Parcela") {
+            columnDef.formatter = (value) => `<span class="badge bg-secondary">${value || "N/A"}</span>`;
+        }
+        if (header === "Estado") {
+            columnDef.formatter = (value) => {
+                const classMap = { "Activo": "bg-success", "Inactivo": "bg-danger", "Moroso": "bg-warning text-dark" };
+                return `<span class="badge ${classMap[value] || 'bg-secondary'}">${value || "No definido"}</span>`;
+            };
+        }
+        return columnDef;
+    });
     
     const rowActions = (item) => `
         <div class="btn-group btn-group-sm">
@@ -124,27 +128,20 @@ function showResidenteForm(residente = null) {
     const form = createForm(fields, formValues, async (formData) => {
         const modal = bootstrap.Modal.getInstance(form.closest('.modal'));
         try {
-            if (residenteHeaders.length === 0) {
-                throw new Error("No se han podido cargar las columnas de la hoja. No se puede guardar.");
-            }
-
-            // *** INICIO DE LA CORRECCIÓN ***
-            // Mapeo de datos que respeta la ESTRUCTURA REAL de la hoja (sin columna ID)
-            const dataMap = {
-                Nombre: formData.nombre,
-                Rut: formData.rut,
-                Direccion: formData.direccion,
-                Email: formData.email,
-                Telefono: formData.telefono,
-                Numero_Parcela: formData.numero_parcela,
-                Estado: formData.estado,
-                Valor_Gasto_Comun: formData.valor_gasto_comun
-            };
-
-            // Se construye el array 'rowData' respetando el orden exacto de las columnas de la hoja.
-            // Ya no se genera ningún ID.
-            const rowData = residenteHeaders.map(header => dataMap[header] !== undefined ? dataMap[header] : "");
-            // *** FIN DE LA CORRECCIÓN ***
+            // *** INICIO DE LA CORRECCIÓN DEFINITIVA ***
+            // Se construye la fila de datos de forma explícita y directa,
+            // asegurando que el orden coincide con el de la hoja de cálculo.
+            const rowData = [
+                formData.nombre,
+                formData.rut,
+                formData.direccion,
+                formData.email,
+                formData.telefono,
+                formData.numero_parcela,
+                formData.estado,
+                formData.valor_gasto_comun
+            ];
+            // *** FIN DE LA CORRECCIÓN DEFINITIVA ***
 
             if (isEditing) {
                 await sheetsAPI.updateRow(CONFIG.SHEETS.RESIDENTES, residente.SHEET_ROW_INDEX, rowData);
