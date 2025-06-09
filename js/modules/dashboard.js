@@ -1,11 +1,11 @@
 /**
  * CondoAdmin - Sistema de Administración de Condominios
- * Módulo de Dashboard (Versión Final)
+ * Módulo de Dashboard
  */
 
 // Función que inicializa el módulo de Dashboard
 async function initDashboardModule(container) {
-    console.log('🚀 Inicializando módulo de Dashboard...');
+    console.log('📊 Inicializando módulo de Dashboard...');
     try {
         // Obtener datos para el dashboard
         const residentes = await sheetsAPI.getSheetData(CONFIG.SHEETS.RESIDENTES);
@@ -23,21 +23,6 @@ async function initDashboardModule(container) {
 
         // Crear contenido del dashboard
         const content = document.createElement('div');
-
-        // Título del dashboard
-        const header = document.createElement('div');
-        header.className = 'd-flex justify-content-between align-items-center mb-4';
-        const title = document.createElement('h2');
-        title.textContent = 'Dashboard';
-        const refreshButton = document.createElement('button');
-        refreshButton.className = 'btn btn-outline-primary';
-        refreshButton.innerHTML = '<i class="fas fa-sync-alt"></i> Actualizar';
-        refreshButton.addEventListener('click', () => {
-            initDashboardModule(container);
-        });
-        header.appendChild(title);
-        header.appendChild(refreshButton);
-        content.appendChild(header);
 
         // Tarjetas de estadísticas
         const statsRow = document.createElement('div');
@@ -203,7 +188,6 @@ async function initDashboardModule(container) {
         // Inicializar el gráfico
         initIncomeExpenseChart(pagos, gastos);
     } catch (error) {
-        console.error('❌ Error al inicializar el módulo de Dashboard:', error);
         container.innerHTML = `
             <div class="alert alert-danger" role="alert">
                 <i class="fas fa-exclamation-circle me-2"></i>
@@ -222,7 +206,6 @@ window.initDashboardModule = initDashboardModule;
  * @param {Array} gastos - Datos de gastos
  */
 function initIncomeExpenseChart(pagos, gastos) {
-    // Procesar datos para el gráfico
     const meses = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
     const ingresosPorMes = Array(12).fill(0);
     const gastosPorMes = Array(12).fill(0);
@@ -230,12 +213,10 @@ function initIncomeExpenseChart(pagos, gastos) {
     // Procesar pagos
     pagos.forEach(pago => {
         if (pago.Fecha) {
-            const fecha = pago.Fecha.split('/');
-            if (fecha.length === 3) {
-                const mes = parseInt(fecha[1]) - 1; // Ajustar al índice base 0
-                if (!isNaN(mes) && mes >= 0 && mes < 12) {
-                    ingresosPorMes[mes] += parseFloat(pago.Monto) || 0;
-                }
+            const [dia, mes, año] = pago.Fecha.split('/');
+            const mesIndex = parseInt(mes) - 1;
+            if (!isNaN(mesIndex) && mesIndex >= 0 && mesIndex < 12) {
+                ingresosPorMes[mesIndex] += parseFloat(pago.Monto) || 0;
             }
         }
     });
@@ -243,12 +224,10 @@ function initIncomeExpenseChart(pagos, gastos) {
     // Procesar gastos
     gastos.forEach(gasto => {
         if (gasto.Fecha) {
-            const fecha = gasto.Fecha.split('/');
-            if (fecha.length === 3) {
-                const mes = parseInt(fecha[1]) - 1; // Ajustar al índice base 0
-                if (!isNaN(mes) && mes >= 0 && mes < 12) {
-                    gastosPorMes[mes] += parseFloat(gasto.Monto) || 0;
-                }
+            const [dia, mes, año] = gasto.Fecha.split('/');
+            const mesIndex = parseInt(mes) - 1;
+            if (!isNaN(mesIndex) && mesIndex >= 0 && mesIndex < 12) {
+                gastosPorMes[mesIndex] += parseFloat(gasto.Monto) || 0;
             }
         }
     });
