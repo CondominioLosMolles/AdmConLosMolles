@@ -20,7 +20,7 @@ console.log('🔍 DEBUG: Módulo de residentes registrado en window.ResidentesMo
 
 /**
  * CondoAdminLosMolles - Sistema de Administración de Condominios
- * Módulo de Residentes (Versión con Debug)
+ * Módulo de Residentes (Versión Corregida)
  */
 
 if (typeof showDetailedError === 'undefined') {
@@ -70,9 +70,12 @@ async function initResidentesModule(container) {
         const residentes = await sheetsAPI.getSheetData(CONFIG.SHEETS.RESIDENTES);
         console.log('✅ Datos cargados:', residentes.length, 'residentes');
         
-        // Asignar un ID temporal y único a cada residente al cargar
+        // Asignar un ID único basado en el RUT (que es único) y el índice real de la hoja
         residentes.forEach((residente, index) => {
-            residente._tempId = index; 
+            // Usar RUT como identificador único principal
+            residente._uniqueId = getNormalizedValue(residente, 'Rut');
+            // Guardar el índice real de la fila en Google Sheets (fila + 2 porque empezamos en fila 2)
+            residente._sheetRowIndex = index + 2;
         });
 
         const content = document.createElement('div');
@@ -143,17 +146,24 @@ async function initResidentesModule(container) {
     }
 }
 
+// Función helper para obtener valores normalizados
+function getNormalizedValue(obj, field) {
+    return obj[field] || obj[field.replace(/_/g, ' ')] || obj[field.replace(/ /g, '_')] || '';
+}
+
 function setupActionButtons(residentes) {
     document.querySelectorAll('.btn-view, .btn-edit, .btn-delete').forEach(button => {
         button.addEventListener('click', (e) => {
             const buttonEl = e.currentTarget;
-            const index = parseInt(buttonEl.getAttribute('data-index'));
-            const residente = residentes[index];
+            const uniqueId = buttonEl.getAttribute('data-unique-id');
+            const residente = residentes.find(r => r._uniqueId === uniqueId);
 
             if (residente) {
                 if (buttonEl.classList.contains('btn-view')) showResidenteDetails(residente);
                 if (buttonEl.classList.contains('btn-edit')) showResidenteForm(residente);
                 if (buttonEl.classList.contains('btn-delete')) confirmDeleteResidente(residente);
+            } else {
+                showDetailedError('Error', new Error('No se encontró el residente seleccionado'));
             }
         });
     });
@@ -185,18 +195,13 @@ function showResidenteForm(residente = null) {
     
     let values = { estado: 'Activo', valor_gasto_comun: '0' }; 
     let isEditing = false;
-    let tempId = null;
-    
-    // Función helper para obtener valores normalizados
-    const getNormalizedValue = (obj, field) => {
-        return obj[field] || obj[field.replace(/_/g, ' ')] || obj[field.replace(/ /g, '_')] || '';
-    };
+    let editingResidente = null;
     
     if (residente) {
         isEditing = true;
-        tempId = residente._tempId;
+        editingResidente = residente;
         
-        console.log('📝 Editando residente con tempId:', tempId);
+        console.log('📝 Editando residente:', editingResidente._uniqueId, 'en fila:', editingResidente._sheetRowIndex);
         
         values = {
             nombre: getNormalizedValue(residente, 'Nombre'),
@@ -213,7 +218,7 @@ function showResidenteForm(residente = null) {
     }
     
     const form = createForm(fields, values, async (formData) => {
-        console.log('💾 Guardando residente...', { isEditing, tempId, formData });
+        console.log('💾 Guardando residente...', { isEditing, formData });
         
         try {
             const submitButton = form.querySelector('button[type="submit"]');
@@ -235,21 +240,17 @@ function showResidenteForm(residente = null) {
             
             console.log('💾 Datos a guardar:', rowData);
             
-            if (isEditing && tempId !== null) {
-                // Buscar el índice actual del residente usando el tempId
-                const currentIndex = window.residentesData.findIndex(r => r._tempId === tempId);
+            if (isEditing && editingResidente) {
+                // Actualizar usando el índice de fila guardado
+                const sheetRowIndex = editingResidente._sheetRowIndex;
                 
-                console.log('💾 Actualizando residente en índice:', currentIndex);
+                console.log('💾 Actualizando residente en fila de Google Sheets:', sheetRowIndex);
                 
-                if (currentIndex !== -1) {
-                    await sheetsAPI.updateRow(CONFIG.SHEETS.RESIDENTES, currentIndex + 2, rowData);
-                    console.log('✅ Residente actualizado exitosamente');
-                } else {
-                    throw new Error('Error de actualización: No se encontró el residente con el ID temporal.');
-                }
+                await sheetsAPI.updateRow(CONFIG.SHEETS.RESIDENTES, sheetRowIndex, rowData);
+                console.log('✅ Residente actualizado exitosamente');
             } else {
                 // Verificar duplicados solo para nuevos residentes
-                const rutExists = window.residentesData.some(r => r.Rut === formData.rut);
+                const rutExists = window.residentesData.some(r => r._uniqueId === formData.rut);
                 if (rutExists) {
                     throw new Error(`El RUT ${formData.rut} ya existe.`);
                 }
@@ -301,10 +302,6 @@ function showResidenteDetails(residente) {
     const infoCardBody = document.createElement('div');
     infoCardBody.className = 'card-body';
     
-    const getNormalizedValue = (obj, field) => {
-        return obj[field] || obj[field.replace(/_/g, ' ')] || obj[field.replace(/ /g, '_')] || 'No especificado';
-    };
-    
     infoCardBody.innerHTML = `
         <h5 class="card-title mb-3">${getNormalizedValue(residente, 'Nombre')}</h5>
         <div class="row">
@@ -342,9 +339,6 @@ function showResidenteDetails(residente) {
 
 function confirmDeleteResidente(residente) {
     const content = document.createElement('div');
-    const getNormalizedValue = (obj, field) => {
-        return obj[field] || obj[field.replace(/_/g, ' ')] || obj[field.replace(/ /g, '_')] || 'N/A';
-    };
     
     content.innerHTML = `<p>¿Está seguro de que desea eliminar al residente <strong>${getNormalizedValue(residente, 'Nombre')}</strong> (RUT: ${getNormalizedValue(residente, 'Rut')})?</p><p>Esta acción no se puede deshacer.</p>`;
     
@@ -365,16 +359,34 @@ function confirmDeleteResidente(residente) {
             deleteButton.disabled = true;
             deleteButton.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Eliminando...';
             
-            const index = window.residentesData.findIndex(r => r._tempId === residente._tempId);
+            // Usar el índice de fila guardado
+            const sheetRowIndex = residente._sheetRowIndex;
             
-            if (index !== -1) {
-                await sheetsAPI.deleteRow(CONFIG.SHEETS.RESIDENTES, index + 2);
-                modal.hide();
-                await initResidentesModule(document.getElementById('module-container'));
-            } else {
-                throw new Error('No se encontró el residente en los datos locales. La lista puede estar desactualizada.');
-            }
+            console.log('🗑️ Eliminando residente de la fila:', sheetRowIndex);
+            
+            await sheetsAPI.deleteRow(CONFIG.SHEETS.RESIDENTES, sheetRowIndex);
+            
+            modal.hide();
+            
+            // Mostrar mensaje de éxito
+            const toast = document.createElement('div');
+            toast.className = 'toast align-items-center text-white bg-success border-0 position-fixed top-0 end-0 m-3';
+            toast.style.zIndex = '9999';
+            toast.innerHTML = `
+                <div class="d-flex">
+                    <div class="toast-body">
+                        Residente eliminado exitosamente
+                    </div>
+                    <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+                </div>
+            `;
+            document.body.appendChild(toast);
+            const bsToast = new bootstrap.Toast(toast);
+            bsToast.show();
+            
+            await initResidentesModule(document.getElementById('module-container'));
         } catch (error) {
+            console.error('❌ Error al eliminar residente:', error);
             showDetailedError('Error al eliminar residente', error);
             deleteButton.disabled = false;
             deleteButton.innerHTML = '<i class="fas fa-trash"></i> Eliminar';
@@ -396,7 +408,12 @@ function filterResidentes() {
             if (valor === null || typeof valor === 'undefined') {
                 return false;
             }
-            if (typeof valor === 'number' && residente._tempId === valor) {
+            // Ignorar campos internos que empiecen con _
+            if (typeof valor === 'string' && valor.startsWith('_')) {
+                return false;
+            }
+            // Ignorar índices de fila
+            if (typeof valor === 'number' && (valor === residente._sheetRowIndex)) {
                 return false;
             }
             return String(valor).toLowerCase().includes(searchText);
@@ -422,9 +439,9 @@ function updateResidentesTable(residentes) {
     
     const rowActions = (item, index) => `
         <div class="btn-group btn-group-sm" role="group">
-            <button type="button" class="btn btn-outline-primary btn-view" data-index="${index}" title="Ver Detalles"><i class="fas fa-eye"></i></button>
-            <button type="button" class="btn btn-outline-secondary btn-edit" data-index="${index}" title="Editar"><i class="fas fa-edit"></i></button>
-            <button type="button" class="btn btn-outline-danger btn-delete" data-index="${index}" title="Eliminar"><i class="fas fa-trash"></i></button>
+            <button type="button" class="btn btn-outline-primary btn-view" data-unique-id="${item._uniqueId}" title="Ver Detalles"><i class="fas fa-eye"></i></button>
+            <button type="button" class="btn btn-outline-secondary btn-edit" data-unique-id="${item._uniqueId}" title="Editar"><i class="fas fa-edit"></i></button>
+            <button type="button" class="btn btn-outline-danger btn-delete" data-unique-id="${item._uniqueId}" title="Eliminar"><i class="fas fa-trash"></i></button>
         </div>`;
         
     const table = createDataTable(residentes, columns, rowActions);
