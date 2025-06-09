@@ -174,7 +174,6 @@ async function checkAndCreateSheets() {
                 let headers = [];
                 switch (key) {
                     case 'RESIDENTES':
-                        // Eliminado campo ID que causaba duplicados
                         headers = ['Nombre', 'Rut', 'Direccion', 'Email', 'Telefono', 'Numero Parcela', 'Estado', 'Valor Gasto Comun'];
                         break;
                     case 'GASTOS_COMUNES':
