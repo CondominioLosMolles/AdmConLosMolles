@@ -1,9 +1,8 @@
 /**
- * CondoAdmin - Módulo de Residentes (Versión con corrección final para edición)
+ * CondoAdmin - Módulo de Residentes (Versión final con corrección de edición y eliminación)
  */
 
 let originalResidentesData = [];
-let residenteHeaders = [];
 
 async function initResidentesModule(container) {
     console.log("🚀 Inicializando módulo de residentes...");
@@ -15,12 +14,7 @@ async function initResidentesModule(container) {
             </div>
         `;
 
-        const [residentes, headers] = await Promise.all([
-            sheetsAPI.getSheetData(CONFIG.SHEETS.RESIDENTES),
-            sheetsAPI.getSheetHeaders(CONFIG.SHEETS.RESIDENTES)
-        ]);
-
-        residenteHeaders = headers;
+        const residentes = await sheetsAPI.getSheetData(CONFIG.SHEETS.RESIDENTES);
         
         originalResidentesData = residentes.map((residente, index) => {
             return { ...residente, SHEET_ROW_INDEX: index + 2 };
@@ -36,9 +30,7 @@ async function initResidentesModule(container) {
 }
 
 function renderResidentesUI(container, residentes) {
-    const content = document.createElement("div");
-    
-    content.innerHTML = `
+    container.innerHTML = `
         <div class="d-flex justify-content-between align-items-center mb-4">
             <h2>Gestión de Residentes</h2>
             <button id="add-residente-btn" class="btn btn-primary shadow-sm"><i class="fas fa-plus me-2"></i> Nuevo Residente</button>
@@ -54,9 +46,6 @@ function renderResidentesUI(container, residentes) {
         <div id="residentes-table-container"></div>
     `;
     
-    container.innerHTML = "";
-    container.appendChild(content);
-    
     document.getElementById('add-residente-btn').addEventListener('click', () => showResidenteForm());
     document.getElementById('search-residente').addEventListener('keyup', filterResidentes);
     document.getElementById('export-residentes-btn').addEventListener('click', () => exportResidentes(originalResidentesData));
@@ -66,16 +55,8 @@ function renderResidentesUI(container, residentes) {
 
 function updateResidentesTable(residentes) {
     const tableContainer = document.getElementById("residentes-table-container");
-    if (!tableContainer) return;
 
-    if (residentes.length === 0 && residenteHeaders.length > 0) {
-        tableContainer.innerHTML = `<div class="alert alert-info mt-4"><i class="fas fa-info-circle me-2"></i>No se encontraron residentes.</div>`;
-        return;
-    }
-
-    // *** INICIO DE LA CORRECCIÓN ***
-    // Se revierte a una definición de columnas explícita y estable.
-    // Esto asegura que no haya efectos secundarios al pasar los datos.
+    // Definición explícita de las columnas para la tabla.
     const columns = [
         { field: "Nombre", title: "Nombre Completo" },
         { field: "Rut", title: "RUT" },
@@ -87,17 +68,16 @@ function updateResidentesTable(residentes) {
             return `<span class="badge ${classMap[value] || 'bg-secondary'}">${value || "No definido"}</span>`;
         }}
     ];
-    // *** FIN DE LA CORRECCIÓN ***
     
     const rowActions = (item) => `
-        <div class="btn-group btn-group-sm">
+        <div class="btn-group btn-group-sm" role="group">
             <button class="btn btn-outline-primary btn-edit" data-rut="${item.Rut}" title="Editar"><i class="fas fa-edit"></i></button>
             <button class="btn btn-outline-danger btn-delete" data-rut="${item.Rut}" title="Eliminar"><i class="fas fa-trash"></i></button>
         </div>
     `;
 
     const dataTable = createDataTable(residentes, columns, rowActions);
-    const card = createCard("", dataTable);
+    const card = createCard("Listado de Residentes", dataTable);
     tableContainer.innerHTML = "";
     tableContainer.appendChild(card);
     setupActionButtons(residentes);
@@ -119,17 +99,27 @@ function showResidenteForm(residente = null) {
         { id: "valor_gasto_comun", label: "Valor Gasto Común ($)", type: "number", required: true }
     ];
 
-    // Esta parte está correcta y llena el formulario con los datos del residente
-    const formValues = isEditing ? {
-        nombre: residente.Nombre || "", rut: residente.Rut || "", direccion: residente.Direccion || "",
-        email: residente.Email || "", telefono: residente.Telefono || "", numero_parcela: residente.Numero_Parcela || "",
-        estado: residente.Estado || "Activo", valor_gasto_comun: residente.Valor_Gasto_Comun || "0"
-    } : { estado: "Activo", valor_gasto_comun: "0" };
+    // *** INICIO DE LA CORRECIÓN PARA EDITAR ***
+    // Se asegura que todos los campos se lean correctamente del objeto 'residente'.
+    const formValues = {};
+    if (isEditing) {
+        formValues.nombre = residente.Nombre || "";
+        formValues.rut = residente.Rut || "";
+        formValues.direccion = residente.Direccion || "";
+        formValues.email = residente.Email || "";
+        formValues.telefono = residente.Telefono || "";
+        formValues.numero_parcela = residente.Numero_Parcela || "";
+        formValues.estado = residente.Estado || "Activo";
+        formValues.valor_gasto_comun = residente.Valor_Gasto_Comun || "0";
+    } else {
+        formValues.estado = "Activo";
+        formValues.valor_gasto_comun = "0";
+    }
+    // *** FIN DE LA CORRECCIÓN PARA EDITAR ***
 
     const form = createForm(fields, formValues, async (formData) => {
         const modal = bootstrap.Modal.getInstance(form.closest('.modal'));
         try {
-            // Esta parte también está correcta y guarda los datos en el orden correcto
             const rowData = [
                 formData.nombre, formData.rut, formData.direccion, formData.email,
                 formData.telefono, formData.numero_parcela, formData.estado, formData.valor_gasto_comun
@@ -160,26 +150,36 @@ function setupActionButtons(residentes) {
             const rut = e.currentTarget.getAttribute("data-rut");
             const residente = residentes.find(r => r.Rut === rut);
             if (!residente) return;
-            if (e.currentTarget.classList.contains("btn-edit")) showResidenteForm(residente);
-            else if (e.currentTarget.classList.contains("btn-delete")) confirmDeleteResidente(residente);
+            if (e.currentTarget.classList.contains("btn-edit")) {
+                showResidenteForm(residente);
+            } else if (e.currentTarget.classList.contains("btn-delete")) {
+                confirmDeleteResidente(residente);
+            }
         });
     });
 }
 
 function confirmDeleteResidente(residente) {
     const modalContent = `<p>¿Está seguro de que desea eliminar a <strong>${residente.Nombre}</strong> (RUT: ${residente.Rut})?</p><p class="text-danger"><i class="fas fa-exclamation-triangle me-2"></i>Esta acción no se puede deshacer.</p>`;
+    
+    // Ahora esta función llamará al nuevo createModal que sí funciona
     createModal("Confirmar Eliminación", modalContent, "md", [
         { label: 'Cancelar', className: 'btn-secondary', dismiss: true },
-        { label: 'Eliminar', className: 'btn-danger', onClick: async (modal) => {
-            try {
-                await sheetsAPI.deleteRow(CONFIG.SHEETS.RESIDENTES, residente.SHEET_ROW_INDEX);
-                showToast("Residente eliminado.", "success");
-                modal.hide();
-                await initResidentesModule(document.getElementById("module-container"));
-            } catch (error) {
-                showDetailedError("Error al Eliminar Residente", error);
+        { 
+            label: 'Eliminar', 
+            className: 'btn-danger', 
+            onClick: async (modal) => {
+                try {
+                    await sheetsAPI.deleteRow(CONFIG.SHEETS.RESIDENTES, residente.SHEET_ROW_INDEX);
+                    showToast("Residente eliminado.", "success");
+                    modal.hide();
+                    await initResidentesModule(document.getElementById("module-container"));
+                } catch (error) {
+                    modal.hide();
+                    showDetailedError("Error al Eliminar Residente", error);
+                }
             }
-        }}
+        }
     ]).show();
 }
 
@@ -192,14 +192,11 @@ function filterResidentes() {
 }
 
 function exportResidentes(residentes) {
+    const headers = ["Nombre", "Rut", "Direccion", "Email", "Telefono", "Numero_Parcela", "Estado", "Valor_Gasto_Comun"];
     try {
-        if (residenteHeaders.length === 0) {
-            showToast("No hay datos para exportar.", "warning");
-            return;
-        }
-        let csvContent = "data:text/csv;charset=utf-8," + residenteHeaders.join(",") + "\n";
+        let csvContent = "data:text/csv;charset=utf-8," + headers.join(",") + "\n";
         residentes.forEach(residente => {
-            const row = residenteHeaders.map(header => `"${String(residente[header] || "").replace(/"/g, '""')}"`);
+            const row = headers.map(header => `"${String(residente[header] || "").replace(/"/g, '""')}"`);
             csvContent += row.join(",") + "\n";
         });
         const encodedUri = encodeURI(csvContent);
