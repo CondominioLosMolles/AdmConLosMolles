@@ -1,6 +1,6 @@
 /**
  * CondoAdmin - Sistema de Administración de Condominios
- * Controlador de la interfaz de usuario (Versión completa y corregida)
+ * Controlador de la interfaz de usuario (Versión final corregida)
  */
 
 function createDataTable(data, columns, rowActions = null) {
@@ -211,6 +211,7 @@ function createModal(title, content, size = '', actions = []) {
     };
 }
 
+// *** FUNCIÓN CORREGIDA ***
 function createCard(title, content) {
     const card = document.createElement('div');
     card.className = 'card shadow-sm mb-4';
@@ -223,15 +224,16 @@ function createCard(title, content) {
     }
     
     const cardBody = document.createElement('div');
-    if (typeof content !== 'string' && content.querySelector('.table')) {
-        cardBody.className = 'card-body p-0';
-    } else {
-        cardBody.className = 'card-body';
-    }
-
+    cardBody.className = 'card-body';
+    
+    // La lógica anterior era incorrecta. Esta es la forma segura.
     if (typeof content === 'string') {
         cardBody.innerHTML = content;
     } else {
+        // Si el contenido es un elemento (como una tabla), se le quita el padding al card-body.
+        if (content.querySelector && content.querySelector('.table')) {
+            cardBody.classList.add('p-0');
+        }
         cardBody.appendChild(content);
     }
     
