@@ -1,5 +1,5 @@
 /**
- * CondoAdmin - Módulo de Residentes (Versión con corrección de API y eficiencia)
+ * CondoAdmin - Módulo de Residentes (Versión con corrección final de guardado)
  */
 
 let originalResidentesData = [];
@@ -15,13 +15,11 @@ async function initResidentesModule(container) {
             </div>
         `;
 
-        // Hacemos las dos llamadas a la API en paralelo para más eficiencia
         const [residentes, headers] = await Promise.all([
             sheetsAPI.getSheetData(CONFIG.SHEETS.RESIDENTES),
             sheetsAPI.getSheetHeaders(CONFIG.SHEETS.RESIDENTES)
         ]);
 
-        // Guardamos las columnas en nuestra variable global para no pedirlas de nuevo
         residenteHeaders = headers;
         
         originalResidentesData = residentes.map((residente, index) => {
@@ -79,6 +77,8 @@ function updateResidentesTable(residentes) {
         { field: "Nombre", title: "Nombre Completo" },
         { field: "Rut", title: "RUT" },
         { field: "Numero_Parcela", title: "Nº Parcela", formatter: (value) => `<span class="badge bg-secondary">${value || "N/A"}</span>` },
+        { field: "Email", title: "Email" },
+        { field: "Telefono", title: "Teléfono" },
         { field: "Estado", title: "Estado", formatter: (value) => {
             const classMap = { "Activo": "bg-success", "Inactivo": "bg-danger", "Moroso": "bg-warning text-dark" };
             return `<span class="badge ${classMap[value] || 'bg-secondary'}">${value || "No definido"}</span>`;
@@ -124,20 +124,25 @@ function showResidenteForm(residente = null) {
     const form = createForm(fields, formValues, async (formData) => {
         const modal = bootstrap.Modal.getInstance(form.closest('.modal'));
         try {
-            // *** INICIO DE LA CORRECCIÓN ***
-            // Ya no llamamos a la API aquí. Usamos la variable 'residenteHeaders' que cargamos al inicio.
             if (residenteHeaders.length === 0) {
                 throw new Error("No se han podido cargar las columnas de la hoja. No se puede guardar.");
             }
 
-            // Mapeo de los campos del formulario a los nombres de las columnas
+            // *** INICIO DE LA CORRECCIÓN ***
+            // Mapeo de los campos del formulario a los nombres de las columnas en el orden correcto.
             const dataMap = {
                 ID: isEditing ? residente.ID : generateUniqueId(),
-                Nombre: formData.nombre, Rut: formData.rut, Direccion: formData.direccion,
-                Email: formData.email, Telefono: formData.telefono, Numero_Parcela: formData.numero_parcela,
-                Estado: formData.estado, Valor_Gasto_Comun: formData.valor_gasto_comun
+                Nombre: formData.nombre,
+                Rut: formData.rut,
+                Direccion: formData.direccion,
+                Email: formData.email,
+                Telefono: formData.telefono,
+                Numero_Parcela: formData.numero_parcela,
+                Estado: formData.estado,
+                Valor_Gasto_Comun: formData.valor_gasto_comun
             };
 
+            // Se construye el array 'rowData' respetando el orden exacto de las columnas de la hoja.
             const rowData = residenteHeaders.map(header => dataMap[header] !== undefined ? dataMap[header] : "");
             // *** FIN DE LA CORRECCIÓN ***
 
