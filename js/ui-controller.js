@@ -3,13 +3,6 @@
  * Controlador de la interfaz de usuario (Versión completa y corregida)
  */
 
-/**
- * Crea una tabla de datos a partir de un array de objetos.
- * @param {Array} data - El array de datos.
- * @param {Array} columns - La configuración de las columnas.
- * @param {Function} rowActions - Función que genera los botones de acción para cada fila.
- * @returns {HTMLElement} El elemento de la tabla.
- */
 function createDataTable(data, columns, rowActions = null) {
     const tableContainer = document.createElement('div');
     tableContainer.className = 'table-responsive';
@@ -28,7 +21,7 @@ function createDataTable(data, columns, rowActions = null) {
     if (rowActions) {
         const actionsHeader = document.createElement('th');
         actionsHeader.textContent = 'Acciones';
-        actionsHeader.style.width = '1%'; // Evita que la columna de acciones sea muy ancha
+        actionsHeader.style.width = '1%'; 
         headerRow.appendChild(actionsHeader);
     }
     
@@ -50,7 +43,7 @@ function createDataTable(data, columns, rowActions = null) {
         
         if (rowActions) {
             const actionsTd = document.createElement('td');
-            actionsTd.className = 'text-nowrap'; // Evita que los botones se partan en dos líneas
+            actionsTd.className = 'text-nowrap';
             actionsTd.innerHTML = rowActions(item, index);
             row.appendChild(actionsTd);
         }
@@ -62,13 +55,6 @@ function createDataTable(data, columns, rowActions = null) {
     return tableContainer;
 }
 
-/**
- * Crea un formulario a partir de una definición de campos.
- * @param {Array} fields - Array con la configuración de los campos.
- * @param {Object} values - Valores iniciales para los campos.
- * @param {Function} onSubmit - Callback que se ejecuta al enviar el formulario.
- * @returns {HTMLElement} El elemento del formulario.
- */
 function createForm(fields, values = {}, onSubmit) {
     const form = document.createElement('form');
     form.noValidate = true;
@@ -156,14 +142,6 @@ function createForm(fields, values = {}, onSubmit) {
     return form;
 }
 
-/**
- * Crea un modal con soporte para botones de acción en el pie de página.
- * @param {string} title - Título del modal.
- * @param {HTMLElement|string} content - Contenido del modal.
- * @param {string} size - Tamaño del modal ('sm', 'lg', 'xl').
- * @param {Array} actions - Array de objetos para los botones de acción.
- * @returns {Object} Objeto con el elemento modal y métodos para mostrar/ocultar.
- */
 function createModal(title, content, size = '', actions = []) {
     const modalContainer = document.createElement('div');
     modalContainer.className = 'modal fade';
@@ -221,7 +199,9 @@ function createModal(title, content, size = '', actions = []) {
     }
 
     modalContainer.addEventListener('hidden.bs.modal', () => {
-        document.body.removeChild(modalContainer);
+        if (document.body.contains(modalContainer)) {
+            document.body.removeChild(modalContainer);
+        }
     });
 
     return {
@@ -231,12 +211,6 @@ function createModal(title, content, size = '', actions = []) {
     };
 }
 
-/**
- * Crea un elemento de tarjeta (Card) de Bootstrap.
- * @param {string} title - El título de la tarjeta. Puede ser vacío.
- * @param {HTMLElement|string} content - El contenido para el cuerpo de la tarjeta.
- * @returns {HTMLElement} El elemento de la tarjeta.
- */
 function createCard(title, content) {
     const card = document.createElement('div');
     card.className = 'card shadow-sm mb-4';
@@ -249,7 +223,6 @@ function createCard(title, content) {
     }
     
     const cardBody = document.createElement('div');
-    // Si el contenido es una tabla, no añadir padding para que se vea bien.
     if (typeof content !== 'string' && content.querySelector('.table')) {
         cardBody.className = 'card-body p-0';
     } else {
