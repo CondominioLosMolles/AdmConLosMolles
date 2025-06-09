@@ -2,7 +2,7 @@
  * Módulo de Gastos Comunes
  */
 
-async function initGastosComunesModule(container) {
+async function initGastoscomunesModule(container) {
     console.log("🚀 Inicializando módulo de Gastos Comunes...");
     try {
         if (typeof sheetsAPI === "undefined") throw new Error("sheetsAPI no está disponible");
@@ -294,4 +294,3 @@ function parseDate(dateString) {
     const parts = dateString.split('/');
     return new Date(parts[2], parts[1] - 1, parts[0]);
 }
-
