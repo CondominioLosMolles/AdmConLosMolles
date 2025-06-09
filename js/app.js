@@ -51,7 +51,6 @@ let currentModule = 'dashboard';
  */
 function initApp() {
     console.log('🚀 Inicializando CondoAdmin...');
-    
     try {
         // Configurar eventos de navegación
         setupNavigation();
@@ -76,22 +75,16 @@ function initApp() {
  * Configura los eventos de navegación
  */
 function setupNavigation() {
-    console.log('🎛️ Configurando navegación...');
-    
     const menuLinks = document.querySelectorAll('#main-menu .nav-link');
     menuLinks.forEach(link => {
         link.addEventListener('click', (event) => {
             event.preventDefault();
-            // Obtener el módulo a cargar
             const module = link.getAttribute('data-module');
-            // Actualizar la URL con el hash
             window.location.hash = module;
-            // Cargar el módulo
             loadModule(module);
         });
     });
 
-    // Manejar cambios en el hash de la URL
     window.addEventListener('hashchange', () => {
         const hash = window.location.hash.substring(1);
         if (hash && MODULES[hash]) {
@@ -99,7 +92,6 @@ function setupNavigation() {
         }
     });
 
-    // Cargar el módulo inicial basado en el hash de la URL
     const initialHash = window.location.hash.substring(1);
     if (initialHash && MODULES[initialHash]) {
         currentModule = initialHash;
@@ -116,12 +108,9 @@ function loadModule(moduleName) {
         return;
     }
 
-    // Actualizar la navegación
     updateNavigation(moduleName);
-    // Actualizar el módulo actual
     currentModule = moduleName;
 
-    // Mostrar el indicador de carga
     const moduleContainer = document.getElementById('module-container');
     moduleContainer.innerHTML = `
         <div class="d-flex justify-content-center my-5">
@@ -131,13 +120,9 @@ function loadModule(moduleName) {
         </div>
     `;
 
-    // Cargar el módulo
     try {
-        // Verificar si existe la función de inicialización del módulo
         const initFunction = window[`init${moduleName.charAt(0).toUpperCase() + moduleName.slice(1)}Module`];
-        
         if (typeof initFunction === 'function') {
-            // Llamar a la función de inicialización del módulo
             initFunction(moduleContainer);
         } else {
             console.warn(`⚠️ Función de inicialización para "${moduleName}" no encontrada`);
@@ -164,8 +149,6 @@ function loadModule(moduleName) {
  * @param {string} activeModule - Nombre del módulo activo
  */
 function updateNavigation(activeModule) {
-    console.log(`🧭 Actualizando navegación. Módulo activo: ${activeModule}`);
-    
     const menuLinks = document.querySelectorAll('#main-menu .nav-link');
     menuLinks.forEach(link => {
         const module = link.getAttribute('data-module');
@@ -181,22 +164,16 @@ function updateNavigation(activeModule) {
  * Verifica y crea las hojas necesarias en Google Sheets
  */
 async function checkAndCreateSheets() {
-    console.log('📁 Verificando hojas de Google Sheets...');
-    
     try {
-        // Verificar si existen las hojas necesarias
         for (const [key, sheetName] of Object.entries(CONFIG.SHEETS)) {
             const exists = await sheetsAPI.sheetExists(sheetName);
-            
             if (!exists) {
                 console.log(`📝 Creando hoja "${sheetName}"...`);
                 
                 // Definir los encabezados según el tipo de hoja
                 let headers = [];
-                
                 switch (key) {
                     case 'RESIDENTES':
-                        // Eliminado campo ID que causaba duplicados
                         headers = ['Nombre', 'Rut', 'Direccion', 'Email', 'Telefono', 'Numero Parcela', 'Estado', 'Valor Gasto Comun'];
                         break;
                     case 'GASTOS_COMUNES':
@@ -223,13 +200,10 @@ async function checkAndCreateSheets() {
                     default:
                         headers = ['Nombre', 'Descripcion'];
                 }
-                
-                // Crear la hoja con los encabezados correctos
                 await sheetsAPI.createSheet(sheetName, headers);
                 console.log(`✅ Hoja "${sheetName}" creada con encabezados:`, headers);
             }
         }
-        
         console.log('✅ Verificación de hojas completada');
     } catch (error) {
         console.error('❌ Error al verificar/crear hojas:', error);
@@ -264,5 +238,5 @@ function formatDate(date) {
  * @returns {string} - Monto formateado
  */
 function formatCurrency(amount) {
-    return CONFIG.APP.CURRENCY + amount.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+    return CONFIG.APP.CURRENCY + amount.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
 }
