@@ -1,120 +1,75 @@
 /**
- * CondoAdmin - Módulo de Residentes (Versión final con corrección de renderizado)
+ * CondoAdmin - Módulo de Residentes (Versión final con estructura de datos fija)
  */
 
+// Se define una constante con las columnas EXACTAS de la hoja de Residentes.
+// Esta es nuestra única "fuente de la verdad" y elimina la inestabilidad.
+const RESIDENTE_HEADERS = ["Nombre", "Rut", "Direccion", "Email", "Telefono", "Numero_Parcela", "Estado", "Valor_Gasto_Comun"];
+
 let originalResidentesData = [];
-let residenteHeaders = [];
 
 async function initResidentesModule(container) {
-    console.log("🚀 Inicializando módulo de residentes...");
+    console.log("🚀 Inicializando módulo de residentes (versión estable)...");
     try {
-        container.innerHTML = `
-            <div class="d-flex justify-content-center align-items-center my-5">
-                <div class="spinner-border text-primary" role="status"></div>
-                <p class="ms-3">Cargando datos de residentes...</p>
-            </div>
-        `;
+        container.innerHTML = `<div class="d-flex justify-content-center align-items-center my-5"><div class="spinner-border text-primary" role="status"></div><p class="ms-3">Cargando datos de residentes...</p></div>`;
 
-        const [residentes, headers] = await Promise.all([
-            sheetsAPI.getSheetData(CONFIG.SHEETS.RESIDENTES),
-            sheetsAPI.getSheetHeaders(CONFIG.SHEETS.RESIDENTES)
-        ]);
-
-        residenteHeaders = headers || [];
+        const residentes = await sheetsAPI.getSheetData(CONFIG.SHEETS.RESIDENTES);
         
         originalResidentesData = residentes.map((residente, index) => {
             return { ...residente, SHEET_ROW_INDEX: index + 2 };
         });
 
-        renderResidentesUI(container, originalResidentesData, residenteHeaders);
+        renderResidentesUI(container, originalResidentesData);
         console.log("✅ Módulo de residentes inicializado correctamente.");
-
     } catch (error) {
         console.error("❌ Error al inicializar módulo de residentes:", error);
         showDetailedError("Error Crítico en el Módulo de Residentes", error, container);
     }
 }
 
-// *** FUNCIÓN REESCRITA PARA MAYOR ESTABILIDAD ***
-function renderResidentesUI(container, residentes, headers) {
-    // Limpiamos el contenedor principal
-    container.innerHTML = "";
-
-    // Creamos los elementos de la UI programáticamente
-    const header = document.createElement('div');
-    header.className = 'd-flex justify-content-between align-items-center mb-4';
-    header.innerHTML = `
-        <h2>Gestión de Residentes</h2>
-        <button id="add-residente-btn" class="btn btn-primary shadow-sm"><i class="fas fa-plus me-2"></i> Nuevo Residente</button>
-    `;
-
-    const toolbar = document.createElement('div');
-    toolbar.className = 'row mb-3';
-    toolbar.innerHTML = `
-        <div class="col-md-8">
-            <div class="input-group"><input type="text" id="search-residente" class="form-control" placeholder="Buscar por nombre, RUT, etc."></div>
+function renderResidentesUI(container, residentes) {
+    container.innerHTML = `
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2>Gestión de Residentes</h2>
+            <button id="add-residente-btn" class="btn btn-primary shadow-sm"><i class="fas fa-plus me-2"></i> Nuevo Residente</button>
         </div>
-        <div class="col-md-4 d-flex justify-content-end">
-            <button id="export-residentes-btn" class="btn btn-outline-success ms-2"><i class="fas fa-file-excel me-2"></i> Exportar a CSV</button>
+        <div class="row mb-3">
+            <div class="col-md-8"><div class="input-group"><input type="text" id="search-residente" class="form-control" placeholder="Buscar por nombre, RUT, etc."></div></div>
+            <div class="col-md-4 d-flex justify-content-end"><button id="export-residentes-btn" class="btn btn-outline-success ms-2"><i class="fas fa-file-excel me-2"></i> Exportar a CSV</button></div>
         </div>
-    `;
+        <div id="residentes-table-container"></div>`;
     
-    // Creamos el contenedor de la tabla y lo guardamos en una variable
-    const tableContainer = document.createElement('div');
-    tableContainer.id = 'residentes-table-container';
-
-    // Añadimos todos los elementos creados al contenedor principal
-    container.appendChild(header);
-    container.appendChild(toolbar);
-    container.appendChild(tableContainer);
-    
-    // Configuramos los eventos de los botones
     document.getElementById('add-residente-btn').addEventListener('click', () => showResidenteForm());
-    document.getElementById('search-residente').addEventListener('keyup', filterResidentes);
+    document.getElementById('search-residente').addEventListener('keyup', () => filterResidentes(originalResidentesData));
     document.getElementById('export-residentes-btn').addEventListener('click', () => exportResidentes(originalResidentesData));
 
-    // Llamamos a la función que dibuja la tabla, pasándole el contenedor que acabamos de crear
-    updateResidentesTable(residentes, headers, tableContainer);
+    updateResidentesTable(residentes);
 }
 
+function updateResidentesTable(residentes) {
+    const tableContainer = document.getElementById("residentes-table-container");
 
-// *** FUNCIÓN MODIFICADA PARA RECIBIR EL CONTENEDOR ***
-function updateResidentesTable(residentes, headers, tableContainer) {
-    if (!tableContainer) {
-        console.error("El contenedor de la tabla no fue provisto.");
-        return;
-    }
-    
-    tableContainer.innerHTML = ""; // Limpiamos el contenedor específico de la tabla
-
-    if (residentes.length === 0) {
-        tableContainer.innerHTML = `<div class="alert alert-info mt-4"><i class="fas fa-info-circle me-2"></i>No se encontraron residentes.</div>`;
-        return;
-    }
-
-    const safeHeaders = Array.isArray(headers) ? headers : [];
-
-    const columns = safeHeaders.map(header => {
-        const columnDef = { field: header, title: header };
-        if (header === "Numero_Parcela") {
-            columnDef.formatter = (value) => `<span class="badge bg-secondary">${value || "N/A"}</span>`;
-        }
-        if (header === "Estado") {
+    const columns = [
+        { field: "Nombre", title: "Nombre Completo" },
+        { field: "Rut", title: "RUT" },
+        { field: "Numero_Parcela", title: "Nº Parcela", formatter: (value) => `<span class="badge bg-secondary">${value || "N/A"}</span>` },
+        { field: "Email", title: "Email" },
+        { field: "Telefono", title: "Teléfono" },
+        { field: "Estado", title: "Estado", formatter: (value) => {
             const classMap = { "Activo": "bg-success", "Inactivo": "bg-danger", "Moroso": "bg-warning text-dark" };
-            columnDef.formatter = (value) => `<span class="badge <span class="math-inline">\{classMap\[value\] \|\| 'bg\-secondary'\}"\></span>{value || "No definido"}</span>`;
-        }
-        return columnDef;
-    });
+            return `<span class="badge ${classMap[value] || 'bg-secondary'}">${value || "No definido"}</span>`;
+        }}
+    ];
     
     const rowActions = (item) => `
         <div class="btn-group btn-group-sm" role="group">
-            <button class="btn btn-outline-primary btn-edit" data-rut="<span class="math-inline">\{item\.Rut\}" title\="Editar"\><i class\="fas fa\-edit"\></i\></button\>
-<button class\="btn btn\-outline\-danger btn\-delete" data\-rut\="</span>{item.Rut}" title="Eliminar"><i class="fas fa-trash"></i></button>
-        </div>
-    `;
+            <button class="btn btn-outline-primary btn-edit" data-rut="${item.Rut}" title="Editar"><i class="fas fa-edit"></i></button>
+            <button class="btn btn-outline-danger btn-delete" data-rut="${item.Rut}" title="Eliminar"><i class="fas fa-trash"></i></button>
+        </div>`;
 
     const dataTable = createDataTable(residentes, columns, rowActions);
     const card = createCard("Listado de Residentes", dataTable);
+    tableContainer.innerHTML = "";
     tableContainer.appendChild(card);
     setupActionButtons(residentes);
 }
@@ -144,6 +99,7 @@ function showResidenteForm(residente = null) {
     const form = createForm(fields, formValues, async (formData) => {
         const modal = bootstrap.Modal.getInstance(form.closest('.modal'));
         try {
+            // Se construye la fila de datos en el orden EXPLICITO de las columnas.
             const rowData = [
                 formData.nombre, formData.rut, formData.direccion, formData.email,
                 formData.telefono, formData.numero_parcela, formData.estado, formData.valor_gasto_comun
@@ -156,10 +112,8 @@ function showResidenteForm(residente = null) {
                 await sheetsAPI.appendRow(CONFIG.SHEETS.RESIDENTES, rowData);
                 showToast("Residente creado exitosamente.", "success");
             }
-
             modal.hide();
             await initResidentesModule(document.getElementById("module-container"));
-
         } catch (error) {
             showDetailedError("Error al Guardar Residente", error);
         }
@@ -208,14 +162,24 @@ function filterResidentes() {
     const filtered = originalResidentesData.filter(residente => 
         Object.values(residente).some(value => String(value).toLowerCase().includes(searchText))
     );
-    // Pasamos el contenedor y los headers guardados para que el filtrado no rompa la tabla
-    updateResidentesTable(filtered, residenteHeaders, document.getElementById('residentes-table-container'));
+    updateResidentesTable(filtered);
 }
 
 function exportResidentes(residentes) {
-    if (residenteHeaders.length === 0) {
-        showToast("No hay datos de columnas para exportar.", "warning");
-        return;
-    }
     try {
-        let csvContent = "data:
+        let csvContent = "data:text/csv;charset=utf-8," + RESIDENTE_HEADERS.join(",") + "\n";
+        residentes.forEach(residente => {
+            const row = RESIDENTE_HEADERS.map(header => `"${String(residente[header] || "").replace(/"/g, '""')}"`);
+            csvContent += row.join(",") + "\n";
+        });
+        const encodedUri = encodeURI(csvContent);
+        const link = document.createElement("a");
+        link.setAttribute("href", encodedUri);
+        link.setAttribute("download", `residentes_${new Date().toISOString().slice(0,10)}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    } catch (error) {
+        showDetailedError("Error al Exportar Datos", error);
+    }
+}
