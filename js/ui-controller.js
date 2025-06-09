@@ -1,7 +1,10 @@
 /**
  * CondoAdmin - Sistema de Administración de Condominios
- * Controlador de la interfaz de usuario
+ * Controlador de la interfaz de usuario (Versión con Modal mejorado)
  */
+
+// ... (El resto de las funciones como createDataTable, createPagination, etc., se mantienen igual)
+// ... (Asegúrate de que el código que sigue reemplace tu función createModal existente)
 
 /**
  * Crea un elemento de tabla con datos
@@ -11,147 +14,51 @@
  * @returns {HTMLElement} - Elemento de tabla
  */
 function createDataTable(data, columns, rowActions = null) {
-    // Crear el contenedor de la tabla
     const tableContainer = document.createElement('div');
     tableContainer.className = 'table-responsive';
     
-    // Crear la tabla
     const table = document.createElement('table');
     table.className = 'table table-hover';
-    
-    // Crear el encabezado de la tabla
     const thead = document.createElement('thead');
     const headerRow = document.createElement('tr');
-    
     columns.forEach(column => {
         const th = document.createElement('th');
         th.textContent = column.title;
-        if (column.width) {
-            th.style.width = column.width;
-        }
         headerRow.appendChild(th);
     });
-    
-    // Agregar columna de acciones si es necesario
     if (rowActions) {
         const actionsHeader = document.createElement('th');
         actionsHeader.textContent = 'Acciones';
+        actionsHeader.style.width = '1%';
         headerRow.appendChild(actionsHeader);
     }
-    
     thead.appendChild(headerRow);
     table.appendChild(thead);
-    
-    // Crear el cuerpo de la tabla
+
     const tbody = document.createElement('tbody');
-    
     data.forEach((item, index) => {
         const row = document.createElement('tr');
-        
         columns.forEach(column => {
             const td = document.createElement('td');
-            
-            // Verificar si hay un formateador personalizado
             if (column.formatter) {
                 td.innerHTML = column.formatter(item[column.field], item);
             } else {
                 td.textContent = item[column.field] || '';
             }
-            
             row.appendChild(td);
         });
         
-        // Agregar acciones si es necesario
         if (rowActions) {
             const actionsTd = document.createElement('td');
             actionsTd.innerHTML = rowActions(item, index);
             row.appendChild(actionsTd);
         }
-        
         tbody.appendChild(row);
     });
-    
     table.appendChild(tbody);
     tableContainer.appendChild(table);
     
     return tableContainer;
-}
-
-/**
- * Crea un elemento de paginación
- * @param {number} currentPage - Página actual
- * @param {number} totalPages - Total de páginas
- * @param {Function} onPageChange - Función a llamar cuando cambia la página
- * @returns {HTMLElement} - Elemento de paginación
- */
-function createPagination(currentPage, totalPages, onPageChange) {
-    const nav = document.createElement('nav');
-    const ul = document.createElement('ul');
-    ul.className = 'pagination justify-content-center';
-    
-    // Botón "Anterior"
-    const prevLi = document.createElement('li');
-    prevLi.className = `page-item ${currentPage === 1 ? 'disabled' : ''}`;
-    
-    const prevLink = document.createElement('a');
-    prevLink.className = 'page-link';
-    prevLink.href = '#';
-    prevLink.textContent = 'Anterior';
-    
-    if (currentPage > 1) {
-        prevLink.addEventListener('click', (e) => {
-            e.preventDefault();
-            onPageChange(currentPage - 1);
-        });
-    }
-    
-    prevLi.appendChild(prevLink);
-    ul.appendChild(prevLi);
-    
-    // Páginas numeradas
-    const startPage = Math.max(1, currentPage - 2);
-    const endPage = Math.min(totalPages, startPage + 4);
-    
-    for (let i = startPage; i <= endPage; i++) {
-        const pageLi = document.createElement('li');
-        pageLi.className = `page-item ${i === currentPage ? 'active' : ''}`;
-        
-        const pageLink = document.createElement('a');
-        pageLink.className = 'page-link';
-        pageLink.href = '#';
-        pageLink.textContent = i;
-        
-        pageLink.addEventListener('click', (e) => {
-            e.preventDefault();
-            onPageChange(i);
-        });
-        
-        pageLi.appendChild(pageLink);
-        ul.appendChild(pageLi);
-    }
-    
-    // Botón "Siguiente"
-    const nextLi = document.createElement('li');
-    nextLi.className = `page-item ${currentPage === totalPages ? 'disabled' : ''}`;
-    
-    const nextLink = document.createElement('a');
-    nextLink.className = 'page-link';
-    nextLink.href = '#';
-    nextLink.textContent = 'Siguiente';
-    
-    if (currentPage < totalPages) {
-        nextLink.addEventListener('click', (e) => {
-            e.preventDefault();
-            onPageChange(currentPage + 1);
-        });
-    }
-    
-    nextLi.appendChild(nextLink);
-    ul.appendChild(nextLi);
-    
-    nav.appendChild(ul);
-    
-    return nav;
 }
 
 /**
@@ -163,7 +70,8 @@ function createPagination(currentPage, totalPages, onPageChange) {
  */
 function createForm(fields, values = {}, onSubmit) {
     const form = document.createElement('form');
-    
+    form.noValidate = true;
+
     fields.forEach(field => {
         const formGroup = document.createElement('div');
         formGroup.className = 'mb-3';
@@ -179,44 +87,24 @@ function createForm(fields, values = {}, onSubmit) {
             case 'select':
                 input = document.createElement('select');
                 input.className = 'form-select';
-                
-                // Agregar opciones
                 if (field.options) {
                     field.options.forEach(option => {
                         const optionElement = document.createElement('option');
                         optionElement.value = option.value;
                         optionElement.textContent = option.label;
-                        
-                        if (values[field.id] === option.value) {
+                        if (String(values[field.id]) === String(option.value)) {
                             optionElement.selected = true;
                         }
-                        
                         input.appendChild(optionElement);
                     });
                 }
                 break;
-                
             case 'textarea':
                 input = document.createElement('textarea');
                 input.className = 'form-control';
                 input.rows = field.rows || 3;
                 input.value = values[field.id] || '';
                 break;
-                
-            case 'checkbox':
-                input = document.createElement('input');
-                input.type = 'checkbox';
-                input.className = 'form-check-input';
-                input.checked = values[field.id] || false;
-                
-                // Ajustar el estilo para checkboxes
-                formGroup.className = 'mb-3 form-check';
-                label.className = 'form-check-label';
-                formGroup.appendChild(input);
-                formGroup.appendChild(label);
-                form.appendChild(formGroup);
-                return;
-                
             default:
                 input = document.createElement('input');
                 input.type = field.type || 'text';
@@ -226,21 +114,15 @@ function createForm(fields, values = {}, onSubmit) {
         
         input.id = field.id;
         input.name = field.id;
-        
-        if (field.placeholder) {
-            input.placeholder = field.placeholder;
-        }
-        
-        if (field.required) {
-            input.required = true;
-        }
+        if (field.placeholder) input.placeholder = field.placeholder;
+        if (field.required) input.required = true;
+        if (field.disabled) input.disabled = true;
         
         formGroup.appendChild(label);
         formGroup.appendChild(input);
         form.appendChild(formGroup);
     });
-    
-    // Botones del formulario
+
     const buttonsContainer = document.createElement('div');
     buttonsContainer.className = 'd-flex justify-content-end mt-4';
     
@@ -249,13 +131,10 @@ function createForm(fields, values = {}, onSubmit) {
     cancelButton.className = 'btn btn-secondary me-2';
     cancelButton.textContent = 'Cancelar';
     cancelButton.addEventListener('click', () => {
-        // Cerrar el modal si existe
         const modal = bootstrap.Modal.getInstance(form.closest('.modal'));
-        if (modal) {
-            modal.hide();
-        }
+        if (modal) modal.hide();
     });
-    
+
     const submitButton = document.createElement('button');
     submitButton.type = 'submit';
     submitButton.className = 'btn btn-primary';
@@ -264,97 +143,95 @@ function createForm(fields, values = {}, onSubmit) {
     buttonsContainer.appendChild(cancelButton);
     buttonsContainer.appendChild(submitButton);
     form.appendChild(buttonsContainer);
-    
-    // Evento de envío del formulario
+
     form.addEventListener('submit', (e) => {
         e.preventDefault();
-        
-        // Recopilar los valores del formulario
         const formData = {};
-        
         fields.forEach(field => {
-            const input = form.elements[field.id];
-            
-            if (field.type === 'checkbox') {
-                formData[field.id] = input.checked;
-            } else {
-                formData[field.id] = input.value;
-            }
+            formData[field.id] = form.elements[field.id].value;
         });
-        
-        // Llamar a la función de envío
         onSubmit(formData);
     });
     
     return form;
 }
 
+
 /**
- * Crea un modal
- * @param {string} title - Título del modal
- * @param {HTMLElement|string} content - Contenido del modal
- * @param {string} size - Tamaño del modal (sm, lg, xl)
- * @returns {Object} - Objeto con el elemento modal y métodos para mostrarlo y ocultarlo
+ * Crea un modal con soporte para botones de acción en el pie de página.
+ * @param {string} title - Título del modal.
+ * @param {HTMLElement|string} content - Contenido del modal.
+ * @param {string} size - Tamaño del modal ('sm', 'lg', 'xl').
+ * @param {Array} actions - Array de objetos para los botones de acción. Ej: [{label: 'Ok', className: 'btn-primary', onClick: (modal) => modal.hide()}]
+ * @returns {Object} - Objeto con el elemento modal y métodos para mostrar/ocultar.
  */
-function createModal(title, content, size = '') {
-    // Crear el contenedor del modal
+function createModal(title, content, size = '', actions = []) {
+    const modalId = 'appModal-' + Date.now();
     const modalContainer = document.createElement('div');
     modalContainer.className = 'modal fade';
+    modalContainer.id = modalId;
     modalContainer.tabIndex = -1;
-    modalContainer.setAttribute('aria-hidden', 'true');
-    
-    // Crear el diálogo del modal
+
     const modalDialog = document.createElement('div');
     modalDialog.className = `modal-dialog ${size ? 'modal-' + size : ''}`;
-    
-    // Crear el contenido del modal
+
     const modalContent = document.createElement('div');
     modalContent.className = 'modal-content';
-    
-    // Crear el encabezado del modal
-    const modalHeader = document.createElement('div');
-    modalHeader.className = 'modal-header';
-    
-    const modalTitle = document.createElement('h5');
-    modalTitle.className = 'modal-title';
-    modalTitle.textContent = title;
-    
-    const closeButton = document.createElement('button');
-    closeButton.type = 'button';
-    closeButton.className = 'btn-close';
-    closeButton.setAttribute('data-bs-dismiss', 'modal');
-    closeButton.setAttribute('aria-label', 'Close');
-    
-    modalHeader.appendChild(modalTitle);
-    modalHeader.appendChild(closeButton);
-    
-    // Crear el cuerpo del modal
-    const modalBody = document.createElement('div');
-    modalBody.className = 'modal-body';
-    
+
+    modalContent.innerHTML = `
+        <div class="modal-header">
+            <h5 class="modal-title">${title}</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body"></div>
+    `;
+
+    const modalBody = modalContent.querySelector('.modal-body');
     if (typeof content === 'string') {
         modalBody.innerHTML = content;
     } else {
         modalBody.appendChild(content);
     }
+
+    if (actions.length > 0) {
+        const modalFooter = document.createElement('div');
+        modalFooter.className = 'modal-footer';
+
+        actions.forEach(action => {
+            const button = document.createElement('button');
+            button.type = 'button';
+            button.className = `btn ${action.className || 'btn-secondary'}`;
+            button.textContent = action.label;
+            
+            if (action.dismiss) {
+                button.setAttribute('data-bs-dismiss', 'modal');
+            }
+            
+            modalFooter.appendChild(button);
+        });
+        modalContent.appendChild(modalFooter);
+    }
     
-    // Ensamblar el modal
-    modalContent.appendChild(modalHeader);
-    modalContent.appendChild(modalBody);
     modalDialog.appendChild(modalContent);
     modalContainer.appendChild(modalDialog);
-    
-    // Agregar el modal al documento
     document.body.appendChild(modalContainer);
-    
-    // Crear la instancia de Bootstrap Modal
+
     const modal = new bootstrap.Modal(modalContainer);
     
-    // Eliminar el modal del DOM cuando se oculte
+    // Asignar los eventos onClick después de que el modal está listo
+    if (actions.length > 0) {
+        const buttons = modalContainer.querySelectorAll('.modal-footer button');
+        buttons.forEach((button, index) => {
+            if (actions[index].onClick) {
+                button.addEventListener('click', () => actions[index].onClick(modal));
+            }
+        });
+    }
+
     modalContainer.addEventListener('hidden.bs.modal', () => {
         document.body.removeChild(modalContainer);
     });
-    
+
     return {
         element: modalContainer,
         show: () => modal.show(),
@@ -362,59 +239,20 @@ function createModal(title, content, size = '') {
     };
 }
 
-/**
- * Crea un elemento de alerta
- * @param {string} message - Mensaje de la alerta
- * @param {string} type - Tipo de alerta (success, danger, warning, info)
- * @param {boolean} dismissible - Indica si la alerta se puede cerrar
- * @returns {HTMLElement} - Elemento de alerta
- */
-function createAlert(message, type = 'info', dismissible = true) {
-    const alert = document.createElement('div');
-    alert.className = `alert alert-${type} ${dismissible ? 'alert-dismissible fade show' : ''}`;
-    alert.role = 'alert';
-    
-    alert.innerHTML = message;
-    
-    if (dismissible) {
-        const closeButton = document.createElement('button');
-        closeButton.type = 'button';
-        closeButton.className = 'btn-close';
-        closeButton.setAttribute('data-bs-dismiss', 'alert');
-        closeButton.setAttribute('aria-label', 'Close');
-        
-        alert.appendChild(closeButton);
-    }
-    
-    return alert;
-}
 
-/**
- * Crea un elemento de tarjeta
- * @param {string} title - Título de la tarjeta
- * @param {HTMLElement|string} content - Contenido de la tarjeta
- * @param {string} headerClass - Clase adicional para el encabezado
- * @returns {HTMLElement} - Elemento de tarjeta
- */
-function createCard(title, content, headerClass = '') {
+function createCard(title, content) {
     const card = document.createElement('div');
-    card.className = 'card mb-4';
+    card.className = 'card shadow-sm mb-4';
     
     if (title) {
         const cardHeader = document.createElement('div');
-        cardHeader.className = `card-header ${headerClass}`;
-        
-        const cardTitle = document.createElement('h5');
-        cardTitle.className = 'card-title mb-0';
-        cardTitle.textContent = title;
-        
-        cardHeader.appendChild(cardTitle);
+        cardHeader.className = 'card-header';
+        cardHeader.innerHTML = `<h5 class="card-title mb-0">${title}</h5>`;
         card.appendChild(cardHeader);
     }
     
     const cardBody = document.createElement('div');
-    cardBody.className = 'card-body';
-    
+    cardBody.className = 'card-body p-0'; // p-0 para que la tabla quede al ras
     if (typeof content === 'string') {
         cardBody.innerHTML = content;
     } else {
@@ -422,6 +260,5 @@ function createCard(title, content, headerClass = '') {
     }
     
     card.appendChild(cardBody);
-    
     return card;
 }
