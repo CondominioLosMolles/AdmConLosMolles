@@ -1,283 +1,184 @@
 /**
- * CondoAdminLosMolles - Sistema de Administración de Condominios
- * Módulo de Dashboard
+ * CondoAdmin - Módulo de Dashboard (Versión Corregida y Funcional)
  */
 
-/**
- * Inicializa el módulo de Dashboard
- * @param {HTMLElement} container - Contenedor donde se renderizará el módulo
- */
 async function initDashboardModule(container) {
+    console.log("🚀 Inicializando módulo de Dashboard...");
+    container.innerHTML = `
+        <div class="d-flex justify-content-center align-items-center my-5">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Cargando...</span>
+            </div>
+            <p class="ms-3">Cargando el panel principal...</p>
+        </div>
+    `;
+
     try {
-        // Obtener datos para el dashboard
-        const residentes = await sheetsAPI.getSheetData(CONFIG.SHEETS.RESIDENTES);
-        const gastos = await sheetsAPI.getSheetData(CONFIG.SHEETS.GASTOS);
-        const pagos = await sheetsAPI.getSheetData(CONFIG.SHEETS.PAGOS);
-        const mantenciones = await sheetsAPI.getSheetData(CONFIG.SHEETS.MANTENCIONES);
+        // Cargar todos los datos necesarios en paralelo para mayor eficiencia
+        const [residentes, gastos, pagos, mantenciones] = await Promise.all([
+            sheetsAPI.getSheetData(CONFIG.SHEETS.RESIDENTES),
+            sheetsAPI.getSheetData(CONFIG.SHEETS.GASTOS),
+            sheetsAPI.getSheetData(CONFIG.SHEETS.PAGOS),
+            sheetsAPI.getSheetData(CONFIG.SHEETS.MANTENCIONES)
+        ]);
+
+        // Calcular estadísticas clave
+        const stats = calculateDashboardStats(residentes, pagos, gastos, mantenciones);
         
-        // Calcular estadísticas
-        const totalResidentes = residentes.length;
-        
-        const totalIngresos = pagos.reduce((sum, pago) => {
-            return sum + (parseFloat(pago.Monto) || 0);
-        }, 0);
-        
-        const totalGastos = gastos.reduce((sum, gasto) => {
-            return sum + (parseFloat(gasto.Monto) || 0);
-        }, 0);
-        
-        const saldoActual = totalIngresos - totalGastos;
-        
-        const mantencionesUrgentes = mantenciones.filter(m => m.Estado === 'Urgente').length;
-        const mantencionesPendientes = mantenciones.filter(m => m.Estado === 'Pendiente' || m.Estado === 'Programada').length;
-        
-        // Crear el contenido del dashboard
-        const content = document.createElement('div');
-        
-        // Título del dashboard
-        const header = document.createElement('div');
-        header.className = 'd-flex justify-content-between align-items-center mb-4';
-        
-        const title = document.createElement('h2');
-        title.textContent = 'Dashboard';
-        
-        const refreshButton = document.createElement('button');
-        refreshButton.className = 'btn btn-outline-primary';
-        refreshButton.innerHTML = '<i class="fas fa-sync-alt"></i> Actualizar';
-        refreshButton.addEventListener('click', () => {
-            initDashboardModule(container);
-        });
-        
-        header.appendChild(title);
-        header.appendChild(refreshButton);
-        content.appendChild(header);
-        
-        // Tarjetas de estadísticas
-        const statsRow = document.createElement('div');
-        statsRow.className = 'row mb-4';
-        
-        // Tarjeta de residentes
-        const residentesCard = document.createElement('div');
-        residentesCard.className = 'col-md-3';
-        residentesCard.innerHTML = `
-            <div class="stat-card bg-primary text-white">
-                <div class="d-flex justify-content-between align-items-center">
-                    <div>
-                        <div class="stat-value">${totalResidentes}</div>
-                        <div class="stat-label">Residentes</div>
-                    </div>
-                    <div>
-                        <i class="fas fa-users fa-2x"></i>
-                    </div>
-                </div>
-            </div>
-        `;
-        statsRow.appendChild(residentesCard);
-        
-        // Tarjeta de ingresos
-        const ingresosCard = document.createElement('div');
-        ingresosCard.className = 'col-md-3';
-        ingresosCard.innerHTML = `
-            <div class="stat-card bg-success text-white">
-                <div class="d-flex justify-content-between align-items-center">
-                    <div>
-                        <div class="stat-value">${formatCurrency(totalIngresos)}</div>
-                        <div class="stat-label">Ingresos</div>
-                    </div>
-                    <div>
-                        <i class="fas fa-arrow-up fa-2x"></i>
-                    </div>
-                </div>
-            </div>
-        `;
-        statsRow.appendChild(ingresosCard);
-        
-        // Tarjeta de gastos
-        const gastosCard = document.createElement('div');
-        gastosCard.className = 'col-md-3';
-        gastosCard.innerHTML = `
-            <div class="stat-card bg-danger text-white">
-                <div class="d-flex justify-content-between align-items-center">
-                    <div>
-                        <div class="stat-value">${formatCurrency(totalGastos)}</div>
-                        <div class="stat-label">Gastos</div>
-                    </div>
-                    <div>
-                        <i class="fas fa-arrow-down fa-2x"></i>
-                    </div>
-                </div>
-            </div>
-        `;
-        statsRow.appendChild(gastosCard);
-        
-        // Tarjeta de saldo
-        const saldoCard = document.createElement('div');
-        saldoCard.className = 'col-md-3';
-        saldoCard.innerHTML = `
-            <div class="stat-card bg-info text-white">
-                <div class="d-flex justify-content-between align-items-center">
-                    <div>
-                        <div class="stat-value">${formatCurrency(saldoActual)}</div>
-                        <div class="stat-label">Saldo</div>
-                    </div>
-                    <div>
-                        <i class="fas fa-wallet fa-2x"></i>
-                    </div>
-                </div>
-            </div>
-        `;
-        statsRow.appendChild(saldoCard);
-        
-        content.appendChild(statsRow);
-        
-        // Gráfico de ingresos vs gastos
-        const chartRow = document.createElement('div');
-        chartRow.className = 'row mb-4';
-        
-        const chartCol = document.createElement('div');
-        chartCol.className = 'col-md-8';
-        
-        const chartCard = createCard('Ingresos vs Gastos', '<div class="chart-container"><canvas id="incomeExpenseChart"></canvas></div>');
-        chartCol.appendChild(chartCard);
-        chartRow.appendChild(chartCol);
-        
-        // Tarjeta de mantenciones
-        const mantencionesCol = document.createElement('div');
-        mantencionesCol.className = 'col-md-4';
-        
-        const mantencionesCard = createCard('Mantenciones', `
-            <div class="d-flex flex-column">
-                <div class="d-flex justify-content-between align-items-center mb-3">
-                    <span>Urgentes</span>
-                    <span class="badge bg-danger">${mantencionesUrgentes}</span>
-                </div>
-                <div class="d-flex justify-content-between align-items-center mb-3">
-                    <span>Pendientes</span>
-                    <span class="badge bg-warning text-dark">${mantencionesPendientes}</span>
-                </div>
-                <div class="mt-3">
-                    <a href="#mantenciones" class="btn btn-outline-primary btn-sm w-100">Ver todas</a>
-                </div>
-            </div>
-        `);
-        mantencionesCol.appendChild(mantencionesCard);
-        chartRow.appendChild(mantencionesCol);
-        
-        content.appendChild(chartRow);
-        
-        // Últimos movimientos
-        const movimientosRow = document.createElement('div');
-        movimientosRow.className = 'row';
-        
-        // Últimos pagos
-        const pagosCol = document.createElement('div');
-        pagosCol.className = 'col-md-6';
-        
-        const ultimosPagos = pagos.slice(0, 5);
-        let pagosList = '<div class="list-group">';
-        
-        ultimosPagos.forEach(pago => {
-            pagosList += `
-                <div class="list-group-item list-group-item-action">
-                    <div class="d-flex w-100 justify-content-between">
-                        <h6 class="mb-1">${pago.Concepto}</h6>
-                        <span class="text-success">${formatCurrency(parseFloat(pago.Monto) || 0)}</span>
-                    </div>
-                    <p class="mb-1">Residente: ${pago.Residente}</p>
-                    <small class="text-muted">Fecha: ${pago.Fecha}</small>
-                </div>
-            `;
-        });
-        
-        pagosList += '</div>';
-        
-        const pagosCard = createCard('Últimos Pagos', pagosList);
-        pagosCol.appendChild(pagosCard);
-        movimientosRow.appendChild(pagosCol);
-        
-        // Últimos gastos
-        const gastosCol = document.createElement('div');
-        gastosCol.className = 'col-md-6';
-        
-        const ultimosGastos = gastos.slice(0, 5);
-        let gastosList = '<div class="list-group">';
-        
-        ultimosGastos.forEach(gasto => {
-            gastosList += `
-                <div class="list-group-item list-group-item-action">
-                    <div class="d-flex w-100 justify-content-between">
-                        <h6 class="mb-1">${gasto.Concepto}</h6>
-                        <span class="text-danger">${formatCurrency(parseFloat(gasto.Monto) || 0)}</span>
-                    </div>
-                    <p class="mb-1">Proveedor: ${gasto.Proveedor}</p>
-                    <small class="text-muted">Fecha: ${gasto.Fecha}</small>
-                </div>
-            `;
-        });
-        
-        gastosList += '</div>';
-        
-        const gastosCardElement = createCard('Últimos Gastos', gastosList);
-        gastosCol.appendChild(gastosCardElement);
-        movimientosRow.appendChild(gastosCol);
-        
-        content.appendChild(movimientosRow);
-        
-        // Renderizar el contenido
-        container.innerHTML = '';
-        container.appendChild(content);
-        
-        // Inicializar el gráfico
-        initIncomeExpenseChart(pagos, gastos);
-        
+        // Renderizar la interfaz de usuario del dashboard
+        renderDashboardUI(container, stats, pagos, gastos);
+
+        // Inicializar los gráficos después de que el DOM esté listo
+        initDashboardCharts(pagos, gastos);
+
+        console.log("✅ Módulo de Dashboard inicializado correctamente.");
+
     } catch (error) {
-        console.error('Error al inicializar el módulo de Dashboard:', error);
-        container.innerHTML = `
-            <div class="alert alert-danger" role="alert">
-                <i class="fas fa-exclamation-circle me-2"></i>
-                Error al cargar el dashboard: ${error.message}
-            </div>
-        `;
+        console.error("❌ Error al inicializar el módulo de Dashboard:", error);
+        showDetailedError("Error Crítico en el Dashboard", error, container);
     }
 }
 
-/**
- * Inicializa el gráfico de ingresos vs gastos
- * @param {Array} pagos - Datos de pagos
- * @param {Array} gastos - Datos de gastos
- */
-function initIncomeExpenseChart(pagos, gastos) {
-    // Obtener el contexto del canvas
-    const ctx = document.getElementById('incomeExpenseChart').getContext('2d');
+function calculateDashboardStats(residentes, pagos, gastos, mantenciones) {
+    const totalIngresos = pagos.reduce((sum, pago) => sum + (parseFloat(pago.Monto) || 0), 0);
+    const totalGastos = gastos.reduce((sum, gasto) => sum + (parseFloat(gasto.Monto) || 0), 0);
     
-    // Procesar los datos para el gráfico
-    const meses = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+    return {
+        totalResidentes: residentes.length,
+        totalIngresos: totalIngresos,
+        totalGastos: totalGastos,
+        saldoActual: totalIngresos - totalGastos,
+        mantencionesUrgentes: mantenciones.filter(m => m.Estado === 'Urgente').length,
+        mantencionesPendientes: mantenciones.filter(m => m.Estado === 'Pendiente' || m.Estado === 'Programada').length,
+    };
+}
+
+function renderDashboardUI(container, stats, pagos, gastos) {
+    container.innerHTML = ''; // Limpiar el contenedor
+    const content = document.createElement('div');
+
+    // Header con título y botón de recarga
+    content.innerHTML = `
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2>Dashboard</h2>
+            <button id="refresh-dashboard" class="btn btn-outline-primary"><i class="fas fa-sync-alt me-2"></i>Actualizar</button>
+        </div>
+    `;
+
+    // Tarjetas de estadísticas principales
+    const statsRow = document.createElement('div');
+    statsRow.className = 'row mb-4';
+    statsRow.innerHTML = `
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="stat-card bg-primary text-white h-100">
+                <div class="stat-value">${stats.totalResidentes}</div>
+                <div class="stat-label">Residentes Registrados</div>
+                <i class="fas fa-users stat-icon"></i>
+            </div>
+        </div>
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="stat-card bg-success text-white h-100">
+                <div class="stat-value">${formatCurrency(stats.totalIngresos)}</div>
+                <div class="stat-label">Ingresos Totales</div>
+                <i class="fas fa-arrow-up stat-icon"></i>
+            </div>
+        </div>
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="stat-card bg-danger text-white h-100">
+                <div class="stat-value">${formatCurrency(stats.totalGastos)}</div>
+                <div class="stat-label">Gastos Totales</div>
+                <i class="fas fa-arrow-down stat-icon"></i>
+            </div>
+        </div>
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="stat-card bg-info text-white h-100">
+                <div class="stat-value">${formatCurrency(stats.saldoActual)}</div>
+                <div class="stat-label">Saldo Actual</div>
+                <i class="fas fa-wallet stat-icon"></i>
+            </div>
+        </div>
+    `;
+    content.appendChild(statsRow);
+
+    // Fila para gráficos y mantenciones
+    const chartRow = document.createElement('div');
+    chartRow.className = 'row mb-4';
+    chartRow.innerHTML = `
+        <div class="col-lg-8">
+            ${createCard('Ingresos vs. Gastos (Últimos 12 meses)', '<div class="chart-container"><canvas id="incomeExpenseChart"></canvas></div>').outerHTML}
+        </div>
+        <div class="col-lg-4">
+            ${createCard('Estado de Mantenciones', `
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <div><i class="fas fa-exclamation-circle text-danger me-2"></i>Urgentes</div>
+                    <span class="badge bg-danger rounded-pill">${stats.mantencionesUrgentes}</span>
+                </div>
+                <div class="d-flex justify-content-between align-items-center">
+                    <div><i class="fas fa-clock text-warning me-2"></i>Pendientes</div>
+                    <span class="badge bg-warning text-dark rounded-pill">${stats.mantencionesPendientes}</span>
+                </div>
+                <div class="mt-4 text-center">
+                    <a href="#mantenciones" class="btn btn-outline-primary btn-sm w-100">Gestionar Mantenciones</a>
+                </div>
+            `).outerHTML}
+        </div>
+    `;
+    content.appendChild(chartRow);
+
+    // Fila para últimos movimientos
+    const movimientosRow = document.createElement('div');
+    movimientosRow.className = 'row';
+    const ultimosPagos = pagos.slice(-5).reverse();
+    const ultimosGastos = gastos.slice(-5).reverse();
+    
+    movimientosRow.innerHTML = `
+        <div class="col-lg-6 mb-4">
+            ${createCard('Últimos Pagos Registrados', createMovementList(ultimosPagos, 'success')).outerHTML}
+        </div>
+        <div class="col-lg-6 mb-4">
+            ${createCard('Últimos Gastos Registrados', createMovementList(ultimosGastos, 'danger')).outerHTML}
+        </div>
+    `;
+    content.appendChild(movimientosRow);
+
+    container.appendChild(content);
+
+    // Añadir evento al botón de refrescar
+    document.getElementById('refresh-dashboard').addEventListener('click', () => initDashboardModule(container));
+}
+
+function initDashboardCharts(pagos, gastos) {
+    const ctx = document.getElementById('incomeExpenseChart');
+    if (!ctx) return;
+
+    const meses = Array.from({length: 12}, (_, i) => {
+        const d = new Date();
+        d.setMonth(d.getMonth() - i);
+        return d.toLocaleString('es-CL', { month: 'short', year: '2-digit' });
+    }).reverse();
+
     const ingresosPorMes = Array(12).fill(0);
     const gastosPorMes = Array(12).fill(0);
-    
-    // Procesar pagos
-    pagos.forEach(pago => {
-        if (pago.Fecha) {
-            const fecha = pago.Fecha.split('/');
-            if (fecha.length === 3) {
-                const mes = parseInt(fecha[1]) - 1; // Ajustar al índice base 0
-                ingresosPorMes[mes] += parseFloat(pago.Monto) || 0;
+    const now = new Date();
+
+    const processData = (data, targetArray) => {
+        data.forEach(item => {
+            if (item.Fecha && item.Monto) {
+                const [day, month, year] = item.Fecha.split('/');
+                if (!day || !month || !year) return;
+                const itemDate = new Date(`${year}-${month}-${day}`);
+                if (isNaN(itemDate.getTime())) return;
+                const monthDiff = (now.getFullYear() - itemDate.getFullYear()) * 12 + (now.getMonth() - itemDate.getMonth());
+                if (monthDiff >= 0 && monthDiff < 12) {
+                    targetArray[11 - monthDiff] += parseFloat(item.Monto) || 0;
+                }
             }
-        }
-    });
+        });
+    };
     
-    // Procesar gastos
-    gastos.forEach(gasto => {
-        if (gasto.Fecha) {
-            const fecha = gasto.Fecha.split('/');
-            if (fecha.length === 3) {
-                const mes = parseInt(fecha[1]) - 1; // Ajustar al índice base 0
-                gastosPorMes[mes] += parseFloat(gasto.Monto) || 0;
-            }
-        }
-    });
-    
-    // Crear el gráfico
+    processData(pagos, ingresosPorMes);
+    processData(gastos, gastosPorMes);
+
     new Chart(ctx, {
         type: 'bar',
         data: {
@@ -286,14 +187,14 @@ function initIncomeExpenseChart(pagos, gastos) {
                 {
                     label: 'Ingresos',
                     data: ingresosPorMes,
-                    backgroundColor: 'rgba(40, 167, 69, 0.5)',
+                    backgroundColor: 'rgba(40, 167, 69, 0.6)',
                     borderColor: 'rgba(40, 167, 69, 1)',
                     borderWidth: 1
                 },
                 {
                     label: 'Gastos',
                     data: gastosPorMes,
-                    backgroundColor: 'rgba(220, 53, 69, 0.5)',
+                    backgroundColor: 'rgba(220, 53, 69, 0.6)',
                     borderColor: 'rgba(220, 53, 69, 1)',
                     borderWidth: 1
                 }
@@ -303,24 +204,31 @@ function initIncomeExpenseChart(pagos, gastos) {
             responsive: true,
             maintainAspectRatio: false,
             scales: {
-                y: {
-                    beginAtZero: true,
-                    ticks: {
-                        callback: function(value) {
-                            return CONFIG.APP.CURRENCY + value;
-                        }
-                    }
-                }
+                y: { beginAtZero: true, ticks: { callback: value => formatCurrency(value) } }
             },
             plugins: {
-                tooltip: {
-                    callbacks: {
-                        label: function(context) {
-                            return context.dataset.label + ': ' + formatCurrency(context.raw);
-                        }
-                    }
-                }
+                tooltip: { callbacks: { label: context => `${context.dataset.label}: ${formatCurrency(context.raw)}` } }
             }
         }
     });
+}
+
+function createMovementList(items, type) {
+    if (items.length === 0) {
+        return `<div class="text-center p-3 text-muted">No hay movimientos recientes.</div>`;
+    }
+    let listHtml = '<div class="list-group list-group-flush">';
+    items.forEach(item => {
+        listHtml += `
+            <div class="list-group-item">
+                <div class="d-flex w-100 justify-content-between">
+                    <h6 class="mb-1">${item.Concepto || 'Sin concepto'}</h6>
+                    <span class="text-${type} fw-bold">${formatCurrency(item.Monto)}</span>
+                </div>
+                <p class="mb-1 small">${item.Residente || item.Proveedor || 'N/A'}</p>
+                <small class="text-muted"><i class="far fa-calendar-alt me-1"></i>${item.Fecha || 'Sin fecha'}</small>
+            </div>
+        `;
+    });
+    return listHtml + '</div>';
 }
