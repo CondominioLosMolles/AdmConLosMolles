@@ -1,11 +1,8 @@
 /**
- * CondoAdmin - Módulo de Residentes (Versión final con estructura de datos fija)
+ * CondoAdmin - Módulo de Residentes (Versión final y estable)
  */
 
-// Se define una constante con las columnas EXACTAS de la hoja de Residentes.
-// Esta es nuestra única "fuente de la verdad" y elimina la inestabilidad.
 const RESIDENTE_HEADERS = ["Nombre", "Rut", "Direccion", "Email", "Telefono", "Numero_Parcela", "Estado", "Valor_Gasto_Comun"];
-
 let originalResidentesData = [];
 
 async function initResidentesModule(container) {
@@ -99,7 +96,6 @@ function showResidenteForm(residente = null) {
     const form = createForm(fields, formValues, async (formData) => {
         const modal = bootstrap.Modal.getInstance(form.closest('.modal'));
         try {
-            // Se construye la fila de datos en el orden EXPLICITO de las columnas.
             const rowData = [
                 formData.nombre, formData.rut, formData.direccion, formData.email,
                 formData.telefono, formData.numero_parcela, formData.estado, formData.valor_gasto_comun
@@ -157,7 +153,7 @@ function confirmDeleteResidente(residente) {
     ]).show();
 }
 
-function filterResidentes() {
+function filterResidentes(residentes) {
     const searchText = document.getElementById("search-residente")?.value?.toLowerCase() || "";
     const filtered = originalResidentesData.filter(residente => 
         Object.values(residente).some(value => String(value).toLowerCase().includes(searchText))
