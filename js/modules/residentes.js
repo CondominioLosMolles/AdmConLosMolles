@@ -1,9 +1,9 @@
 /**
- * CondoAdmin - Módulo de Residentes (Versión final con corrección de carga y renderizado)
+ * CondoAdmin - Módulo de Residentes (Versión con flujo de datos corregido)
  */
 
 let originalResidentesData = [];
-let residenteHeaders = [];
+let residenteHeaders = []; // Se mantiene para la función de exportar
 
 async function initResidentesModule(container) {
     console.log("🚀 Inicializando módulo de residentes...");
@@ -20,16 +20,17 @@ async function initResidentesModule(container) {
             sheetsAPI.getSheetHeaders(CONFIG.SHEETS.RESIDENTES)
         ]);
 
-        // *** INICIO DE LA CORRECCIÓN ***
-        // Se añade una verificación para asegurar que 'headers' sea siempre un array.
-        residenteHeaders = headers || [];
-        // *** FIN DE LA CORRECCIÓN ***
+        residenteHeaders = headers || []; // Guardamos los headers para la exportación
         
         originalResidentesData = residentes.map((residente, index) => {
             return { ...residente, SHEET_ROW_INDEX: index + 2 };
         });
 
-        renderResidentesUI(container, originalResidentesData);
+        // *** INICIO DE LA CORRECCIÓN ***
+        // Pasamos los headers como parámetro para asegurar que siempre estén disponibles
+        renderResidentesUI(container, originalResidentesData, residenteHeaders);
+        // *** FIN DE LA CORRECCIÓN ***
+
         console.log("✅ Módulo de residentes inicializado correctamente.");
 
     } catch (error) {
@@ -38,7 +39,7 @@ async function initResidentesModule(container) {
     }
 }
 
-function renderResidentesUI(container, residentes) {
+function renderResidentesUI(container, residentes, headers) {
     container.innerHTML = `
         <div class="d-flex justify-content-between align-items-center mb-4">
             <h2>Gestión de Residentes</h2>
@@ -59,10 +60,11 @@ function renderResidentesUI(container, residentes) {
     document.getElementById('search-residente').addEventListener('keyup', filterResidentes);
     document.getElementById('export-residentes-btn').addEventListener('click', () => exportResidentes(originalResidentesData));
 
-    updateResidentesTable(residentes);
+    // Pasamos los headers a la función que dibuja la tabla
+    updateResidentesTable(residentes, headers);
 }
 
-function updateResidentesTable(residentes) {
+function updateResidentesTable(residentes, headers) {
     const tableContainer = document.getElementById("residentes-table-container");
 
     if (residentes.length === 0) {
@@ -70,20 +72,20 @@ function updateResidentesTable(residentes) {
         return;
     }
 
-    // *** INICIO DE LA CORRECCIÓN ***
-    // Se vuelve a una definición de columnas explícita y estable para evitar errores de renderizado.
-    const columns = [
-        { field: "Nombre", title: "Nombre Completo" },
-        { field: "Rut", title: "RUT" },
-        { field: "Numero_Parcela", title: "Nº Parcela", formatter: (value) => `<span class="badge bg-secondary">${value || "N/A"}</span>` },
-        { field: "Email", title: "Email" },
-        { field: "Telefono", title: "Teléfono" },
-        { field: "Estado", title: "Estado", formatter: (value) => {
+    // Usamos los headers recibidos para asegurar que no haya errores
+    const safeHeaders = Array.isArray(headers) ? headers : [];
+
+    const columns = safeHeaders.map(header => {
+        const columnDef = { field: header, title: header };
+        if (header === "Numero_Parcela") {
+            columnDef.formatter = (value) => `<span class="badge bg-secondary">${value || "N/A"}</span>`;
+        }
+        if (header === "Estado") {
             const classMap = { "Activo": "bg-success", "Inactivo": "bg-danger", "Moroso": "bg-warning text-dark" };
-            return `<span class="badge ${classMap[value] || 'bg-secondary'}">${value || "No definido"}</span>`;
-        }}
-    ];
-    // *** FIN DE LA CORRECCIÓN ***
+            columnDef.formatter = (value) => `<span class="badge ${classMap[value] || 'bg-secondary'}">${value || "No definido"}</span>`;
+        }
+        return columnDef;
+    });
     
     const rowActions = (item) => `
         <div class="btn-group btn-group-sm" role="group">
@@ -188,7 +190,8 @@ function filterResidentes() {
     const filtered = originalResidentesData.filter(residente => 
         Object.values(residente).some(value => String(value).toLowerCase().includes(searchText))
     );
-    updateResidentesTable(filtered);
+    // Pasamos los headers guardados para que el filtrado no rompa la tabla
+    updateResidentesTable(filtered, residenteHeaders);
 }
 
 function exportResidentes(residentes) {
