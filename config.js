@@ -7,15 +7,15 @@ const CONFIG = {
     API_KEY: 'AIzaSyA4nUkMycf_CHZE7TaBBD_WUyWMvSXUwoU',
     SPREADSHEET_ID: '1bFo5dBC3HM0xupginTBe-hrrUNgkiuUn4fkXXzHide8',
     SHEETS: {
-        RESIDENTES: 'Residentes',
-        GASTOS_COMUNES: 'Gastos_Comunes',
-        PAGOS: 'Pagos',
-        GASTOS: 'Gastos',
-        MANTENCIONES: 'Mantenciones',
-        COMUNICACIONES: 'Comunicaciones',
-        MULTAS: 'Multas',
-        ASAMBLEAS: 'Asambleas'
-    },
+    RESIDENTES: 'Residentes',
+    GASTOS_COMUNES: 'Gastos_Comunes', // Sin espacios
+    PAGOS: 'Pagos',
+    GASTOS: 'Gastos',
+    MANTENCIONES: 'Mantenciones',
+    COMUNICACIONES: 'Comunicaciones',
+    MULTAS: 'Multas',
+    ASAMBLEAS: 'Asambleas'
+},
     APP: {
         NAME: 'CondoAdminLosMolles',
         VERSION: '1.0.0',
