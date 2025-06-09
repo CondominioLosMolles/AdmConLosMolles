@@ -1,5 +1,5 @@
 /**
- * CondoAdmin - Módulo de Residentes (Versión con corrección para edición)
+ * CondoAdmin - Módulo de Residentes (Versión con corrección para guardado de parcela)
  */
 
 let originalResidentesData = [];
@@ -17,7 +17,6 @@ async function initResidentesModule(container) {
         const residentes = await sheetsAPI.getSheetData(CONFIG.SHEETS.RESIDENTES);
 
         originalResidentesData = residentes.map((residente, index) => {
-            // Se añade el índice de la fila original para poder actualizarla o borrarla después.
             return { ...residente, SHEET_ROW_INDEX: index + 2 };
         });
 
@@ -85,14 +84,14 @@ function updateResidentesTable(residentes) {
             if (value === "Activo") badgeClass = "bg-success";
             if (value === "Inactivo") badgeClass = "bg-danger";
             if (value === "Moroso") badgeClass = "bg-warning text-dark";
-            return `<span class="badge <span class="math-inline">\{badgeClass\}"\></span>{value || "No definido"}</span>`;
+            return `<span class="badge ${badgeClass}">${value || "No definido"}</span>`;
         }}
     ];
     
     const rowActions = (item) => `
         <div class="btn-group btn-group-sm">
-            <button class="btn btn-outline-primary btn-edit" data-rut="<span class="math-inline">\{item\.Rut\}" title\="Editar Residente"\><i class\="fas fa\-edit"\></i\></button\>
-<button class\="btn btn\-outline\-danger btn\-delete" data\-rut\="</span>{item.Rut}" title="Eliminar Residente"><i class="fas fa-trash"></i></button>
+            <button class="btn btn-outline-primary btn-edit" data-rut="${item.Rut}" title="Editar Residente"><i class="fas fa-edit"></i></button>
+            <button class="btn btn-outline-danger btn-delete" data-rut="${item.Rut}" title="Eliminar Residente"><i class="fas fa-trash"></i></button>
         </div>
     `;
 
@@ -106,8 +105,147 @@ function updateResidentesTable(residentes) {
 function showResidenteForm(residente = null) {
     const isEditing = !!residente;
 
-    // Mapa que define la correspondencia entre los IDs del formulario y las cabeceras de Google Sheets.
-    // Esta es la ÚNICA fuente de verdad para el mapeo, lo que evita errores.
-    const fieldMap = {
-        nombre: 'Nombre', rut: 'Rut', direccion: 'Direccion', email: 'Email', telefono: 'Telefono',
-        numero_parcela: 'Numero_Parcela', estado: 'Estado', valor_gasto_
+    const fields = [
+        { id: "nombre", label: "Nombre Completo", required: true },
+        { id: "rut", label: "RUT", required: true, disabled: isEditing },
+        { id: "direccion", label: "Dirección", required: true },
+        { id: "email", label: "Email", type: "email" },
+        { id: "telefono", label: "Teléfono", type: "tel" },
+        { id: "numero_parcela", label: "Nº Parcela", required: true, type: "number" },
+        { id: "estado", label: "Estado", type: "select", options: [
+            { value: "Activo", label: "Activo" }, { value: "Inactivo", label: "Inactivo" }, { value: "Moroso", label: "Moroso" }
+        ], required: true },
+        { id: "valor_gasto_comun", label: "Valor Gasto Común ($)", type: "number", required: true }
+    ];
+
+    let formValues = {};
+    if (isEditing) {
+        formValues = {
+            nombre: residente.Nombre || "", rut: residente.Rut || "", direccion: residente.Direccion || "",
+            email: residente.Email || "", telefono: residente.Telefono || "", numero_parcela: residente.Numero_Parcela || "",
+            estado: residente.Estado || "Activo", valor_gasto_comun: residente.Valor_Gasto_Comun || "0"
+        };
+    } else {
+        formValues = { estado: "Activo", valor_gasto_comun: "0" };
+    }
+
+    const form = createForm(fields, formValues, async (formData) => {
+        const modal = bootstrap.Modal.getInstance(form.closest('.modal'));
+        try {
+            // *** INICIO DE LA CORRECCIÓN ***
+            // Se construye la fila de datos de forma directa y en el orden correcto de las columnas de la hoja.
+            // Esto es más simple y evita el error de mapeo anterior.
+            const rowData = [
+                isEditing ? residente.ID : generateUniqueId(),
+                formData.nombre,
+                formData.rut,
+                formData.direccion,
+                formData.email,
+                formData.telefono,
+                formData.numero_parcela, // <-- Aquí se usa directamente el valor del formulario
+                formData.estado,
+                formData.valor_gasto_comun
+            ];
+            // *** FIN DE LA CORRECCIÓN ***
+
+            if (isEditing) {
+                // Para actualizar, necesitamos saber qué fila es (por eso guardamos SHEET_ROW_INDEX)
+                // y necesitamos pasar el array completo de datos en el orden correcto.
+                await sheetsAPI.updateRowByHeader(CONFIG.SHEETS.RESIDENTES, residente.SHEET_ROW_INDEX, {
+                    ID: residente.ID, // Mantenemos el ID original
+                    Nombre: formData.nombre, Rut: formData.rut, Direccion: formData.direccion,
+                    Email: formData.email, Telefono: formData.telefono, Numero_Parcela: formData.numero_parcela,
+                    Estado: formData.estado, Valor_Gasto_Comun: formData.valor_gasto_comun
+                });
+
+                showToast("Residente actualizado exitosamente.", "success");
+            } else {
+                // Para agregar una nueva fila, solo enviamos el array de datos.
+                await sheetsAPI.appendRow(CONFIG.SHEETS.RESIDENTES, rowData);
+                showToast("Residente creado exitosamente.", "success");
+            }
+
+            modal.hide();
+            await initResidentesModule(document.getElementById("module-container"));
+
+        } catch (error) {
+            showDetailedError("Error al Guardar Residente", error);
+        }
+    });
+
+    createModal(isEditing ? "Editar Residente" : "Nuevo Residente", form, "lg").show();
+}
+
+function setupActionButtons(residentes) {
+    document.querySelectorAll(".btn-edit, .btn-delete").forEach(button => {
+        button.addEventListener("click", (e) => {
+            const rut = e.currentTarget.getAttribute("data-rut");
+            const residente = residentes.find(r => r.Rut === rut);
+            if (!residente) {
+                showDetailedError("Error de Referencia", new Error(`No se encontró el residente con RUT: ${rut}`));
+                return;
+            }
+            if (e.currentTarget.classList.contains("btn-edit")) {
+                showResidenteForm(residente);
+            } else if (e.currentTarget.classList.contains("btn-delete")) {
+                confirmDeleteResidente(residente);
+            }
+        });
+    });
+}
+
+function confirmDeleteResidente(residente) {
+    const modalContent = `
+        <p>¿Está seguro de que desea eliminar permanentemente al residente <strong>${residente.Nombre}</strong> (RUT: ${residente.Rut})?</p>
+        <p class="text-danger"><i class="fas fa-exclamation-triangle me-2"></i>Esta acción no se puede deshacer.</p>
+    `;
+    createModal("Confirmar Eliminación", modalContent, "md", [
+        { label: 'Cancelar', className: 'btn-secondary', dismiss: true },
+        { label: 'Eliminar', className: 'btn-danger', onClick: async (modal) => {
+            try {
+                await sheetsAPI.deleteRow(CONFIG.SHEETS.RESIDENTES, residente.SHEET_ROW_INDEX);
+                showToast("Residente eliminado.", "success");
+                modal.hide();
+                await initResidentesModule(document.getElementById("module-container"));
+            } catch (error) {
+                showDetailedError("Error al Eliminar Residente", error);
+            }
+        }}
+    ]).show();
+}
+
+function filterResidentes() {
+    const searchText = document.getElementById("search-residente")?.value?.toLowerCase() || "";
+    const filtered = originalResidentesData.filter(residente => 
+        Object.values(residente).some(value => 
+            String(value).toLowerCase().includes(searchText)
+        )
+    );
+    updateResidentesTable(filtered);
+}
+
+function exportResidentes(residentes) {
+    try {
+        const headers = ["ID", "Nombre", "Rut", "Direccion", "Email", "Telefono", "Numero_Parcela", "Estado", "Valor_Gasto_Comun"];
+        let csvContent = "data:text/csv;charset=utf-8," + headers.join(",") + "\n";
+
+        residentes.forEach(residente => {
+            const row = headers.map(header => {
+                let value = residente[header] || "";
+                return `"${String(value).replace(/"/g, '""')}"`;
+            });
+            csvContent += row.join(",") + "\n";
+        });
+
+        const encodedUri = encodeURI(csvContent);
+        const link = document.createElement("a");
+        link.setAttribute("href", encodedUri);
+        link.setAttribute("download", `residentes_${new Date().toISOString().slice(0,10)}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        showToast("La exportación se ha iniciado.", "info");
+    } catch (error) {
+        showDetailedError("Error al Exportar Datos", error);
+    }
+}
