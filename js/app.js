@@ -1,6 +1,6 @@
 /**
  * CondoAdmin - Sistema de Administración de Condominios
- * Archivo principal de la aplicación
+ * Archivo principal de la aplicación - Versión Corregida
  */
 
 // Módulos disponibles en la aplicación
@@ -50,25 +50,19 @@ let currentModule = 'dashboard';
  * Inicializa la aplicación
  */
 function initApp() {
-    console.log('🚀 Inicializando CondoAdmin...');
-    try {
-        // Configurar eventos de navegación
-        setupNavigation();
-        
-        // Verificar y crear las hojas necesarias
-        checkAndCreateSheets().then(() => {
-            console.log('✅ Hojas verificadas/creadas correctamente');
-            
-            // Cargar el módulo inicial (dashboard)
-            loadModule('dashboard');
-        }).catch(error => {
-            console.error('❌ Error al inicializar la aplicación:', error);
-            showError('Error al inicializar la aplicación: ' + error.message);
-        });
-    } catch (error) {
-        console.error('❌ Error crítico durante inicialización:', error);
-        showError('Error crítico: ' + error.message);
-    }
+    console.log('Inicializando CondoAdmin...');
+    
+    // Configurar eventos de navegación
+    setupNavigation();
+    
+    // Verificar y crear las hojas necesarias
+    checkAndCreateSheets().then(() => {
+        // Cargar el módulo inicial (dashboard)
+        loadModule('dashboard');
+    }).catch(error => {
+        console.error('Error al inicializar la aplicación:', error);
+        showError('Error al inicializar la aplicación: ' + error.message);
+    });
 }
 
 /**
@@ -76,22 +70,31 @@ function initApp() {
  */
 function setupNavigation() {
     const menuLinks = document.querySelectorAll('#main-menu .nav-link');
+    
     menuLinks.forEach(link => {
         link.addEventListener('click', (event) => {
             event.preventDefault();
+            
+            // Obtener el módulo a cargar
             const module = link.getAttribute('data-module');
+            
+            // Actualizar la URL con el hash
             window.location.hash = module;
+            
+            // Cargar el módulo
             loadModule(module);
         });
     });
-
+    
+    // Manejar cambios en el hash de la URL
     window.addEventListener('hashchange', () => {
         const hash = window.location.hash.substring(1);
         if (hash && MODULES[hash]) {
             loadModule(hash);
         }
     });
-
+    
+    // Cargar el módulo inicial basado en el hash de la URL
     const initialHash = window.location.hash.substring(1);
     if (initialHash && MODULES[initialHash]) {
         currentModule = initialHash;
@@ -104,13 +107,17 @@ function setupNavigation() {
  */
 function loadModule(moduleName) {
     if (!MODULES[moduleName]) {
-        console.error(`❌ Módulo "${moduleName}" no encontrado`);
+        console.error(`Módulo "${moduleName}" no encontrado`);
         return;
     }
-
+    
+    // Actualizar la navegación
     updateNavigation(moduleName);
+    
+    // Actualizar el módulo actual
     currentModule = moduleName;
-
+    
+    // Mostrar el indicador de carga
     const moduleContainer = document.getElementById('module-container');
     moduleContainer.innerHTML = `
         <div class="d-flex justify-content-center my-5">
@@ -119,13 +126,17 @@ function loadModule(moduleName) {
             </div>
         </div>
     `;
-
+    
+    // Cargar el módulo
     try {
-        const initFunction = window[`init${moduleName.charAt(0).toUpperCase() + moduleName.slice(1)}Module`];
+        // Verificar si existe la función de inicialización del módulo
+        const initFunction = window[`init${moduleName.charAt(0).toUpperCase() + moduleName.slice(1).replace('-', '')}Module`];
+        
         if (typeof initFunction === 'function') {
+            // Llamar a la función de inicialización del módulo
             initFunction(moduleContainer);
         } else {
-            console.warn(`⚠️ Función de inicialización para "${moduleName}" no encontrada`);
+            console.error(`Función de inicialización para el módulo "${moduleName}" no encontrada`);
             moduleContainer.innerHTML = `
                 <div class="alert alert-warning" role="alert">
                     <i class="fas fa-exclamation-triangle me-2"></i>
@@ -134,7 +145,7 @@ function loadModule(moduleName) {
             `;
         }
     } catch (error) {
-        console.error(`❌ Error al cargar el módulo "${moduleName}":`, error);
+        console.error(`Error al cargar el módulo "${moduleName}":`, error);
         moduleContainer.innerHTML = `
             <div class="alert alert-danger" role="alert">
                 <i class="fas fa-exclamation-circle me-2"></i>
@@ -150,8 +161,10 @@ function loadModule(moduleName) {
  */
 function updateNavigation(activeModule) {
     const menuLinks = document.querySelectorAll('#main-menu .nav-link');
+    
     menuLinks.forEach(link => {
         const module = link.getAttribute('data-module');
+        
         if (module === activeModule) {
             link.classList.add('active');
         } else {
@@ -165,50 +178,53 @@ function updateNavigation(activeModule) {
  */
 async function checkAndCreateSheets() {
     try {
+        // Verificar si existen las hojas necesarias
         for (const [key, sheetName] of Object.entries(CONFIG.SHEETS)) {
             const exists = await sheetsAPI.sheetExists(sheetName);
+            
             if (!exists) {
-                console.log(`📝 Creando hoja "${sheetName}"...`);
+                console.log(`Creando hoja "${sheetName}"...`);
                 
-                // Definir encabezados según el tipo de hoja
+                // Definir los encabezados según el tipo de hoja
                 let headers = [];
+                
                 switch (key) {
                     case 'RESIDENTES':
-                        headers = ['Nombre', 'Rut', 'Direccion', 'Email', 'Telefono', 'Numero Parcela', 'Estado', 'Valor Gasto Comun'];
+                        headers = ['Nombre', 'Rut', 'Direccion', 'Email', 'Telefono', 'Numero_Parcela', 'Estado', 'Valor_Gasto_Comun'];
                         break;
                     case 'GASTOS_COMUNES':
-                        headers = ['Periodo', 'Monto Base', 'Fondo Reserva', 'Total Unidad', 'Vencimiento', 'Estado'];
+                        headers = ['ID', 'Periodo', 'Monto_Base', 'Fondo_Reserva', 'Total_Unidad', 'Vencimiento', 'Estado'];
                         break;
                     case 'PAGOS':
-                        headers = ['Fecha', 'Residente', 'Concepto', 'Monto', 'Metodo Pago'];
+                        headers = ['ID', 'Fecha', 'Residente', 'Concepto', 'Monto', 'Método_Pago'];
                         break;
                     case 'GASTOS':
-                        headers = ['Fecha', 'Concepto', 'Monto', 'Proveedor', 'Categoria', 'Estado'];
+                        headers = ['ID', 'Fecha', 'Concepto', 'Monto', 'Proveedor', 'Categoría', 'Estado'];
                         break;
                     case 'MANTENCIONES':
-                        headers = ['Fecha', 'Tipo', 'Descripcion', 'Responsable', 'Estado'];
+                        headers = ['ID', 'Fecha', 'Tipo', 'Descripción', 'Responsable', 'Estado'];
                         break;
                     case 'COMUNICACIONES':
-                        headers = ['Fecha', 'Asunto', 'Contenido', 'Destinatarios', 'Estado'];
+                        headers = ['ID', 'Fecha', 'Asunto', 'Contenido', 'Destinatarios', 'Estado'];
                         break;
                     case 'MULTAS':
-                        headers = ['Fecha', 'Residente', 'Motivo', 'Monto', 'Estado'];
+                        headers = ['ID', 'Fecha', 'Residente', 'Motivo', 'Monto', 'Estado'];
                         break;
                     case 'ASAMBLEAS':
-                        headers = ['Fecha', 'Tipo', 'Descripcion', 'Asistentes', 'Estado'];
+                        headers = ['ID', 'Fecha', 'Tipo', 'Descripción', 'Asistentes', 'Estado'];
                         break;
                     default:
-                        headers = ['Nombre', 'Descripcion'];
+                        headers = ['ID', 'Nombre', 'Descripción'];
                 }
                 
-                // Crear la hoja con los encabezados correctos
+                // Crear la hoja con los encabezados
                 await sheetsAPI.createSheet(sheetName, headers);
-                console.log(`✅ Hoja "${sheetName}" creada con encabezados:`, headers);
             }
         }
-        console.log('✅ Verificación de hojas completada');
+        
+        console.log('Verificación de hojas completada');
     } catch (error) {
-        console.error('❌ Error al verificar/crear hojas:', error);
+        console.error('Error al verificar/crear hojas:', error);
         throw error;
     }
 }
@@ -229,8 +245,9 @@ function generateUniqueId() {
 function formatDate(date) {
     const d = new Date(date);
     const day = String(d.getDate()).padStart(2, '0');
-    const month = String(d.getMonth() + 1).padStart(2, '0'); // Meses son base 0
+    const month = String(d.getMonth() + 1).padStart(2, '0');
     const year = d.getFullYear();
+    
     return `${day}/${month}/${year}`;
 }
 
@@ -240,5 +257,58 @@ function formatDate(date) {
  * @returns {string} - Monto formateado
  */
 function formatCurrency(amount) {
-    return CONFIG.APP.CURRENCY + amount.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    return CONFIG.APP.CURRENCY + amount.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+}
+
+/**
+ * Muestra un error detallado
+ * @param {string} title - Título del error
+ * @param {Error} error - Objeto de error
+ */
+function showDetailedError(title, error) {
+    console.error(title + ':', error);
+    
+    const errorMessage = error.message || 'Error desconocido';
+    const errorDetails = error.stack || 'No hay detalles adicionales disponibles';
+    
+    const alertContent = `
+        <div class="alert alert-danger" role="alert">
+            <h4 class="alert-heading"><i class="fas fa-exclamation-circle me-2"></i>${title}</h4>
+            <p><strong>Mensaje:</strong> ${errorMessage}</p>
+            <hr>
+            <p class="mb-0"><small><strong>Detalles técnicos:</strong><br><code>${errorDetails}</code></small></p>
+        </div>
+    `;
+    
+    // Mostrar en un modal si es posible
+    if (typeof createModal === 'function') {
+        const modal = createModal('Error', alertContent, 'lg');
+        modal.show();
+    } else {
+        // Fallback: mostrar en consola y alert
+        alert(`${title}: ${errorMessage}`);
+    }
+}
+
+/**
+ * Muestra un error simple
+ * @param {string} message - Mensaje de error
+ */
+function showError(message) {
+    console.error('Error:', message);
+    
+    if (typeof createAlert === 'function') {
+        const alert = createAlert(message, 'danger', true);
+        document.body.appendChild(alert);
+        
+        // Auto-remover después de 5 segundos
+        setTimeout(() => {
+            if (document.body.contains(alert)) {
+                document.body.removeChild(alert);
+            }
+        }, 5000);
+    } else {
+        // Fallback
+        alert('Error: ' + message);
+    }
 }
