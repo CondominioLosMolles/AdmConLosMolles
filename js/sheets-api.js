@@ -1,25 +1,9 @@
-/**
- * CondoAdminLosMolles - Sistema de Administración de Condominios
- * Módulo de interacción con Google Sheets API
- */
-
-/**
- * Clase para manejar la interacción con Google Sheets API
- */
 class SheetsAPI {
-    /**
-     * Constructor
-     */
     constructor() {
         this.spreadsheetId = CONFIG.SPREADSHEET_ID;
         this.sheets = CONFIG.SHEETS;
     }
 
-    /**
-     * Obtiene los datos de una hoja específica
-     * @param {string} sheetName - Nombre de la hoja
-     * @returns {Promise<Array>} - Datos de la hoja
-     */
     async getSheetData(sheetName) {
         try {
             const response = await gapi.client.sheets.spreadsheets.values.get({
@@ -28,8 +12,6 @@ class SheetsAPI {
             });
 
             const values = response.result.values || [];
-
-            // Si hay datos, convertir a objetos usando la primera fila como encabezados
             if (values.length > 0) {
                 const headers = values[0];
                 return values.slice(1).map(row => {
@@ -40,7 +22,6 @@ class SheetsAPI {
                     return obj;
                 });
             }
-
             return [];
         } catch (error) {
             console.error('Error al obtener datos de la hoja:', error);
@@ -49,12 +30,6 @@ class SheetsAPI {
         }
     }
 
-    /**
-     * Agrega una fila a una hoja específica
-     * @param {string} sheetName - Nombre de la hoja
-     * @param {Array} rowData - Datos de la fila a agregar
-     * @returns {Promise<Object>} - Resultado de la operación
-     */
     async appendRow(sheetName, rowData) {
         try {
             const response = await gapi.client.sheets.spreadsheets.values.append({
@@ -62,11 +37,8 @@ class SheetsAPI {
                 range: sheetName,
                 valueInputOption: 'USER_ENTERED',
                 insertDataOption: 'INSERT_ROWS',
-                resource: {
-                    values: [rowData]
-                }
+                resource: { values: [rowData] }
             });
-
             return response.result;
         } catch (error) {
             console.error('Error al agregar fila:', error);
@@ -75,25 +47,15 @@ class SheetsAPI {
         }
     }
 
-    /**
-     * Actualiza una fila en una hoja específica
-     * @param {string} sheetName - Nombre de la hoja
-     * @param {number} rowIndex - Índice de la fila a actualizar (base 1, ej. fila 2)
-     * @param {Array} rowData - Nuevos datos para la fila
-     * @returns {Promise<Object>} - Resultado de la operación
-     */
     async updateRow(sheetName, rowIndex, rowData) {
         try {
-            // Usar rowIndex directamente sin ajuste adicional
+            // rowIndex ya debe ser el número de fila correcto (incluyendo encabezados)
             const response = await gapi.client.sheets.spreadsheets.values.update({
                 spreadsheetId: this.spreadsheetId,
                 range: `${sheetName}!A${rowIndex}`,
                 valueInputOption: 'USER_ENTERED',
-                resource: {
-                    values: [rowData]
-                }
+                resource: { values: [rowData] }
             });
-
             return response.result;
         } catch (error) {
             console.error('Error al actualizar fila:', error);
@@ -102,15 +64,8 @@ class SheetsAPI {
         }
     }
 
-    /**
-     * Elimina una fila de una hoja específica
-     * @param {string} sheetName - Nombre de la hoja
-     * @param {number} rowIndex - Índice de la fila a eliminar (base 1, ej. fila 2)
-     * @returns {Promise<Object>} - Resultado de la operación
-     */
     async deleteRow(sheetName, rowIndex) {
         try {
-            // Ajustar el índice para la API de Google Sheets
             const sheetsResponse = await gapi.client.sheets.spreadsheets.get({
                 spreadsheetId: this.spreadsheetId
             });
@@ -120,22 +75,21 @@ class SheetsAPI {
 
             const sheetId = sheet.properties.sheetId;
 
-            // Usar índices correctos: startIndex es base 0, endIndex es exclusivo
+            // rowIndex ya debe ser el número de fila correcto (1-based)
+            // Para la API de Google Sheets, necesitamos convertir a 0-based
             const response = await gapi.client.sheets.spreadsheets.batchUpdate({
                 spreadsheetId: this.spreadsheetId,
                 resource: {
-                    requests: [
-                        {
-                            deleteDimension: {
-                                range: {
-                                    sheetId: sheetId,
-                                    dimension: 'ROWS',
-                                    startIndex: rowIndex - 1, // Convertir a base 0
-                                    endIndex: rowIndex // Ej: si rowIndex es 2, elimina fila 2
-                                }
+                    requests: [{
+                        deleteDimension: {
+                            range: {
+                                sheetId,
+                                dimension: 'ROWS',
+                                startIndex: rowIndex - 1, // Convertir a 0-based
+                                endIndex: rowIndex // Excluir la fila siguiente
                             }
                         }
-                    ]
+                    }]
                 }
             });
 
@@ -147,18 +101,12 @@ class SheetsAPI {
         }
     }
 
-    /**
-     * Obtiene los encabezados de una hoja específica
-     * @param {string} sheetName - Nombre de la hoja
-     * @returns {Promise<Array>} - Encabezados de la hoja
-     */
     async getSheetHeaders(sheetName) {
         try {
             const response = await gapi.client.sheets.spreadsheets.values.get({
                 spreadsheetId: this.spreadsheetId,
                 range: `${sheetName}!1:1`
             });
-
             return response.result.values[0] || [];
         } catch (error) {
             console.error('Error al obtener encabezados:', error);
@@ -167,39 +115,25 @@ class SheetsAPI {
         }
     }
 
-    /**
-     * Crea una nueva hoja en el documento
-     * @param {string} sheetName - Nombre de la nueva hoja
-     * @param {Array} headers - Encabezados para la nueva hoja
-     * @returns {Promise<Object>} - Resultado de la operación
-     */
     async createSheet(sheetName, headers) {
         try {
-            // Primero, crear la hoja
             const createResponse = await gapi.client.sheets.spreadsheets.batchUpdate({
                 spreadsheetId: this.spreadsheetId,
                 resource: {
-                    requests: [
-                        {
-                            addSheet: {
-                                properties: {
-                                    title: sheetName
-                                }
-                            }
+                    requests: [{
+                        addSheet: {
+                            properties: { title: sheetName }
                         }
-                    ]
+                    }]
                 }
             });
 
-            // Luego, agregar los encabezados
             if (headers && headers.length > 0) {
                 await gapi.client.sheets.spreadsheets.values.update({
                     spreadsheetId: this.spreadsheetId,
                     range: `${sheetName}!A1`,
                     valueInputOption: 'USER_ENTERED',
-                    resource: {
-                        values: [headers]
-                    }
+                    resource: { values: [headers] }
                 });
             }
 
@@ -211,17 +145,11 @@ class SheetsAPI {
         }
     }
 
-    /**
-     * Verifica si una hoja existe en el documento
-     * @param {string} sheetName - Nombre de la hoja a verificar
-     * @returns {Promise<boolean>} - true si la hoja existe, false en caso contrario
-     */
     async sheetExists(sheetName) {
         try {
             const response = await gapi.client.sheets.spreadsheets.get({
                 spreadsheetId: this.spreadsheetId
             });
-
             return response.result.sheets.some(sheet => sheet.properties.title === sheetName);
         } catch (error) {
             console.error('Error al verificar existencia de hoja:', error);
@@ -231,5 +159,4 @@ class SheetsAPI {
     }
 }
 
-// Instancia global de la API de Sheets
 const sheetsAPI = new SheetsAPI();
