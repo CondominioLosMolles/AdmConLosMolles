@@ -36,7 +36,7 @@ function setupNavigation() {
     mainMenu.innerHTML = Object.entries(MODULES).map(([key, mod]) => `
         <li class="nav-item">
             <a class="nav-link" href="#${key}" data-module="${key}">
-                <i class="fas fa-${mod.icon} fa-fw me-2"></i> ${mod.title}
+                <i class="fas fa-${mod.icon} fa-fw me-2"></i> <span>${mod.title}</span>
             </a>
         </li>
     `).join('');
@@ -108,6 +108,10 @@ async function checkAndCreateSheets() {
     try {
         for (const [key, headers] of Object.entries(requiredSheets)) {
             const sheetName = CONFIG.SHEETS[key];
+            if (!sheetName) {
+                console.error(`Nombre de hoja para la clave ${key} no definido en CONFIG.SHEETS`);
+                continue;
+            }
             const exists = await sheetsAPI.sheetExists(sheetName);
             if (!exists) {
                 console.warn(`La hoja "${sheetName}" no existe. Creándola...`);
@@ -127,6 +131,11 @@ function generateUniqueId() {
     return Date.now().toString(36) + Math.random().toString(36).substring(2, 9);
 }
 
+const formatCurrency = (amount) => {
+    const value = Number(amount) || 0;
+    return (CONFIG.APP.CURRENCY || '$') + value.toLocaleString('es-CL');
+};
+
 function showToast(message, type = 'success') {
     const toastContainer = document.createElement('div');
     toastContainer.className = `toast align-items-center text-white bg-${type} border-0 position-fixed top-0 end-0 m-3`;
@@ -140,8 +149,13 @@ function showToast(message, type = 'success') {
     document.body.appendChild(toastContainer);
     const bsToast = new bootstrap.Toast(toastContainer, { delay: 5000 });
     bsToast.show();
-    toastContainer.addEventListener('hidden.bs.toast', () => document.body.removeChild(toastContainer));
+    toastContainer.addEventListener('hidden.bs.toast', () => {
+        if (document.body.contains(toastContainer)) {
+            document.body.removeChild(toastContainer);
+        }
+    });
 }
+
 
 function showDetailedError(title, error, container) {
     console.error(title + ':', error);
