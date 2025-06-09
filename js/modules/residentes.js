@@ -1,5 +1,5 @@
 /**
- * CondoAdmin - Módulo de Residentes (Versión con corrección final de guardado)
+ * CondoAdmin - Módulo de Residentes (Versión final sin columna ID)
  */
 
 let originalResidentesData = [];
@@ -129,9 +129,8 @@ function showResidenteForm(residente = null) {
             }
 
             // *** INICIO DE LA CORRECCIÓN ***
-            // Mapeo de los campos del formulario a los nombres de las columnas en el orden correcto.
+            // Mapeo de datos que respeta la ESTRUCTURA REAL de la hoja (sin columna ID)
             const dataMap = {
-                ID: isEditing ? residente.ID : generateUniqueId(),
                 Nombre: formData.nombre,
                 Rut: formData.rut,
                 Direccion: formData.direccion,
@@ -143,6 +142,7 @@ function showResidenteForm(residente = null) {
             };
 
             // Se construye el array 'rowData' respetando el orden exacto de las columnas de la hoja.
+            // Ya no se genera ningún ID.
             const rowData = residenteHeaders.map(header => dataMap[header] !== undefined ? dataMap[header] : "");
             // *** FIN DE LA CORRECCIÓN ***
 
