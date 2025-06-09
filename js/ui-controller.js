@@ -1,17 +1,14 @@
 /**
  * CondoAdmin - Sistema de Administración de Condominios
- * Controlador de la interfaz de usuario (Versión con Modal mejorado)
+ * Controlador de la interfaz de usuario (Versión completa y corregida)
  */
 
-// ... (El resto de las funciones como createDataTable, createPagination, etc., se mantienen igual)
-// ... (Asegúrate de que el código que sigue reemplace tu función createModal existente)
-
 /**
- * Crea un elemento de tabla con datos
- * @param {Array} data - Datos para la tabla
- * @param {Array} columns - Definición de columnas
- * @param {Function} rowActions - Función para generar acciones por fila
- * @returns {HTMLElement} - Elemento de tabla
+ * Crea una tabla de datos a partir de un array de objetos.
+ * @param {Array} data - El array de datos.
+ * @param {Array} columns - La configuración de las columnas.
+ * @param {Function} rowActions - Función que genera los botones de acción para cada fila.
+ * @returns {HTMLElement} El elemento de la tabla.
  */
 function createDataTable(data, columns, rowActions = null) {
     const tableContainer = document.createElement('div');
@@ -21,17 +18,20 @@ function createDataTable(data, columns, rowActions = null) {
     table.className = 'table table-hover';
     const thead = document.createElement('thead');
     const headerRow = document.createElement('tr');
+    
     columns.forEach(column => {
         const th = document.createElement('th');
         th.textContent = column.title;
         headerRow.appendChild(th);
     });
+
     if (rowActions) {
         const actionsHeader = document.createElement('th');
         actionsHeader.textContent = 'Acciones';
-        actionsHeader.style.width = '1%';
+        actionsHeader.style.width = '1%'; // Evita que la columna de acciones sea muy ancha
         headerRow.appendChild(actionsHeader);
     }
+    
     thead.appendChild(headerRow);
     table.appendChild(thead);
 
@@ -50,6 +50,7 @@ function createDataTable(data, columns, rowActions = null) {
         
         if (rowActions) {
             const actionsTd = document.createElement('td');
+            actionsTd.className = 'text-nowrap'; // Evita que los botones se partan en dos líneas
             actionsTd.innerHTML = rowActions(item, index);
             row.appendChild(actionsTd);
         }
@@ -62,15 +63,23 @@ function createDataTable(data, columns, rowActions = null) {
 }
 
 /**
- * Crea un formulario a partir de una definición de campos
- * @param {Array} fields - Definición de campos
- * @param {Object} values - Valores iniciales
- * @param {Function} onSubmit - Función a llamar al enviar el formulario
- * @returns {HTMLElement} - Elemento de formulario
+ * Crea un formulario a partir de una definición de campos.
+ * @param {Array} fields - Array con la configuración de los campos.
+ * @param {Object} values - Valores iniciales para los campos.
+ * @param {Function} onSubmit - Callback que se ejecuta al enviar el formulario.
+ * @returns {HTMLElement} El elemento del formulario.
  */
 function createForm(fields, values = {}, onSubmit) {
     const form = document.createElement('form');
     form.noValidate = true;
+    form.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const formData = {};
+        fields.forEach(field => {
+            formData[field.id] = form.elements[field.id].value;
+        });
+        onSubmit(formData);
+    });
 
     fields.forEach(field => {
         const formGroup = document.createElement('div');
@@ -143,70 +152,54 @@ function createForm(fields, values = {}, onSubmit) {
     buttonsContainer.appendChild(cancelButton);
     buttonsContainer.appendChild(submitButton);
     form.appendChild(buttonsContainer);
-
-    form.addEventListener('submit', (e) => {
-        e.preventDefault();
-        const formData = {};
-        fields.forEach(field => {
-            formData[field.id] = form.elements[field.id].value;
-        });
-        onSubmit(formData);
-    });
     
     return form;
 }
-
 
 /**
  * Crea un modal con soporte para botones de acción en el pie de página.
  * @param {string} title - Título del modal.
  * @param {HTMLElement|string} content - Contenido del modal.
  * @param {string} size - Tamaño del modal ('sm', 'lg', 'xl').
- * @param {Array} actions - Array de objetos para los botones de acción. Ej: [{label: 'Ok', className: 'btn-primary', onClick: (modal) => modal.hide()}]
- * @returns {Object} - Objeto con el elemento modal y métodos para mostrar/ocultar.
+ * @param {Array} actions - Array de objetos para los botones de acción.
+ * @returns {Object} Objeto con el elemento modal y métodos para mostrar/ocultar.
  */
 function createModal(title, content, size = '', actions = []) {
-    const modalId = 'appModal-' + Date.now();
     const modalContainer = document.createElement('div');
     modalContainer.className = 'modal fade';
-    modalContainer.id = modalId;
     modalContainer.tabIndex = -1;
+    modalContainer.setAttribute('aria-hidden', 'true');
 
     const modalDialog = document.createElement('div');
-    modalDialog.className = `modal-dialog ${size ? 'modal-' + size : ''}`;
+    modalDialog.className = `modal-dialog ${size ? 'modal-' + size : ''} modal-dialog-centered`;
 
     const modalContent = document.createElement('div');
     modalContent.className = 'modal-content';
 
-    modalContent.innerHTML = `
-        <div class="modal-header">
-            <h5 class="modal-title">${title}</h5>
-            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-        </div>
-        <div class="modal-body"></div>
-    `;
+    const modalHeader = document.createElement('div');
+    modalHeader.className = 'modal-header';
+    modalHeader.innerHTML = `<h5 class="modal-title">${title}</h5><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>`;
 
-    const modalBody = modalContent.querySelector('.modal-body');
+    const modalBody = document.createElement('div');
+    modalBody.className = 'modal-body';
     if (typeof content === 'string') {
         modalBody.innerHTML = content;
     } else {
         modalBody.appendChild(content);
     }
+    
+    modalContent.appendChild(modalHeader);
+    modalContent.appendChild(modalBody);
 
     if (actions.length > 0) {
         const modalFooter = document.createElement('div');
         modalFooter.className = 'modal-footer';
-
         actions.forEach(action => {
             const button = document.createElement('button');
             button.type = 'button';
             button.className = `btn ${action.className || 'btn-secondary'}`;
             button.textContent = action.label;
-            
-            if (action.dismiss) {
-                button.setAttribute('data-bs-dismiss', 'modal');
-            }
-            
+            if (action.dismiss) button.setAttribute('data-bs-dismiss', 'modal');
             modalFooter.appendChild(button);
         });
         modalContent.appendChild(modalFooter);
@@ -218,7 +211,6 @@ function createModal(title, content, size = '', actions = []) {
 
     const modal = new bootstrap.Modal(modalContainer);
     
-    // Asignar los eventos onClick después de que el modal está listo
     if (actions.length > 0) {
         const buttons = modalContainer.querySelectorAll('.modal-footer button');
         buttons.forEach((button, index) => {
@@ -239,7 +231,12 @@ function createModal(title, content, size = '', actions = []) {
     };
 }
 
-
+/**
+ * Crea un elemento de tarjeta (Card) de Bootstrap.
+ * @param {string} title - El título de la tarjeta. Puede ser vacío.
+ * @param {HTMLElement|string} content - El contenido para el cuerpo de la tarjeta.
+ * @returns {HTMLElement} El elemento de la tarjeta.
+ */
 function createCard(title, content) {
     const card = document.createElement('div');
     card.className = 'card shadow-sm mb-4';
@@ -252,7 +249,13 @@ function createCard(title, content) {
     }
     
     const cardBody = document.createElement('div');
-    cardBody.className = 'card-body p-0'; // p-0 para que la tabla quede al ras
+    // Si el contenido es una tabla, no añadir padding para que se vea bien.
+    if (typeof content !== 'string' && content.querySelector('.table')) {
+        cardBody.className = 'card-body p-0';
+    } else {
+        cardBody.className = 'card-body';
+    }
+
     if (typeof content === 'string') {
         cardBody.innerHTML = content;
     } else {
