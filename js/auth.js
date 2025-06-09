@@ -2,6 +2,7 @@
  * CondoAdminLosMolles - Sistema de Administración de Condominios
  * Módulo de autenticación con Google
  */
+
 // Variables globales para la autenticación
 let tokenClient;
 let gapiInited = false;
@@ -13,20 +14,19 @@ function handleClientLoad() {
         tokenClient = google.accounts.oauth2.initTokenClient({
             client_id: CONFIG.CLIENT_ID,
             scope: 'https://www.googleapis.com/auth/spreadsheets', 
-            callback: '', 
+            callback: ''
         });
         maybeEnableButtons();
     });
 }
 
-function initializeGapiClient() {
-    gapi.client.init({
+async function initializeGapiClient() {
+    await gapi.client.init({
         apiKey: CONFIG.API_KEY,
-        discoveryDocs: ['https://sheets.googleapis.com/$discovery/rest?version=v4'],
-    }).then(() => {
-        gapiInited = true;
-        maybeEnableButtons();
+        discoveryDocs: ['https://sheets.googleapis.com/$discovery/rest?version=v4']
     });
+    gapiInited = true;
+    maybeEnableButtons();
 }
 
 function gisLoaded() {
@@ -39,7 +39,6 @@ function maybeEnableButtons() {
         document.getElementById('authorize_button').classList.remove('d-none');
         document.getElementById('authorize_button').disabled = false;
         document.getElementById('authorize_button').onclick = handleAuthClick;
-        // Verificar si ya hay un token almacenado
         const token = localStorage.getItem('gapi_access_token');
         if (token) {
             gapi.client.setToken(JSON.parse(token));
@@ -58,7 +57,11 @@ function handleAuthClick() {
         localStorage.setItem('gapi_access_token', JSON.stringify(gapi.client.getToken()));
         handleAuthSuccess();
     };
-    tokenClient.requestAccessToken({ prompt: 'consent' });
+    if (gapi.client.getToken() === null) {
+        tokenClient.requestAccessToken({ prompt: 'consent' });
+    } else {
+        tokenClient.requestAccessToken({ prompt: '' });
+    }
 }
 
 function handleSignoutClick() {
