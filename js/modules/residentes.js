@@ -1,8 +1,9 @@
 /**
- * CondoAdmin - Módulo de Residentes (Versión final con corrección de edición y eliminación)
+ * CondoAdmin - Módulo de Residentes (Versión final con corrección de carga y renderizado)
  */
 
 let originalResidentesData = [];
+let residenteHeaders = [];
 
 async function initResidentesModule(container) {
     console.log("🚀 Inicializando módulo de residentes...");
@@ -14,7 +15,15 @@ async function initResidentesModule(container) {
             </div>
         `;
 
-        const residentes = await sheetsAPI.getSheetData(CONFIG.SHEETS.RESIDENTES);
+        const [residentes, headers] = await Promise.all([
+            sheetsAPI.getSheetData(CONFIG.SHEETS.RESIDENTES),
+            sheetsAPI.getSheetHeaders(CONFIG.SHEETS.RESIDENTES)
+        ]);
+
+        // *** INICIO DE LA CORRECCIÓN ***
+        // Se añade una verificación para asegurar que 'headers' sea siempre un array.
+        residenteHeaders = headers || [];
+        // *** FIN DE LA CORRECCIÓN ***
         
         originalResidentesData = residentes.map((residente, index) => {
             return { ...residente, SHEET_ROW_INDEX: index + 2 };
@@ -56,7 +65,13 @@ function renderResidentesUI(container, residentes) {
 function updateResidentesTable(residentes) {
     const tableContainer = document.getElementById("residentes-table-container");
 
-    // Definición explícita de las columnas para la tabla.
+    if (residentes.length === 0) {
+        tableContainer.innerHTML = `<div class="alert alert-info mt-4"><i class="fas fa-info-circle me-2"></i>No se encontraron residentes.</div>`;
+        return;
+    }
+
+    // *** INICIO DE LA CORRECCIÓN ***
+    // Se vuelve a una definición de columnas explícita y estable para evitar errores de renderizado.
     const columns = [
         { field: "Nombre", title: "Nombre Completo" },
         { field: "Rut", title: "RUT" },
@@ -68,6 +83,7 @@ function updateResidentesTable(residentes) {
             return `<span class="badge ${classMap[value] || 'bg-secondary'}">${value || "No definido"}</span>`;
         }}
     ];
+    // *** FIN DE LA CORRECCIÓN ***
     
     const rowActions = (item) => `
         <div class="btn-group btn-group-sm" role="group">
@@ -99,23 +115,11 @@ function showResidenteForm(residente = null) {
         { id: "valor_gasto_comun", label: "Valor Gasto Común ($)", type: "number", required: true }
     ];
 
-    // *** INICIO DE LA CORRECIÓN PARA EDITAR ***
-    // Se asegura que todos los campos se lean correctamente del objeto 'residente'.
-    const formValues = {};
-    if (isEditing) {
-        formValues.nombre = residente.Nombre || "";
-        formValues.rut = residente.Rut || "";
-        formValues.direccion = residente.Direccion || "";
-        formValues.email = residente.Email || "";
-        formValues.telefono = residente.Telefono || "";
-        formValues.numero_parcela = residente.Numero_Parcela || "";
-        formValues.estado = residente.Estado || "Activo";
-        formValues.valor_gasto_comun = residente.Valor_Gasto_Comun || "0";
-    } else {
-        formValues.estado = "Activo";
-        formValues.valor_gasto_comun = "0";
-    }
-    // *** FIN DE LA CORRECCIÓN PARA EDITAR ***
+    const formValues = isEditing ? {
+        nombre: residente.Nombre || "", rut: residente.Rut || "", direccion: residente.Direccion || "",
+        email: residente.Email || "", telefono: residente.Telefono || "", numero_parcela: residente.Numero_Parcela || "",
+        estado: residente.Estado || "Activo", valor_gasto_comun: residente.Valor_Gasto_Comun || "0"
+    } : { estado: "Activo", valor_gasto_comun: "0" };
 
     const form = createForm(fields, formValues, async (formData) => {
         const modal = bootstrap.Modal.getInstance(form.closest('.modal'));
@@ -150,11 +154,8 @@ function setupActionButtons(residentes) {
             const rut = e.currentTarget.getAttribute("data-rut");
             const residente = residentes.find(r => r.Rut === rut);
             if (!residente) return;
-            if (e.currentTarget.classList.contains("btn-edit")) {
-                showResidenteForm(residente);
-            } else if (e.currentTarget.classList.contains("btn-delete")) {
-                confirmDeleteResidente(residente);
-            }
+            if (e.currentTarget.classList.contains("btn-edit")) showResidenteForm(residente);
+            else if (e.currentTarget.classList.contains("btn-delete")) confirmDeleteResidente(residente);
         });
     });
 }
@@ -162,7 +163,6 @@ function setupActionButtons(residentes) {
 function confirmDeleteResidente(residente) {
     const modalContent = `<p>¿Está seguro de que desea eliminar a <strong>${residente.Nombre}</strong> (RUT: ${residente.Rut})?</p><p class="text-danger"><i class="fas fa-exclamation-triangle me-2"></i>Esta acción no se puede deshacer.</p>`;
     
-    // Ahora esta función llamará al nuevo createModal que sí funciona
     createModal("Confirmar Eliminación", modalContent, "md", [
         { label: 'Cancelar', className: 'btn-secondary', dismiss: true },
         { 
@@ -192,11 +192,14 @@ function filterResidentes() {
 }
 
 function exportResidentes(residentes) {
-    const headers = ["Nombre", "Rut", "Direccion", "Email", "Telefono", "Numero_Parcela", "Estado", "Valor_Gasto_Comun"];
+    if (residenteHeaders.length === 0) {
+        showToast("No hay datos de columnas para exportar.", "warning");
+        return;
+    }
     try {
-        let csvContent = "data:text/csv;charset=utf-8," + headers.join(",") + "\n";
+        let csvContent = "data:text/csv;charset=utf-8," + residenteHeaders.join(",") + "\n";
         residentes.forEach(residente => {
-            const row = headers.map(header => `"${String(residente[header] || "").replace(/"/g, '""')}"`);
+            const row = residenteHeaders.map(header => `"${String(residente[header] || "").replace(/"/g, '""')}"`);
             csvContent += row.join(",") + "\n";
         });
         const encodedUri = encodeURI(csvContent);
