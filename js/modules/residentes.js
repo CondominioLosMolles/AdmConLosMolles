@@ -1,63 +1,13 @@
-/**
- * CondoAdminLosMolles - Sistema de Administración de Condominios
- * Módulo de Residentes (Versión Final)
- */
+// Módulo de Residentes - Versión Corregida
 
-// Función para mostrar errores detallados
-function showDetailedError(contextMessage, error) {
-    console.error('❌ ERROR:', contextMessage, error);
-    const modalElement = document.getElementById('errorModal');
-    if (!modalElement) return;
-    const modalBody = document.getElementById('errorModalBody');
-    let detailedMessage = 'No hay detalles disponibles.';
-    if (error) {
-        if (error.message) {
-            detailedMessage = error.message;
-        } else if (error.result && error.result.error) {
-            detailedMessage = `Code ${error.result.error.code}: ${error.result.error.message}`;
-        } else {
-            detailedMessage = JSON.stringify(error);
-        }
-    }
-    modalBody.innerHTML = `<strong>${contextMessage}:</strong><br><pre style="white-space: pre-wrap; word-break: break-all;">${detailedMessage}</pre>`;
-    const modal = new bootstrap.Modal(modalElement);
-    modal.show();
-}
-
-// Función helper para obtener valores normalizados
-function getNormalizedValue(obj, field) {
-    if (!obj) return '';
-    return obj[field] || obj[field.replace(/_/g, ' ')] || obj[field.replace(/ /g, '_')] || '';
-}
-
-// Variable global para almacenar los datos originales
 let originalResidentesData = [];
 
-// Función que configura los botones de acción
-function setupActionButtons(residentes) {
-    document.querySelectorAll('.btn-view, .btn-edit, .btn-delete').forEach(button => {
-        button.addEventListener('click', (e) => {
-            const buttonEl = e.currentTarget;
-            const rutId = buttonEl.getAttribute('data-rut-id');
-            const residente = residentes.find(r => r.RUT_UNIQUE_ID === rutId);
-            if (residente) {
-                if (buttonEl.classList.contains('btn-view')) showResidenteDetails(residente);
-                if (buttonEl.classList.contains('btn-edit')) showResidenteForm(residente);
-                if (buttonEl.classList.contains('btn-delete')) confirmDeleteResidente(residente);
-            } else {
-                showDetailedError('Error', new Error(`No se encontró el residente con RUT: ${rutId}`));
-            }
-        });
-    });
-}
-
 async function initResidentesModule(container) {
+    console.log('🚀 Inicializando módulo de residentes...');
     try {
-        if (typeof sheetsAPI === 'undefined') {
-            throw new Error('sheetsAPI no está disponible. Verifica que se haya cargado correctamente.');
-        }
+        if (typeof sheetsAPI === 'undefined') throw new Error('sheetsAPI no está disponible');
         if (typeof CONFIG === 'undefined' || !CONFIG.SHEETS || !CONFIG.SHEETS.RESIDENTES) {
-            throw new Error('CONFIG.SHEETS.RESIDENTES no está definido. Verifica la configuración.');
+            throw new Error('CONFIG.SHEETS.RESIDENTES no está definido');
         }
 
         container.innerHTML = `
@@ -69,6 +19,7 @@ async function initResidentesModule(container) {
         `;
 
         const residentes = await sheetsAPI.getSheetData(CONFIG.SHEETS.RESIDENTES);
+
         originalResidentesData = residentes.map((residente, index) => {
             const cleanResidente = {};
             Object.keys(residente).forEach(key => {
@@ -77,16 +28,15 @@ async function initResidentesModule(container) {
                 }
             });
 
-            const rut = getNormalizedValue(cleanResidente, 'Rut') || getNormalizedValue(cleanResidente, 'RUT');
+            // Usar el RUT como identificador único
+            const rut = cleanResidente['Rut'] || cleanResidente['RUT'];
             cleanResidente.RUT_UNIQUE_ID = rut;
-            cleanResidente.SHEET_ROW_INDEX = index + 2;
+            cleanResidente.SHEET_ROW_INDEX = index + 2; // Fila real en Google Sheets (considerando encabezados)
 
             return cleanResidente;
         });
 
         const content = document.createElement('div');
-
-        // Encabezado y botón de nuevo residente
         const header = document.createElement('div');
         header.className = 'd-flex justify-content-between align-items-center mb-4';
         const title = document.createElement('h2');
@@ -99,7 +49,6 @@ async function initResidentesModule(container) {
         header.appendChild(addButton);
         content.appendChild(header);
 
-        // Barra de herramientas con búsqueda y exportación
         const toolbarRow = document.createElement('div');
         toolbarRow.className = 'row mb-4';
 
@@ -135,7 +84,6 @@ async function initResidentesModule(container) {
 
         content.appendChild(toolbarRow);
 
-        // Contenedor de la tabla
         const tableContainer = document.createElement('div');
         tableContainer.className = 'card';
         tableContainer.id = 'residentes-table-container';
@@ -148,60 +96,14 @@ async function initResidentesModule(container) {
         container.appendChild(content);
 
         updateResidentesTable(originalResidentesData);
+        console.log('✅ Módulo de residentes inicializado correctamente');
     } catch (error) {
+        console.error('❌ Error al inicializar módulo de residentes:', error);
         showDetailedError('Error al inicializar el módulo de Residentes', error);
     }
 }
 
-// Función que muestra un residente en detalle
-function showResidenteDetails(residente) {
-    const content = document.createElement('div');
-    const infoCardBody = document.createElement('div');
-    infoCardBody.className = 'card-body';
-    infoCardBody.innerHTML = `
-        <h5 class="card-title mb-3">${getNormalizedValue(residente, 'Nombre')}</h5>
-        <div class="row">
-            <div class="col-md-6">
-                <p><strong>RUT:</strong> ${getNormalizedValue(residente, 'Rut') || getNormalizedValue(residente, 'RUT')}</p>
-                <p><strong>Dirección:</strong> ${getNormalizedValue(residente, 'Direccion')}</p>
-                <p><strong>Nº Parcela:</strong> ${getNormalizedValue(residente, 'Numero_Parcela') || getNormalizedValue(residente, 'Numero Parcela')}</p>
-            </div>
-            <div class="col-md-6">
-                <p><strong>Email:</strong> ${getNormalizedValue(residente, 'Email') || 'No especificado'}</p>
-                <p><strong>Teléfono:</strong> ${getNormalizedValue(residente, 'Telefono') || 'No especificado'}</p>
-                <p><strong>Estado:</strong> <span class="badge ${getNormalizedValue(residente, 'Estado') === 'Activo' ? 'bg-success' : getNormalizedValue(residente, 'Estado') === 'Inactivo' ? 'bg-danger' : 'bg-warning text-dark'}">${getNormalizedValue(residente, 'Estado')}</span></p>
-                <p><strong>Valor Gasto Común:</strong> <span class="text-primary fw-bold">${formatCurrency(parseFloat(getNormalizedValue(residente, 'Valor_Gasto_Comun') || getNormalizedValue(residente, 'Valor Gasto Comun')) || 0}</span></p>
-            </div>
-        </div>`;
-    content.appendChild(infoCardBody);
-
-    const actionsDiv = document.createElement('div');
-    actionsDiv.className = 'd-flex justify-content-end p-3';
-    const editButton = document.createElement('button');
-    editButton.className = 'btn btn-primary me-2';
-    editButton.innerHTML = '<i class="fas fa-edit"></i> Editar';
-    editButton.addEventListener('click', () => { modal.hide(); showResidenteForm(residente); });
-    const closeButton = document.createElement('button');
-    closeButton.className = 'btn btn-secondary';
-    closeButton.innerHTML = 'Cerrar';
-    closeButton.setAttribute('data-bs-dismiss', 'modal');
-    actionsDiv.appendChild(editButton);
-    actionsDiv.appendChild(closeButton);
-    content.appendChild(actionsDiv);
-
-    const modal = createModal('Detalles del Residente', content, 'lg');
-    modal.show();
-}
-
-// Función que muestra el formulario de residente
 function showResidenteForm(residente = null) {
-    console.log('📝 Mostrando formulario de residente:', residente ? 'EDITAR' : 'NUEVO');
-
-    if (typeof createForm === 'undefined') {
-        showDetailedError('Error de dependencias', new Error('createForm no está disponible'));
-        return;
-    }
-
     const fields = [
         { id: 'nombre', label: 'Nombre Completo', type: 'text', required: true },
         { id: 'rut', label: 'RUT (con guion y dígito verificador)', type: 'text', required: true, disabled: !!residente },
@@ -225,14 +127,14 @@ function showResidenteForm(residente = null) {
         isEditing = true;
         editingResidente = residente;
         values = {
-            nombre: getNormalizedValue(residente, 'Nombre'),
-            rut: getNormalizedValue(residente, 'Rut') || getNormalizedValue(residente, 'RUT'),
-            direccion: getNormalizedValue(residente, 'Direccion'),
-            email: getNormalizedValue(residente, 'Email'),
-            telefono: getNormalizedValue(residente, 'Telefono'),
-            numero_parcela: getNormalizedValue(residente, 'Numero_Parcela') || getNormalizedValue(residente, 'Numero Parcela'),
-            estado: getNormalizedValue(residente, 'Estado'),
-            valor_gasto_comun: getNormalizedValue(residente, 'Valor_Gasto_Comun') || getNormalizedValue(residente, 'Valor Gasto Comun') || '0'
+            nombre: residente['Nombre'] || '',
+            rut: residente['Rut'] || residente['RUT'] || '',
+            direccion: residente['Direccion'] || '',
+            email: residente['Email'] || '',
+            telefono: residente['Telefono'] || '',
+            numero_parcela: residente['Numero_Parcela'] || residente['Numero Parcela'] || '',
+            estado: residente['Estado'] || 'Activo',
+            valor_gasto_comun: residente['Valor_Gasto_Comun'] || residente['Valor Gasto Comun'] || '0'
         };
     }
 
@@ -245,30 +147,38 @@ function showResidenteForm(residente = null) {
             const valorGastoComunNumerico = Number(formData.valor_gasto_comun) || 0;
 
             const rowData = [
-                formData.nombre, 
-                formData.rut, 
-                formData.direccion, 
+                formData.nombre,
+                formData.rut,
+                formData.direccion,
                 formData.email || '',
-                formData.telefono || '', 
-                formData.numero_parcela, 
-                formData.estado, 
+                formData.telefono || '',
+                formData.numero_parcela,
+                formData.estado,
                 valorGastoComunNumerico
             ];
 
-            if (isEditing && editingResidente) {
+            if (isEditing && editingResidente && editingResidente.SHEET_ROW_INDEX) {
+                // Actualizar fila existente
                 await sheetsAPI.updateRow(CONFIG.SHEETS.RESIDENTES, editingResidente.SHEET_ROW_INDEX, rowData);
+                showSuccessToast('Residente actualizado exitosamente');
             } else {
+                // Verificar que el RUT no exista antes de crear
                 const rutExists = originalResidentesData.some(r => r.RUT_UNIQUE_ID === formData.rut);
                 if (rutExists) {
                     throw new Error(`El RUT ${formData.rut} ya existe.`);
                 }
+                // Crear nuevo residente
                 await sheetsAPI.appendRow(CONFIG.SHEETS.RESIDENTES, rowData);
+                showSuccessToast('Residente creado exitosamente');
             }
 
+            const modal = bootstrap.Modal.getInstance(form.closest('.modal'));
             modal.hide();
-            showSuccessToast(isEditing ? 'Residente actualizado exitosamente' : 'Residente creado exitosamente');
+            
+            // Recargar los datos después de la operación
             await initResidentesModule(document.getElementById('module-container'));
         } catch (error) {
+            console.error('❌ Error al guardar residente:', error);
             showDetailedError('Error al guardar residente', error);
             const submitButton = form.querySelector('button[type="submit"]');
             submitButton.disabled = false;
@@ -277,73 +187,19 @@ function showResidenteForm(residente = null) {
     });
 
     const modal = createModal(
-        isEditing ? 'Editar Residente' : 'Nuevo Residente', 
-        form, 
+        isEditing ? 'Editar Residente' : 'Nuevo Residente',
+        form,
         'lg'
     );
     modal.show();
 }
 
-function filterResidentes() {
-    const searchText = document.getElementById('search-residente')?.value?.toLowerCase() || '';
-    const filteredResidentes = originalResidentesData.filter(residente => {
-        return Object.entries(residente).some(([key, value]) => {
-            if (key.startsWith('RUT_UNIQUE_ID') || key.startsWith('SHEET_ROW_INDEX')) {
-                return false;
-            }
-            if (value === null || typeof value === 'undefined') {
-                return false;
-            }
-            return String(value).toLowerCase().includes(searchText);
-        });
-    });
-    updateResidentesTable(filteredResidentes);
-}
-
-function updateResidentesTable(residentes) {
-    const tableCard = document.querySelector('#residentes-table-container .card-body');
-    if (!tableCard) return;
-
-    tableCard.innerHTML = '';
-    const columns = [
-        { field: 'Nombre', title: 'Nombre' }, 
-        { field: 'Rut', title: 'RUT' },
-        { field: 'Email', title: 'Email' }, 
-        { field: 'Telefono', title: 'Teléfono' },
-        { field: 'Numero Parcela', title: 'Nº Parcela', width: '120px' },
-        { 
-            field: 'Estado', 
-            title: 'Estado', 
-            width: '120px', 
-            formatter: (value) => `<span class="badge ${value === 'Activo' ? 'bg-success' : value === 'Inactivo' ? 'bg-danger' : 'bg-warning text-dark'}">${value || 'No definido'}</span>` 
-        },
-        { 
-            field: 'Valor Gasto Comun', 
-            title: 'Gasto Común', 
-            width: '130px', 
-            formatter: (value) => formatCurrency(parseFloat(value) || 0) 
-        }
-    ];
-
-    const rowActions = (item, index) => `
-        <div class="btn-group btn-group-sm" role="group">
-            <button type="button" class="btn btn-outline-primary btn-view" data-rut-id="${item.RUT_UNIQUE_ID}" title="Ver Detalles"><i class="fas fa-eye"></i></button>
-            <button type="button" class="btn btn-outline-secondary btn-edit" data-rut-id="${item.RUT_UNIQUE_ID}" title="Editar"><i class="fas fa-edit"></i></button>
-            <button type="button" class="btn btn-outline-danger btn-delete" data-rut-id="${item.RUT_UNIQUE_ID}" title="Eliminar"><i class="fas fa-trash"></i></button>
-        </div>`;
-
-    const table = createDataTable(residentes, columns, rowActions);
-    tableCard.appendChild(table);
-    setupActionButtons(residentes);
-}
-
 function confirmDeleteResidente(residente) {
     const content = document.createElement('div');
     content.innerHTML = `
-        <p>¿Está seguro de que desea eliminar al residente <strong>${getNormalizedValue(residente, 'Nombre')}</strong> (RUT: ${residente.RUT_UNIQUE_ID})?</p>
+        <p>¿Está seguro de que desea eliminar al residente <strong>${residente['Nombre']}</strong> (RUT: ${residente.RUT_UNIQUE_ID})?</p>
         <p>Esta acción no se puede deshacer.</p>
     `;
-
     const actionsDiv = document.createElement('div');
     actionsDiv.className = 'd-flex justify-content-end mt-4';
     const cancelButton = document.createElement('button');
@@ -357,13 +213,18 @@ function confirmDeleteResidente(residente) {
         try {
             deleteButton.disabled = true;
             deleteButton.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Eliminando...';
-
-            const sheetRowIndex = residente.SHEET_ROW_INDEX;
-            await sheetsAPI.deleteRow(CONFIG.SHEETS.RESIDENTES, sheetRowIndex);
+            
+            // Eliminar la fila específica usando el índice correcto
+            await sheetsAPI.deleteRow(CONFIG.SHEETS.RESIDENTES, residente.SHEET_ROW_INDEX);
+            
+            const modal = bootstrap.Modal.getInstance(deleteButton.closest('.modal'));
             modal.hide();
             showSuccessToast('Residente eliminado exitosamente');
+            
+            // Recargar los datos después de la eliminación
             await initResidentesModule(document.getElementById('module-container'));
         } catch (error) {
+            console.error('❌ Error al eliminar residente:', error);
             showDetailedError('Error al eliminar residente', error);
             deleteButton.disabled = false;
             deleteButton.innerHTML = '<i class="fas fa-trash"></i> Eliminar';
@@ -372,21 +233,138 @@ function confirmDeleteResidente(residente) {
     actionsDiv.appendChild(cancelButton);
     actionsDiv.appendChild(deleteButton);
     content.appendChild(actionsDiv);
-
     const modal = createModal('Confirmar Eliminación', content, 'sm');
     modal.show();
 }
 
+function updateResidentesTable(residentes) {
+    const tableCard = document.querySelector('#residentes-table-container .card-body');
+    if (!tableCard) return;
+
+    tableCard.innerHTML = '';
+    const columns = [
+        { field: 'Nombre', title: 'Nombre' },
+        { field: 'Rut', title: 'RUT' },
+        { field: 'Email', title: 'Email' },
+        { field: 'Telefono', title: 'Teléfono' },
+        { 
+            field: 'Numero_Parcela', 
+            title: 'Nº Parcela', 
+            width: '120px',
+            formatter: (value, item) => value || item['Numero Parcela'] || 'N/A'
+        },
+        {
+            field: 'Estado',
+            title: 'Estado',
+            width: '120px',
+            formatter: (value) => `<span class="badge ${value === 'Activo' ? 'bg-success' : value === 'Inactivo' ? 'bg-danger' : 'bg-warning text-dark'}">${value || 'No definido'}</span>`
+        },
+        {
+            field: 'Valor_Gasto_Comun',
+            title: 'Gasto Común',
+            width: '130px',
+            formatter: (value, item) => {
+                const valorGasto = value || item['Valor Gasto Comun'] || 0;
+                return formatCurrency(parseFloat(valorGasto) || 0);
+            }
+        }
+    ];
+    const rowActions = (item) => `
+        <div class="btn-group btn-group-sm" role="group">
+            <button type="button" class="btn btn-outline-primary btn-view" data-rut-id="${item.RUT_UNIQUE_ID}" title="Ver Detalles"><i class="fas fa-eye"></i></button>
+            <button type="button" class="btn btn-outline-secondary btn-edit" data-rut-id="${item.RUT_UNIQUE_ID}" title="Editar"><i class="fas fa-edit"></i></button>
+            <button type="button" class="btn btn-outline-danger btn-delete" data-rut-id="${item.RUT_UNIQUE_ID}" title="Eliminar"><i class="fas fa-trash"></i></button>
+        </div>
+    `;
+    const table = createDataTable(residentes, columns, rowActions);
+    tableCard.appendChild(table);
+    setupActionButtons(residentes);
+}
+
+function setupActionButtons(residentes) {
+    document.querySelectorAll('.btn-view, .btn-edit, .btn-delete').forEach(button => {
+        button.addEventListener('click', (e) => {
+            const buttonEl = e.currentTarget;
+            const rutId = buttonEl.getAttribute('data-rut-id');
+            const residente = residentes.find(r => r.RUT_UNIQUE_ID === rutId);
+            if (residente) {
+                if (buttonEl.classList.contains('btn-view')) showResidenteDetails(residente);
+                if (buttonEl.classList.contains('btn-edit')) showResidenteForm(residente);
+                if (buttonEl.classList.contains('btn-delete')) confirmDeleteResidente(residente);
+            } else {
+                showDetailedError('Error', new Error(`No se encontró el residente con RUT: ${rutId}`));
+            }
+        });
+    });
+}
+
+function showResidenteDetails(residente) {
+    const content = document.createElement('div');
+    const infoCardBody = document.createElement('div');
+    infoCardBody.className = 'card-body';
+    
+    const numeroParcela = residente['Numero_Parcela'] || residente['Numero Parcela'] || 'No especificado';
+    const valorGastoComun = residente['Valor_Gasto_Comun'] || residente['Valor Gasto Comun'] || 0;
+    
+    infoCardBody.innerHTML = `
+        <h5 class="card-title mb-3">${residente['Nombre']}</h5>
+        <div class="row">
+            <div class="col-md-6">
+                <p><strong>RUT:</strong> ${residente['Rut'] || residente['RUT']}</p>
+                <p><strong>Dirección:</strong> ${residente['Direccion']}</p>
+                <p><strong>Nº Parcela:</strong> ${numeroParcela}</p>
+            </div>
+            <div class="col-md-6">
+                <p><strong>Email:</strong> ${residente['Email'] || 'No especificado'}</p>
+                <p><strong>Teléfono:</strong> ${residente['Telefono'] || 'No especificado'}</p>
+                <p><strong>Estado:</strong> <span class="badge ${residente['Estado'] === 'Activo' ? 'bg-success' : residente['Estado'] === 'Inactivo' ? 'bg-danger' : 'bg-warning text-dark'}">${residente['Estado']}</span></p>
+                <p><strong>Valor Gasto Común:</strong> <span class="text-primary fw-bold">${formatCurrency(parseFloat(valorGastoComun) || 0)}</span></p>
+            </div>
+        </div>`;
+    content.appendChild(infoCardBody);
+    const actionsDiv = document.createElement('div');
+    actionsDiv.className = 'd-flex justify-content-end p-3';
+    const editButton = document.createElement('button');
+    editButton.className = 'btn btn-primary me-2';
+    editButton.innerHTML = '<i class="fas fa-edit"></i> Editar';
+    editButton.addEventListener('click', () => { 
+        const modal = bootstrap.Modal.getInstance(editButton.closest('.modal'));
+        modal.hide(); 
+        showResidenteForm(residente); 
+    });
+    const closeButton = document.createElement('button');
+    closeButton.className = 'btn btn-secondary';
+    closeButton.innerHTML = 'Cerrar';
+    closeButton.setAttribute('data-bs-dismiss', 'modal');
+    actionsDiv.appendChild(editButton);
+    actionsDiv.appendChild(closeButton);
+    content.appendChild(actionsDiv);
+    const modal = createModal('Detalles del Residente', content, 'lg');
+    modal.show();
+}
+
+function filterResidentes() {
+    const searchText = document.getElementById('search-residente')?.value?.toLowerCase() || '';
+    const filteredResidentes = originalResidentesData.filter(residente => {
+        return Object.values(residente).some(value => {
+            if (value === null || typeof value === 'undefined') return false;
+            return String(value).toLowerCase().includes(searchText);
+        });
+    });
+    updateResidentesTable(filteredResidentes);
+}
+
 function exportResidentes(residentes) {
     let csvContent = 'data:text/csv;charset=utf-8,';
-    const headers = ['Nombre', 'Rut', 'Direccion', 'Email', 'Telefono', 'Numero Parcela', 'Estado', 'Valor Gasto Comun'];
+    const headers = ['Nombre', 'Rut', 'Direccion', 'Email', 'Telefono', 'Numero_Parcela', 'Estado', 'Valor_Gasto_Comun'];
     csvContent += headers.join(',') + '\n';
 
     residentes.forEach(residente => {
         const row = headers.map(headerKey => {
-            return `"${(residente[headerKey] || '').toString().replace(/"/g, '""')}"`;
-        }).join(',');
-        csvContent += row + '\n';
+            let value = residente[headerKey] || residente[headerKey.replace(/_/g, ' ')] || residente[headerKey.replace(/ /g, '_')] || '';
+            return value.toString().replace(/"/g, '""');
+        });
+        csvContent += `"${row.join('","')}"\n`;
     });
 
     const encodedUri = encodeURI(csvContent);
@@ -404,14 +382,15 @@ function showSuccessToast(message) {
     toast.style.zIndex = '9999';
     toast.innerHTML = `
         <div class="d-flex">
-            <div class="toast-body">${message}</div>
+            <div class="toast-body">
+                ${message}
+            </div>
             <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
         </div>
     `;
     document.body.appendChild(toast);
     const bsToast = new bootstrap.Toast(toast);
     bsToast.show();
-
     setTimeout(() => {
         if (document.body.contains(toast)) {
             document.body.removeChild(toast);
@@ -419,4 +398,3 @@ function showSuccessToast(message) {
     }, 5000);
 }
 
-window.initResidentesModule = initResidentesModule;
