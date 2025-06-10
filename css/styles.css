@@ -1,0 +1,48 @@
+body {
+  font-family: 'Roboto', sans-serif;
+  margin: 0;
+  display: flex;
+  height: 100vh;
+}
+.hidden {
+  display: none;
+}
+#login-container {
+  margin: auto;
+  text-align: center;
+}
+.app {
+  display: flex;
+  width: 100%;
+}
+.sidebar {
+  width: 220px;
+  background-color: #e8f0fe;
+  padding: 1rem;
+  box-shadow: 2px 0 5px rgba(0,0,0,0.1);
+}
+.sidebar h2 {
+  font-size: 1.2rem;
+  margin-bottom: 1rem;
+}
+.sidebar ul {
+  list-style: none;
+  padding: 0;
+}
+.sidebar li {
+  padding: 0.5rem;
+  cursor: pointer;
+}
+.sidebar li:hover {
+  background-color: #d2e3fc;
+}
+.main-content {
+  flex-grow: 1;
+  padding: 2rem;
+}
+.view {
+  display: none;
+}
+.view:not(.hidden) {
+  display: block;
+}
