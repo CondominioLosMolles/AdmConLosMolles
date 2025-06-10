@@ -45,16 +45,16 @@ function updateSigninStatus(isSignedIn) {
     app.classList.remove("hidden");
     login.classList.add("hidden");
 
-    // Acciones tras login
-    loadMainView();             // Vista por defecto
-    cargarConfiguracion();      // Config local (TMC)
-    cargarResidentes();         // Módulo Residentes
-    cargarSelectorResidentes(); // Módulo Gastos
+    loadMainView();
+    cargarConfiguracion();
+    cargarResidentes();
+    cargarSelectorResidentes();
+    mostrarTabContabilidad('ingresos');
   } else {
     app.classList.add("hidden");
     login.classList.remove("hidden");
   }
 }
 
-// Inicializa cliente cuando se carga la API de Google
 gapi.load('client:auth2', initClient);
+
