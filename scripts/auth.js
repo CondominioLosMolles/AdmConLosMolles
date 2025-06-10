@@ -1,17 +1,6 @@
-// scripts/auth.js - Autenticación OAuth 2.0 con Google
-let tokenClient;
-let gapiInited = false;
-let gisInited = false;
-
-function initAuth() {
-  tokenClient = google.accounts.oauth2.initTokenClient({
-    client_id: CONFIG.CLIENT_ID,
-    scope: CONFIG.SCOPES.join(" "),
-    callback: () => {}
-  });
-}
-
+// scripts/auth.js
 function handleLogin() {
+  console.log("handleLogin llamado"); // Agregar este log
   if (!gapiInited || !gisInited) {
     showError("APIs no inicializadas. Espere...");
     return;
@@ -31,12 +20,6 @@ function handleLogin() {
     <button onclick="signOut()">Cerrar Sesión</button>
   `;
   loadApp();
-}
-
-function signOut() {
-  google.accounts.oauth2.revoke(CONFIG.ALLOWED_EMAIL, () => {
-    location.reload();
-  });
 }
 
 // Inicializar Google Auth al cargar la página
@@ -61,6 +44,9 @@ window.addEventListener("load", async () => {
     script.onload = () => {
       gisInited = true;
       console.log("Google Auth listo");
+    };
+    script.onerror = (error) => {
+      console.error("Error cargando GIS:", error);
     };
     document.head.appendChild(script);
   } catch (error) {
