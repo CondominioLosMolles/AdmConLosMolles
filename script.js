@@ -230,7 +230,6 @@ function attachViewListeners(viewName) {
 
 // --- LÓGICA DE GASTOS COMUNES (CORREGIDA) ---
 async function displayResidentGCDetails() {
-     alert("¡Función ejecutada!");
     const residentId = document.getElementById('resident-selector-gc').value;
     const detailsContainer = document.getElementById('resident-gc-details');
     if (!residentId) {
