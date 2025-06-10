@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>CondominioLosMolles - Sistema de Administración</title>
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self' https://*.google.com https://*.googleapis.com https://*.gstatic.com; script-src 'self' 'unsafe-inline' https://*.google.com https://*.googleapis.com https://*.gstatic.com; style-src 'self' 'unsafe-inline' https://*.google.com https://*.googleapis.com https://*.gstatic.com; font-src 'self' https://*.gstatic.com; img-src 'self' data: https://*.google.com https://*.googleapis.com https://*.gstatic.com;">
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
@@ -413,6 +414,24 @@
         .login-btn i {
             font-size: 1.4rem;
         }
+        
+        .error-message {
+            background: #fdecea;
+            color: var(--danger-color);
+            padding: 15px;
+            border-radius: 6px;
+            margin-top: 20px;
+            text-align: left;
+            font-size: 0.9rem;
+        }
+        
+        .error-title {
+            font-weight: 600;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
 
         /* Responsive */
         @media (max-width: 992px) {
@@ -528,6 +547,15 @@
                 </svg>
                 Iniciar sesión con Google
             </button>
+            <div id="error-container" style="display: none;" class="error-message">
+                <div class="error-title">
+                    <svg width="20" height="20" viewBox="0 0 24 24">
+                        <path fill="#e74c3c" d="M13,13H11V7H13M13,17H11V15H13M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2Z" />
+                    </svg>
+                    <span>Error de autenticación</span>
+                </div>
+                <div id="error-details">No se pudo iniciar sesión. Por favor intente nuevamente.</div>
+            </div>
         </div>
     </div>
 
@@ -722,6 +750,8 @@
         const loginButton = document.getElementById('login-button');
         const moduleTitle = document.getElementById('module-title');
         const moduleContent = document.getElementById('module-content');
+        const errorContainer = document.getElementById('error-container');
+        const errorDetails = document.getElementById('error-details');
         
         // Estado de la aplicación
         let currentModule = 'dashboard';
@@ -1017,12 +1047,16 @@
                 gapi.client.init({
                     apiKey: API_KEY,
                     clientId: CLIENT_ID,
-                    discoveryDocs: ['https://sheets.googleapis.com/$discovery/rest?version=v4', 
-                                   'https://www.googleapis.com/discovery/v1/apis/drive/v3/rest',
-                                   'https://gmail.googleapis.com/$discovery/rest?version=v1'],
+                    discoveryDocs: [
+                        'https://sheets.googleapis.com/$discovery/rest?version=v4', 
+                        'https://www.googleapis.com/discovery/v1/apis/drive/v3/rest',
+                        'https://gmail.googleapis.com/$discovery/rest?version=v1'
+                    ],
                     scope: SCOPES
                 }).then(() => {
                     gapiInitialized = true;
+                    console.log('Google API inicializada correctamente');
+                    
                     // Verificar si ya está autenticado
                     if (gapi.auth2.getAuthInstance().isSignedIn.get()) {
                         loginScreen.style.display = 'none';
@@ -1033,13 +1067,15 @@
                     }
                 }).catch(err => {
                     console.error('Error al inicializar Google API', err);
-                    alert('Error al inicializar la aplicación. Por favor recarga la página.');
+                    showError('Error al inicializar la aplicación. Por favor recarga la página.');
                 });
             });
         }
         
         // Manejar clic en botón de login
         function handleAuthClick() {
+            loginButton.innerHTML = '<div class="spinner" style="width:20px;height:20px;border-width:3px;"></div> Iniciando sesión...';
+            
             gapi.auth2.getAuthInstance().signIn({
                 login_hint: 'losmollestunquen@gmail.com'
             }).then(() => {
@@ -1048,14 +1084,44 @@
                 init();
             }).catch(err => {
                 console.error('Error al iniciar sesión', err);
-                alert('Error al iniciar sesión. Por favor intenta nuevamente.');
+                showError('Error al iniciar sesión: ' + err.error);
+                loginButton.innerHTML = 'Iniciar sesión con Google';
             });
+        }
+        
+        // Mostrar mensaje de error
+        function showError(message) {
+            errorDetails.textContent = message;
+            errorContainer.style.display = 'block';
+            
+            // Ocultar después de 5 segundos
+            setTimeout(() => {
+                errorContainer.style.display = 'none';
+            }, 8000);
         }
         
         // Iniciar la aplicación cuando la API de Google esté cargada
         window.gapiLoaded = function() {
             initGoogleAPI();
         };
+        
+        // Verificar si gapi está disponible
+        if (typeof gapi !== 'undefined') {
+            window.gapiLoaded();
+        } else {
+            // Si no está disponible, intentar cargarla
+            const script = document.createElement('script');
+            script.src = 'https://apis.google.com/js/api.js';
+            script.onload = window.gapiLoaded;
+            document.head.appendChild(script);
+        }
+        
+        // Configurar el botón de inicio de sesión
+        loginButton.addEventListener('click', () => {
+            if (!gapiInitialized) {
+                showError('La API de Google aún no está cargada. Por favor espera unos segundos e intenta nuevamente.');
+            }
+        });
     </script>
 </body>
 </html>
