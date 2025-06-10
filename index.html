@@ -399,6 +399,60 @@
                 margin-top: 15px;
             }
         }
+        
+        /* Badges */
+        .badge {
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 500;
+            display: inline-block;
+        }
+
+        .badge-success {
+            background: #e6f7f0;
+            color: var(--success-color);
+        }
+
+        .badge-danger {
+            background: #fdecea;
+            color: var(--danger-color);
+        }
+
+        .badge-warning {
+            background: #fef5e6;
+            color: var(--warning-color);
+        }
+        
+        /* Tables */
+        .table-container {
+            background: white;
+            border-radius: var(--card-radius);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+            overflow: hidden;
+            margin-top: 20px;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        th, td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid #eee;
+        }
+        
+        th {
+            background-color: #f8f9fa;
+            font-weight: 600;
+            color: var(--dark-color);
+        }
+        
+        tr:hover {
+            background-color: #f9f9f9;
+        }
     </style>
 </head>
 <body>
@@ -504,7 +558,7 @@
                                 <div class="card-icon icon-blue">👥</div>
                             </div>
                             <div class="card-value" id="residents-count">42</div>
-                            <div class="card-footer">Activos: 38 | Morosos: 4</div>
+                            <div class="card-footer">Activos: <span id="active-residents">38</span> | Morosos: <span id="delinquent-residents">4</span></div>
                         </div>
                         
                         <div class="card">
@@ -513,7 +567,7 @@
                                 <div class="card-icon icon-green">⬆️</div>
                             </div>
                             <div class="card-value" id="income-month">$5,230,500</div>
-                            <div class="card-footer">+12% vs mes anterior</div>
+                            <div class="card-footer"><span id="income-change">+12%</span> vs mes anterior</div>
                         </div>
                         
                         <div class="card">
@@ -522,7 +576,7 @@
                                 <div class="card-icon icon-red">⬇️</div>
                             </div>
                             <div class="card-value" id="expenses-month">$3,450,200</div>
-                            <div class="card-footer">-5% vs mes anterior</div>
+                            <div class="card-footer"><span id="expenses-change">-5%</span> vs mes anterior</div>
                         </div>
                         
                         <div class="card">
@@ -531,7 +585,7 @@
                                 <div class="card-icon icon-purple">💵</div>
                             </div>
                             <div class="card-value" id="cash-balance">$8,750,300</div>
-                            <div class="card-footer">+$1,780,300 este año</div>
+                            <div class="card-footer"><span id="balance-change">+$1,780,300</span> este año</div>
                         </div>
                         
                         <div class="card">
@@ -540,7 +594,7 @@
                                 <div class="card-icon icon-orange">🔧</div>
                             </div>
                             <div class="card-value" id="maintenance-count">7</div>
-                            <div class="card-footer">3 urgentes</div>
+                            <div class="card-footer"><span id="urgent-maintenance">3</span> urgentes</div>
                         </div>
                         
                         <div class="card">
@@ -549,7 +603,7 @@
                                 <div class="card-icon icon-red">⚠️</div>
                             </div>
                             <div class="card-value" id="delinquency-amount">$1,850,700</div>
-                            <div class="card-footer">4 parcelas morosas</div>
+                            <div class="card-footer"><span id="delinquent-parcels">4</span> parcelas morosas</div>
                         </div>
                     </div>
                     
@@ -559,6 +613,87 @@
                         </div>
                         <div class="chart-container">
                             <canvas id="income-expenses-chart"></canvas>
+                        </div>
+                    </div>
+                    
+                    <div class="card">
+                        <div class="card-header">
+                            <div class="card-title">Resumen de Morosidad</div>
+                        </div>
+                        <div class="table-container">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Parcela</th>
+                                        <th>Residente</th>
+                                        <th>Meses Mora</th>
+                                        <th>Deuda Total</th>
+                                        <th>Estado</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="delinquency-list">
+                                    <tr>
+                                        <td>14</td>
+                                        <td>Juan Pérez</td>
+                                        <td>2</td>
+                                        <td>$850,400</td>
+                                        <td><span class="badge badge-danger">Moroso</span></td>
+                                    </tr>
+                                    <tr>
+                                        <td>22</td>
+                                        <td>María González</td>
+                                        <td>1</td>
+                                        <td>$425,200</td>
+                                        <td><span class="badge badge-danger">Moroso</span></td>
+                                    </tr>
+                                    <tr>
+                                        <td>07</td>
+                                        <td>Carlos López</td>
+                                        <td>3</td>
+                                        <td>$575,100</td>
+                                        <td><span class="badge badge-danger">Moroso</span></td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Residentes Content -->
+                <div id="residentes-module" style="display:none;">
+                    <div class="card">
+                        <div class="card-header">
+                            <div class="card-title">Gestión de Residentes</div>
+                        </div>
+                        <div class="card-body">
+                            <p>Módulo para administrar la información de los residentes</p>
+                            <!-- Contenido real del módulo de residentes -->
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Gastos Comunes Content -->
+                <div id="gastos-comunes-module" style="display:none;">
+                    <div class="card">
+                        <div class="card-header">
+                            <div class="card-title">Gestión de Gastos Comunes</div>
+                        </div>
+                        <div class="card-body">
+                            <p>Módulo para administrar los gastos comunes y pagos de los residentes</p>
+                            <!-- Contenido real del módulo de gastos comunes -->
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Contabilidad Content -->
+                <div id="contabilidad-module" style="display:none;">
+                    <div class="card">
+                        <div class="card-header">
+                            <div class="card-title">Contabilidad</div>
+                        </div>
+                        <div class="card-body">
+                            <p>Módulo para gestionar la contabilidad del condominio</p>
+                            <!-- Contenido real del módulo de contabilidad -->
                         </div>
                     </div>
                 </div>
@@ -577,6 +712,41 @@
         const moduleTitle = document.getElementById('module-title');
         const moduleContent = document.getElementById('module-content');
         
+        // Datos simulados del dashboard
+        const dashboardData = {
+            residents: {
+                total: 42,
+                active: 38,
+                delinquent: 4
+            },
+            finances: {
+                income: 5230500,
+                incomeChange: 12,
+                expenses: 3450200,
+                expensesChange: -5,
+                cashBalance: 8750300,
+                balanceChange: 1780300
+            },
+            maintenance: {
+                pending: 7,
+                urgent: 3
+            },
+            delinquency: {
+                amount: 1850700,
+                parcels: 4,
+                list: [
+                    { parcel: "14", resident: "Juan Pérez", months: 2, debt: 850400 },
+                    { parcel: "22", resident: "María González", months: 1, debt: 425200 },
+                    { parcel: "07", resident: "Carlos López", months: 3, debt: 575100 }
+                ]
+            },
+            chart: {
+                months: ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'],
+                income: [3200000, 3100000, 3500000, 3700000, 4000000, 4200000, 4500000, 4800000, 5000000, 5200000, 5100000, 5230500],
+                expenses: [2800000, 2750000, 2900000, 3000000, 3200000, 3300000, 3400000, 3450000, 3500000, 3470000, 3420000, 3450200]
+            }
+        };
+        
         // Inicializar la aplicación
         function initApp() {
             // Configurar menú
@@ -584,8 +754,81 @@
                 item.addEventListener('click', function() {
                     document.querySelectorAll('.menu-item').forEach(i => i.classList.remove('active'));
                     this.classList.add('active');
-                    moduleTitle.textContent = this.querySelector('span').textContent;
+                    
+                    const module = this.getAttribute('data-module');
+                    loadModule(module);
                 });
+            });
+            
+            // Cargar datos del dashboard
+            loadDashboardData();
+        }
+        
+        // Cargar módulo específico
+        function loadModule(module) {
+            currentModule = module;
+            moduleTitle.textContent = capitalizeFirstLetter(module);
+            
+            // Ocultar todos los módulos
+            document.querySelectorAll('[id$="-module"]').forEach(el => {
+                el.style.display = 'none';
+            });
+            
+            // Mostrar el módulo seleccionado
+            const moduleElement = document.getElementById(`${module}-module`);
+            if(moduleElement) {
+                moduleElement.style.display = 'block';
+            } else {
+                // Si no existe, mostrar dashboard como predeterminado
+                document.getElementById('dashboard-module').style.display = 'block';
+            }
+            
+            // Si es dashboard, cargar datos
+            if(module === 'dashboard') {
+                loadDashboardData();
+            }
+        }
+        
+        // Cargar datos del dashboard
+        function loadDashboardData() {
+            // Residentes
+            document.getElementById('residents-count').textContent = dashboardData.residents.total;
+            document.getElementById('active-residents').textContent = dashboardData.residents.active;
+            document.getElementById('delinquent-residents').textContent = dashboardData.residents.delinquent;
+            
+            // Finanzas
+            document.getElementById('income-month').textContent = '$' + dashboardData.finances.income.toLocaleString();
+            document.getElementById('income-change').textContent = `${dashboardData.finances.incomeChange > 0 ? '+' : ''}${dashboardData.finances.incomeChange}%`;
+            document.getElementById('income-change').style.color = dashboardData.finances.incomeChange >= 0 ? 'green' : 'red';
+            
+            document.getElementById('expenses-month').textContent = '$' + dashboardData.finances.expenses.toLocaleString();
+            document.getElementById('expenses-change').textContent = `${dashboardData.finances.expensesChange > 0 ? '+' : ''}${dashboardData.finances.expensesChange}%`;
+            document.getElementById('expenses-change').style.color = dashboardData.finances.expensesChange >= 0 ? 'red' : 'green';
+            
+            document.getElementById('cash-balance').textContent = '$' + dashboardData.finances.cashBalance.toLocaleString();
+            document.getElementById('balance-change').textContent = `+$${dashboardData.finances.balanceChange.toLocaleString()}`;
+            
+            // Mantenimiento
+            document.getElementById('maintenance-count').textContent = dashboardData.maintenance.pending;
+            document.getElementById('urgent-maintenance').textContent = dashboardData.maintenance.urgent;
+            
+            // Morosidad
+            document.getElementById('delinquency-amount').textContent = '$' + dashboardData.delinquency.amount.toLocaleString();
+            document.getElementById('delinquent-parcels').textContent = dashboardData.delinquency.parcels;
+            
+            // Actualizar lista de morosos
+            const delinquencyList = document.getElementById('delinquency-list');
+            delinquencyList.innerHTML = '';
+            dashboardData.delinquency.list.forEach(item => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${item.parcel}</td>
+                    <td>${item.resident}</td>
+                    <td>${item.months}</td>
+                    <td>$${item.debt.toLocaleString()}</td>
+                    <td><span class="badge badge-danger">Moroso</span></td>
+                `;
+                delinquencyList.appendChild(tr);
             });
             
             // Inicializar gráficos
@@ -596,26 +839,21 @@
         function initCharts() {
             const ctx = document.getElementById('income-expenses-chart').getContext('2d');
             
-            // Datos de ejemplo
-            const months = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
-            const incomeData = [3200000, 3100000, 3500000, 3700000, 4000000, 4200000, 4500000, 4800000, 5000000, 5200000, 5100000, 5230500];
-            const expensesData = [2800000, 2750000, 2900000, 3000000, 3200000, 3300000, 3400000, 3450000, 3500000, 3470000, 3420000, 3450200];
-            
             new Chart(ctx, {
                 type: 'bar',
                 data: {
-                    labels: months,
+                    labels: dashboardData.chart.months,
                     datasets: [
                         {
                             label: 'Ingresos',
-                            data: incomeData,
+                            data: dashboardData.chart.income,
                             backgroundColor: 'rgba(26, 188, 156, 0.7)',
                             borderColor: 'rgba(26, 188, 156, 1)',
                             borderWidth: 1
                         },
                         {
                             label: 'Egresos',
-                            data: expensesData,
+                            data: dashboardData.chart.expenses,
                             backgroundColor: 'rgba(231, 76, 60, 0.7)',
                             borderColor: 'rgba(231, 76, 60, 1)',
                             borderWidth: 1
@@ -648,6 +886,11 @@
             });
         }
         
+        // Función para capitalizar la primera letra
+        function capitalizeFirstLetter(string) {
+            return string.charAt(0).toUpperCase() + string.slice(1);
+        }
+        
         // Función para iniciar sesión
         function login() {
             // Mostrar spinner
@@ -667,29 +910,6 @@
         
         // Configurar evento de clic en el botón de inicio de sesión
         loginButton.addEventListener('click', login);
-        
-        // Simular un posible error en el primer intento
-        let firstAttempt = true;
-        
-        loginButton.addEventListener('click', function() {
-            if (firstAttempt) {
-                firstAttempt = false;
-                
-                // Mostrar spinner
-                loginText.innerHTML = '<div class="spinner"></div> Iniciando sesión...';
-                errorContainer.style.display = 'none';
-                
-                // Simular error después de 1.5 segundos
-                setTimeout(() => {
-                    errorDetails.textContent = "La API de Google aún no está cargada. Por favor espera unos segundos e intenta nuevamente.";
-                    errorContainer.style.display = 'block';
-                    loginText.innerHTML = 'Iniciar sesión con Google';
-                }, 1500);
-            } else {
-                // En el segundo intento, iniciar sesión exitosamente
-                login();
-            }
-        });
     </script>
 </body>
 </html>
