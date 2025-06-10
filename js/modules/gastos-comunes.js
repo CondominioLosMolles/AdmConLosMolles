@@ -1,54 +1,53 @@
 /**
- * Módulo de Gastos Comunes (Versión Dinámica y Corregida)
+ * Módulo de Gastos Comunes (VERSIÓN DE DIAGNÓSTICO)
+ * Este archivo es solo para probar la conexión con la hoja "Gastos_Comunes".
  */
 
 async function initGastoscomunesModule(container) {
-    console.log("🚀 Inicializando módulo de Gastos Comunes...");
+    console.log("🚀 INICIANDO PRUEBA DE GASTOS COMUNES...");
+    container.innerHTML = `
+        <div class="p-4">
+            <h2>Prueba de Carga: Módulo Gastos Comunes</h2>
+            <p>A continuación se muestra el resultado del intento de leer los datos de tu hoja de cálculo.</p>
+            <div id="debug-output" class="alert alert-info"><strong>Estado:</strong> Esperando resultado de la API de Google...</div>
+        </div>
+    `;
+
+    const debugOutput = document.getElementById('debug-output');
+
     try {
-        container.innerHTML = `<div class="d-flex justify-content-center align-items-center my-5"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Cargando...</span></div></div>`;
+        console.log("Paso 1: Llamando a sheetsAPI.getSheetData para la hoja definida en CONFIG.SHEETS.GASTOS_COMUNES...");
+        const rawData = await sheetsAPI.getSheetData(CONFIG.SHEETS.GASTOS_COMUNES);
 
-        // Se leen los datos y las columnas (headers) en paralelo para más eficiencia
-        const [data, headers] = await Promise.all([
-            sheetsAPI.getSheetData(CONFIG.SHEETS.GASTOS_COMUNES),
-            sheetsAPI.getSheetHeaders(CONFIG.SHEETS.GASTOS_COMUNES)
-        ]);
+        console.log("Paso 2: La llamada a la API ha finalizado. El resultado recibido es:", rawData);
 
-        // Se asegura que los datos sean siempre una lista
-        const gastosComunes = (Array.isArray(data) ? data : []).map((row, index) => {
-            row.SHEET_ROW_INDEX = index + 2;
-            return row;
-        });
-        
-        renderGastosComunesUI(container, gastosComunes, headers);
-        console.log("✅ Módulo de Gastos Comunes inicializado correctamente.");
+        // Verificamos si lo que recibimos es una lista (array)
+        if (Array.isArray(rawData)) {
+            console.log("✅ ÉXITO: Se recibió una lista (array).");
+            debugOutput.className = "alert alert-success"; // Cambiamos el color a verde
+            debugOutput.innerHTML = `
+                <h4><i class="fas fa-check-circle"></i> ¡Prueba Exitosa!</h4>
+                <p>Se estableció la conexión y se recibió una lista de datos de la hoja "Gastos_Comunes".</p>
+                <hr>
+                <p class="mb-0"><strong>Número de filas de datos encontradas:</strong> ${rawData.length}</p>
+            `;
+        } else {
+            // Si no es una lista, es un error.
+            console.error("❌ FALLO: No se recibió una lista (array). Se recibió:", typeof rawData, rawData);
+            debugOutput.className = "alert alert-danger"; // Cambiamos el color a rojo
+            debugOutput.innerHTML = `
+                <h4><i class="fas fa-times-circle"></i> Prueba Fallida</h4>
+                <p>La aplicación no pudo leer los datos porque no recibió una lista válida de la API.</p>
+                <hr>
+                <p><strong>Dato recibido:</strong> ${typeof rawData} (valor: <code>${JSON.stringify(rawData)}</code>)</p>
+                <p class="mb-0 mt-3"><strong>Causa Más Común:</strong> El nombre de la hoja en tu archivo <code>config.js</code> (<code>GASTOS_COMUNES: '${CONFIG.SHEETS.GASTOS_COMUNES}'</code>) no coincide <strong>exactamente</strong> con el nombre de la pestaña en tu documento de Google Sheets.</p>
+            `;
+        }
+
     } catch (error) {
-        console.error("❌ Error al inicializar módulo de Gastos Comunes:", error);
-        showDetailedError("Error al inicializar el módulo de Gastos Comunes", error, container);
+        console.error("❌ ERROR CATASTRÓFICO: La función getSheetData lanzó una excepción.", error);
+        debugOutput.className = "alert alert-danger";
+        debugOutput.innerHTML = `<h4><i class="fas fa-exclamation-triangle"></i> Error Fatal</h4> <p>Ocurrió un error inesperado al intentar leer los datos. Revisa la consola para más detalles.</p>`;
+        showDetailedError("Error en prueba de Gastos Comunes", error, container);
     }
 }
-
-function renderGastosComunesUI(container, data, headers) {
-    container.innerHTML = `
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <h2>Gastos Comunes</h2>
-            <button id="add-gasto-comun" class="btn btn-primary"><i class="fas fa-plus"></i> Nuevo Gasto Común</button>
-        </div>
-        <div id="gastos-comunes-table-container"></div>
-    `;
-    
-    document.getElementById('add-gasto-comun').addEventListener('click', () => showGastosComunesForm(null, headers));
-    updateGastosComunesTable(data, headers);
-}
-
-function updateGastosComunesTable(gastosComunes, headers) {
-    const tableContainer = document.getElementById("gastos-comunes-table-container");
-    const formatCurrency = (val) => CONFIG.APP.CURRENCY + Number(val || 0).toLocaleString('es-CL');
-
-    // --- INICIO DE LA CORRECCIÓN #1: Tabla Dinámica ---
-    // Las columnas de la tabla se crean dinámicamente a partir de los headers de tu hoja.
-    // Esto asegura que el orden siempre será el correcto.
-    const columns = headers.map(header => {
-        // No mostramos la columna ID en la tabla
-        if (header === "ID") return null;
-
-        const columnDef = { field: header
