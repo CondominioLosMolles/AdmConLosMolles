@@ -4,8 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>CondominioLosMolles - Sistema de Administración</title>
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self' https://*.google.com https://*.googleapis.com https://*.gstatic.com; script-src 'self' 'unsafe-inline' https://*.google.com https://*.googleapis.com https://*.gstatic.com; style-src 'self' 'unsafe-inline' https://*.google.com https://*.googleapis.com https://*.gstatic.com; font-src 'self' https://*.gstatic.com; img-src 'self' data: https://*.google.com https://*.googleapis.com https://*.gstatic.com;">
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         :root {
             --primary-color: #2c3e50;
@@ -38,6 +38,134 @@
         .app-container {
             display: flex;
             min-height: 100vh;
+        }
+
+        /* Login Screen */
+        .login-screen {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #2c3e50, #1a2530);
+            padding: 20px;
+            width: 100%;
+        }
+
+        .login-container {
+            background: white;
+            border-radius: var(--card-radius);
+            box-shadow: 0 20px 50px rgba(0,0,0,0.2);
+            width: 100%;
+            max-width: 450px;
+            padding: 40px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .login-logo {
+            margin-bottom: 30px;
+        }
+
+        .login-title {
+            font-size: 1.8rem;
+            font-weight: 700;
+            margin-bottom: 10px;
+            background: linear-gradient(to right, var(--accent-color), var(--secondary-color));
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
+
+        .login-subtitle {
+            color: #777;
+            margin-bottom: 30px;
+        }
+
+        .login-btn {
+            background: #4285f4;
+            color: white;
+            border: none;
+            padding: 15px 24px;
+            border-radius: 6px;
+            font-family: 'Poppins', sans-serif;
+            font-weight: 500;
+            font-size: 1rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            width: 100%;
+            transition: var(--transition);
+            position: relative;
+            overflow: hidden;
+            z-index: 1;
+        }
+
+        .login-btn:before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 0%;
+            height: 100%;
+            background: #3367d6;
+            transition: all 0.5s ease;
+            z-index: -1;
+        }
+
+        .login-btn:hover:before {
+            width: 100%;
+        }
+
+        .login-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+
+        .login-btn:active {
+            transform: translateY(1px);
+        }
+
+        .error-message {
+            background: #fdecea;
+            color: var(--danger-color);
+            padding: 15px;
+            border-radius: 6px;
+            margin-top: 20px;
+            text-align: left;
+            font-size: 0.9rem;
+            display: none;
+        }
+
+        .error-title {
+            font-weight: 600;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .spinner {
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-left-color: white;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            display: inline-block;
+            margin-right: 8px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Main Application */
+        #app {
+            display: none;
+            width: 100%;
         }
 
         /* Sidebar */
@@ -149,6 +277,8 @@
             box-shadow: 0 5px 15px rgba(0,0,0,0.05);
             padding: 20px;
             transition: var(--transition);
+            position: relative;
+            overflow: hidden;
         }
 
         .card:hover {
@@ -199,253 +329,13 @@
             margin-top: 20px;
         }
 
-        /* Tables */
-        .table-container {
-            background: white;
-            border-radius: var(--card-radius);
-            box-shadow: 0 5px 15px rgba(0,0,0,0.05);
-            overflow: hidden;
-            margin-bottom: 30px;
-        }
-
-        .table-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 20px;
-            border-bottom: 1px solid #eee;
-        }
-
-        .table-title {
-            font-weight: 600;
-            color: var(--dark-color);
-        }
-
-        .table-actions {
-            display: flex;
-            gap: 10px;
-        }
-
-        .btn {
-            padding: 8px 16px;
-            border-radius: 6px;
-            border: none;
-            font-weight: 500;
-            cursor: pointer;
-            transition: var(--transition);
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .btn-primary {
-            background: var(--accent-color);
-            color: white;
-        }
-
-        .btn-secondary {
-            background: var(--secondary-color);
-            color: white;
-        }
-
-        .btn-danger {
-            background: var(--danger-color);
-            color: white;
-        }
-
-        .btn:hover {
-            opacity: 0.9;
-            transform: translateY(-2px);
-        }
-
-        table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-
-        th, td {
-            padding: 12px 15px;
-            text-align: left;
-            border-bottom: 1px solid #eee;
-        }
-
-        th {
-            background-color: #f8f9fa;
-            font-weight: 600;
-            color: var(--dark-color);
-        }
-
-        tr:hover {
-            background-color: #f9f9f9;
-        }
-
-        .badge {
-            padding: 5px 10px;
-            border-radius: 20px;
-            font-size: 0.8rem;
-            font-weight: 500;
-        }
-
-        .badge-success {
-            background: #e6f7f0;
-            color: var(--success-color);
-        }
-
-        .badge-danger {
-            background: #fdecea;
-            color: var(--danger-color);
-        }
-
-        .badge-warning {
-            background: #fef5e6;
-            color: var(--warning-color);
-        }
-
-        /* Forms */
-        .form-container {
-            background: white;
-            border-radius: var(--card-radius);
-            box-shadow: 0 5px 15px rgba(0,0,0,0.05);
-            padding: 30px;
-            max-width: 800px;
-            margin: 0 auto;
-        }
-
-        .form-group {
-            margin-bottom: 20px;
-        }
-
-        .form-label {
-            display: block;
-            margin-bottom: 8px;
-            font-weight: 500;
-            color: var(--dark-color);
-        }
-
-        .form-control {
-            width: 100%;
-            padding: 12px 15px;
-            border: 1px solid #ddd;
-            border-radius: 6px;
-            font-family: 'Poppins', sans-serif;
-            transition: var(--transition);
-        }
-
-        .form-control:focus {
-            border-color: var(--accent-color);
-            outline: none;
-            box-shadow: 0 0 0 3px rgba(26, 188, 156, 0.2);
-        }
-
-        .form-row {
-            display: flex;
-            gap: 20px;
-        }
-
-        .form-row .form-group {
-            flex: 1;
-        }
-
-        /* Login Screen */
-        .login-screen {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-            background: linear-gradient(135deg, #2c3e50, #1a2530);
-            padding: 20px;
-        }
-
-        .login-container {
-            background: white;
-            border-radius: var(--card-radius);
-            box-shadow: 0 20px 50px rgba(0,0,0,0.2);
-            width: 100%;
-            max-width: 450px;
-            padding: 40px;
-            text-align: center;
-        }
-
-        .login-logo {
-            margin-bottom: 30px;
-        }
-
-        .login-title {
-            font-size: 1.8rem;
-            font-weight: 700;
-            margin-bottom: 10px;
-            background: linear-gradient(to right, var(--accent-color), var(--secondary-color));
-            -webkit-background-clip: text;
-            background-clip: text;
-            color: transparent;
-        }
-
-        .login-subtitle {
-            color: #777;
-            margin-bottom: 30px;
-        }
-
-        .login-btn {
-            background: #4285f4;
-            color: white;
-            border: none;
-            padding: 12px 24px;
-            border-radius: 6px;
-            font-family: 'Poppins', sans-serif;
-            font-weight: 500;
-            font-size: 1rem;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 10px;
-            width: 100%;
-            transition: var(--transition);
-            position: relative;
-        }
-
-        .login-btn:hover {
-            background: #3367d6;
-            transform: translateY(-3px);
-        }
-
-        .login-btn i {
-            font-size: 1.4rem;
-        }
+        /* Colors for icons */
+        .icon-blue { background: var(--secondary-color); }
+        .icon-green { background: var(--accent-color); }
+        .icon-orange { background: var(--warning-color); }
+        .icon-red { background: var(--danger-color); }
+        .icon-purple { background: #9b59b6; }
         
-        .error-message {
-            background: #fdecea;
-            color: var(--danger-color);
-            padding: 15px;
-            border-radius: 6px;
-            margin-top: 20px;
-            text-align: left;
-            font-size: 0.9rem;
-        }
-        
-        .error-title {
-            font-weight: 600;
-            margin-bottom: 8px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .spinner {
-            width: 20px;
-            height: 20px;
-            border: 3px solid rgba(255, 255, 255, 0.3);
-            border-left-color: white;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-            display: inline-block;
-            margin-right: 8px;
-        }
-
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
-
         /* Responsive */
         @media (max-width: 992px) {
             .sidebar {
@@ -476,15 +366,6 @@
             .dashboard-grid {
                 grid-template-columns: 1fr;
             }
-            
-            .form-row {
-                flex-direction: column;
-                gap: 0;
-            }
-            
-            .table-actions {
-                flex-wrap: wrap;
-            }
         }
 
         @media (max-width: 576px) {
@@ -492,7 +373,6 @@
                 width: 100%;
                 height: auto;
                 position: relative;
-                height: auto;
             }
             
             .sidebar-menu {
@@ -519,13 +399,6 @@
                 margin-top: 15px;
             }
         }
-
-        /* Colors for icons */
-        .icon-blue { background: var(--secondary-color); }
-        .icon-green { background: var(--accent-color); }
-        .icon-orange { background: var(--warning-color); }
-        .icon-red { background: var(--danger-color); }
-        .icon-purple { background: #9b59b6; }
     </style>
 </head>
 <body>
@@ -539,10 +412,15 @@
             </div>
             <h1 class="login-title">CondominioLosMolles</h1>
             <p class="login-subtitle">Sistema de Administración de Condominios</p>
+            
             <button id="login-button" class="login-btn">
+                <svg width="24" height="24" viewBox="0 0 24 24">
+                    <path fill="white" d="M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M17.39,15.53C16.71,16.24 15.89,16.77 14.97,17.07C14.05,17.37 13.06,17.5 12.06,17.5C10.94,17.5 9.86,17.34 8.84,17C7.82,16.67 6.89,16.16 6.07,15.5L7.5,14.08C8.26,14.8 9.18,15.33 10.23,15.65C11.29,15.97 12.41,16.13 13.53,16.13C14.19,16.13 14.83,16.06 15.46,15.94C16.08,15.82 16.68,15.63 17.24,15.37L14.88,13H20V18.5L17.39,15.53M10.5,10C10.5,10.53 10.7,11 11.07,11.38C11.44,11.75 11.91,12 12.5,12C13.09,12 13.56,11.75 13.93,11.38C14.3,11 14.5,10.53 14.5,10H16.25C16.25,11.1 15.81,12.07 14.94,12.94C14.07,13.81 13.11,14.25 12.05,14.25C11,14.25 10.03,13.81 9.16,12.94C8.29,12.07 7.85,11.1 7.85,10H10.5Z" />
+                </svg>
                 <span id="login-text">Iniciar sesión con Google</span>
             </button>
-            <div id="error-container" style="display: none;" class="error-message">
+            
+            <div id="error-container" class="error-message">
                 <div class="error-title">
                     <svg width="20" height="20" viewBox="0 0 24 24">
                         <path fill="#e74c3c" d="M13,13H11V7H13M13,17H11V15H13M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2Z" />
@@ -555,7 +433,7 @@
     </div>
 
     <!-- Main Application -->
-    <div id="app" class="app-container" style="display:none;">
+    <div id="app" class="app-container">
         <!-- Sidebar -->
         <div class="sidebar">
             <div class="sidebar-header">
@@ -683,121 +561,42 @@
                             <canvas id="income-expenses-chart"></canvas>
                         </div>
                     </div>
-                    
-                    <div class="card">
-                        <div class="card-header">
-                            <div class="card-title">Resumen de Morosidad</div>
-                        </div>
-                        <div class="table-container">
-                            <table>
-                                <thead>
-                                    <tr>
-                                        <th>Parcela</th>
-                                        <th>Residente</th>
-                                        <th>Meses Mora</th>
-                                        <th>Deuda Total</th>
-                                        <th>Estado</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <tr>
-                                        <td>14</td>
-                                        <td>Juan Pérez</td>
-                                        <td>2</td>
-                                        <td>$850,400</td>
-                                        <td><span class="badge badge-danger">Moroso</span></td>
-                                    </tr>
-                                    <tr>
-                                        <td>22</td>
-                                        <td>María González</td>
-                                        <td>1</td>
-                                        <td>$425,200</td>
-                                        <td><span class="badge badge-danger">Moroso</span></td>
-                                    </tr>
-                                    <tr>
-                                        <td>07</td>
-                                        <td>Carlos López</td>
-                                        <td>3</td>
-                                        <td>$575,100</td>
-                                        <td><span class="badge badge-danger">Moroso</span></td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
                 </div>
             </div>
         </div>
     </div>
 
     <script>
-        // Constantes de la aplicación
-        const SPREADSHEET_ID = '1bFo5dBC3HM0xupginTBe-hrrUNgkiuUn4fkXXzHide8';
-        const CLIENT_ID = '997872453031-5o8s2o6v3qt722fb3p51a2r7bo24ncee.apps.googleusercontent.com';
-        const API_KEY = 'AIzaSyA4nUkMycf_CHZE7TaBBD_WUyWMvSXUwoU';
-        const SCOPES = 'https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/drive https://www.googleapis.com/auth/gmail.send';
-        
-        // Referencias a elementos DOM
+        // Elementos DOM
         const loginScreen = document.getElementById('login-screen');
         const appContainer = document.getElementById('app');
         const loginButton = document.getElementById('login-button');
         const loginText = document.getElementById('login-text');
-        const moduleTitle = document.getElementById('module-title');
-        const moduleContent = document.getElementById('module-content');
         const errorContainer = document.getElementById('error-container');
         const errorDetails = document.getElementById('error-details');
+        const moduleTitle = document.getElementById('module-title');
+        const moduleContent = document.getElementById('module-content');
         
-        // Estado de la aplicación
-        let currentModule = 'dashboard';
-        let gapiInitialized = false;
-        
-        // Inicialización de la aplicación
-        function init() {
-            // Configurar listeners de menú
+        // Inicializar la aplicación
+        function initApp() {
+            // Configurar menú
             document.querySelectorAll('.menu-item').forEach(item => {
-                item.addEventListener('click', () => {
-                    // Remover clase activa de todos los elementos
+                item.addEventListener('click', function() {
                     document.querySelectorAll('.menu-item').forEach(i => i.classList.remove('active'));
-                    
-                    // Añadir clase activa al elemento seleccionado
-                    item.classList.add('active');
-                    
-                    // Cargar el módulo seleccionado
-                    const module = item.getAttribute('data-module');
-                    loadModule(module);
+                    this.classList.add('active');
+                    moduleTitle.textContent = this.querySelector('span').textContent;
                 });
             });
             
-            // Cargar el dashboard inicial
-            loadModule('dashboard');
+            // Inicializar gráficos
+            initCharts();
         }
         
-        // Cargar un módulo específico
-        function loadModule(module) {
-            currentModule = module;
-            moduleTitle.textContent = capitalizeFirstLetter(module);
-            
-            // Mostrar spinner mientras se carga
-            moduleContent.innerHTML = '<div class="spinner"></div>';
-            
-            // Simular carga de datos
-            setTimeout(() => {
-                switch(module) {
-                    case 'dashboard':
-                        moduleContent.innerHTML = document.getElementById('dashboard-module').innerHTML;
-                        initCharts();
-                        break;
-                    default:
-                        moduleContent.innerHTML = `<div class="card"><div class="card-header"><div class="card-title">${capitalizeFirstLetter(module)}</div></div><div class="card-body"><p>Módulo en desarrollo</p></div></div>`;
-                }
-            }, 500);
-        }
-        
-        // Inicializar gráficos del dashboard
+        // Inicializar gráficos
         function initCharts() {
             const ctx = document.getElementById('income-expenses-chart').getContext('2d');
             
-            // Datos de ejemplo para la gráfica
+            // Datos de ejemplo
             const months = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
             const incomeData = [3200000, 3100000, 3500000, 3700000, 4000000, 4200000, 4500000, 4800000, 5000000, 5200000, 5100000, 5230500];
             const expensesData = [2800000, 2750000, 2900000, 3000000, 3200000, 3300000, 3400000, 3450000, 3500000, 3470000, 3420000, 3450200];
@@ -849,44 +648,48 @@
             });
         }
         
-        // Función para capitalizar la primera letra
-        function capitalizeFirstLetter(string) {
-            return string.charAt(0).toUpperCase() + string.slice(1);
-        }
-        
-        // Mostrar mensaje de error
-        function showError(message) {
-            errorDetails.textContent = message;
-            errorContainer.style.display = 'block';
-            
-            // Ocultar después de 5 segundos
-            setTimeout(() => {
-                errorContainer.style.display = 'none';
-            }, 8000);
-        }
-        
-        // Función para iniciar sesión con Google
-        function handleAuthClick() {
-            // Mostrar spinner en el botón
+        // Función para iniciar sesión
+        function login() {
+            // Mostrar spinner
             loginText.innerHTML = '<div class="spinner"></div> Iniciando sesión...';
+            errorContainer.style.display = 'none';
             
-            // Simular proceso de autenticación exitoso
+            // Simular proceso de autenticación
             setTimeout(() => {
+                // Ocultar pantalla de login y mostrar la aplicación
                 loginScreen.style.display = 'none';
                 appContainer.style.display = 'flex';
-                init();
+                
+                // Inicializar la aplicación
+                initApp();
             }, 1500);
         }
         
-        // Configurar el botón de inicio de sesión
-        loginButton.addEventListener('click', handleAuthClick);
+        // Configurar evento de clic en el botón de inicio de sesión
+        loginButton.addEventListener('click', login);
         
-        // Simular autenticación exitosa después de 1 segundo
-        setTimeout(() => {
-            // Esto es solo para propósitos de demostración
-            // En producción real, esto se reemplazaría con la autenticación real
-            loginButton.addEventListener('click', handleAuthClick);
-        }, 1000);
+        // Simular un posible error en el primer intento
+        let firstAttempt = true;
+        
+        loginButton.addEventListener('click', function() {
+            if (firstAttempt) {
+                firstAttempt = false;
+                
+                // Mostrar spinner
+                loginText.innerHTML = '<div class="spinner"></div> Iniciando sesión...';
+                errorContainer.style.display = 'none';
+                
+                // Simular error después de 1.5 segundos
+                setTimeout(() => {
+                    errorDetails.textContent = "La API de Google aún no está cargada. Por favor espera unos segundos e intenta nuevamente.";
+                    errorContainer.style.display = 'block';
+                    loginText.innerHTML = 'Iniciar sesión con Google';
+                }, 1500);
+            } else {
+                // En el segundo intento, iniciar sesión exitosamente
+                login();
+            }
+        });
     </script>
 </body>
 </html>
