@@ -1,3 +1,4 @@
+// scripts/utils/drive.js - Funciones para interactuar con Google Drive
 async function uploadToDrive(file, folderPath, residenteId) {
   const metadata = {
     name: file.name,
