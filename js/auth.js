@@ -1,6 +1,12 @@
 const CLIENT_ID = '997872453031-5o8s2o6v3qt722fb3p51a2r7bo24ncee.apps.googleusercontent.com';
 const API_KEY = 'AIzaSyA4nUkMycf_CHZE7TaBBD_WUyWMvSXUwoU';
-const SCOPES = 'https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/gmail.send';
+const SPREADSHEET_ID = '1bFo5dBC3HM0xupginTBe-hrrUNgkiuUn4fkXXzHide8';
+
+const SCOPES = [
+  'https://www.googleapis.com/auth/spreadsheets',
+  'https://www.googleapis.com/auth/drive.file',
+  'https://www.googleapis.com/auth/gmail.send'
+].join(' ');
 
 function initClient() {
   gapi.client.init({
@@ -17,6 +23,9 @@ function initClient() {
     updateSigninStatus(isSignedIn);
     document.getElementById("loginBtn").onclick = handleSignIn;
     document.getElementById("logoutBtn").onclick = handleSignOut;
+  }).catch(error => {
+    console.error("Error al inicializar cliente de Google API", error);
+    alert("Error al cargar las APIs de Google. Revisa tu consola.");
   });
 }
 
@@ -31,23 +40,22 @@ function handleSignOut() {
 function updateSigninStatus(isSignedIn) {
   const app = document.getElementById("app");
   const login = document.getElementById("login-container");
+
   if (isSignedIn) {
     app.classList.remove("hidden");
     login.classList.add("hidden");
-    loadMainView();
+
+    // Acciones tras login
+    loadMainView();           // Vista por defecto
+    cargarConfiguracion();    // Cargar configuración local (TMC)
+    cargarResidentes();       // ✅ Módulo Residentes
+    // Aquí luego se agregarán: cargarPagos(), cargarDashboard(), etc.
   } else {
     app.classList.add("hidden");
     login.classList.remove("hidden");
   }
 }
 
-function loadMainView() {
-  showView("dashboard");
-}
-
-function showView(id) {
-  document.querySelectorAll(".view").forEach(el => el.classList.add("hidden"));
-  document.getElementById(id).classList.remove("hidden");
-}
-
+// Inicializa cliente cuando se carga la API de Google
 gapi.load('client:auth2', initClient);
+
