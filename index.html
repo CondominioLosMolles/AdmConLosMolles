@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Condominio Los Molles</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="styles/main.css">
+    <script src="https://apis.google.com/js/api.js"></script> 
+    <script src="https://accounts.google.com/gsi/client"  async defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script> 
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.0/package/xlsx.full.min.js"></script> 
+</head>
+<body>
+    <div class="app-container">
+        <aside class="sidebar">
+            <div class="logo">
+                <img src="assets/logo.png" alt="Logo">
+                <h2>Los Molles</h2>
+            </div>
+            <nav class="menu">
+                <a href="#dashboard" class="menu-item active">📊 Dashboard</a>
+                <a href="#residents" class="menu-item">👥 Residentes</a>
+                <a href="#payments" class="menu-item">💰 Gastos Comunes</a>
+                <a href="#expenses" class="menu-item">💸 Contabilidad</a>
+                <a href="#communications" class="menu-item">📧 Comunicaciones</a>
+                <a href="#maintenance" class="menu-item">🔧 Mantenciones</a>
+                <a href="#fines" class="menu-item">⚖️ Multas</a>
+                <a href="#assemblies" class="menu-item">🏛️ Asambleas</a>
+                <a href="#reports" class="menu-item">📈 Informes</a>
+            </nav>
+        </aside>
+        <main class="content">
+            <header class="top-bar">
+                <button id="login-btn" class="btn-login">Iniciar Sesión</button>
+                <div id="user-info" class="user-info"></div>
+            </header>
+            <div id="app-content">
+                <div class="welcome-message">
+                    <h1>Bienvenido al Sistema de Administración de Condominio Los Molles</h1>
+                    <p>Por favor, inicie sesión para acceder a las funciones completas.</p>
+                </div>
+            </div>
+        </main>
+    </div>
+    <template id="spinner-template">
+        <div class="spinner"></div>
+    </template>
+    <template id="modal-template">
+        <div class="modal-overlay">
+            <div class="modal-content">
+                <span class="modal-close">&times;</span>
+                <h3 class="modal-title">Título</h3>
+                <div class="modal-body"></div>
+            </div>
+        </div>
+    </template>
+    <script src="config.js"></script>
+    <script src="scripts/utils/gapi.js"></script>
+    <script src="scripts/utils/drive.js"></script>
+    <script src="scripts/utils/mail.js"></script>
+    <script src="scripts/auth.js"></script>
+    <script src="scripts/api.js"></script>
+    <script src="scripts/modules/dashboard.js"></script>
+    <script src="scripts/modules/residents.js"></script>
+    <script src="scripts/modules/payments.js"></script>
+    <script src="scripts/modules/expenses.js"></script>
+    <script src="scripts/modules/communications.js"></script>
+    <script src="scripts/modules/maintenance.js"></script>
+    <script src="scripts/modules/fines.js"></script>
+    <script src="scripts/modules/assemblies.js"></script>
+    <script src="scripts/modules/reports.js"></script>
+</body>
+</html>
