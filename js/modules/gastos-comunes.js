@@ -42,12 +42,10 @@ function updateGastosComunesTable(gastosComunes, headers) {
     const tableContainer = document.getElementById("gastos-comunes-table-container");
     const formatCurrency = (val) => CONFIG.APP.CURRENCY + Number(val || 0).toLocaleString('es-CL');
 
-    // --- INICIO DE LA CORRECCIÓN: Manejo de tabla vacía ---
     if (gastosComunes.length === 0) {
         tableContainer.innerHTML = `<div class="alert alert-info">No hay gastos comunes registrados. Haz clic en "Nuevo Gasto Común" para agregar el primero.</div>`;
         return;
     }
-    // --- FIN DE LA CORRECCIÓN ---
 
     const columns = (Array.isArray(headers) ? headers : []).map(header => {
         if (header === "ID") return null;
@@ -138,7 +136,7 @@ function showGastosComunesForm(gastoComun = null, headers) {
             }
 
             showToast("Gasto común guardado exitosamente", "success");
-            bootstrap.Modal.getInstance(form.closest('.modal')).hide();
+            bootstrap.Modal.getInstance(form.closest(".modal")).hide();
             await initGastoscomunesModule(document.getElementById("module-container"));
         } catch (error) {
             showDetailedError("Error al guardar gasto común", error);
