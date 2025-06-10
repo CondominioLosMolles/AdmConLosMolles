@@ -29,7 +29,11 @@
     </aside>
 
     <main class="main-content">
+
+      <!-- DASHBOARD -->
       <section id="dashboard" class="view">Bienvenido al Panel de Administración</section>
+
+      <!-- CONFIGURACIÓN -->
       <section id="configuracion" class="view hidden">
         <h2>Configuración</h2>
         <label>TMC (%):
@@ -37,6 +41,58 @@
         </label>
         <button onclick="guardarConfiguracion()">Guardar</button>
       </section>
+
+      <!-- RESIDENTES -->
+      <section id="residentes" class="view hidden">
+        <h2>Gestión de Residentes</h2>
+
+        <input type="text" id="busquedaResidente" placeholder="Buscar por nombre, RUT o parcela..." />
+
+        <button onclick="abrirFormularioResidente()">Agregar Residente</button>
+        <button onclick="exportarResidentesExcel()">Exportar a Excel</button>
+
+        <table id="tablaResidentes">
+          <thead>
+            <tr>
+              <th>Nombre</th>
+              <th>RUT</th>
+              <th>Parcela</th>
+              <th>Email</th>
+              <th>Teléfono</th>
+              <th>Estado</th>
+              <th>Gasto Común</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+
+        <!-- Modal -->
+        <div id="modalResidente" class="modal hidden">
+          <div class="modal-content">
+            <h3 id="modalTitulo">Nuevo Residente</h3>
+            <form id="formResidente">
+              <input type="hidden" id="residenteIndex" />
+              <label>Nombre: <input type="text" id="nombreResidente" required /></label>
+              <label>RUT: <input type="text" id="rutResidente" required /></label>
+              <label>Parcela: <input type="text" id="parcelaResidente" required /></label>
+              <label>Email: <input type="email" id="emailResidente" /></label>
+              <label>Teléfono: <input type="text" id="telefonoResidente" /></label>
+              <label>Estado:
+                <select id="estadoResidente">
+                  <option>Activo</option>
+                  <option>Moroso</option>
+                  <option>Inactivo</option>
+                </select>
+              </label>
+              <label>Gasto Común: <input type="number" id="gastoResidente" /></label>
+              <button type="submit">Guardar</button>
+              <button type="button" onclick="cerrarFormularioResidente()">Cancelar</button>
+            </form>
+          </div>
+        </div>
+      </section>
+
     </main>
   </div>
 
@@ -44,8 +100,13 @@
     <button id="loginBtn">Iniciar sesión con Google</button>
   </div>
 
+  <!-- API de Google -->
   <script src="https://apis.google.com/js/api.js"></script>
+
+  <!-- Scripts del sistema -->
   <script src="js/auth.js"></script>
   <script src="js/main.js"></script>
+  <script src="js/residentes.js"></script>
 </body>
 </html>
+
