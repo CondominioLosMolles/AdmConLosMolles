@@ -222,10 +222,19 @@ function attachViewListeners(viewName) {
         document.getElementById('resident-search').addEventListener('keyup', filterResidentTable);
     }
     
-    if (viewName === 'gastos-comunes') {
-        document.getElementById('resident-selector-gc').addEventListener('change', displayResidentGCDetails);
-        document.getElementById('tmc-input').addEventListener('change', displayResidentGCDetails);
+   // ESTE ES EL NUEVO CÓDIGO DE PRUEBA
+if (viewName === 'gastos-comunes') {
+    console.log("Paso A: Entrando al bloque para añadir oyentes de Gastos Comunes."); // LÍNEA 1
+    const selector = document.getElementById('resident-selector-gc');
+
+    if (selector) {
+        console.log("Paso B: Selector de residente encontrado en el HTML. Añadiendo 'oyente'."); // LÍNEA 2
+        selector.addEventListener('change', displayResidentGCDetails);
+    } else {
+        console.error("¡ERROR CRÍTICO! No se encontró el elemento 'resident-selector-gc' en el HTML."); // LÍNEA 3
     }
+
+    document.getElementById('tmc-input').addEventListener('change', displayResidentGCDetails);
 }
 
 // --- LÓGICA DE GASTOS COMUNES (CORREGIDA) ---
