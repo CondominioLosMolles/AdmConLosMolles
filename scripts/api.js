@@ -1,3 +1,4 @@
+// scripts/api.js - Funciones para interactuar con Google Sheets
 class GoogleSheetsAPI {
   constructor() {
     this.spreadsheetId = CONFIG.SPREADSHEET_ID;
