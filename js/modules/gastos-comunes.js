@@ -136,7 +136,7 @@ function showGastosComunesForm(gastoComun = null, headers) {
             }
 
             showToast("Gasto común guardado exitosamente", "success");
-            bootstrap.Modal.getInstance(form.closest(".modal")).hide();
+            bootstrap.Modal.getInstance(form.closest('.modal')).hide();
             await initGastoscomunesModule(document.getElementById("module-container"));
         } catch (error) {
             showDetailedError("Error al guardar gasto común", error);
