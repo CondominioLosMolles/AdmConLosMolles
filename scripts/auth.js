@@ -1,3 +1,4 @@
+// scripts/auth.js - Autenticación OAuth 2.0 con Google
 let tokenClient;
 let gapiInited = false;
 let gisInited = false;
@@ -34,3 +35,9 @@ function signOut() {
     location.reload();
   });
 }
+
+// Inicializar Google Auth
+window.addEventListener("load", () => {
+  initAuth();
+  gisInited = true;
+});
