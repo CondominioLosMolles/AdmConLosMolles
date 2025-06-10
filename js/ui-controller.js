@@ -1,6 +1,6 @@
 /**
  * CondoAdmin - Sistema de Administración de Condominios
- * Controlador de la interfaz de usuario (Versión final corregida)
+ * Controlador de la interfaz de usuario (Versión final y estable)
  */
 
 function createDataTable(data, columns, rowActions = null) {
@@ -21,7 +21,7 @@ function createDataTable(data, columns, rowActions = null) {
     if (rowActions) {
         const actionsHeader = document.createElement('th');
         actionsHeader.textContent = 'Acciones';
-        actionsHeader.style.width = '1%'; 
+        actionsHeader.style.width = '1%';
         headerRow.appendChild(actionsHeader);
     }
     
@@ -211,7 +211,7 @@ function createModal(title, content, size = '', actions = []) {
     };
 }
 
-// *** FUNCIÓN CORREGIDA ***
+// *** FUNCIÓN createCard RESTAURADA A SU VERSIÓN SIMPLE Y ESTABLE ***
 function createCard(title, content) {
     const card = document.createElement('div');
     card.className = 'card shadow-sm mb-4';
@@ -226,15 +226,10 @@ function createCard(title, content) {
     const cardBody = document.createElement('div');
     cardBody.className = 'card-body';
     
-    // La lógica anterior era incorrecta. Esta es la forma segura.
     if (typeof content === 'string') {
         cardBody.innerHTML = content;
     } else {
-        // Si el contenido es un elemento (como una tabla), se le quita el padding al card-body.
-        if (content.querySelector && content.querySelector('.table')) {
-            cardBody.classList.add('p-0');
-        }
-        cardBody.appendChild(content);
+        cardBody.appendChild(content); // Ahora es seguro porque `content` es un elemento
     }
     
     card.appendChild(cardBody);
