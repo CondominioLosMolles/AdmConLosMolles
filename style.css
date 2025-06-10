@@ -143,7 +143,6 @@ h1, h2 {
     display: block;
 }
 
-/* Dashboard Widgets */
 .dashboard-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
@@ -183,12 +182,10 @@ h1, h2 {
     border-radius: 8px;
     box-shadow: var(--shadow);
     margin-top: 20px;
-    /* --- CAMBIO AQUÍ --- */
-    height: 45vh; /* Se define una altura para el gráfico */
+    height: 45vh; 
     position: relative;
 }
 
-/* Tablas */
 .table-container {
     overflow-x: auto;
     background: white;
@@ -220,7 +217,6 @@ th {
 .action-icons .icon-edit { color: var(--accent-color); }
 .action-icons .icon-delete { color: var(--danger-color); }
 
-/* Controles y Formularios */
 .controls {
     display: flex;
     justify-content: space-between;
@@ -230,15 +226,15 @@ th {
     gap: 10px;
 }
 
-input[type="text"], input[type="search"], input[type="email"], input[type="tel"], input[type="date"], input[type="number"], select {
+input[type="text"], input[type="search"], input[type="email"], input[type="tel"], input[type="date"], input[type="number"], select, textarea {
     padding: 10px;
     border: 1px solid #ccc;
     border-radius: 5px;
     font-size: 1rem;
-    min-width: 200px;
+    width: 100%;
+    box-sizing: border-box;
 }
 
-/* Modal */
 .modal-container {
     position: fixed;
     z-index: 1000;
@@ -283,7 +279,6 @@ input[type="text"], input[type="search"], input[type="email"], input[type="tel"]
     font-weight: 600;
 }
 
-/* Responsive Design */
 @media (max-width: 992px) {
     .sidebar {
         width: 200px;
