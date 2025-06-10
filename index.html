@@ -93,6 +93,36 @@
         </div>
       </section>
 
+      <!-- GASTOS COMUNES -->
+      <section id="gastos" class="view hidden">
+        <h2>Gastos Comunes</h2>
+
+        <label>Buscar Residente:
+          <input type="text" id="busquedaPago" placeholder="Nombre, RUT o Parcela" />
+        </label>
+        <select id="selectorResidente" onchange="mostrarHistorialPagos()">
+          <option value="">Seleccione residente</option>
+        </select>
+
+        <div id="detallePagos"></div>
+
+        <h3>Registrar Pago</h3>
+        <form id="formPago">
+          <label>Monto Pagado: <input type="number" id="montoPago" required /></label>
+          <label>Fecha Pago: <input type="date" id="fechaPago" required /></label>
+          <label>Método:
+            <select id="metodoPago">
+              <option>Transferencia</option>
+              <option>Efectivo</option>
+            </select>
+          </label>
+          <label>Comprobante:
+            <input type="file" id="archivoComprobante" accept="application/pdf,image/*" />
+          </label>
+          <button type="submit">Guardar Pago</button>
+        </form>
+      </section>
+
     </main>
   </div>
 
@@ -107,6 +137,6 @@
   <script src="js/auth.js"></script>
   <script src="js/main.js"></script>
   <script src="js/residentes.js"></script>
+  <script src="js/gastos.js"></script>
 </body>
 </html>
-
