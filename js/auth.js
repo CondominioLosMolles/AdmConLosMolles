@@ -46,10 +46,10 @@ function updateSigninStatus(isSignedIn) {
     login.classList.add("hidden");
 
     // Acciones tras login
-    loadMainView();           // Vista por defecto
-    cargarConfiguracion();    // Cargar configuración local (TMC)
-    cargarResidentes();       // ✅ Módulo Residentes
-    // Aquí luego se agregarán: cargarPagos(), cargarDashboard(), etc.
+    loadMainView();             // Vista por defecto
+    cargarConfiguracion();      // Config local (TMC)
+    cargarResidentes();         // Módulo Residentes
+    cargarSelectorResidentes(); // Módulo Gastos
   } else {
     app.classList.add("hidden");
     login.classList.remove("hidden");
@@ -58,4 +58,3 @@ function updateSigninStatus(isSignedIn) {
 
 // Inicializa cliente cuando se carga la API de Google
 gapi.load('client:auth2', initClient);
-
