@@ -1,4 +1,4 @@
-// config.js - NO EXPOSER EN PRODUCCIÓN (usar variables de entorno)
+// config.js - Credenciales y Configuración
 window.CONFIG = {
   SPREADSHEET_ID: "1bFo5dBC3HM0xupginTBe-hrrUNgkiuUn4fkXXzHide8",
   CLIENT_ID: "997872453031-5o8s2o6v3qt722fb3p51a2r7bo24ncee.apps.googleusercontent.com",
