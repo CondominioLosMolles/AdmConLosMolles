@@ -1,6 +1,8 @@
-// scripts/auth.js
+// NO DECLARAR NUEVAMENTE LAS VARIABLES
+// let gapiInited = false; // ELIMINAR ESTA LÍNEA
+// let gisInited = false;  // ELIMINAR ESTA LÍNEA
+
 function handleLogin() {
-  console.log("handleLogin llamado"); // Agregar este log
   if (!gapiInited || !gisInited) {
     showError("APIs no inicializadas. Espere...");
     return;
