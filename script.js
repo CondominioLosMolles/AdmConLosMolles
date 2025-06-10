@@ -130,8 +130,7 @@ function hideModal() {
 
 async function switchView(viewName) {
     showLoader();
-     console.log("La vista que se intenta cargar es:", viewName);
-    try {
+       try {
         let viewContent = '';
         switch (viewName) {
             case 'dashboard':
