@@ -4,14 +4,19 @@
     <meta charset="UTF-8">
     <title>Condominio Los Molles</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- Estilos -->
     <link rel="stylesheet" href="styles/main.css">
+    <!-- Google APIs -->
     <script src="https://apis.google.com/js/api.js"></script> 
     <script src="https://accounts.google.com/gsi/client"  async defer></script>
+    <!-- Librerías Externas -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script> 
     <script src="https://cdn.sheetjs.com/xlsx-0.20.0/package/xlsx.full.min.js"></script> 
 </head>
 <body>
+    <!-- Contenedor Principal -->
     <div class="app-container">
+        <!-- Sidebar -->
         <aside class="sidebar">
             <div class="logo">
                 <img src="assets/logo.png" alt="Logo">
@@ -29,11 +34,14 @@
                 <a href="#reports" class="menu-item">📈 Informes</a>
             </nav>
         </aside>
+        <!-- Área de Contenido -->
         <main class="content">
             <header class="top-bar">
+                <!-- Botón de Inicio de Sesión -->
                 <button id="login-btn" class="btn-login" onclick="handleLogin()">Iniciar Sesión</button>
                 <div id="user-info" class="user-info"></div>
             </header>
+            <!-- Contenido Dinámico -->
             <div id="app-content">
                 <div class="welcome-message">
                     <h1>Bienvenido al Sistema de Administración de Condominio Los Molles</h1>
@@ -42,9 +50,12 @@
             </div>
         </main>
     </div>
+
+    <!-- Componentes Reutilizables -->
     <template id="spinner-template">
         <div class="spinner"></div>
     </template>
+
     <template id="modal-template">
         <div class="modal-overlay">
             <div class="modal-content">
@@ -54,16 +65,29 @@
             </div>
         </div>
     </template>
+
+    <!-- Variables Globales -->
     <script>
-      let gapiInited = false;
-      let gisInited = false;
+        // Variables para controlar el estado de las APIs
+        let gapiInited = false;
+        let gisInited = false;
     </script>
+
+    <!-- Configuración -->
     <script src="config.js"></script>
+
+    <!-- Utilidades -->
     <script src="scripts/utils/gapi.js"></script>
     <script src="scripts/utils/drive.js"></script>
     <script src="scripts/utils/mail.js"></script>
+
+    <!-- Autenticación -->
     <script src="scripts/auth.js"></script>
+
+    <!-- API de Google Sheets -->
     <script src="scripts/api.js"></script>
+
+    <!-- Módulos del Sistema -->
     <script src="scripts/modules/dashboard.js"></script>
     <script src="scripts/modules/residents.js"></script>
     <script src="scripts/modules/payments.js"></script>
