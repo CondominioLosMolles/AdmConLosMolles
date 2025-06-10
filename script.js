@@ -130,7 +130,7 @@ function hideModal() {
 
 async function switchView(viewName) {
     showLoader();
-       try {
+    try {
         let viewContent = '';
         switch (viewName) {
             case 'dashboard':
@@ -150,7 +150,7 @@ async function switchView(viewName) {
         attachViewListeners(viewName);
     } catch (error) {
         console.error(`Error al cambiar a la vista ${viewName}:`, error);
-        mainContent.innerHTML = `<p style="color:red;">Error al cargar la vista: ${error.message}.<br/>Asegúrate de que la hoja de cálculo "${viewName}" existe en tu Google Sheet.</p>`;
+        mainContent.innerHTML = `<p style="color:red;">Error al cargar la vista: ${error.message}.<br/>Asegúrate de que la hoja de cálculo relacionada con "${viewName}" existe en tu Google Sheet.</p>`;
     } finally {
         hideLoader();
     }
@@ -159,7 +159,6 @@ async function switchView(viewName) {
 // --- LÓGICA DE VISTAS ---
 
 async function loadDashboardView() {
-    // Código del Dashboard (sin cambios)
     const [residentsData, paymentsData, expensesData, maintenanceData] = await Promise.all([
         readSheetData('Residentes!A2:H'), readSheetData('Pagos_GC!F:G'),
         readSheetData('Egresos!B:F'), readSheetData('Mantenciones!F:F')
@@ -185,13 +184,11 @@ async function loadDashboardView() {
 }
 
 async function loadResidentesView() {
-    // Código de Residentes (sin cambios)
     const residents = await readSheetData('Residentes!A2:H');
     let tableRows = residents.map((row, index) => { if (!row) return ''; return `<tr><td>${row[1] || ''}</td><td>${row[2] || ''}</td><td>${row[3] || ''}</td><td>${row[4] || ''}</td><td>${row[5] || ''}</td><td>${row[6] || ''}</td><td>${formatCurrency(parseFloat(row[7] || 0))}</td><td class="action-icons"><span class="icon icon-edit" data-row-index="${index + 2}">✏️</span><span class="icon icon-delete" data-row-index="${index + 2}">🗑️</span></td></tr>`}).join('');
     return `<div class="view active" id="residentes-view"><h1>Gestión de Residentes</h1><div class="controls"><input type="search" id="resident-search" placeholder="Buscar por Nombre, RUT o Parcela..."><div><button class="cta-button" id="add-resident-btn">Agregar Residente</button></div></div><div class="table-container"><table id="residentes-table"><thead><tr><th>Nombre Completo</th><th>RUT</th><th>N° Parcela</th><th>E-mail</th><th>Teléfono</th><th>Estado</th><th>Valor Gasto Común</th><th>Acciones</th></tr></thead><tbody>${tableRows}</tbody></table></div></div>`;
 }
 
-// --- ¡NUEVO MÓDULO! ---
 async function loadGastosComunesView() {
     const residentOptions = allResidentsData.slice(1) // Omitir encabezado
         .map(r => `<option value="${r[0]}">${r[3]} - ${r[1]}</option>`)
@@ -210,7 +207,8 @@ async function loadGastosComunesView() {
                 <input type="number" id="tmc-input" value="2.5" step="0.01" style="width: 80px;">
             </div>
             <div id="resident-gc-details">
-                </div>
+                <p>Seleccione un residente para ver su historial de pagos.</p>
+            </div>
         </div>
     `;
 }
@@ -231,19 +229,17 @@ function attachViewListeners(viewName) {
         document.getElementById('resident-search').addEventListener('keyup', filterResidentTable);
     }
     
-    // --- ¡NUEVO LISTENER! ---
     if (viewName === 'gastos-comunes') {
         document.getElementById('resident-selector-gc').addEventListener('change', displayResidentGCDetails);
         document.getElementById('tmc-input').addEventListener('change', displayResidentGCDetails);
     }
 }
 
-// --- ¡NUEVAS FUNCIONES PARA GASTOS COMUNES! ---
 async function displayResidentGCDetails() {
     const residentId = document.getElementById('resident-selector-gc').value;
     const detailsContainer = document.getElementById('resident-gc-details');
     if (!residentId) {
-        detailsContainer.innerHTML = '';
+        detailsContainer.innerHTML = '<p>Seleccione un residente para ver su historial de pagos.</p>';
         return;
     }
     showLoader();
@@ -258,7 +254,6 @@ async function displayResidentGCDetails() {
 
         const currentYear = new Date().getFullYear();
         let tableRows = '';
-        let deudaAcumulada = 0;
 
         for (let i = 0; i < 12; i++) {
             const monthDate = new Date(currentYear, i, 1);
@@ -266,7 +261,7 @@ async function displayResidentGCDetails() {
             const fechaVencimiento = new Date(currentYear, i, 10);
             
             const paymentForPeriod = residentPayments.find(p => p[3] === periodo);
-            const montoPagado = paymentForPeriod ? parseFloat(paymentForPeriod[5]) : 0;
+            const montoPagado = paymentForPeriod ? parseFloat(paymentForPeriod[5] || 0) : 0;
 
             const diasDeAtraso = Math.max(0, Math.floor((new Date() - fechaVencimiento) / (1000 * 60 * 60 * 24)));
             const mesesDeMora = (new Date() > fechaVencimiento && montoPagado < valorGastoComun) ? Math.floor(diasDeAtraso / 30) + 1 : 0;
@@ -276,9 +271,8 @@ async function displayResidentGCDetails() {
             const multaAdicional = (mesesDeMora > 0) ? (valorGastoComun * 0.25) * mesesDeMora : 0;
             
             const deudaMes = (valorGastoComun + interesPorMora + multaAdicional) - montoPagado;
-            deudaAcumulada += (new Date() > fechaVencimiento) ? deudaMes : 0;
-
-            const estado = deudaMes <= 0 ? '<span style="color:green;">Pagado</span>' : '<span style="color:red;">Pendiente</span>';
+            
+            const estado = (montoPagado >= valorGastoComun) ? '<span style="color:green;">Pagado</span>' : (new Date() > fechaVencimiento ? '<span style="color:red;">Pendiente</span>' : 'Por Vencer');
 
             tableRows += `
                 <tr>
@@ -286,7 +280,7 @@ async function displayResidentGCDetails() {
                     <td>${formatCurrency(valorGastoComun)}</td>
                     <td>${fechaVencimiento.toLocaleDateString('es-CL')}</td>
                     <td>${formatCurrency(montoPagado)}</td>
-                    <td style="color:${deudaMes > 0 ? 'red' : 'green'};">${formatCurrency(deudaMes * -1)}</td>
+                    <td style="color:${deudaMes > 0 && montoPagado > 0 ? 'orange' : (deudaMes <= 0 ? 'green' : 'red')};">${formatCurrency(Math.abs(valorGastoComun - montoPagado))}</td>
                     <td>${formatCurrency(interesPorMora)}</td>
                     <td>${formatCurrency(multaAdicional)}</td>
                     <td>${mesesDeMora}</td>
@@ -302,7 +296,7 @@ async function displayResidentGCDetails() {
                 <table id="gc-history-table">
                     <thead>
                         <tr>
-                            <th>Mes</th><th>Valor Gasto Común</th><th>Fecha Venc.</th><th>Monto Pagado</th><th>Saldo a Favor/Deuda Mes</th>
+                            <th>Mes</th><th>Valor Gasto Común</th><th>Fecha Venc.</th><th>Monto Pagado</th><th>Valor Pendiente / Saldo a Favor</th>
                             <th>Interés Mora</th><th>¼ Multa Adic.</th><th>Meses Mora</th><th>Deuda Total Mes</th><th>Estado</th>
                         </tr>
                     </thead>
@@ -359,35 +353,26 @@ async function handleSavePayment(e) {
     let comprobanteId = '';
 
     try {
-        // 1. Subir archivo a Drive si existe
         if (fileInput.files.length > 0) {
             const file = fileInput.files[0];
-            const yearMonth = periodo.split('-');
             const folderPath = `/LosMolles/Contabilidad/Parcela Pagos/${nParcela}`;
             const fileName = `${periodo}-Comprobante.${file.name.split('.').pop()}`;
             comprobanteId = await uploadFileToDrive(file, folderPath, fileName);
         }
 
-        // 2. Guardar registro en Google Sheets
         const lastData = await gapi.client.sheets.spreadsheets.values.get({ spreadsheetId: SPREADSHEET_ID, range: 'Pagos_GC!A:A' });
         const lastId = lastData.result.values ? Math.max(...lastData.result.values.flat().map(Number).filter(n => !isNaN(n))) : 0;
         
         const newPayment = [
-            lastId + 1, // ID_Pago
-            residentId, // ID_Residente
-            nParcela,   // N_Parcela
-            periodo,    // Periodo
-            `${periodo}-10`, // FechaVencimiento
-            document.getElementById('montoPagado').value, // MontoPagado
-            fechaPago,  // FechaPago
-            document.getElementById('metodoPago').value, // MetodoPago
-            comprobanteId // ID_Comprobante_Drive
+            lastId + 1, residentId, nParcela, periodo, `${periodo}-10`,
+            document.getElementById('montoPagado').value, fechaPago,
+            document.getElementById('metodoPago').value, comprobanteId
         ];
 
         await appendSheetData('Pagos_GC', [newPayment]);
         alert("Pago registrado exitosamente.");
         hideModal();
-        displayResidentGCDetails(); // Recargar la tabla
+        displayResidentGCDetails();
     } catch (error) {
         console.error("Error al guardar el pago:", error);
         alert("Error al guardar el pago: " + (error.message || error.result.error.message));
@@ -397,7 +382,6 @@ async function handleSavePayment(e) {
 }
 
 async function uploadFileToDrive(file, path, fileName) {
-    // Helper para encontrar o crear carpetas recursivamente
     const findOrCreateFolder = async (parentFolderId, folderName) => {
         const query = `mimeType='application/vnd.google-apps.folder' and name='${folderName}' and '${parentFolderId}' in parents and trashed=false`;
         const res = await gapi.client.drive.files.list({ q: query, fields: 'files(id)' });
@@ -416,7 +400,6 @@ async function uploadFileToDrive(file, path, fileName) {
         currentFolderId = await findOrCreateFolder(currentFolderId, part);
     }
     
-    // Subir el archivo
     const fileMetadata = { name: fileName, parents: [currentFolderId] };
     const media = { mimeType: file.type, body: file };
     const uploadedFile = await gapi.client.drive.files.create({ resource: fileMetadata, media: media, fields: 'id' });
@@ -424,7 +407,6 @@ async function uploadFileToDrive(file, path, fileName) {
 }
 
 
-// OTRAS FUNCIONES (sin cambios)
 function showAddResidentModal() {
     const formHtml = `<h2>Agregar Nuevo Residente</h2><form id="resident-form"><label for="nombreCompleto">Nombre Completo:</label><input type="text" id="nombreCompleto" required><label for="rut">RUT:</label><input type="text" id="rut" required><label for="nParcela">N° Parcela:</label><input type="text" id="nParcela" required><label for="email">Email:</label><input type="email" id="email" required><label for="telefono">Teléfono:</label><input type="tel" id="telefono"><label for="estado">Estado:</label><select id="estado"><option value="Activo">Activo</option><option value="Moroso">Moroso</option><option value="Inactivo">Inactivo</option></select><label for="valorGastoComun">Valor Gasto Común:</label><input type="number" id="valorGastoComun" required><button type="submit" class="cta-button">Guardar Residente</button></form>`;
     showModal(formHtml);
@@ -438,7 +420,7 @@ async function handleAddResident(e) {
         const lastId = lastData.result.values ? Math.max(...lastData.result.values.flat().map(Number).filter(n => !isNaN(n))) : 0;
         const newResident = [ lastId + 1, document.getElementById('nombreCompleto').value, document.getElementById('rut').value, document.getElementById('nParcela').value, document.getElementById('email').value, document.getElementById('telefono').value, document.getElementById('estado').value, document.getElementById('valorGastoComun').value ];
         await appendSheetData('Residentes', [newResident]);
-        allResidentsData = await readSheetData('Residentes!A:H'); // Recargar caché
+        allResidentsData = await readSheetData('Residentes!A:H');
         hideModal(); switchView('residentes');
     } catch (error) { console.error("Error al agregar residente:", error); alert("Error al guardar: " + error.result.error.message);
     } finally { hideLoader(); }
@@ -485,7 +467,7 @@ async function deleteSheetRow(sheetName, rowIndex) {
             spreadsheetId: SPREADSHEET_ID,
             resource: { requests: [{ deleteDimension: { range: { sheetId: sheet.properties.sheetId, dimension: "ROWS", startIndex: rowIndex - 1, endIndex: rowIndex } } }] }
         });
-        allResidentsData = await readSheetData('Residentes!A:H'); // Recargar caché
+        allResidentsData = await readSheetData('Residentes!A:H');
         alert("Fila eliminada correctamente."); switchView('residentes');
     } catch (err) { console.error("Error al eliminar la fila:", err); alert("No se pudo eliminar la fila.");
     } finally { hideLoader(); }
