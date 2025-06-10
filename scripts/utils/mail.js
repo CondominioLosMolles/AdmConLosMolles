@@ -1,3 +1,4 @@
+// scripts/utils/mail.js - Funciones para enviar correos con Gmail API
 async function sendEmail(to, subject, body) {
   const raw = [
     `To: ${to}`,
