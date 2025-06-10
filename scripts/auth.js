@@ -12,7 +12,10 @@ function initAuth() {
 }
 
 function handleLogin() {
-  if (!gapiInited || !gisInited) return;
+  if (!gapiInited || !gisInited) {
+    showError("APIs no inicializadas. Espere...");
+    return;
+  }
   
   tokenClient.requestAccessToken();
   
@@ -36,8 +39,31 @@ function signOut() {
   });
 }
 
-// Inicializar Google Auth
-window.addEventListener("load", () => {
-  initAuth();
-  gisInited = true;
+// Inicializar Google Auth al cargar la página
+window.addEventListener("load", async () => {
+  try {
+    // Cargar GAPI
+    await new Promise(resolve => {
+      gapi.load("client", async () => {
+        await gapi.client.init({
+          apiKey: CONFIG.API_KEY,
+          clientId: CONFIG.CLIENT_ID,
+          scope: CONFIG.SCOPES.join(" "),
+        });
+        gapiInited = true;
+        resolve();
+      });
+    });
+
+    // Cargar GIS
+    const script = document.createElement("script");
+    script.src = "https://accounts.google.com/gsi/client"; 
+    script.onload = () => {
+      gisInited = true;
+      console.log("Google Auth listo");
+    };
+    document.head.appendChild(script);
+  } catch (error) {
+    console.error("Error inicializando Google Auth:", error);
+  }
 });
