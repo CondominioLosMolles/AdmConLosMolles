@@ -1,103 +1,122 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <title>Condominio Los Molles</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <!-- Estilos -->
-    <link rel="stylesheet" href="styles/main.css">
-    <!-- Google APIs -->
-    <script src="https://apis.google.com/js/api.js"></script> 
-    <script src="https://accounts.google.com/gsi/client"  async defer></script>
-    <!-- Librerías Externas -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script> 
-    <script src="https://cdn.sheetjs.com/xlsx-0.20.0/package/xlsx.full.min.js"></script> 
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Condominio Los Molles</title>
+  <style>
+    :root {
+      --primary: #2196F3;
+      --accent: #4CAF50;
+      --bg: #f5f5f5;
+      --text: #333;
+      --font: 'Roboto', sans-serif;
+    }
+    body {
+      font-family: var(--font);
+      background: var(--bg);
+      margin: 0;
+      padding: 0;
+    }
+    .container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 2rem;
+    }
+    .btn-login {
+      padding: 0.75rem 1.5rem;
+      background: var(--accent);
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 1rem;
+    }
+    .hidden { display: none; }
+  </style>
 </head>
 <body>
-    <!-- Contenedor Principal -->
-    <div class="app-container">
-        <!-- Sidebar -->
-        <aside class="sidebar">
-            <div class="logo">
-                <img src="assets/logo.png" alt="Logo">
-                <h2>Los Molles</h2>
-            </div>
-            <nav class="menu">
-                <a href="#dashboard" class="menu-item active">📊 Dashboard</a>
-                <a href="#residents" class="menu-item">👥 Residentes</a>
-                <a href="#payments" class="menu-item">💰 Gastos Comunes</a>
-                <a href="#expenses" class="menu-item">💸 Contabilidad</a>
-                <a href="#communications" class="menu-item">📧 Comunicaciones</a>
-                <a href="#maintenance" class="menu-item">🔧 Mantenciones</a>
-                <a href="#fines" class="menu-item">⚖️ Multas</a>
-                <a href="#assemblies" class="menu-item">🏛️ Asambleas</a>
-                <a href="#reports" class="menu-item">📈 Informes</a>
-            </nav>
-        </aside>
-        <!-- Área de Contenido -->
-        <main class="content">
-            <header class="top-bar">
-                <!-- Botón de Inicio de Sesión -->
-                <button id="login-btn" class="btn-login" onclick="handleLogin()">Iniciar Sesión</button>
-                <div id="user-info" class="user-info"></div>
-            </header>
-            <!-- Contenido Dinámico -->
-            <div id="app-content">
-                <div class="welcome-message">
-                    <h1>Bienvenido al Sistema de Administración de Condominio Los Molles</h1>
-                    <p>Por favor, inicie sesión para acceder a las funciones completas.</p>
-                </div>
-            </div>
-        </main>
+  <div class="container">
+    <h1>Condominio Los Molles</h1>
+    <button id="login-btn" class="btn-login">Iniciar Sesión</button>
+    <div id="user-info" class="hidden"></div>
+    <div id="app" class="hidden">
+      <p>¡Bienvenido! Aquí se mostrarán los módulos del sistema.</p>
     </div>
+  </div>
 
-    <!-- Componentes Reutilizables -->
-    <template id="spinner-template">
-        <div class="spinner"></div>
-    </template>
+  <!-- Google APIs -->
+  <script src="https://apis.google.com/js/api.js"></script> 
+  <script src="https://accounts.google.com/gsi/client"  async defer></script>
 
-    <template id="modal-template">
-        <div class="modal-overlay">
-            <div class="modal-content">
-                <span class="modal-close">&times;</span>
-                <h3 class="modal-title">Título</h3>
-                <div class="modal-body"></div>
-            </div>
-        </div>
-    </template>
+  <script>
+    // Configuración
+    const CONFIG = {
+      CLIENT_ID: "997872453031-5o8s2o6v3qt722fb3p51a2r7bo24ncee.apps.googleusercontent.com",
+      SCOPES: [
+        "https://www.googleapis.com/auth/spreadsheets", 
+        "https://www.googleapis.com/auth/drive.file", 
+        "https://www.googleapis.com/auth/gmail.send" 
+      ],
+      ALLOWED_EMAIL: "losmollestunquen@gmail.com"
+    };
 
-    <!-- Variables Globales -->
-    <script>
-        // Variables para controlar el estado de las APIs
-        let gapiInited = false;
-        let gisInited = false;
-    </script>
+    let tokenClient;
+    let gapiInited = false;
+    let gisInited = false;
 
-    <!-- Configuración -->
-    <script src="config.js"></script>
+    // Inicializar Google Auth
+    function initAuth() {
+      tokenClient = google.accounts.oauth2.initTokenClient({
+        client_id: CONFIG.CLIENT_ID,
+        scope: CONFIG.SCOPES.join(" "),
+        callback: () => {} // Empty callback
+      });
+    }
 
-    <!-- Utilidades -->
-    <script src="scripts/utils/gapi.js"></script>
-    <script src="scripts/utils/drive.js"></script>
-    <script src="scripts/utils/mail.js"></script>
+    // Manejar login
+    function handleLogin() {
+      if (!gapiInited || !gisInited) {
+        alert("API no inicializada. Espere...");
+        return;
+      }
+      tokenClient.requestAccessToken();
+      const user = google.accounts.oauth2.initBasicProfile();
+      if (user.getEmail() !== CONFIG.ALLOWED_EMAIL) {
+        alert("Acceso denegado. Use la cuenta autorizada.");
+        return;
+      }
+      document.getElementById("login-btn").style.display = "none";
+      document.getElementById("user-info").textContent = `Bienvenido, ${user.getName()}`;
+      document.getElementById("user-info").classList.remove("hidden");
+      document.getElementById("app").classList.remove("hidden");
+    }
 
-    <!-- Autenticación -->
-    <script src="scripts/auth.js"></script>
+    // Inicializar APIs
+    window.addEventListener("load", () => {
+      // Cargar GAPI
+      gapi.load("client", async () => {
+        await gapi.client.init({
+          apiKey: "AIzaSyA4nUkMycf_CHZE7TaBBD_WUyWMvSXUwoU",
+          clientId: CONFIG.CLIENT_ID,
+          scope: CONFIG.SCOPES.join(" ")
+        });
+        gapiInited = true;
+      });
 
-    <!-- API de Google Sheets -->
-    <script src="scripts/api.js"></script>
-
-    <!-- Módulos del Sistema -->
-    <script src="scripts/auth.js"></script>
-<script src="scripts/api.js"></script>
-<script src="scripts/modules/dashboard.js"></script>
-<script src="scripts/modules/residents.js"></script>
-<script src="scripts/modules/payments.js"></script>
-<script src="scripts/modules/expenses.js"></script>
-<script src="scripts/modules/communications.js"></script>
-<script src="scripts/modules/maintenance.js"></script>
-<script src="scripts/modules/fines.js"></script>
-<script src="scripts/modules/assemblies.js"></script>
-<script src="scripts/modules/reports.js"></script>
+      // Cargar GIS
+      const script = document.createElement("script");
+      script.src = "https://accounts.google.com/gsi/client"; 
+      script.onload = () => {
+        initAuth();
+        gisInited = true;
+      };
+      script.onerror = () => {
+        alert("Error cargando Google Identity Services.");
+      };
+      document.head.appendChild(script);
+    });
+  </script>
 </body>
 </html>
