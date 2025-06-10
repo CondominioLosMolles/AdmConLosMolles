@@ -105,14 +105,13 @@ function handleSignoutClick() {
         appContainer.style.display = 'none';
         loginContainer.style.display = 'flex';
         mainContent.innerHTML = '';
-        allResidentsData = []; // Limpiar caché al salir
+        allResidentsData = [];
     }
 }
 
 async function startApp() {
     loginContainer.style.display = 'none';
     appContainer.style.display = 'block';
-    // Precargar datos de residentes para usarlos en otros módulos
     allResidentsData = await readSheetData('Residentes!A:H');
     switchView('dashboard');
 }
@@ -190,10 +189,7 @@ async function loadResidentesView() {
 }
 
 async function loadGastosComunesView() {
-    const residentOptions = allResidentsData.slice(1) // Omitir encabezado
-        .map(r => `<option value="${r[0]}">${r[3]} - ${r[1]}</option>`)
-        .join('');
-
+    const residentOptions = allResidentsData.slice(1).map(r => r ? `<option value="${r[0]}">${r[3]} - ${r[1]}</option>` : '').join('');
     return `
         <div class="view active" id="gastos-comunes-view">
             <h1>Gestión de Gastos Comunes</h1>
@@ -203,16 +199,13 @@ async function loadGastosComunesView() {
                     <option value="">-- Buscar por Parcela o Nombre --</option>
                     ${residentOptions}
                 </select>
-                <label for="tmc-input">TMC (%):</label>
-                <input type="number" id="tmc-input" value="2.5" step="0.01" style="width: 80px;">
+                <label for="tmc-input">TMC Anual (%):</label>
+                <input type="number" id="tmc-input" value="34.53" step="0.01" style="width: 80px;" title="Tasa Máxima Convencional para operaciones en moneda nacional no reajustable, en cuotas, de plazos entre 90 días y un año. Valor referencial a Junio 2025.">
             </div>
-            <div id="resident-gc-details">
-                <p>Seleccione un residente para ver su historial de pagos.</p>
-            </div>
+            <div id="resident-gc-details"><p>Seleccione un residente para ver su historial de pagos.</p></div>
         </div>
     `;
 }
-
 
 function attachViewListeners(viewName) {
     if (viewName === 'dashboard') {
@@ -235,6 +228,7 @@ function attachViewListeners(viewName) {
     }
 }
 
+// --- LÓGICA DE GASTOS COMUNES (CORREGIDA) ---
 async function displayResidentGCDetails() {
     const residentId = document.getElementById('resident-selector-gc').value;
     const detailsContainer = document.getElementById('resident-gc-details');
@@ -246,45 +240,65 @@ async function displayResidentGCDetails() {
 
     try {
         const residentData = allResidentsData.find(r => r[0] === residentId);
+        if (!residentData) {
+            throw new Error("No se encontraron los datos del residente seleccionado.");
+        }
         const valorGastoComun = parseFloat(residentData[7]);
         const nParcela = residentData[3];
 
         const allPayments = await readSheetData('Pagos_GC!A:I');
-        const residentPayments = allPayments.slice(1).filter(p => p[1] === residentId);
+        const residentPayments = allPayments.slice(1).filter(p => p && p[1] === residentId);
 
         const currentYear = new Date().getFullYear();
         let tableRows = '';
 
         for (let i = 0; i < 12; i++) {
-            const monthDate = new Date(currentYear, i, 1);
             const periodo = `${currentYear}-${String(i + 1).padStart(2, '0')}`;
             const fechaVencimiento = new Date(currentYear, i, 10);
             
             const paymentForPeriod = residentPayments.find(p => p[3] === periodo);
             const montoPagado = paymentForPeriod ? parseFloat(paymentForPeriod[5] || 0) : 0;
-
-            const diasDeAtraso = Math.max(0, Math.floor((new Date() - fechaVencimiento) / (1000 * 60 * 60 * 24)));
-            const mesesDeMora = (new Date() > fechaVencimiento && montoPagado < valorGastoComun) ? Math.floor(diasDeAtraso / 30) + 1 : 0;
             
-            const tmc = parseFloat(document.getElementById('tmc-input').value) || 0;
-            const interesPorMora = (mesesDeMora > 0) ? ((valorGastoComun * tmc) / 100) / 12 * mesesDeMora : 0;
-            const multaAdicional = (mesesDeMora > 0) ? (valorGastoComun * 0.25) * mesesDeMora : 0;
+            let mesesDeMora = 0;
+            if (new Date() > fechaVencimiento && montoPagado < valorGastoComun) {
+                let start = fechaVencimiento;
+                let end = new Date();
+                mesesDeMora = (end.getMonth() - start.getMonth()) + (12 * (end.getFullYear() - start.getFullYear()));
+                 if (end.getDate() < start.getDate()) {
+                    mesesDeMora--;
+                }
+                mesesDeMora = Math.max(1, mesesDeMora);
+            }
             
-            const deudaMes = (valorGastoComun + interesPorMora + multaAdicional) - montoPagado;
+            const tmcAnual = parseFloat(document.getElementById('tmc-input').value) || 0;
+            const interesPorMora = (mesesDeMora > 0) ? (((valorGastoComun * tmcAnual) / 100) / 12) * mesesDeMora : 0;
+            const multaAdicional = (mesesDeMora > 0) ? (valorGastoComun * 0.25) * 1 : 0; // Se aplica una vez por mes de atraso.
             
-            const estado = (montoPagado >= valorGastoComun) ? '<span style="color:green;">Pagado</span>' : (new Date() > fechaVencimiento ? '<span style="color:red;">Pendiente</span>' : 'Por Vencer');
-
+            const deudaTotalMes = (valorGastoComun + interesPorMora + multaAdicional) - montoPagado;
+            const valorPendiente = valorGastoComun - montoPagado;
+            
+            let estado;
+            if (montoPagado >= valorGastoComun) {
+                estado = '<span style="color:green;">Pagado</span>';
+            } else if (new Date() > fechaVencimiento) {
+                estado = '<span style="color:red;">Pendiente</span>';
+            } else {
+                estado = 'Por Vencer';
+            }
+            
+            let saldoColor = valorPendiente > 0 ? 'red' : 'green';
+            
             tableRows += `
                 <tr>
-                    <td>${monthDate.toLocaleString('es-CL', { month: 'long' })} ${currentYear}</td>
+                    <td>${new Date(currentYear, i, 1).toLocaleString('es-CL', { month: 'long' })}</td>
                     <td>${formatCurrency(valorGastoComun)}</td>
                     <td>${fechaVencimiento.toLocaleDateString('es-CL')}</td>
                     <td>${formatCurrency(montoPagado)}</td>
-                    <td style="color:${deudaMes > 0 && montoPagado > 0 ? 'orange' : (deudaMes <= 0 ? 'green' : 'red')};">${formatCurrency(Math.abs(valorGastoComun - montoPagado))}</td>
+                    <td style="color:${saldoColor};">${formatCurrency(valorPendiente)}</td>
                     <td>${formatCurrency(interesPorMora)}</td>
                     <td>${formatCurrency(multaAdicional)}</td>
                     <td>${mesesDeMora}</td>
-                    <td>${formatCurrency(deudaMes)}</td>
+                    <td>${formatCurrency(deudaTotalMes)}</td>
                     <td>${estado}</td>
                 </tr>
             `;
@@ -296,7 +310,7 @@ async function displayResidentGCDetails() {
                 <table id="gc-history-table">
                     <thead>
                         <tr>
-                            <th>Mes</th><th>Valor Gasto Común</th><th>Fecha Venc.</th><th>Monto Pagado</th><th>Valor Pendiente / Saldo a Favor</th>
+                            <th>Mes</th><th>Valor Gasto Común</th><th>Fecha Venc.</th><th>Monto Pagado</th><th>Valor Pendiente o Saldo a Favor</th>
                             <th>Interés Mora</th><th>¼ Multa Adic.</th><th>Meses Mora</th><th>Deuda Total Mes</th><th>Estado</th>
                         </tr>
                     </thead>
@@ -310,12 +324,14 @@ async function displayResidentGCDetails() {
 
     } catch (error) {
         console.error("Error displaying resident details:", error);
-        detailsContainer.innerHTML = `<p style="color:red;">No se pudo cargar el historial del residente.</p>`;
+        detailsContainer.innerHTML = `<p style="color:red;">No se pudo cargar el historial del residente. ${error.message}</p>`;
     } finally {
         hideLoader();
     }
 }
 
+
+// --- OTRAS FUNCIONES (RESTO DEL CÓDIGO) ---
 function showRegisterPaymentModal(residentId, nParcela) {
     const formHtml = `
         <h2>Registrar Pago para Parcela N° ${nParcela}</h2>
@@ -405,7 +421,6 @@ async function uploadFileToDrive(file, path, fileName) {
     const uploadedFile = await gapi.client.drive.files.create({ resource: fileMetadata, media: media, fields: 'id' });
     return uploadedFile.result.id;
 }
-
 
 function showAddResidentModal() {
     const formHtml = `<h2>Agregar Nuevo Residente</h2><form id="resident-form"><label for="nombreCompleto">Nombre Completo:</label><input type="text" id="nombreCompleto" required><label for="rut">RUT:</label><input type="text" id="rut" required><label for="nParcela">N° Parcela:</label><input type="text" id="nParcela" required><label for="email">Email:</label><input type="email" id="email" required><label for="telefono">Teléfono:</label><input type="tel" id="telefono"><label for="estado">Estado:</label><select id="estado"><option value="Activo">Activo</option><option value="Moroso">Moroso</option><option value="Inactivo">Inactivo</option></select><label for="valorGastoComun">Valor Gasto Común:</label><input type="number" id="valorGastoComun" required><button type="submit" class="cta-button">Guardar Residente</button></form>`;
