@@ -1,3 +1,7 @@
+// =================================================================================
+// ARCHIVO SCRIPT.JS FINAL Y COMPLETO
+// =================================================================================
+
 // CONFIGURACIÓN DE CREDENCIALES Y API
 const CLIENT_ID = '997872453031-5o8s2o6v3qt722fb3p51a2r7bo24ncee.apps.googleusercontent.com';
 const API_KEY = 'AIzaSyA4nUkMycf_CHZE7TaBBD_WUyWMvSXUwoU'; 
@@ -13,7 +17,7 @@ const loader = document.getElementById('loader-wrapper');
 const modalContainer = document.getElementById('modal-container');
 const modalBody = document.getElementById('modal-body');
 
-// --- FLUJO DE AUTENTICACIÓN (ESTABLE) ---
+// --- FLUJO DE AUTENTICACIÓN (CORREGIDO Y MODERNO) ---
 function gapiLoaded() {
     gapi.load('client', initializeGapiClient);
 }
@@ -84,7 +88,6 @@ function handleSignoutClick() {
 async function startApp() {
     document.getElementById('login-container').style.display = 'none';
     document.getElementById('app-container').style.display = 'flex';
-    // Se lee hasta la columna J para incluir el nuevo campo ID_Sheet_Pagos
     const residents = await readSheetData(SPREADSHEET_ID, 'Residentes!A2:J');
     allResidentsData = [['ID_Residente', 'NombreCompleto', 'RUT', 'N_Parcela', 'Direccion', 'Email', 'Telefono', 'Estado', 'ValorGastoComun', 'ID_Sheet_Pagos'], ...residents];
     switchView('dashboard');
