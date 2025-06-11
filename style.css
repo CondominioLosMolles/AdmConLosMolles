@@ -74,7 +74,7 @@ body {
     font-size: 1rem;
     border-radius: 8px;
     cursor: pointer;
-    transition: background-color 0.3s;
+    transition: background-color: 0.3s;
 }
 
 #login-button:hover, button.cta-button:hover {
@@ -227,6 +227,11 @@ th {
     gap: 10px;
 }
 
+.controls-buttons {
+    display: flex;
+    gap: 10px;
+}
+
 input[type="text"], input[type="search"], input[type="email"], input[type="tel"], input[type="date"], input[type="number"], select, textarea {
     padding: 10px;
     border: 1px solid #ccc;
@@ -280,7 +285,6 @@ input[type="text"], input[type="search"], input[type="email"], input[type="tel"]
     font-weight: 600;
 }
 
-/* --- NUEVAS CLASES PARA LOS ESTADOS --- */
 .status-badge {
     color: white;
     padding: 3px 10px;
@@ -294,7 +298,6 @@ input[type="text"], input[type="search"], input[type="email"], input[type="tel"]
 .status-activo { background-color: var(--success-color); }
 .status-moroso { background-color: var(--danger-color); }
 .status-inactivo { background-color: var(--text-muted); }
-/* --- FIN DE NUEVAS CLASES --- */
 
 
 @media (max-width: 992px) {
