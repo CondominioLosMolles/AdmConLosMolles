@@ -131,7 +131,7 @@ main#main-content {
     width: calc(100% - 250px);
 }
 
-h1, h2 {
+h1, h2, h3 {
     color: var(--text-color);
 }
 
