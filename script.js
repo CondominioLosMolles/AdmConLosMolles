@@ -81,7 +81,9 @@ function handleSignoutClick() {
 async function startApp() {
     document.getElementById('login-container').style.display = 'none';
     document.getElementById('app-container').style.display = 'block';
-    allResidentsData = await readSheetData('Residentes!A:H');
+    // Precargar datos de residentes para usarlos en toda la app
+    const residents = await readSheetData('Residentes!A2:H');
+    allResidentsData = [['ID_Residente', 'NombreCompleto', 'RUT', 'N_Parcela', 'Email', 'Telefono', 'Estado', 'ValorGastoComun'], ...residents];
     switchView('dashboard');
 }
 
@@ -175,20 +177,13 @@ async function loadDashboardView() {
     return `<div class="view active" id="dashboard-view"><h1>Dashboard</h1><div class="dashboard-grid"><div class="widget"><h3>Residentes Registrados</h3><div class="value">${activeResidents}</div><div class="details">Estado 'Activo'</div></div><div class="widget"><h3>Ingresos del Mes</h3><div class="value positive">${formatCurrency(incomeThisMonth)}</div><div class="details">Pagos de Gastos Comunes</div></div><div class="widget"><h3>Egresos del Mes</h3><div class="value negative">${formatCurrency(expensesThisMonth)}</div><div class="details">Mantención y Servicios</div></div><div class="widget"><h3>Saldo de Caja</h3><div class="value">${formatCurrency(cashBalance)}</div><div class="details">Estimado Total</div></div><div class="widget"><h3>Mantenciones</h3><div class="value">${pendingMaintenance}</div><div class="details">Pendientes / Urgentes</div></div><div class="widget"><h3>Resumen de Morosidad</h3><div class="value">${morososCount}</div><div class="details">Residentes en estado 'Moroso'</div></div></div><div class="chart-container"><canvas id="incomeExpenseChart" data-labels='${JSON.stringify(chartLabels)}' data-income='${JSON.stringify(chartIncomeData)}' data-expenses='${JSON.stringify(chartExpenseData)}'></canvas></div></div>`;
 }
 
-// =================================================================================
-// MODIFICADO: loadResidentesView para añadir colores de estado
-// =================================================================================
 async function loadResidentesView() {
-    const residents = await readSheetData('Residentes!A2:H');
-    // Actualizar el caché global. Se añade la fila de encabezado al principio.
-    allResidentsData = [['ID_Residente', 'NombreCompleto', 'RUT', 'N_Parcela', 'Email', 'Telefono', 'Estado', 'ValorGastoComun'], ...residents];
-    
-    let tableRows = residents.map((row, index) => {
+    let tableRows = allResidentsData.slice(1).map((row, index) => {
         if (!row) return '';
-        const status = row[6] || 'Inactivo';
-        let statusClass = 'status-inactivo'; // Clase por defecto
-        if (status.toLowerCase() === 'activo') statusClass = 'status-activo';
-        else if (status.toLowerCase() === 'moroso') statusClass = 'status-moroso';
+        const status = (row[6] || 'Inactivo').trim().toLowerCase();
+        let statusClass = 'status-inactivo';
+        if (status === 'activo') statusClass = 'status-activo';
+        else if (status === 'moroso') statusClass = 'status-moroso';
 
         return `
             <tr>
@@ -197,17 +192,17 @@ async function loadResidentesView() {
                 <td>${row[3] || ''}</td>
                 <td>${row[4] || ''}</td>
                 <td>${row[5] || ''}</td>
-                <td><span class="status-badge ${statusClass}">${status}</span></td>
+                <td><span class="status-badge ${statusClass}">${row[6] || 'Inactivo'}</span></td>
                 <td>${formatCurrency(parseFloat(row[7] || 0))}</td>
                 <td class="action-icons">
                     <span class="icon icon-edit" data-row-index="${index + 2}">✏️</span>
                     <span class="icon icon-delete" data-row-index="${index + 2}">🗑️</span>
                 </td>
             </tr>
-        `
+        `;
     }).join('');
     
-    return `<div class="view active" id="residentes-view"><h1>Gestión de Residentes</h1><div class="controls"><input type="search" id="resident-search" placeholder="Buscar por Nombre, RUT o Parcela..."><div class="controls-buttons"><button class="cta-button" id="export-excel-btn">Descargar Excel</button><button class="cta-button" id="add-resident-btn" style="margin-left: 10px;">Agregar Residente</button></div></div><div class="table-container"><table id="residentes-table"><thead><tr><th>Nombre Completo</th><th>RUT</th><th>N° Parcela</th><th>E-mail</th><th>Teléfono</th><th>Estado</th><th>Valor Gasto Común</th><th>Acciones</th></tr></thead><tbody>${tableRows}</tbody></table></div></div>`;
+    return `<div class="view active" id="residentes-view"><h1>Gestión de Residentes</h1><div class="controls"><input type="search" id="resident-search" class="form-control" placeholder="Buscar por Nombre, RUT o Parcela..."><div class="controls-buttons"><button class="cta-button" id="export-excel-btn">Descargar Excel</button><button class="cta-button" id="add-resident-btn">Agregar Residente</button></div></div><div class="table-container"><table id="residentes-table"><thead><tr><th>Nombre Completo</th><th>RUT</th><th>N° Parcela</th><th>E-mail</th><th>Teléfono</th><th>Estado</th><th>Valor Gasto Común</th><th>Acciones</th></tr></thead><tbody>${tableRows}</tbody></table></div></div>`;
 }
 
 async function loadGastosComunesView() {
@@ -316,8 +311,6 @@ async function uploadFileToDrive(file, path, fileName) {
     return uploadedFile.result.id;
 }
 
-// --- FUNCIONES PARA RESIDENTES (INCLUYE EDICIÓN Y EXPORTACIÓN) ---
-
 function showAddResidentModal() {
     const formHtml = `<h2>Agregar Nuevo Residente</h2><form id="resident-form"><label for="nombreCompleto">Nombre Completo:</label><input type="text" id="nombreCompleto" required><label for="rut">RUT:</label><input type="text" id="rut" required><label for="nParcela">N° Parcela:</label><input type="text" id="nParcela" required><label for="email">Email:</label><input type="email" id="email" required><label for="telefono">Teléfono:</label><input type="tel" id="telefono"><label for="estado">Estado:</label><select id="estado"><option value="Activo">Activo</option><option value="Moroso">Moroso</option><option value="Inactivo">Inactivo</option></select><label for="valorGastoComun">Valor Gasto Común:</label><input type="number" id="valorGastoComun" required><button type="submit" class="cta-button">Guardar Residente</button></form>`;
     showModal(formHtml);
@@ -331,7 +324,8 @@ async function handleAddResident(e) {
         const lastId = lastData.result.values ? Math.max(...lastData.result.values.flat().map(Number).filter(n => !isNaN(n))) : 0;
         const newResident = [ lastId + 1, document.getElementById('nombreCompleto').value, document.getElementById('rut').value, document.getElementById('nParcela').value, document.getElementById('email').value, document.getElementById('telefono').value, document.getElementById('estado').value, document.getElementById('valorGastoComun').value ];
         await appendSheetData('Residentes', [newResident]);
-        allResidentsData = await readSheetData('Residentes!A:H');
+        const residents = await readSheetData('Residentes!A2:H');
+        allResidentsData = [['ID_Residente', 'NombreCompleto', 'RUT', 'N_Parcela', 'Email', 'Telefono', 'Estado', 'ValorGastoComun'], ...residents];
         hideModal(); switchView('residentes');
     } catch (error) { console.error("Error al agregar residente:", error); alert("Error al guardar: " + error.result.error.message);
     } finally { hideLoader(); }
@@ -343,33 +337,11 @@ function handleResidentTableClick(e) {
     if (e.target.matches('.icon-edit')) { showEditResidentModal(rowIndex); }
 }
 
-// =================================================================================
-// CORREGIDO: showEditResidentModal para que encuentre el residente correcto
-// =================================================================================
 function showEditResidentModal(rowIndex) {
-    // El caché allResidentsData incluye la fila de encabezado, así que el índice correcto es rowIndex - 1
     const arrayIndex = parseInt(rowIndex) - 1;
     const residentData = allResidentsData[arrayIndex];
-    
-    if (!residentData) {
-        alert("Error: No se encontraron los datos para editar.");
-        return;
-    }
-
-    const formHtml = `
-        <h2>Editar Residente</h2>
-        <form id="edit-resident-form">
-            <input type="hidden" id="rowIndex" value="${rowIndex}">
-            <label for="nombreCompleto">Nombre Completo:</label><input type="text" id="nombreCompleto" value="${residentData[1] || ''}" required>
-            <label for="rut">RUT:</label><input type="text" id="rut" value="${residentData[2] || ''}" required>
-            <label for="nParcela">N° Parcela:</label><input type="text" id="nParcela" value="${residentData[3] || ''}" required>
-            <label for="email">Email:</label><input type="email" id="email" value="${residentData[4] || ''}" required>
-            <label for="telefono">Teléfono:</label><input type="tel" id="telefono" value="${residentData[5] || ''}">
-            <label for="estado">Estado:</label><select id="estado"><option value="Activo">Activo</option><option value="Moroso">Moroso</option><option value="Inactivo">Inactivo</option></select>
-            <label for="valorGastoComun">Valor Gasto Común:</label><input type="number" id="valorGastoComun" value="${residentData[7] || ''}" required>
-            <button type="submit" class="cta-button">Actualizar Residente</button>
-        </form>
-    `;
+    if (!residentData) { alert("Error: No se encontraron los datos para editar."); return; }
+    const formHtml = `<h2>Editar Residente</h2><form id="edit-resident-form"><input type="hidden" id="rowIndex" value="${rowIndex}"><label for="nombreCompleto">Nombre Completo:</label><input type="text" id="nombreCompleto" value="${residentData[1] || ''}" required><label for="rut">RUT:</label><input type="text" id="rut" value="${residentData[2] || ''}" required><label for="nParcela">N° Parcela:</label><input type="text" id="nParcela" value="${residentData[3] || ''}" required><label for="email">Email:</label><input type="email" id="email" value="${residentData[4] || ''}" required><label for="telefono">Teléfono:</label><input type="tel" id="telefono" value="${residentData[5] || ''}"><label for="estado">Estado:</label><select id="estado"><option value="Activo">Activo</option><option value="Moroso">Moroso</option><option value="Inactivo">Inactivo</option></select><label for="valorGastoComun">Valor Gasto Común:</label><input type="number" id="valorGastoComun" value="${residentData[7] || ''}" required><button type="submit" class="cta-button">Actualizar Residente</button></form>`;
     showModal(formHtml);
     document.getElementById('estado').value = residentData[6] || 'Activo';
     document.getElementById('edit-resident-form').addEventListener('submit', handleUpdateResident);
@@ -388,7 +360,8 @@ async function handleUpdateResident(e) {
             document.getElementById('valorGastoComun').value
         ];
         await updateSheetRow('Residentes', rowIndex, [updatedValues]);
-        allResidentsData = await readSheetData('Residentes!A:H');
+        const residents = await readSheetData('Residentes!A2:H');
+        allResidentsData = [['ID_Residente', 'NombreCompleto', 'RUT', 'N_Parcela', 'Email', 'Telefono', 'Estado', 'ValorGastoComun'], ...residents];
         hideModal();
         switchView('residentes');
     } catch (error) {
@@ -409,8 +382,21 @@ function filterResidentTable() {
 }
 
 function exportResidentsToExcel() {
-    const table = document.getElementById("residentes-table");
-    const wb = XLSX.utils.table_to_book(table, {sheet: "Residentes"});
+    const headers = ["ID", "Nombre Completo", "RUT", "N° Parcela", "Email", "Teléfono", "Estado", "Valor Gasto Común"];
+    const data = allResidentsData.slice(1).map(row => {
+        return [
+            row[0], row[1], row[2], row[3], row[4], row[5], row[6],
+            { v: parseFloat(row[7] || 0), t: 'n', z: '$ #,##0' } // Celda de moneda
+        ];
+    });
+
+    const ws = XLSX.utils.aoa_to_sheet([headers, ...data]);
+    
+    // Ajustar anchos de columna
+    ws['!cols'] = [ {wch:5}, {wch:30}, {wch:12}, {wch:10}, {wch:30}, {wch:15}, {wch:10}, {wch:20} ];
+
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Residentes");
     XLSX.writeFile(wb, "Listado_Residentes.xlsx");
 }
 
@@ -450,9 +436,13 @@ async function deleteSheetRow(sheetName, rowIndex) {
             spreadsheetId: SPREADSHEET_ID,
             resource: { requests: [{ deleteDimension: { range: { sheetId: sheet.properties.sheetId, dimension: "ROWS", startIndex: parseInt(rowIndex) - 1, endIndex: parseInt(rowIndex) } } }] }
         });
-        allResidentsData = await readSheetData('Residentes!A:H');
-        alert("Fila eliminada correctamente."); switchView('residentes');
-    } catch (err) { console.error("Error al eliminar la fila:", err); alert("No se pudo eliminar la fila.");
+        const residents = await readSheetData('Residentes!A2:H');
+        allResidentsData = [['ID_Residente', 'NombreCompleto', 'RUT', 'N_Parcela', 'Email', 'Telefono', 'Estado', 'ValorGastoComun'], ...residents];
+        alert("Fila eliminada correctamente."); 
+        switchView('residentes');
+    } catch (err) { 
+        console.error("Error al eliminar la fila:", err); 
+        alert("No se pudo eliminar la fila.");
     } finally {
         hideLoader();
     }
