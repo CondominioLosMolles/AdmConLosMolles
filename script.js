@@ -110,10 +110,6 @@ async function switchView(viewName) {
     }
 }
 
-
-// =================================================================================
-// FUNCIÓN MODIFICADA PARA EL GRÁFICO
-// =================================================================================
 function attachViewListeners(viewName) {
     setTimeout(() => { 
         try {
@@ -124,7 +120,6 @@ function attachViewListeners(viewName) {
                     const labels = JSON.parse(canvas.getAttribute('data-labels'));
                     const incomeData = JSON.parse(canvas.getAttribute('data-income'));
                     const expenseData = JSON.parse(canvas.getAttribute('data-expenses'));
-                    
                     new Chart(ctx, {
                         type: 'bar',
                         data: {
@@ -141,7 +136,6 @@ function attachViewListeners(viewName) {
                                 y: {
                                     beginAtZero: true,
                                     ticks: {
-                                        // AÑADIDO: Formatea los números del eje Y como pesos chilenos
                                         callback: function(value) {
                                             return formatCurrency(value);
                                         }
@@ -151,7 +145,6 @@ function attachViewListeners(viewName) {
                             plugins: {
                                 tooltip: {
                                     callbacks: {
-                                        // AÑADIDO: Formatea los números dentro del tooltip como pesos chilenos
                                         label: function(context) {
                                             let label = context.dataset.label || '';
                                             if (label) { label += ': '; }
@@ -167,13 +160,11 @@ function attachViewListeners(viewName) {
                     });
                 }
             }
-
             if (viewName === 'residentes') {
                 document.getElementById('add-resident-btn').addEventListener('click', showAddResidentModal);
                 document.getElementById('residentes-table').addEventListener('click', handleResidentTableClick);
                 document.getElementById('resident-search').addEventListener('keyup', filterResidentTable);
             }
-            
             if (viewName === 'gastos-comunes') {
                 const selector = document.getElementById('resident-selector-gc');
                 const tmcInput = document.getElementById('tmc-input');
@@ -185,8 +176,6 @@ function attachViewListeners(viewName) {
         }
     }, 100);
 }
-// =================================================================================
-
 
 // --- LÓGICA DE VISTAS ---
 
@@ -306,87 +295,4 @@ async function displayResidentGCDetails() {
                     <td><span class="math-inline">\{formatCurrency\(interesPorMora\)\}</td\>
 <td\></span>{formatCurrency(multaAdicional)}</td>
                     <td><span class="math-inline">\{\(montoPagado < valorGastoComun\) ? mesesMoraAcumulados \: 0\}</td\>
-<td\></span>{formatCurrency(deudaTotalMes)}</td>
-                    <td>${estado}</td>
-                </tr>
-            `;
-        }
-
-        detailsContainer.innerHTML = `
-            <h3>Historial de Pagos para Parcela N° <span class="math-inline">\{nParcela\}</h3\>
-<div class\="table\-container"\>
-<table id\="gc\-history\-table"\>
-<thead\>
-<tr\>
-<th\>Mes</th\><th\>Valor Gasto Común</th\><th\>Fecha Venc\.</th\><th\>Monto Pagado</th\><th\>Valor Pendiente o Saldo a Favor</th\>
-<th\>Interés Mora</th\><th\>¼ Multa Adic\.</th\><th\>Meses Mora \(Acum\.\)</th\><th\>Deuda Total Mes</th\><th\>Estado</th\>
-</tr\>
-</thead\>
-<tbody\></span>{tableRows}</tbody>
-                </table>
-            </div>
-            <br>
-            <button class="cta-button" id="register-payment-btn">Registrar Pago</button>
-        `;
-        document.getElementById('register-payment-btn').addEventListener('click', () => showRegisterPaymentModal(residentId, nParcela));
-
-    } catch (error) {
-        console.error("Error displaying resident details:", error);
-        detailsContainer.innerHTML = `<p style="color:red;">No se pudo cargar el historial del residente. ${error.message}</p>`;
-    } finally {
-        hideLoader();
-    }
-}
-
-function showRegisterPaymentModal(residentId, nParcela) {
-    const formHtml = `<h2>Registrar Pago para Parcela N° <span class="math-inline">\{nParcela\}</h2\><form id\="payment\-form"\><input type\="hidden" id\="residentId" value\="</span>{residentId}"><input type="hidden" id="nParcela" value="${nParcela}"><label for="periodo">Período de Pago (YYYY-MM):</label><input type="text" id="periodo" required placeholder="Ej: 2025-07"><label for="montoPagado">Monto Pagado:</label><input type="number" id="montoPagado" required><label for="fechaPago">Fecha de Pago:</label><input type="date" id="fechaPago" required><label for="metodoPago">Método de Pago:</label><select id="metodoPago"><option value="Transferencia">Transferencia</option><option value="Efectivo">Efectivo</option></select><label for="comprobante">Comprobante (PDF/JPG):</label><input type="file" id="comprobante"><button type="submit" class="cta-button">Guardar Pago</button></form>`;
-    showModal(formHtml);
-    document.getElementById('payment-form').addEventListener('submit', handleSavePayment);
-}
-
-async function handleSavePayment(e) {
-    e.preventDefault(); showLoader();
-    const residentId = document.getElementById('residentId').value;
-    const nParcela = document.getElementById('nParcela').value;
-    const periodo = document.getElementById('periodo').value;
-    const fechaPago = document.getElementById('fechaPago').value;
-    const fileInput = document.getElementById('comprobante');
-    let comprobanteId = '';
-
-    try {
-        if (fileInput.files.length > 0) {
-            const file = fileInput.files[0];
-            const folderPath = `/LosMolles/Contabilidad/Parcela Pagos/${nParcela}`;
-            const fileName = `<span class="math-inline">\{periodo\}\-Comprobante\.</span>{file.name.split('.').pop()}`;
-            comprobanteId = await uploadFileToDrive(file, folderPath, fileName);
-        }
-        const lastData = await gapi.client.sheets.spreadsheets.values.get({ spreadsheetId: SPREADSHEET_ID, range: 'Pagos_GC!A:A' });
-        const lastId = lastData.result.values ? Math.max(...lastData.result.values.flat().map(Number).filter(n => !isNaN(n))) : 0;
-        const newPayment = [ lastId + 1, residentId, nParcela, periodo, `${periodo}-10`, document.getElementById('montoPagado').value, fechaPago, document.getElementById('metodoPago').value, comprobanteId ];
-        await appendSheetData('Pagos_GC', [newPayment]);
-        alert("Pago registrado exitosamente.");
-        hideModal();
-        const selector = document.getElementById('resident-selector-gc');
-        if(selector) selector.dispatchEvent(new Event('change'));
-
-    } catch (error) {
-        console.error("Error al guardar el pago:", error);
-        alert("Error al guardar el pago: " + (error.message || error.result.error.message));
-    } finally {
-        hideLoader();
-    }
-}
-
-async function uploadFileToDrive(file, path, fileName) {
-    const findOrCreateFolder = async (parentFolderId, folderName) => {
-        const query = `mimeType='application/vnd.google-apps.folder' and name='<span class="math-inline">\{folderName\}' and '</span>{parentFolderId}' in parents and trashed=false`;
-        const res = await gapi.client.drive.files.list({ q: query, fields: 'files(id)' });
-        if (res.result.files.length > 0) { return res.result.files[0].id; } else {
-            const folderMetadata = { name: folderName, mimeType: 'application/vnd.google-apps.folder', parents: [parentFolderId] };
-            const folder = await gapi.client.drive.files.create({ resource: folderMetadata, fields: 'id' });
-            return folder.result.id;
-        }
-    };
-    const pathParts = path.split('/').filter(p => p);
-    let currentFolderId = 'root';
-    for (const part of pathParts) { currentFolderId =
+<td\></span>{format  
