@@ -81,7 +81,6 @@ function handleSignoutClick() {
 async function startApp() {
     document.getElementById('login-container').style.display = 'none';
     document.getElementById('app-container').style.display = 'block';
-    // Precargar datos de residentes para usarlos en toda la app
     const residents = await readSheetData('Residentes!A2:H');
     allResidentsData = [['ID_Residente', 'NombreCompleto', 'RUT', 'N_Parcela', 'Email', 'Telefono', 'Estado', 'ValorGastoComun'], ...residents];
     switchView('dashboard');
@@ -132,14 +131,12 @@ function attachViewListeners(viewName) {
                     });
                 }
             }
-
             if (viewName === 'residentes') {
                 document.getElementById('add-resident-btn').addEventListener('click', showAddResidentModal);
                 document.getElementById('residentes-table').addEventListener('click', handleResidentTableClick);
                 document.getElementById('resident-search').addEventListener('keyup', filterResidentTable);
                 document.getElementById('export-excel-btn').addEventListener('click', exportResidentsToExcel);
             }
-            
             if (viewName === 'gastos-comunes') {
                 const selector = document.getElementById('resident-selector-gc');
                 const tmcInput = document.getElementById('tmc-input');
@@ -184,24 +181,8 @@ async function loadResidentesView() {
         let statusClass = 'status-inactivo';
         if (status === 'activo') statusClass = 'status-activo';
         else if (status === 'moroso') statusClass = 'status-moroso';
-
-        return `
-            <tr>
-                <td>${row[1] || ''}</td>
-                <td>${row[2] || ''}</td>
-                <td>${row[3] || ''}</td>
-                <td>${row[4] || ''}</td>
-                <td>${row[5] || ''}</td>
-                <td><span class="status-badge ${statusClass}">${row[6] || 'Inactivo'}</span></td>
-                <td>${formatCurrency(parseFloat(row[7] || 0))}</td>
-                <td class="action-icons">
-                    <span class="icon icon-edit" data-row-index="${index + 2}">✏️</span>
-                    <span class="icon icon-delete" data-row-index="${index + 2}">🗑️</span>
-                </td>
-            </tr>
-        `;
+        return `<tr><td>${row[1] || ''}</td><td>${row[2] || ''}</td><td>${row[3] || ''}</td><td>${row[4] || ''}</td><td>${row[5] || ''}</td><td><span class="status-badge ${statusClass}">${row[6] || 'Inactivo'}</span></td><td>${formatCurrency(parseFloat(row[7] || 0))}</td><td class="action-icons"><span class="icon icon-edit" data-row-index="${index + 2}">✏️</span><span class="icon icon-delete" data-row-index="${index + 2}">🗑️</span></td></tr>`;
     }).join('');
-    
     return `<div class="view active" id="residentes-view"><h1>Gestión de Residentes</h1><div class="controls"><input type="search" id="resident-search" class="form-control" placeholder="Buscar por Nombre, RUT o Parcela..."><div class="controls-buttons"><button class="cta-button" id="export-excel-btn">Descargar Excel</button><button class="cta-button" id="add-resident-btn">Agregar Residente</button></div></div><div class="table-container"><table id="residentes-table"><thead><tr><th>Nombre Completo</th><th>RUT</th><th>N° Parcela</th><th>E-mail</th><th>Teléfono</th><th>Estado</th><th>Valor Gasto Común</th><th>Acciones</th></tr></thead><tbody>${tableRows}</tbody></table></div></div>`;
 }
 
@@ -384,15 +365,26 @@ function filterResidentTable() {
 function exportResidentsToExcel() {
     const headers = ["ID", "Nombre Completo", "RUT", "N° Parcela", "Email", "Teléfono", "Estado", "Valor Gasto Común"];
     const data = allResidentsData.slice(1).map(row => {
+        if (!row) return [];
         return [
             row[0], row[1], row[2], row[3], row[4], row[5], row[6],
-            { v: parseFloat(row[7] || 0), t: 'n', z: '$ #,##0' } // Celda de moneda
+            parseFloat(row[7] || 0)
         ];
     });
 
     const ws = XLSX.utils.aoa_to_sheet([headers, ...data]);
     
-    // Ajustar anchos de columna
+    // Set format for the currency column (H)
+    const range = XLSX.utils.decode_range(ws['!ref']);
+    for (let R = range.s.r + 1; R <= range.e.r; ++R) {
+        const cell_address = { c: 7, r: R }; // Column H (index 7)
+        const cell_ref = XLSX.utils.encode_cell(cell_address);
+        if (ws[cell_ref] && ws[cell_ref].v !== undefined) {
+            ws[cell_ref].t = 'n';
+            ws[cell_ref].z = '$ #,##0';
+        }
+    }
+    
     ws['!cols'] = [ {wch:5}, {wch:30}, {wch:12}, {wch:10}, {wch:30}, {wch:15}, {wch:10}, {wch:20} ];
 
     const wb = XLSX.utils.book_new();
