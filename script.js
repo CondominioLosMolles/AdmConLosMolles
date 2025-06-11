@@ -50,7 +50,6 @@ function handleAuthError(message) {
     loader.innerHTML = `<p style="color:red; text-align:center; padding: 20px;"><b>${message}</b><br/>Verifique la configuración en Google Cloud y que las cookies de terceros estén habilitadas.</p>`;
     loader.style.display = 'flex';
 }
-// --- FIN DEL FLUJO DE AUTENTICACIÓN ---
 
 document.addEventListener('DOMContentLoaded', () => {
     document.querySelector('.sidebar').addEventListener('click', (e) => {
@@ -85,6 +84,7 @@ function handleSignoutClick() {
 async function startApp() {
     document.getElementById('login-container').style.display = 'none';
     document.getElementById('app-container').style.display = 'flex';
+    // Se lee hasta la columna J para incluir el nuevo campo ID_Sheet_Pagos
     const residents = await readSheetData(SPREADSHEET_ID, 'Residentes!A2:J');
     allResidentsData = [['ID_Residente', 'NombreCompleto', 'RUT', 'N_Parcela', 'Direccion', 'Email', 'Telefono', 'Estado', 'ValorGastoComun', 'ID_Sheet_Pagos'], ...residents];
     switchView('dashboard');
@@ -177,8 +177,7 @@ async function loadResidentesView() {
         if (!row) return '';
         const status = (row[7] || 'Inactivo').trim().toLowerCase();
         let statusClass = 'status-inactivo';
-        if (status === 'activo') statusClass = 'status-activo';
-        else if (status === 'moroso') statusClass = 'status-moroso';
+        if (status === 'activo') statusClass = 'status-activo'; else if (status === 'moroso') statusClass = 'status-moroso';
         return `<tr><td>${row[1] || ''}</td><td>${row[2] || ''}</td><td>${row[3] || ''}</td><td>${row[4] || ''}</td><td>${row[5] || ''}</td><td>${row[6] || ''}</td><td><span class="status-badge ${statusClass}">${row[7] || 'Inactivo'}</span></td><td>${formatCurrency(parseFloat(row[8] || 0))}</td><td class="action-icons"><span class="icon icon-edit" data-row-index="${index + 2}">✏️</span><span class="icon icon-delete" data-row-index="${index + 2}">🗑️</span></td></tr>`;
     }).join('');
     return `<div class="view active" id="residentes-view"><h1>Gestión de Residentes</h1><div class="controls"><input type="search" id="resident-search" placeholder="Buscar por Nombre, RUT o Parcela..."><div class="controls-buttons"><button class="cta-button" id="export-excel-btn">Descargar Excel</button><button class="cta-button" id="add-resident-btn">Agregar Residente</button></div></div><div class="table-container"><table id="residentes-table"><thead><tr><th>Nombre Completo</th><th>RUT</th><th>N° Parcela</th><th>Dirección</th><th>E-mail</th><th>Teléfono</th><th>Estado</th><th>Valor Gasto Común</th><th>Acciones</th></tr></thead><tbody>${tableRows}</tbody></table></div></div>`;
@@ -220,7 +219,7 @@ async function displayResidentSheet() {
 }
 
 function showRegisterPaymentModal(sheetId) {
-    const formHtml = `<h2>Registrar Nuevo Pago</h2><form id="payment-form"><input type="hidden" id="paymentSheetId" value="${sheetId}"><label for="mes">Mes a Pagar (1 para Enero, 2 para Febrero, etc.):</label><input type="number" id="mes" min="1" max="12" required><label for="montoPagado">Monto Pagado:</label><input type="number" id="montoPagado" required><label for="fechaPago">Fecha de Pago:</label><input type="date" id="fechaPago" required></form><button id="save-payment-btn" class="cta-button">Guardar Pago</button>`;
+    const formHtml = `<h2>Registrar Nuevo Pago</h2><form><input type="hidden" id="paymentSheetId" value="${sheetId}"><label>Mes a Pagar (1 para Enero, 2 para Febrero, etc.):</label><input type="number" id="mes" min="1" max="12" required><label>Monto Pagado:</label><input type="number" id="montoPagado" required><label>Fecha de Pago:</label><input type="date" id="fechaPago" required></form><button id="save-payment-btn" class="cta-button">Guardar Pago</button>`;
     showModal(formHtml);
     document.getElementById('save-payment-btn').addEventListener('click', handleSavePaymentToSheet);
 }
