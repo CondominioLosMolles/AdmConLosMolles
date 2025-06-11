@@ -136,9 +136,14 @@ function attachViewListeners(viewName) {
                             scales: {
                                 y: {
                                     beginAtZero: true,
+                                    // AÑADIDO: Define un valor máximo sugerido para el eje
+                                    suggestedMax: 1000000,
                                     ticks: {
                                         callback: function(value) {
-                                            return formatCurrency(value);
+                                            // Solo muestra etiquetas para números enteros para evitar el desorden
+                                            if (Math.floor(value) === value) {
+                                                return formatCurrency(value);
+                                            }
                                         }
                                     }
                                 }
