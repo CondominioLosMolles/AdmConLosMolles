@@ -299,33 +299,14 @@ input[type="text"], input[type="search"], input[type="email"], input[type="tel"]
 .status-moroso { background-color: var(--danger-color); }
 .status-inactivo { background-color: var(--text-muted); }
 
-
 @media (max-width: 992px) {
-    .sidebar {
-        width: 200px;
-    }
-    main#main-content {
-        margin-left: 200px;
-        width: calc(100% - 200px);
-    }
+    .sidebar { width: 200px; }
+    main#main-content { margin-left: 200px; width: calc(100% - 200px); }
 }
 
 @media (max-width: 768px) {
-    #app-container {
-        flex-direction: column;
-    }
-    .sidebar {
-        width: 100%;
-        height: auto;
-        position: relative;
-    }
-    main#main-content {
-        margin-left: 0;
-        width: 100%;
-        padding: 15px;
-    }
-    .controls {
-        flex-direction: column;
-        align-items: stretch;
-    }
+    #app-container { flex-direction: column; }
+    .sidebar { width: 100%; height: auto; position: relative; }
+    main#main-content { margin-left: 0; width: 100%; padding: 15px; }
+    .controls { flex-direction: column; align-items: stretch; }
 }
