@@ -2,10 +2,10 @@
 const CONFIG = {
     // ⚠️ IMPORTANTE: Reemplazar con su Client ID de Google Cloud Console
     // Instrucciones en README.md
-    GOOGLE_CLIENT_ID: 'YOUR_GOOGLE_CLIENT_ID.apps.googleusercontent.com',
+    GOOGLE_CLIENT_ID: '997872453031-5o8s2o6v3qt722fb3p51a2r7bo24ncee.apps.googleusercontent.com',
     
     // Email del administrador del condominio
-    ADMIN_EMAIL: 'admin@condominiolosmolles.cl',
+    ADMIN_EMAIL: 'losmollestunquen@gmail.com',
     
     // Configuración de Google Sheets
     // Estos IDs se generarán automáticamente al crear las hojas
