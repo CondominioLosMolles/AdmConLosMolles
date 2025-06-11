@@ -102,6 +102,7 @@ async function switchView(viewName) {
             default: viewContent = `<div class="view active"><h1>${viewName.charAt(0).toUpperCase() + viewName.slice(1).replace('-', ' ')}</h1><p>Este módulo aún está en construcción.</p></div>`; break;
         }
         mainContent.innerHTML = viewContent;
+        // La llamada a attachViewListeners se mantiene, pero la cambiaremos
         attachViewListeners(viewName);
     } catch (error) {
         console.error(`Error al cambiar a la vista ${viewName}:`, error);
@@ -112,41 +113,35 @@ async function switchView(viewName) {
 }
 
 function attachViewListeners(viewName) {
-    setTimeout(() => { 
-        try {
-            if (viewName === 'dashboard') {
-                const canvas = document.getElementById('incomeExpenseChart');
-                if (canvas) {
-                    const ctx = canvas.getContext('2d');
-                    const labels = JSON.parse(canvas.getAttribute('data-labels'));
-                    const incomeData = JSON.parse(canvas.getAttribute('data-income'));
-                    const expenseData = JSON.parse(canvas.getAttribute('data-expenses'));
-                    new Chart(ctx, {
-                        type: 'bar', data: { labels: labels, datasets: [ { label: 'Ingresos', data: incomeData, backgroundColor: 'rgba(40, 167, 69, 0.7)' }, { label: 'Egresos', data: expenseData, backgroundColor: 'rgba(220, 53, 69, 0.7)' } ] },
-                        options: {
-                            responsive: true, maintainAspectRatio: false,
-                            scales: { y: { beginAtZero: true, suggestedMax: 1000000, ticks: { callback: function(value) { if (Math.floor(value) === value) { return formatCurrency(value); } } } } },
-                            plugins: { tooltip: { callbacks: { label: function(context) { let label = context.dataset.label || ''; if (label) { label += ': '; } if (context.parsed.y !== null) { label += formatCurrency(context.parsed.y); } return label; } } } }
-                        }
-                    });
-                }
+    // Ya no es necesario el setTimeout con el nuevo enfoque
+    try {
+        if (viewName === 'dashboard') {
+            const canvas = document.getElementById('incomeExpenseChart');
+            if (canvas) {
+                const ctx = canvas.getContext('2d');
+                const labels = JSON.parse(canvas.getAttribute('data-labels'));
+                const incomeData = JSON.parse(canvas.getAttribute('data-income'));
+                const expenseData = JSON.parse(canvas.getAttribute('data-expenses'));
+                new Chart(ctx, {
+                    type: 'bar', data: { labels: labels, datasets: [ { label: 'Ingresos', data: incomeData, backgroundColor: 'rgba(40, 167, 69, 0.7)' }, { label: 'Egresos', data: expenseData, backgroundColor: 'rgba(220, 53, 69, 0.7)' } ] },
+                    options: {
+                        responsive: true, maintainAspectRatio: false,
+                        scales: { y: { beginAtZero: true, suggestedMax: 1000000, ticks: { callback: function(value) { if (Math.floor(value) === value) { return formatCurrency(value); } } } } },
+                        plugins: { tooltip: { callbacks: { label: function(context) { let label = context.dataset.label || ''; if (label) { label += ': '; } if (context.parsed.y !== null) { label += formatCurrency(context.parsed.y); } return label; } } } }
+                    }
+                });
             }
-            if (viewName === 'residentes') {
-                document.getElementById('add-resident-btn').addEventListener('click', showAddResidentModal);
-                document.getElementById('residentes-table').addEventListener('click', handleResidentTableClick);
-                document.getElementById('resident-search').addEventListener('keyup', filterResidentTable);
-                document.getElementById('export-excel-btn').addEventListener('click', exportResidentsToExcel);
-            }
-            if (viewName === 'gastos-comunes') {
-                const selector = document.getElementById('resident-selector-gc');
-                const tmcInput = document.getElementById('tmc-input');
-                if (selector) selector.addEventListener('change', displayResidentGCDetails);
-                if (tmcInput) tmcInput.addEventListener('change', displayResidentGCDetails);
-            }
-        } catch(e) {
-            console.error("Error al adjuntar listeners: ", e);
         }
-    }, 100);
+        if (viewName === 'residentes') {
+            document.getElementById('add-resident-btn').addEventListener('click', showAddResidentModal);
+            document.getElementById('residentes-table').addEventListener('click', handleResidentTableClick);
+            document.getElementById('resident-search').addEventListener('keyup', filterResidentTable);
+            document.getElementById('export-excel-btn').addEventListener('click', exportResidentsToExcel);
+        }
+        // No es necesario añadir el listener para gastos-comunes aquí, ya que lo pondremos directamente en el HTML.
+    } catch(e) {
+        console.error("Error al adjuntar listeners: ", e);
+    }
 }
 
 // --- LÓGICA DE VISTAS ---
@@ -186,9 +181,26 @@ async function loadResidentesView() {
     return `<div class="view active" id="residentes-view"><h1>Gestión de Residentes</h1><div class="controls"><input type="search" id="resident-search" class="form-control" placeholder="Buscar por Nombre, RUT o Parcela..."><div class="controls-buttons"><button class="cta-button" id="export-excel-btn">Descargar Excel</button><button class="cta-button" id="add-resident-btn">Agregar Residente</button></div></div><div class="table-container"><table id="residentes-table"><thead><tr><th>Nombre Completo</th><th>RUT</th><th>N° Parcela</th><th>E-mail</th><th>Teléfono</th><th>Estado</th><th>Valor Gasto Común</th><th>Acciones</th></tr></thead><tbody>${tableRows}</tbody></table></div></div>`;
 }
 
+// =================================================================================
+// MODIFICADO: loadGastosComunesView para añadir onchange="..."
+// =================================================================================
 async function loadGastosComunesView() {
     const residentOptions = allResidentsData.slice(1).map(r => r ? `<option value="${r[0]}">${r[3]} - ${r[1]}</option>` : '').join('');
-    return `<div class="view active" id="gastos-comunes-view"><h1>Gestión de Gastos Comunes</h1><div class="controls" style="display: block;"><label for="resident-selector-gc">Seleccione un Residente:</label><select id="resident-selector-gc" style="width: auto; max-width: 400px; margin-right: 10px;"><option value="">-- Buscar por Parcela o Nombre --</option>${residentOptions}</select><label for="tmc-input">TMC Anual (%):</label><input type="number" id="tmc-input" value="34.53" step="0.01" style="width: 80px;" title="Tasa Máxima Convencional para operaciones en moneda nacional no reajustable."></div><div id="resident-gc-details"><p>Seleccione un residente para ver su historial de pagos.</p></div></div>`;
+    return `
+        <div class="view active" id="gastos-comunes-view">
+            <h1>Gestión de Gastos Comunes</h1>
+            <div class="controls" style="display: block;">
+                <label for="resident-selector-gc">Seleccione un Residente:</label>
+                <select id="resident-selector-gc" onchange="displayResidentGCDetails()" style="width: auto; max-width: 400px; margin-right: 10px;">
+                    <option value="">-- Buscar por Parcela o Nombre --</option>
+                    ${residentOptions}
+                </select>
+                <label for="tmc-input">TMC Anual (%):</label>
+                <input type="number" id="tmc-input" onchange="displayResidentGCDetails()" value="34.53" step="0.01" style="width: 80px;" title="Tasa Máxima Convencional para operaciones en moneda nacional no reajustable.">
+            </div>
+            <div id="resident-gc-details"><p>Seleccione un residente para ver su historial de pagos.</p></div>
+        </div>
+    `;
 }
 
 async function displayResidentGCDetails() {
@@ -265,8 +277,7 @@ async function handleSavePayment(e) {
         await appendSheetData('Pagos_GC', [newPayment]);
         alert("Pago registrado exitosamente.");
         hideModal();
-        const selector = document.getElementById('resident-selector-gc');
-        if(selector) selector.dispatchEvent(new Event('change'));
+        displayResidentGCDetails();
     } catch (error) {
         console.error("Error al guardar el pago:", error);
         alert("Error al guardar el pago: " + (error.message || error.result.error.message));
@@ -374,10 +385,10 @@ function exportResidentsToExcel() {
 
     const ws = XLSX.utils.aoa_to_sheet([headers, ...data]);
     
-    // Set format for the currency column (H)
+    ws['!cols'] = [ {wch:5}, {wch:30}, {wch:12}, {wch:10}, {wch:30}, {wch:15}, {wch:10}, {wch:20} ];
     const range = XLSX.utils.decode_range(ws['!ref']);
     for (let R = range.s.r + 1; R <= range.e.r; ++R) {
-        const cell_address = { c: 7, r: R }; // Column H (index 7)
+        const cell_address = { c: 7, r: R };
         const cell_ref = XLSX.utils.encode_cell(cell_address);
         if (ws[cell_ref] && ws[cell_ref].v !== undefined) {
             ws[cell_ref].t = 'n';
@@ -385,8 +396,6 @@ function exportResidentsToExcel() {
         }
     }
     
-    ws['!cols'] = [ {wch:5}, {wch:30}, {wch:12}, {wch:10}, {wch:30}, {wch:15}, {wch:10}, {wch:20} ];
-
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Residentes");
     XLSX.writeFile(wb, "Listado_Residentes.xlsx");
