@@ -175,10 +175,38 @@ async function loadDashboardView() {
     return `<div class="view active" id="dashboard-view"><h1>Dashboard</h1><div class="dashboard-grid"><div class="widget"><h3>Residentes Registrados</h3><div class="value">${activeResidents}</div><div class="details">Estado 'Activo'</div></div><div class="widget"><h3>Ingresos del Mes</h3><div class="value positive">${formatCurrency(incomeThisMonth)}</div><div class="details">Pagos de Gastos Comunes</div></div><div class="widget"><h3>Egresos del Mes</h3><div class="value negative">${formatCurrency(expensesThisMonth)}</div><div class="details">Mantención y Servicios</div></div><div class="widget"><h3>Saldo de Caja</h3><div class="value">${formatCurrency(cashBalance)}</div><div class="details">Estimado Total</div></div><div class="widget"><h3>Mantenciones</h3><div class="value">${pendingMaintenance}</div><div class="details">Pendientes / Urgentes</div></div><div class="widget"><h3>Resumen de Morosidad</h3><div class="value">${morososCount}</div><div class="details">Residentes en estado 'Moroso'</div></div></div><div class="chart-container"><canvas id="incomeExpenseChart" data-labels='${JSON.stringify(chartLabels)}' data-income='${JSON.stringify(chartIncomeData)}' data-expenses='${JSON.stringify(chartExpenseData)}'></canvas></div></div>`;
 }
 
+// =================================================================================
+// MODIFICADO: loadResidentesView para añadir colores de estado
+// =================================================================================
 async function loadResidentesView() {
     const residents = await readSheetData('Residentes!A2:H');
+    // Actualizar el caché global. Se añade la fila de encabezado al principio.
     allResidentsData = [['ID_Residente', 'NombreCompleto', 'RUT', 'N_Parcela', 'Email', 'Telefono', 'Estado', 'ValorGastoComun'], ...residents];
-    let tableRows = residents.map((row, index) => { if (!row) return ''; return `<tr><td>${row[1] || ''}</td><td>${row[2] || ''}</td><td>${row[3] || ''}</td><td>${row[4] || ''}</td><td>${row[5] || ''}</td><td>${row[6] || ''}</td><td>${formatCurrency(parseFloat(row[7] || 0))}</td><td class="action-icons"><span class="icon icon-edit" data-row-index="${index + 2}">✏️</span><span class="icon icon-delete" data-row-index="${index + 2}">🗑️</span></td></tr>`}).join('');
+    
+    let tableRows = residents.map((row, index) => {
+        if (!row) return '';
+        const status = row[6] || 'Inactivo';
+        let statusClass = 'status-inactivo'; // Clase por defecto
+        if (status.toLowerCase() === 'activo') statusClass = 'status-activo';
+        else if (status.toLowerCase() === 'moroso') statusClass = 'status-moroso';
+
+        return `
+            <tr>
+                <td>${row[1] || ''}</td>
+                <td>${row[2] || ''}</td>
+                <td>${row[3] || ''}</td>
+                <td>${row[4] || ''}</td>
+                <td>${row[5] || ''}</td>
+                <td><span class="status-badge ${statusClass}">${status}</span></td>
+                <td>${formatCurrency(parseFloat(row[7] || 0))}</td>
+                <td class="action-icons">
+                    <span class="icon icon-edit" data-row-index="${index + 2}">✏️</span>
+                    <span class="icon icon-delete" data-row-index="${index + 2}">🗑️</span>
+                </td>
+            </tr>
+        `
+    }).join('');
+    
     return `<div class="view active" id="residentes-view"><h1>Gestión de Residentes</h1><div class="controls"><input type="search" id="resident-search" placeholder="Buscar por Nombre, RUT o Parcela..."><div class="controls-buttons"><button class="cta-button" id="export-excel-btn">Descargar Excel</button><button class="cta-button" id="add-resident-btn" style="margin-left: 10px;">Agregar Residente</button></div></div><div class="table-container"><table id="residentes-table"><thead><tr><th>Nombre Completo</th><th>RUT</th><th>N° Parcela</th><th>E-mail</th><th>Teléfono</th><th>Estado</th><th>Valor Gasto Común</th><th>Acciones</th></tr></thead><tbody>${tableRows}</tbody></table></div></div>`;
 }
 
@@ -315,12 +343,19 @@ function handleResidentTableClick(e) {
     if (e.target.matches('.icon-edit')) { showEditResidentModal(rowIndex); }
 }
 
+// =================================================================================
+// CORREGIDO: showEditResidentModal para que encuentre el residente correcto
+// =================================================================================
 function showEditResidentModal(rowIndex) {
-    // allResidentsData tiene una fila de encabezado, pero el array de la tabla no.
-    // El rowIndex viene de la tabla, que empieza en 2. Array index es rowIndex - 2.
-    // Pero allResidentsData[0] es el encabezado, así que el dato está en allResidentsData[rowIndex - 1]
-    const residentData = allResidentsData[rowIndex - 1];
-    if (!residentData) { alert("No se encontraron datos para editar."); return; }
+    // El caché allResidentsData incluye la fila de encabezado, así que el índice correcto es rowIndex - 1
+    const arrayIndex = parseInt(rowIndex) - 1;
+    const residentData = allResidentsData[arrayIndex];
+    
+    if (!residentData) {
+        alert("Error: No se encontraron los datos para editar.");
+        return;
+    }
+
     const formHtml = `
         <h2>Editar Residente</h2>
         <form id="edit-resident-form">
@@ -343,9 +378,10 @@ function showEditResidentModal(rowIndex) {
 async function handleUpdateResident(e) {
     e.preventDefault(); showLoader();
     const rowIndex = document.getElementById('rowIndex').value;
+    const arrayIndex = parseInt(rowIndex) - 1;
     try {
         const updatedValues = [
-            allResidentsData[rowIndex-1][0], // Mantener el ID original
+            allResidentsData[arrayIndex][0], // Mantener el ID original
             document.getElementById('nombreCompleto').value, document.getElementById('rut').value,
             document.getElementById('nParcela').value, document.getElementById('email').value,
             document.getElementById('telefono').value, document.getElementById('estado').value,
@@ -412,7 +448,7 @@ async function deleteSheetRow(sheetName, rowIndex) {
         if (!sheet) throw new Error(`Hoja "${sheetName}" no encontrada.`);
         await gapi.client.sheets.spreadsheets.batchUpdate({
             spreadsheetId: SPREADSHEET_ID,
-            resource: { requests: [{ deleteDimension: { range: { sheetId: sheet.properties.sheetId, dimension: "ROWS", startIndex: rowIndex - 1, endIndex: rowIndex } } }] }
+            resource: { requests: [{ deleteDimension: { range: { sheetId: sheet.properties.sheetId, dimension: "ROWS", startIndex: parseInt(rowIndex) - 1, endIndex: parseInt(rowIndex) } } }] }
         });
         allResidentsData = await readSheetData('Residentes!A:H');
         alert("Fila eliminada correctamente."); switchView('residentes');
