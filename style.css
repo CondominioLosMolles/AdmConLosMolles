@@ -204,6 +204,7 @@ th, td {
     padding: 12px;
     text-align: left;
     border-bottom: 1px solid #dee2e6;
+    vertical-align: middle;
 }
 
 th {
@@ -278,6 +279,23 @@ input[type="text"], input[type="search"], input[type="email"], input[type="tel"]
 #modal-body form label {
     font-weight: 600;
 }
+
+/* --- NUEVAS CLASES PARA LOS ESTADOS --- */
+.status-badge {
+    color: white;
+    padding: 3px 10px;
+    border-radius: 12px;
+    font-size: 0.85rem;
+    text-align: center;
+    display: inline-block;
+    min-width: 70px;
+}
+
+.status-activo { background-color: var(--success-color); }
+.status-moroso { background-color: var(--danger-color); }
+.status-inactivo { background-color: var(--text-muted); }
+/* --- FIN DE NUEVAS CLASES --- */
+
 
 @media (max-width: 992px) {
     .sidebar {
