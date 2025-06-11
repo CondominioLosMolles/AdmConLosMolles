@@ -1,298 +1,1558 @@
 <!DOCTYPE html>
-
 <html lang="es">
-
 <head>
-
     <meta charset="UTF-8">
-
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CondominioLosMolles - Sistema de Administración</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://apis.google.com/js/api.js"></script>
+    <style>
+        :root {
+            --primary-color: #4a90e2;
+            --secondary-color: #7ed321;
+            --accent-color: #f5a623;
+            --background-color: #f8fafb;
+            --sidebar-color: #2c3e50;
+            --text-color: #34495e;
+            --light-gray: #ecf0f1;
+            --danger-color: #e74c3c;
+            --success-color: #27ae60;
+            --warning-color: #f39c12;
+        }
 
-    <title>CondoAdmin - Sistema de Administración de Condominios</title>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
 
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+        body {
+            font-family: 'Poppins', sans-serif;
+            background-color: var(--background-color);
+            color: var(--text-color);
+            line-height: 1.6;
+        }
 
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+        .app-container {
+            display: flex;
+            min-height: 100vh;
+        }
 
-    <link rel="stylesheet" href="css/styles.css">
+        /* Sidebar Styles */
+        .sidebar {
+            width: 260px;
+            background: linear-gradient(135deg, var(--sidebar-color) 0%, #34495e 100%);
+            color: white;
+            position: fixed;
+            height: 100vh;
+            overflow-y: auto;
+            z-index: 1000;
+            transition: all 0.3s ease;
+        }
 
-    <link rel="icon" href="assets/icons/favicon.ico" type="image/x-icon">
+        .sidebar-header {
+            padding: 20px;
+            text-align: center;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
 
-    <meta name="description" content="Sistema de administración de condominios con Google Sheets">
+        .sidebar-header h1 {
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
 
-    <meta name="author" content="CondoAdmin">
+        .sidebar-header p {
+            font-size: 0.8rem;
+            opacity: 0.8;
+        }
 
+        .nav-menu {
+            padding: 20px 0;
+        }
+
+        .nav-item {
+            display: block;
+            padding: 15px 25px;
+            text-decoration: none;
+            color: rgba(255,255,255,0.8);
+            transition: all 0.3s ease;
+            border-left: 3px solid transparent;
+        }
+
+        .nav-item:hover,
+        .nav-item.active {
+            background: rgba(255,255,255,0.1);
+            color: white;
+            border-left-color: var(--primary-color);
+        }
+
+        .nav-item i {
+            margin-right: 12px;
+            width: 20px;
+            text-align: center;
+        }
+
+        /* Main Content */
+        .main-content {
+            flex: 1;
+            margin-left: 260px;
+            padding: 30px;
+            min-height: 100vh;
+        }
+
+        .page-header {
+            margin-bottom: 30px;
+        }
+
+        .page-title {
+            font-size: 2rem;
+            font-weight: 600;
+            color: var(--text-color);
+            margin-bottom: 10px;
+        }
+
+        .page-subtitle {
+            color: #7f8c8d;
+            font-size: 1rem;
+        }
+
+        /* Dashboard Cards */
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 25px;
+            margin-bottom: 30px;
+        }
+
+        .card {
+            background: white;
+            border-radius: 12px;
+            padding: 25px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 30px rgba(0,0,0,0.12);
+        }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .card-icon {
+            width: 50px;
+            height: 50px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 15px;
+            font-size: 1.5rem;
+            color: white;
+        }
+
+        .card-icon.primary { background: var(--primary-color); }
+        .card-icon.success { background: var(--success-color); }
+        .card-icon.warning { background: var(--warning-color); }
+        .card-icon.danger { background: var(--danger-color); }
+
+        .card-title {
+            font-size: 0.9rem;
+            font-weight: 500;
+            color: #7f8c8d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .card-value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--text-color);
+            margin-bottom: 10px;
+        }
+
+        .card-change {
+            font-size: 0.85rem;
+            display: flex;
+            align-items: center;
+        }
+
+        .card-change.positive { color: var(--success-color); }
+        .card-change.negative { color: var(--danger-color); }
+
+        /* Tables */
+        .table-container {
+            background: white;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+        }
+
+        .table-header {
+            padding: 20px 25px;
+            border-bottom: 1px solid var(--light-gray);
+            display: flex;
+            justify-content: between;
+            align-items: center;
+        }
+
+        .table-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: var(--text-color);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th, td {
+            text-align: left;
+            padding: 15px 25px;
+            border-bottom: 1px solid #f8f9fa;
+        }
+
+        th {
+            background: #f8f9fa;
+            font-weight: 600;
+            color: var(--text-color);
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        tbody tr:hover {
+            background: #f8f9fa;
+        }
+
+        /* Buttons */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-weight: 500;
+            text-decoration: none;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 0.9rem;
+        }
+
+        .btn i {
+            margin-right: 8px;
+        }
+
+        .btn-primary {
+            background: var(--primary-color);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #357abd;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(74, 144, 226, 0.3);
+        }
+
+        .btn-success {
+            background: var(--success-color);
+            color: white;
+        }
+
+        .btn-warning {
+            background: var(--warning-color);
+            color: white;
+        }
+
+        .btn-danger {
+            background: var(--danger-color);
+            color: white;
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+
+        .btn-sm {
+            padding: 8px 16px;
+            font-size: 0.8rem;
+        }
+
+        /* Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 2000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            backdrop-filter: blur(5px);
+        }
+
+        .modal-content {
+            background: white;
+            margin: 5% auto;
+            padding: 0;
+            border-radius: 12px;
+            width: 90%;
+            max-width: 600px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            animation: modalSlideIn 0.3s ease;
+        }
+
+        @keyframes modalSlideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-50px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .modal-header {
+            padding: 25px;
+            border-bottom: 1px solid var(--light-gray);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-title {
+            font-size: 1.3rem;
+            font-weight: 600;
+            color: var(--text-color);
+        }
+
+        .close {
+            font-size: 2rem;
+            font-weight: 300;
+            color: #aaa;
+            cursor: pointer;
+            line-height: 1;
+        }
+
+        .close:hover {
+            color: var(--danger-color);
+        }
+
+        .modal-body {
+            padding: 25px;
+        }
+
+        /* Forms */
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+            color: var(--text-color);
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #e1e8ed;
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+
+        .form-control:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.1);
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        /* Status badges */
+        .badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .badge-success {
+            background: rgba(39, 174, 96, 0.1);
+            color: var(--success-color);
+        }
+
+        .badge-warning {
+            background: rgba(243, 156, 18, 0.1);
+            color: var(--warning-color);
+        }
+
+        .badge-danger {
+            background: rgba(231, 76, 60, 0.1);
+            color: var(--danger-color);
+        }
+
+        /* Chart container */
+        .chart-container {
+            position: relative;
+            height: 400px;
+            margin-top: 20px;
+        }
+
+        /* Loading spinner */
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 40px;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid var(--primary-color);
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Auth container */
+        .auth-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+        }
+
+        .auth-card {
+            background: white;
+            padding: 40px;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.1);
+            text-align: center;
+            max-width: 400px;
+            width: 90%;
+        }
+
+        .auth-logo {
+            font-size: 3rem;
+            color: var(--primary-color);
+            margin-bottom: 20px;
+        }
+
+        .auth-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-bottom: 10px;
+            color: var(--text-color);
+        }
+
+        .auth-subtitle {
+            color: #7f8c8d;
+            margin-bottom: 30px;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .sidebar {
+                width: 100%;
+                height: auto;
+                position: relative;
+            }
+            
+            .main-content {
+                margin-left: 0;
+                padding: 20px;
+            }
+            
+            .dashboard-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        .page-content {
+            display: none;
+        }
+
+        .page-content.active {
+            display: block;
+        }
+
+        /* Utility classes */
+        .text-center { text-align: center; }
+        .text-right { text-align: right; }
+        .mt-20 { margin-top: 20px; }
+        .mb-20 { margin-bottom: 20px; }
+        .p-20 { padding: 20px; }
+
+        /* Action buttons in tables */
+        .action-buttons {
+            display: flex;
+            gap: 5px;
+        }
+
+        .btn-icon {
+            width: 35px;
+            height: 35px;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: none;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .btn-icon.edit {
+            background: rgba(74, 144, 226, 0.1);
+            color: var(--primary-color);
+        }
+
+        .btn-icon.delete {
+            background: rgba(231, 76, 60, 0.1);
+            color: var(--danger-color);
+        }
+
+        .btn-icon:hover {
+            transform: scale(1.1);
+        }
+
+        /* Search and filters */
+        .search-container {
+            margin-bottom: 25px;
+            display: flex;
+            gap: 15px;
+            align-items: center;
+        }
+
+        .search-input {
+            flex: 1;
+            max-width: 300px;
+        }
+    </style>
 </head>
-
 <body>
-
-    <div id="app">
-
-        <!-- Contenido dinámico de la aplicación -->
-
-        <div id="loading" class="d-flex justify-content-center align-items-center vh-100">
-
-            <div class="text-center">
-
-                <div class="spinner-border text-primary" role="status">
-
-                    <span class="visually-hidden">Cargando...</span>
-
-                </div>
-
-                <p class="mt-3">Cargando CondoAdmin...</p>
-
+    <!-- Authentication Screen -->
+    <div id="authScreen" class="auth-container">
+        <div class="auth-card">
+            <div class="auth-logo">
+                <i class="fas fa-building"></i>
             </div>
-
+            <h1 class="auth-title">CondominioLosMolles</h1>
+            <p class="auth-subtitle">Sistema de Administración</p>
+            <button id="signInBtn" class="btn btn-primary">
+                <i class="fab fa-google"></i>
+                Iniciar Sesión con Google
+            </button>
+            <div id="authLoading" class="loading">
+                <div class="spinner"></div>
+                <p>Iniciando sesión...</p>
+            </div>
         </div>
+    </div>
 
-        <!-- Contenedor para el login -->
+    <!-- Main Application -->
+    <div id="mainApp" class="app-container hidden">
+        <!-- Sidebar -->
+        <nav class="sidebar">
+            <div class="sidebar-header">
+                <h1>CondominioLosMolles</h1>
+                <p>Sistema de Administración</p>
+            </div>
+            <div class="nav-menu">
+                <a href="#" class="nav-item active" data-page="dashboard">
+                    <i class="fas fa-tachometer-alt"></i>
+                    Dashboard
+                </a>
+                <a href="#" class="nav-item" data-page="residentes">
+                    <i class="fas fa-users"></i>
+                    Residentes
+                </a>
+                <a href="#" class="nav-item" data-page="gastos-comunes">
+                    <i class="fas fa-money-bill-wave"></i>
+                    Gastos Comunes
+                </a>
+                <a href="#" class="nav-item" data-page="contabilidad">
+                    <i class="fas fa-calculator"></i>
+                    Contabilidad
+                </a>
+                <a href="#" class="nav-item" data-page="comunicaciones">
+                    <i class="fas fa-envelope"></i>
+                    Comunicaciones
+                </a>
+                <a href="#" class="nav-item" data-page="mantenciones">
+                    <i class="fas fa-tools"></i>
+                    Mantenciones
+                </a>
+                <a href="#" class="nav-item" data-page="multas">
+                    <i class="fas fa-gavel"></i>
+                    Multas
+                </a>
+                <a href="#" class="nav-item" data-page="asambleas">
+                    <i class="fas fa-users-cog"></i>
+                    Asambleas
+                </a>
+                <a href="#" class="nav-item" data-page="informes">
+                    <i class="fas fa-chart-bar"></i>
+                    Informes
+                </a>
+            </div>
+        </nav>
 
-        <div id="login-container" class="d-none">
-
-            <div class="login-box">
-
-                <div class="text-center mb-4">
-
-                    <h1 class="logo">CondoAdmin</h1>
-
-                    <p>Sistema de Administración de Condominios</p>
-
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Dashboard Page -->
+            <div id="dashboard" class="page-content active">
+                <div class="page-header">
+                    <h1 class="page-title">Dashboard</h1>
+                    <p class="page-subtitle">Resumen general del condominio</p>
                 </div>
 
-                <div class="card">
-
-                    <div class="card-body">
-
-                        <h5 class="card-title text-center mb-4">Iniciar sesión</h5>
-
-                        <p class="card-text">Para utilizar el sistema, es necesario autenticarse con Google para acceder a Google Sheets.</p>
-
-                        <button id="authorize_button" class="btn btn-primary w-100">
-
-                            <i class="fab fa-google me-2"></i> Iniciar sesión con Google
-
-                        </button>
-
+                <div class="dashboard-grid">
+                    <div class="card">
+                        <div class="card-header">
+                            <div class="card-icon primary">
+                                <i class="fas fa-users"></i>
+                            </div>
+                            <div>
+                                <div class="card-title">Residentes Registrados</div>
+                                <div class="card-value" id="totalResidentes">0</div>
+                            </div>
+                        </div>
                     </div>
 
+                    <div class="card">
+                        <div class="card-header">
+                            <div class="card-icon success">
+                                <i class="fas fa-dollar-sign"></i>
+                            </div>
+                            <div>
+                                <div class="card-title">Ingresos del Mes</div>
+                                <div class="card-value" id="ingresosMes">$0</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-header">
+                            <div class="card-icon warning">
+                                <i class="fas fa-credit-card"></i>
+                            </div>
+                            <div>
+                                <div class="card-title">Egresos del Mes</div>
+                                <div class="card-value" id="egresosMes">$0</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-header">
+                            <div class="card-icon danger">
+                                <i class="fas fa-exclamation-triangle"></i>
+                            </div>
+                            <div>
+                                <div class="card-title">Residentes Morosos</div>
+                                <div class="card-value" id="totalMorosos">0</div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
+                <div class="dashboard-grid">
+                    <div class="card" style="grid-column: 1 / -1;">
+                        <div class="card-header">
+                            <div class="card-title">Ingresos vs Egresos (Últimos 12 meses)</div>
+                        </div>
+                        <div class="chart-container">
+                            <canvas id="ingresosEgresosChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="dashboard-grid">
+                    <div class="card">
+                        <div class="card-header">
+                            <div class="card-icon primary">
+                                <i class="fas fa-wallet"></i>
+                            </div>
+                            <div>
+                                <div class="card-title">Saldo de Caja</div>
+                                <div class="card-value" id="saldoCaja">$0</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-header">
+                            <div class="card-icon warning">
+                                <i class="fas fa-wrench"></i>
+                            </div>
+                            <div>
+                                <div class="card-title">Mantenciones Pendientes</div>
+                                <div class="card-value" id="mantencionesPendientes">0</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
 
-        </div>
-
-        <!-- Contenedor principal de la aplicación -->
-
-        <div id="main-container" class="d-none">
-
-            <!-- Sidebar -->
-
-            <div class="sidebar">
-
-                <div class="p-3">
-
-                    <div class="logo">CondoAdmin</div>
-
+            <!-- Residentes Page -->
+            <div id="residentes" class="page-content">
+                <div class="page-header">
+                    <h1 class="page-title">Gestión de Residentes</h1>
+                    <p class="page-subtitle">Administrar información de residentes del condominio</p>
                 </div>
 
-                <ul class="nav flex-column" id="main-menu">
-
-                    <li class="nav-item">
-
-                        <a class="nav-link active" href="#dashboard" data-module="dashboard">
-
-                            <i class="fas fa-tachometer-alt"></i> Dashboard
-
-                        </a>
-
-                    </li>
-
-                    <li class="nav-item">
-
-                        <a class="nav-link" href="#residentes" data-module="residentes">
-
-                            <i class="fas fa-users"></i> Residentes
-
-                        </a>
-
-                    </li>
-
-                    <li class="nav-item">
-
-                        <a class="nav-link" href="#gastos-comunes" data-module="gastos-comunes">
-
-                            <i class="fas fa-file-invoice-dollar"></i> Gastos Comunes
-
-                        </a>
-
-                    </li>
-
-                    <li class="nav-item">
-
-                        <a class="nav-link" href="#contabilidad" data-module="contabilidad">
-
-                            <i class="fas fa-chart-line"></i> Contabilidad
-
-                        </a>
-
-                    </li>
-
-                    <li class="nav-item">
-
-                        <a class="nav-link" href="#mantenciones" data-module="mantenciones">
-
-                            <i class="fas fa-tools"></i> Mantenciones
-
-                        </a>
-
-                    </li>
-
-                    <li class="nav-item">
-
-                        <a class="nav-link" href="#comunicaciones" data-module="comunicaciones">
-
-                            <i class="fas fa-envelope"></i> Comunicaciones
-
-                        </a>
-
-                    </li>
-
-                    <li class="nav-item">
-
-                        <a class="nav-link" href="#multas" data-module="multas">
-
-                            <i class="fas fa-exclamation-triangle"></i> Multas
-
-                        </a>
-
-                    </li>
-
-                    <li class="nav-item">
-
-                        <a class="nav-link" href="#asambleas" data-module="asambleas">
-
-                            <i class="fas fa-users-cog"></i> Asambleas
-
-                        </a>
-
-                    </li>
-
-                    <li class="nav-item">
-
-                        <a class="nav-link" href="#informes" data-module="informes">
-
-                            <i class="fas fa-file-alt"></i> Informes
-
-                        </a>
-
-                    </li>
-
-                </ul>
-
-                <div class="mt-auto p-3">
-
-                    <button id="signout_button" class="btn btn-outline-secondary btn-sm w-100">
-
-                        <i class="fas fa-sign-out-alt me-2"></i> Cerrar sesión
-
+                <div class="search-container">
+                    <input type="text" id="searchResidentes" class="form-control search-input" placeholder="Buscar por nombre, RUT o N° parcela...">
+                    <button class="btn btn-primary" onclick="openAddResidenteModal()">
+                        <i class="fas fa-plus"></i>
+                        Agregar Residente
                     </button>
-
+                    <button class="btn btn-success" onclick="exportResidentesToExcel()">
+                        <i class="fas fa-file-excel"></i>
+                        Descargar Excel
+                    </button>
                 </div>
 
-            </div>
-
-            <!-- Contenido principal -->
-
-            <div class="content">
-
-                <div id="module-container">
-
-                    <!-- El contenido de los módulos se cargará aquí dinámicamente -->
-
+                <div class="table-container">
+                    <div class="table-header">
+                        <h3 class="table-title">Lista de Residentes</h3>
+                    </div>
+                    <div style="overflow-x: auto;">
+                        <table id="residentesTable">
+                            <thead>
+                                <tr>
+                                    <th>Nombre Completo</th>
+                                    <th>RUT</th>
+                                    <th>N° Parcela</th>
+                                    <th>Email</th>
+                                    <th>Teléfono</th>
+                                    <th>Estado</th>
+                                    <th>Valor Gasto Común</th>
+                                    <th>Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody id="residentesTableBody">
+                                <!-- Data will be loaded here -->
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
-
             </div>
 
-        </div>
+            <!-- Other pages will be added similarly -->
+            <div id="gastos-comunes" class="page-content">
+                <div class="page-header">
+                    <h1 class="page-title">Gastos Comunes</h1>
+                    <p class="page-subtitle">Gestión de pagos y cálculo de gastos comunes</p>
+                </div>
+                <!-- Content will be added -->
+            </div>
 
+            <!-- Placeholder for other modules -->
+            <div id="contabilidad" class="page-content">
+                <div class="page-header">
+                    <h1 class="page-title">Contabilidad</h1>
+                    <p class="page-subtitle">Gestión financiera del condominio</p>
+                </div>
+            </div>
+
+            <div id="comunicaciones" class="page-content">
+                <div class="page-header">
+                    <h1 class="page-title">Comunicaciones</h1>
+                    <p class="page-subtitle">Envío de comunicaciones a residentes</p>
+                </div>
+            </div>
+
+            <div id="mantenciones" class="page-content">
+                <div class="page-header">
+                    <h1 class="page-title">Mantenciones</h1>
+                    <p class="page-subtitle">Gestión de mantenciones del condominio</p>
+                </div>
+            </div>
+
+            <div id="multas" class="page-content">
+                <div class="page-header">
+                    <h1 class="page-title">Multas</h1>
+                    <p class="page-subtitle">Gestión de multas según Ley 21.442</p>
+                </div>
+            </div>
+
+            <div id="asambleas" class="page-content">
+                <div class="page-header">
+                    <h1 class="page-title">Asambleas</h1>
+                    <p class="page-subtitle">Gestión de asambleas de copropietarios</p>
+                </div>
+            </div>
+
+            <div id="informes" class="page-content">
+                <div class="page-header">
+                    <h1 class="page-title">Informes</h1>
+                    <p class="page-subtitle">Generación de reportes y estadísticas</p>
+                </div>
+            </div>
+        </main>
     </div>
 
-    <!-- Modales -->
-
-    <div class="modal fade" id="errorModal" tabindex="-1" aria-labelledby="errorModalLabel" aria-hidden="true">
-
-        <div class="modal-dialog">
-
-            <div class="modal-content">
-
-                <div class="modal-header">
-
-                    <h5 class="modal-title" id="errorModalLabel">Error</h5>
-
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-
-                </div>
-
-                <div class="modal-body" id="errorModalBody">
-
-                    Ha ocurrido un error.
-
-                </div>
-
-                <div class="modal-footer">
-
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
-
-                </div>
-
+    <!-- Modal for Add/Edit Resident -->
+    <div id="residenteModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title" id="residenteModalTitle">Agregar Residente</h2>
+                <span class="close" onclick="closeResidenteModal()">&times;</span>
             </div>
-
+            <div class="modal-body">
+                <form id="residenteForm">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Nombre Completo</label>
+                            <input type="text" id="nombreCompleto" class="form-control" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">RUT</label>
+                            <input type="text" id="rut" class="form-control" required>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">N° Parcela</label>
+                            <input type="number" id="nParcela" class="form-control" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Email</label>
+                            <input type="email" id="email" class="form-control" required>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Teléfono</label>
+                            <input type="text" id="telefono" class="form-control">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Estado</label>
+                            <select id="estado" class="form-control">
+                                <option value="Activo">Activo</option>
+                                <option value="Moroso">Moroso</option>
+                                <option value="Inactivo">Inactivo</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Valor Gasto Común</label>
+                        <input type="number" id="valorGastoComun" class="form-control" required>
+                    </div>
+                    <div class="form-group text-right">
+                        <button type="button" class="btn btn-secondary" onclick="closeResidenteModal()">Cancelar</button>
+                        <button type="submit" class="btn btn-primary">Guardar</button>
+                    </div>
+                </form>
+            </div>
         </div>
-
     </div>
 
-    <!-- Scripts -->
+    <script>
+        // Configuration
+        const CONFIG = {
+            CLIENT_ID: '997872453031-5o8s2o6v3qt722fb3p51a2r7bo24ncee.apps.googleusercontent.com',
+            API_KEY: 'AIzaSyA4nUkMycf_CHZE7TaBBD_WUyWMvSXUwoU',
+            SPREADSHEET_ID: '1bFo5dBC3HM0xupginTBe-hrrUNgkiuUn4fkXXzHide8',
+            DISCOVERY_DOC: 'https://sheets.googleapis.com/$discovery/rest?version=v4',
+            SCOPES: 'https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/gmail.send'
+        };
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+        // Global variables
+        let gapi;
+        let tokenClient;
+        let gapiInited = false;
+        let gisInited = false;
+        let isSignedIn = false;
+        let currentEditingResident = null;
 
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+        // Data storage
+        let residentes = [];
+        let pagos = [];
+        let egresos = [];
+        let mantenciones = [];
+        let multas = [];
+        let asambleas = [];
+        let comunicaciones = [];
 
-    <!-- Configuración de la aplicación -->
-    <script src="config.js"></script>
-    
-    <!-- Módulo de autenticación -->
-    <script src="js/auth.js"></script>
-    
-    <!-- API de Google Sheets -->
-    <script src="js/sheets-api.js"></script>
-    
-    <!-- Controlador de la interfaz -->
-    <script src="js/ui-controller.js"></script>
-    
-    <!-- Archivo principal de la aplicación -->
-    <script src="js/app.js"></script>
-    
-    <!-- Módulos -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-   
-    <script src="config.js"></script>
-    <script src="js/auth.js"></script>
-    <script src="js/sheets-api.js"></script>
-    <script src="js/ui-controller.js"></script>
-    <script src="js/app.js"></script> <script src="js/modules/dashboard.js"></script>
-    <script src="js/modules/residentes.js"></script>
-    <script src="js/modules/gastos-comunes.js?v=2"></script>
-    <script src="js/modules/contabilidad.js"></script>
-    <script src="js/modules/mantenciones.js"></script>
-    <script src="js/modules/comunicaciones.js"></script>
-    <script src="js/modules/multas.js"></script>
-    <script src="js/modules/asambleas.js"></script>
-    <script src="js/modules/informes.js"></script>
-    
-    <script async defer src="https://apis.google.com/js/api.js" onload="handleClientLoad()"></script>
-    <script async defer src="https://accounts.google.com/gsi/client" onload="gisLoaded()"></script>
+        // Initialize the application
+        document.addEventListener('DOMContentLoaded', function() {
+            loadGoogleApis();
+            setupEventListeners();
+        });
 
-    </body>
-</html>
+        // Load Google APIs
+        function loadGoogleApis() {
+            gapi.load('client:auth2', initializeGapiClient);
+        }
+
+        async function initializeGapiClient() {
+            await gapi.client.init({
+                apiKey: CONFIG.API_KEY,
+                discoveryDocs: [CONFIG.DISCOVERY_DOC],
+            });
+            gapiInited = true;
+            maybeEnableButtons();
+        }
+
+        function gisLoaded() {
+            tokenClient = google.accounts.oauth2.initTokenClient({
+                client_id: CONFIG.CLIENT_ID,
+                scope: CONFIG.SCOPES,
+                callback: '', // defined later
+            });
+            gisInited = true;
+            maybeEnableButtons();
+        }
+
+        function maybeEnableButtons() {
+            if (gapiInited && gisInited) {
+                document.getElementById('signInBtn').style.visibility = 'visible';
+            }
+        }
+
+        // Authentication functions
+        function handleAuthClick() {
+            tokenClient.callback = async (resp) => {
+                if (resp.error !== undefined) {
+                    throw (resp);
+                }
+                document.getElementById('authLoading').style.display = 'block';
+                document.getElementById('signInBtn').style.display = 'none';
+                
+                await initializeApp();
+            };
+
+            if (gapi.client.getToken() === null) {
+                tokenClient.requestAccessToken({prompt: 'consent'});
+            } else {
+                tokenClient.requestAccessToken({prompt: ''});
+            }
+        }
+
+        function handleSignoutClick() {
+            const token = gapi.client.getToken();
+            if (token !== null) {
+                google.accounts.oauth2.revoke(token.access_token);
+                gapi.client.setToken('');
+                showAuthScreen();
+            }
+        }
+
+        function showAuthScreen() {
+            document.getElementById('authScreen').classList.remove('hidden');
+            document.getElementById('mainApp').classList.add('hidden');
+            isSignedIn = false;
+        }
+
+        function showMainApp() {
+            document.getElementById('authScreen').classList.add('hidden');
+            document.getElementById('mainApp').classList.remove('hidden');
+            isSignedIn = true;
+        }
+
+        // Initialize application after authentication
+        async function initializeApp() {
+            try {
+                await loadAllData();
+                updateDashboard();
+                showMainApp();
+            } catch (error) {
+                console.error('Error initializing app:', error);
+                alert('Error al inicializar la aplicación. Por favor, recarga la página.');
+            }
+        }
+
+        // Setup event listeners
+        function setupEventListeners() {
+            // Sign in button
+            document.getElementById('signInBtn').addEventListener('click', handleAuthClick);
+
+            // Navigation
+            document.querySelectorAll('.nav-item').forEach(item => {
+                item.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    const page = this.getAttribute('data-page');
+                    showPage(page);
+                    
+                    // Update active navigation
+                    document.querySelectorAll('.nav-item').forEach(nav => nav.classList.remove('active'));
+                    this.classList.add('active');
+                });
+            });
+
+            // Search functionality
+            document.getElementById('searchResidentes').addEventListener('input', function() {
+                filterResidentes(this.value);
+            });
+
+            // Form submissions
+            document.getElementById('residenteForm').addEventListener('submit', handleResidenteSubmit);
+        }
+
+        // Navigation
+        function showPage(pageId) {
+            document.querySelectorAll('.page-content').forEach(page => {
+                page.classList.remove('active');
+            });
+            document.getElementById(pageId).classList.add('active');
+
+            // Load page-specific data
+            switch(pageId) {
+                case 'dashboard':
+                    updateDashboard();
+                    break;
+                case 'residentes':
+                    loadResidentesTable();
+                    break;
+                // Add other cases as needed
+            }
+        }
+
+        // Google Sheets API functions
+        async function readSheet(range) {
+            try {
+                const response = await gapi.client.sheets.spreadsheets.values.get({
+                    spreadsheetId: CONFIG.SPREADSHEET_ID,
+                    range: range,
+                });
+                return response.result.values || [];
+            } catch (error) {
+                console.error('Error reading sheet:', error);
+                return [];
+            }
+        }
+
+        async function writeSheet(range, values) {
+            try {
+                const response = await gapi.client.sheets.spreadsheets.values.update({
+                    spreadsheetId: CONFIG.SPREADSHEET_ID,
+                    range: range,
+                    valueInputOption: 'USER_ENTERED',
+                    resource: {
+                        values: values
+                    }
+                });
+                return response;
+            } catch (error) {
+                console.error('Error writing to sheet:', error);
+                throw error;
+            }
+        }
+
+        async function appendSheet(range, values) {
+            try {
+                const response = await gapi.client.sheets.spreadsheets.values.append({
+                    spreadsheetId: CONFIG.SPREADSHEET_ID,
+                    range: range,
+                    valueInputOption: 'USER_ENTERED',
+                    resource: {
+                        values: values
+                    }
+                });
+                return response;
+            } catch (error) {
+                console.error('Error appending to sheet:', error);
+                throw error;
+            }
+        }
+
+        // Data loading functions
+        async function loadAllData() {
+            await Promise.all([
+                loadResidentes(),
+                loadPagos(),
+                loadEgresos(),
+                loadMantenciones(),
+                loadMultas(),
+                loadAsambleas(),
+                loadComunicaciones()
+            ]);
+        }
+
+        async function loadResidentes() {
+            const data = await readSheet('Residentes!A2:H1000');
+            residentes = data.map((row, index) => ({
+                id: parseInt(row[0]) || index + 1,
+                nombreCompleto: row[1] || '',
+                rut: row[2] || '',
+                nParcela: parseInt(row[3]) || 0,
+                email: row[4] || '',
+                telefono: row[5] || '',
+                estado: row[6] || 'Activo',
+                valorGastoComun: parseFloat(row[7]) || 0,
+                rowIndex: index + 2
+            })).filter(r => r.nombreCompleto);
+        }
+
+        async function loadPagos() {
+            const data = await readSheet('Pagos_GC!A2:I1000');
+            pagos = data.map((row, index) => ({
+                id: parseInt(row[0]) || index + 1,
+                idResidente: parseInt(row[1]) || 0,
+                nParcela: parseInt(row[2]) || 0,
+                periodo: row[3] || '',
+                fechaVencimiento: row[4] || '',
+                montoPagado: parseFloat(row[5]) || 0,
+                fechaPago: row[6] || '',
+                metodoPago: row[7] || '',
+                idComprobanteDrive: row[8] || '',
+                rowIndex: index + 2
+            })).filter(p => p.idResidente);
+        }
+
+        async function loadEgresos() {
+            const data = await readSheet('Egresos!A2:H1000');
+            egresos = data.map((row, index) => ({
+                id: parseInt(row[0]) || index + 1,
+                fecha: row[1] || '',
+                categoria: row[2] || '',
+                descripcion: row[3] || '',
+                proveedor: row[4] || '',
+                monto: parseFloat(row[5]) || 0,
+                idFacturaDrive: row[6] || '',
+                rowIndex: index + 2
+            })).filter(e => e.fecha);
+        }
+
+        async function loadMantenciones() {
+            const data = await readSheet('Mantenciones!A2:H1000');
+            mantenciones = data.map((row, index) => ({
+                id: parseInt(row[0]) || index + 1,
+                fecha: row[1] || '',
+                encargado: row[2] || '',
+                tipo: row[3] || '',
+                descripcion: row[4] || '',
+                estado: row[5] || 'Pendiente',
+                costoTotal: parseFloat(row[6]) || 0,
+                idComprobanteDrive: row[7] || '',
+                rowIndex: index + 2
+            })).filter(m => m.fecha);
+        }
+
+        async function loadMultas() {
+            const data = await readSheet('Multas!A2:G1000');
+            multas = data.map((row, index) => ({
+                id: parseInt(row[0]) || index + 1,
+                idResidente: parseInt(row[1]) || 0,
+                fechaInfraccion: row[2] || '',
+                descripcion: row[3] || '',
+                monto: parseFloat(row[4]) || 0,
+                estado: row[5] || 'Pendiente',
+                fechaPago: row[6] || '',
+                rowIndex: index + 2
+            })).filter(m => m.idResidente);
+        }
+
+        async function loadAsambleas() {
+            const data = await readSheet('Asambleas!A2:F1000');
+            asambleas = data.map((row, index) => ({
+                id: parseInt(row[0]) || index + 1,
+                fecha: row[1] || '',
+                tipo: row[2] || '',
+                descripcion: row[3] || '',
+                estado: row[4] || 'Programada',
+                idActaDrive: row[5] || '',
+                rowIndex: index + 2
+            })).filter(a => a.fecha);
+        }
+
+        async function loadComunicaciones() {
+            const data = await readSheet('Comunicaciones!A2:E1000');
+            comunicaciones = data.map((row, index) => ({
+                id: parseInt(row[0]) || index + 1,
+                idResidente: parseInt(row[1]) || 0,
+                fechaEnvio: row[2] || '',
+                asunto: row[3] || '',
+                mensaje: row[4] || '',
+                rowIndex: index + 2
+            })).filter(c => c.idResidente);
+        }
+
+        // Dashboard functions
+        function updateDashboard() {
+            updateDashboardCards();
+            updateIncomeExpenseChart();
+        }
+
+        function updateDashboardCards() {
+            const activeResidentes = residentes.filter(r => r.estado === 'Activo');
+            const morosos = residentes.filter(r => r.estado === 'Moroso');
+            
+            // Get current month
+            const currentMonth = new Date().toISOString().slice(0, 7);
+            
+            // Calculate monthly income
+            const monthlyIncome = pagos
+                .filter(p => p.periodo === currentMonth)
+                .reduce((sum, p) => sum + p.montoPagado, 0);
+            
+            // Calculate monthly expenses
+            const currentDate = new Date();
+            const monthlyExpenses = egresos
+                .filter(e => {
+                    const egresoDate = new Date(e.fecha);
+                    return egresoDate.getMonth() === currentDate.getMonth() && 
+                           egresoDate.getFullYear() === currentDate.getFullYear();
+                })
+                .reduce((sum, e) => sum + e.monto, 0);
+            
+            // Calculate total balance
+            const totalIncome = pagos.reduce((sum, p) => sum + p.montoPagado, 0);
+            const totalExpenses = egresos.reduce((sum, e) => sum + e.monto, 0);
+            const balance = totalIncome - totalExpenses;
+            
+            // Pending maintenance
+            const pendingMaintenance = mantenciones.filter(m => 
+                m.estado === 'Pendiente' || m.estado === 'Urgente'
+            ).length;
+            
+            // Update DOM
+            document.getElementById('totalResidentes').textContent = activeResidentes.length;
+            document.getElementById('ingresosMes').textContent = formatCurrency(monthlyIncome);
+            document.getElementById('egresosMes').textContent = formatCurrency(monthlyExpenses);
+            document.getElementById('totalMorosos').textContent = morosos.length;
+            document.getElementById('saldoCaja').textContent = formatCurrency(balance);
+            document.getElementById('mantencionesPendientes').textContent = pendingMaintenance;
+        }
+
+        function updateIncomeExpenseChart() {
+            const ctx = document.getElementById('ingresosEgresosChart').getContext('2d');
+            
+            // Get last 12 months data
+            const monthsData = getLast12MonthsData();
+            
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: monthsData.labels,
+                    datasets: [{
+                        label: 'Ingresos',
+                        data: monthsData.ingresos,
+                        backgroundColor: 'rgba(74, 144, 226, 0.8)',
+                        borderColor: 'rgba(74, 144, 226, 1)',
+                        borderWidth: 1
+                    }, {
+                        label: 'Egresos',
+                        data: monthsData.egresos,
+                        backgroundColor: 'rgba(231, 76, 60, 0.8)',
+                        borderColor: 'rgba(231, 76, 60, 1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                callback: function(value) {
+                                    return formatCurrency(value);
+                                }
+                            }
+                        }
+                    },
+                    plugins: {
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return context.dataset.label + ': ' + formatCurrency(context.parsed.y);
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function getLast12MonthsData() {
+            const months = [];
+            const ingresos = [];
+            const egresos = [];
+            
+            for (let i = 11; i >= 0; i--) {
+                const date = new Date();
+                date.setMonth(date.getMonth() - i);
+                const monthKey = date.toISOString().slice(0, 7);
+                const monthName = date.toLocaleDateString('es-ES', { month: 'short', year: '2-digit' });
+                
+                months.push(monthName);
+                
+                // Calculate income for this month
+                const monthIncome = pagos
+                    .filter(p => p.periodo === monthKey)
+                    .reduce((sum, p) => sum + p.montoPagado, 0);
+                ingresos.push(monthIncome);
+                
+                // Calculate expenses for this month
+                const monthExpenses = egresos
+                    .filter(e => {
+                        const egresoDate = new Date(e.fecha);
+                        return egresoDate.getMonth() === date.getMonth() && 
+                               egresoDate.getFullYear() === date.getFullYear();
+                    })
+                    .reduce((sum, e) => sum + e.monto, 0);
+                egresos.push(monthExpenses);
+            }
+            
+            return { labels: months, ingresos, egresos };
+        }
+
+        // Residents management functions
+        function loadResidentesTable() {
+            const tbody = document.getElementById('residentesTableBody');
+            tbody.innerHTML = '';
+            
+            residentes.forEach(residente => {
+                const row = createResidenteRow(residente);
+                tbody.appendChild(row);
+            });
+        }
+
+        function createResidenteRow(residente) {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>${residente.nombreCompleto}</td>
+                <td>${residente.rut}</td>
+                <td>${residente.nParcela}</td>
+                <td>${residente.email}</td>
+                <td>${residente.telefono}</td>
+                <td><span class="badge badge-${getStatusColor(residente.estado)}">${residente.estado}</span></td>
+                <td>${formatCurrency(residente.valorGastoComun)}</td>
+                <td>
+                    <div class="action-buttons">
+                        <button class="btn-icon edit" onclick="editResidente(${residente.id})" title="Editar">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button class="btn-icon delete" onclick="deleteResidente(${residente.id})" title="Eliminar">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                </td>
+            `;
+            return row;
+        }
+
+        function getStatusColor(estado) {
+            switch(estado) {
+                case 'Activo': return 'success';
+                case 'Moroso': return 'danger';
+                case 'Inactivo': return 'warning';
+                default: return 'secondary';
+            }
+        }
+
+        function filterResidentes(searchTerm) {
+            const tbody = document.getElementById('residentesTableBody');
+            const rows = tbody.getElementsByTagName('tr');
+            
+            Array.from(rows).forEach(row => {
+                const text = row.textContent.toLowerCase();
+                const show = text.includes(searchTerm.toLowerCase());
+                row.style.display = show ? '' : 'none';
+            });
+        }
+
+        // Modal functions
+        function openAddResidenteModal() {
+            currentEditingResident = null;
+            document.getElementById('residenteModalTitle').textContent = 'Agregar Residente';
+            document.getElementById('residenteForm').reset();
+            document.getElementById('residenteModal').style.display = 'block';
+        }
+
+        function editResidente(id) {
+            const residente = residentes.find(r => r.id === id);
+            if (!residente) return;
+            
+            currentEditingResident = residente;
+            document.getElementById('residenteModalTitle').textContent = 'Editar Residente';
+            
+            // Fill form with current data
+            document.getElementById('nombreCompleto').value = residente.nombreCompleto;
+            document.getElementById('rut').value = residente.rut;
+            document.getElementById('nParcela').value = residente.nParcela;
+            document.getElementById('email').value = residente.email;
+            document.getElementById('telefono').value = residente.telefono;
+            document.getElementById('estado').value = residente.estado;
+            document.getElementById('valorGastoComun').value = residente.valorGastoComun;
+            
+            document.getElementById('residenteModal').style.display = 'block';
+        }
+
+        function closeResidenteModal() {
+            document.getElementById('residenteModal').style.display = 'none';
+            currentEditingResident = null;
+        }
+
+        async function handleResidenteSubmit(e) {
+            e.preventDefault();
+            
+            const formData = {
+                nombreCompleto: document.getElementById('nombreCompleto').value,
+                rut: document.getElementById('rut').value,
+                nParcela: parseInt(document.getElementById('nParcela').value),
+                email: document.getElementById('email').value,
+                telefono: document.getElementById('telefono').value,
+                estado: document.getElementById('estado').value,
+                valorGastoComun: parseFloat(document.getElementById('valorGastoComun').value)
+            };
+            
+            try {
+                if (currentEditingResident) {
+                    await updateResidente(currentEditingResident.id, formData);
+                } else {
+                    await addResidente(formData);
+                }
+                
+                closeResidenteModal();
+                await loadResidentes();
+                loadResidentesTable();
+                updateDashboard();
+            } catch (error) {
+                console.error('Error saving resident:', error);
+                alert('Error al guardar el residente. Por favor, intenta nuevamente.');
+            }
+        }
+
+        async function addResidente(data) {
+            const newId = Math.max(...residentes.map(r => r.id), 0) + 1;
+            const values = [[
+                newId,
+                data.nombreCompleto,
+                data.rut,
+                data.nParcela,
+                data.email,
+                data.telefono,
+                data.estado,
+                data.valorGastoComun
+            ]];
+            
+            await appendSheet('Residentes!A:H', values);
+        }
+
+        async function updateResidente(id, data) {
+            const residente = residentes.find(r => r.id === id);
+            if (!residente) return;
+            
+            const values = [[
+                id,
+                data.nombreCompleto,
+                data.rut,
+                data.nParcela,
+                data.email,
+                data.telefono,
+                data.estado,
+                data.valorGastoComun
+            ]];
+            
+            await writeSheet(`Residentes!A${residente.rowIndex}:H${residente.rowIndex}`, values);
+        }
+
+        async function deleteResidente(id) {
+            if (!confirm('¿Está seguro de que desea eliminar a este residente?')) {
+                return;
+            }
+            
+            const residente = residentes.find(r => r.id === id);
+            if (!residente) return;
+            
+            try {
+                // Clear the row in the sheet
+                const emptyValues = [['', '', '', '', '', '', '', '']];
+                await writeSheet(`Residentes!A${residente.rowIndex}:H${residente.rowIndex}`, emptyValues);
+                
+                await loadResidentes();
+                loadResidentesTable();
+                updateDashboard();
+            } catch (error) {
+                console.error('Error deleting resident:', error);
+                alert('Error al eliminar el residente. Por favor, intenta nuevamente.');
+            }
+        }
+
+        function exportResidentesToExcel() {
+            const data = residentes.map(r => ({
+                'Nombre Completo': r.nombreCompleto,
+                'RUT': r.rut,
+                'N° Parcela': r.nParcela,
+                'Email': r.email,
+                'Teléfono': r.telefono,
+                'Estado': r.estado,
+                'Valor Gasto Común': r.valorGastoComun
+            }));
+            
+            const ws = XLSX.utils.json_to_sheet(data);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, 'Residentes');
+            
+            const fileName = `Residentes_${new Date().toISOString().slice(0, 10)}.xlsx`;
+            XLSX.writeFile(wb, fileName);
+        }
+
+        // Utility functions
+        function formatCurrency(amount) {
+            return new Intl.NumberFormat('es-CL', {
+                style: 'currency',
+                currency: 'CLP'
+            }).format(amount);
+        }
+
+        function formatDate(dateString) {
+            if (!dateString) return '';
+            const date = new Date(dateString);
+            return date.toLocaleDateString('es-CL');
+        }
+
+        // Close modal when clicking outside
+        window.onclick = function(event) {
+            const modals = document.querySelectorAll('.modal');
+            modals.forEach(modal => {
+                if (event.target === modal) {
+                    modal.style.display = 'none';
+                }
+            });
+        }
+
+        // Load Google Identity Services
+        window.onload = function() {
+            gisLoaded();
+        }
