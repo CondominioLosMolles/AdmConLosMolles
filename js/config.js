@@ -2,8 +2,7 @@
 const CONFIG = {
     // Credenciales de Google API
     CLIENT_ID: '997872453031-5o8s2o6v3qt722fb3p51a2r7bo24ncee.apps.googleusercontent.com',
-    API_KEY: 'AIzaSyA4nUkMycf_CHZE7TaBBD_WUyWMvSXUwoU',
-    
+      
     // ID de la hoja de cálculo de Google Sheets
     SPREADSHEET_ID: '1bFo5dBC3HM0xupginTBe-hrrUNgkiuUn4fkXXzHide8',
     
