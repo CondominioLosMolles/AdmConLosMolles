@@ -135,7 +135,6 @@ function attachViewListeners(viewName) {
                 document.getElementById('add-resident-btn').addEventListener('click', showAddResidentModal);
                 document.getElementById('residentes-table').addEventListener('click', handleResidentTableClick);
                 document.getElementById('resident-search').addEventListener('keyup', filterResidentTable);
-                // Listener para el nuevo botón de descarga
                 document.getElementById('export-excel-btn').addEventListener('click', exportResidentsToExcel);
             }
             
@@ -177,10 +176,10 @@ async function loadDashboardView() {
 }
 
 async function loadResidentesView() {
-    // Se añade el botón de descarga a la vista
     const residents = await readSheetData('Residentes!A2:H');
+    allResidentsData = [['ID_Residente', 'NombreCompleto', 'RUT', 'N_Parcela', 'Email', 'Telefono', 'Estado', 'ValorGastoComun'], ...residents];
     let tableRows = residents.map((row, index) => { if (!row) return ''; return `<tr><td>${row[1] || ''}</td><td>${row[2] || ''}</td><td>${row[3] || ''}</td><td>${row[4] || ''}</td><td>${row[5] || ''}</td><td>${row[6] || ''}</td><td>${formatCurrency(parseFloat(row[7] || 0))}</td><td class="action-icons"><span class="icon icon-edit" data-row-index="${index + 2}">✏️</span><span class="icon icon-delete" data-row-index="${index + 2}">🗑️</span></td></tr>`}).join('');
-    return `<div class="view active" id="residentes-view"><h1>Gestión de Residentes</h1><div class="controls"><input type="search" id="resident-search" placeholder="Buscar por Nombre, RUT o Parcela..."><div><button class="cta-button" id="export-excel-btn">Descargar Excel</button><button class="cta-button" id="add-resident-btn" style="margin-left: 10px;">Agregar Residente</button></div></div><div class="table-container"><table id="residentes-table"><thead><tr><th>Nombre Completo</th><th>RUT</th><th>N° Parcela</th><th>E-mail</th><th>Teléfono</th><th>Estado</th><th>Valor Gasto Común</th><th>Acciones</th></tr></thead><tbody>${tableRows}</tbody></table></div></div>`;
+    return `<div class="view active" id="residentes-view"><h1>Gestión de Residentes</h1><div class="controls"><input type="search" id="resident-search" placeholder="Buscar por Nombre, RUT o Parcela..."><div class="controls-buttons"><button class="cta-button" id="export-excel-btn">Descargar Excel</button><button class="cta-button" id="add-resident-btn" style="margin-left: 10px;">Agregar Residente</button></div></div><div class="table-container"><table id="residentes-table"><thead><tr><th>Nombre Completo</th><th>RUT</th><th>N° Parcela</th><th>E-mail</th><th>Teléfono</th><th>Estado</th><th>Valor Gasto Común</th><th>Acciones</th></tr></thead><tbody>${tableRows}</tbody></table></div></div>`;
 }
 
 async function loadGastosComunesView() {
@@ -317,7 +316,10 @@ function handleResidentTableClick(e) {
 }
 
 function showEditResidentModal(rowIndex) {
-    const residentData = allResidentsData.find(r => r[0] === allResidentsData[rowIndex - 1][0]);
+    // allResidentsData tiene una fila de encabezado, pero el array de la tabla no.
+    // El rowIndex viene de la tabla, que empieza en 2. Array index es rowIndex - 2.
+    // Pero allResidentsData[0] es el encabezado, así que el dato está en allResidentsData[rowIndex - 1]
+    const residentData = allResidentsData[rowIndex - 1];
     if (!residentData) { alert("No se encontraron datos para editar."); return; }
     const formHtml = `
         <h2>Editar Residente</h2>
@@ -334,7 +336,7 @@ function showEditResidentModal(rowIndex) {
         </form>
     `;
     showModal(formHtml);
-    document.getElementById('estado').value = residentData[6] || 'Activo'; // Setear valor del select
+    document.getElementById('estado').value = residentData[6] || 'Activo';
     document.getElementById('edit-resident-form').addEventListener('submit', handleUpdateResident);
 }
 
@@ -350,7 +352,7 @@ async function handleUpdateResident(e) {
             document.getElementById('valorGastoComun').value
         ];
         await updateSheetRow('Residentes', rowIndex, [updatedValues]);
-        allResidentsData = await readSheetData('Residentes!A:H'); // Recargar caché
+        allResidentsData = await readSheetData('Residentes!A:H');
         hideModal();
         switchView('residentes');
     } catch (error) {
