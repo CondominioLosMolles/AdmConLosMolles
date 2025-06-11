@@ -1,7 +1,7 @@
 // CONFIGURACIÓN DE CREDENCIALES Y API
 const CLIENT_ID = '997872453031-5o8s2o6v3qt722fb3p51a2r7bo24ncee.apps.googleusercontent.com';
 const API_KEY = 'AIzaSyA4nUkMycf_CHZE7TaBBD_WUyWMvSXUwoU'; 
-const SPREADSHEET_ID = '1bFo5dBC3HM0xupginTBe-hrrUNgkiuUn4fkXXzHide8';
+const SPREADSHEET_ID = '1bFo5dBC3HM0xupginTBe-hrrUNgkiuUn4fkXXzHide8'; // ID de la hoja principal de Residentes
 const SCOPES = 'https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/drive https://www.googleapis.com/auth/gmail.send';
 
 let tokenClient;
@@ -81,8 +81,9 @@ function handleSignoutClick() {
 async function startApp() {
     document.getElementById('login-container').style.display = 'none';
     document.getElementById('app-container').style.display = 'block';
-    const residents = await readSheetData('Residentes!A2:I'); // Leer hasta la columna de Dirección
-    allResidentsData = [['ID_Residente', 'NombreCompleto', 'RUT', 'N_Parcela', 'Direccion', 'Email', 'Telefono', 'Estado', 'ValorGastoComun'], ...residents];
+    // Se lee hasta la columna J para incluir el nuevo campo ID_Sheet_Pagos
+    const residents = await readSheetData(SPREADSHEET_ID, 'Residentes!A2:J');
+    allResidentsData = [['ID_Residente', 'NombreCompleto', 'RUT', 'N_Parcela', 'Direccion', 'Email', 'Telefono', 'Estado', 'ValorGastoComun', 'ID_Sheet_Pagos'], ...residents];
     switchView('dashboard');
 }
 
@@ -98,7 +99,8 @@ async function switchView(viewName) {
         switch (viewName) {
             case 'dashboard': viewContent = await loadDashboardView(); break;
             case 'residentes': viewContent = await loadResidentesView(); break;
-            default: viewContent = `<div class="view active"><h1>Módulo en Construcción</h1><p>Este módulo estará disponible próximamente.</p></div>`; break;
+            case 'gastos-comunes': viewContent = await loadGastosComunesView(); break;
+            default: viewContent = `<div class="view active"><h1>${viewName.charAt(0).toUpperCase() + viewName.slice(1).replace('-', ' ')}</h1><p>Este módulo aún está en construcción.</p></div>`; break;
         }
         mainContent.innerHTML = viewContent;
         attachViewListeners(viewName);
@@ -146,8 +148,8 @@ function attachViewListeners(viewName) {
 
 async function loadDashboardView() {
     const [residentsData, paymentsData, expensesData, maintenanceData] = await Promise.all([
-        readSheetData('Residentes!A2:I'), readSheetData('Pagos_GC!F:G'),
-        readSheetData('Egresos!B:F'), readSheetData('Mantenciones!F:F')
+        readSheetData(SPREADSHEET_ID, 'Residentes!A2:J'), readSheetData(SPREADSHEET_ID, 'Pagos_GC!F:G'),
+        readSheetData(SPREADSHEET_ID, 'Egresos!B:F'), readSheetData(SPREADSHEET_ID, 'Mantenciones!F:F')
     ]);
     const now = new Date();
     const currentMonth = now.getMonth(); const currentYear = now.getFullYear();
@@ -179,8 +181,127 @@ async function loadResidentesView() {
     return `<div class="view active" id="residentes-view"><h1>Gestión de Residentes</h1><div class="controls"><input type="search" id="resident-search" placeholder="Buscar por Nombre, RUT o Parcela..."><div class="controls-buttons"><button class="cta-button" id="export-excel-btn">Descargar Excel</button><button class="cta-button" id="add-resident-btn">Agregar Residente</button></div></div><div class="table-container"><table id="residentes-table"><thead><tr><th>Nombre Completo</th><th>RUT</th><th>N° Parcela</th><th>Dirección</th><th>E-mail</th><th>Teléfono</th><th>Estado</th><th>Valor Gasto Común</th><th>Acciones</th></tr></thead><tbody>${tableRows}</tbody></table></div></div>`;
 }
 
-// --- FUNCIONES PARA RESIDENTES ---
+// =================================================================================
+// NUEVA LÓGICA PARA GASTOS COMUNES
+// =================================================================================
+async function loadGastosComunesView() {
+    const residentOptions = allResidentsData.slice(1).map(r => r ? `<option value="${r[0]}">${r[3]} - ${r[1]}</option>` : '').join('');
+    return `
+        <div class="view active" id="gastos-comunes-view">
+            <h1>Gestión de Gastos Comunes</h1>
+            <div class="controls">
+                <label for="resident-selector-gc">Seleccione un Residente:</label>
+                <select id="resident-selector-gc" onchange="displayResidentSheet()">
+                    <option value="">-- Seleccione --</option>
+                    ${residentOptions}
+                </select>
+            </div>
+            <div id="resident-sheet-details" class="table-container">
+                <p>Seleccione un residente para ver su detalle de pagos.</p>
+            </div>
+        </div>
+    `;
+}
 
+async function displayResidentSheet() {
+    const residentId = document.getElementById('resident-selector-gc').value;
+    const detailsContainer = document.getElementById('resident-sheet-details');
+    if (!residentId) {
+        detailsContainer.innerHTML = '<p>Seleccione un residente para ver su detalle de pagos.</p>';
+        return;
+    }
+    showLoader();
+    try {
+        const residentData = allResidentsData.find(r => r && r[0] === residentId);
+        const paymentSheetId = residentData[9]; // Columna J: ID_Sheet_Pagos
+
+        if (!paymentSheetId) {
+            throw new Error("Este residente no tiene una planilla de pagos asociada. Revisa la columna 'ID_Sheet_Pagos' en la hoja de Residentes.");
+        }
+
+        // Asumimos que la data está en 'Hoja 1' y en el rango A1:L13 (12 meses + encabezado)
+        const sheetData = await readSheetData(paymentSheetId, 'Hoja 1!A1:L13');
+        
+        let tableHtml = '<table>';
+        sheetData.forEach((row, rowIndex) => {
+            tableHtml += `<tr>`;
+            row.forEach((cell) => {
+                tableHtml += rowIndex === 0 ? `<th>${cell}</th>` : `<td>${cell || ''}</td>`;
+            });
+            tableHtml += `</tr>`;
+        });
+        tableHtml += '</table>';
+        
+        detailsContainer.innerHTML = `
+            <h3>Detalle de Pagos para Parcela N° ${residentData[3]}</h3>
+            ${tableHtml}
+            <br>
+            <button class="cta-button" id="register-payment-btn">Registrar Nuevo Pago</button>
+        `;
+        document.getElementById('register-payment-btn').addEventListener('click', () => showRegisterPaymentModal(paymentSheetId));
+
+    } catch (error) {
+        console.error("Error displaying resident sheet:", error);
+        detailsContainer.innerHTML = `<p style="color:red;">No se pudo cargar la planilla del residente. ${error.message}</p>`;
+    } finally {
+        hideLoader();
+    }
+}
+
+function showRegisterPaymentModal(sheetId) {
+    const formHtml = `
+        <h2>Registrar Nuevo Pago</h2>
+        <form id="payment-form">
+            <input type="hidden" id="paymentSheetId" value="${sheetId}">
+            <label for="mes">Mes a Pagar (1 para Enero, 2 para Febrero, etc.):</label>
+            <input type="number" id="mes" min="1" max="12" required>
+            <label for="montoPagado">Monto Pagado:</label>
+            <input type="number" id="montoPagado" required>
+            <label for="fechaPago">Fecha de Pago:</label>
+            <input type="date" id="fechaPago" required>
+            <button type="submit" class="cta-button">Guardar Pago</button>
+        </form>
+    `;
+    showModal(formHtml);
+    document.getElementById('payment-form').addEventListener('submit', handleSavePaymentToSheet);
+}
+
+async function handleSavePaymentToSheet(e) {
+    e.preventDefault();
+    showLoader();
+    const sheetId = document.getElementById('paymentSheetId').value;
+    const mes = parseInt(document.getElementById('mes').value);
+    const monto = document.getElementById('montoPagado').value;
+    const fecha = document.getElementById('fechaPago').value;
+    const rowToUpdate = mes + 1;
+
+    try {
+        const updateRequests = [
+            { range: `'Hoja 1'!D${rowToUpdate}`, values: [[monto]] },
+            { range: `'Hoja 1'!L${rowToUpdate}`, values: [[fecha]] }
+        ];
+
+        await gapi.client.sheets.spreadsheets.values.batchUpdate({
+            spreadsheetId: sheetId,
+            resource: {
+                valueInputOption: 'USER_ENTERED',
+                data: updateRequests
+            }
+        });
+
+        alert("Pago registrado exitosamente. La planilla se ha actualizado.");
+        hideModal();
+        displayResidentSheet();
+    } catch (error) {
+        console.error("Error al guardar el pago:", error);
+        alert("Error al guardar el pago: " + (error.result?.error?.message || error.message));
+    } finally {
+        hideLoader();
+    }
+}
+
+
+// --- FUNCIONES DE RESIDENTES ---
 function showAddResidentModal() {
     const formHtml = `<h2>Agregar Nuevo Residente</h2><form id="resident-form"><label for="nombreCompleto">Nombre Completo:</label><input type="text" id="nombreCompleto" required><label for="rut">RUT:</label><input type="text" id="rut" required><label for="nParcela">N° Parcela:</label><input type="text" id="nParcela" required><label for="direccion">Dirección:</label><input type="text" id="direccion"><label for="email">Email:</label><input type="email" id="email" required><label for="telefono">Teléfono:</label><input type="tel" id="telefono"><label for="estado">Estado:</label><select id="estado"><option value="Activo">Activo</option><option value="Moroso">Moroso</option><option value="Inactivo">Inactivo</option></select><label for="valorGastoComun">Valor Gasto Común:</label><input type="number" id="valorGastoComun" required><button type="submit" class="cta-button">Guardar Residente</button></form>`;
     showModal(formHtml);
@@ -190,8 +311,8 @@ function showAddResidentModal() {
 async function handleAddResident(e) {
     e.preventDefault(); showLoader();
     try {
-        const lastData = await readSheetData('Residentes!A:A');
-        const lastId = lastData.result.values ? Math.max(...lastData.result.values.flat().map(Number).filter(n => !isNaN(n))) : 0;
+        const lastData = await readSheetData(SPREADSHEET_ID, 'Residentes!A:A');
+        const lastId = lastData.length > 0 ? Math.max(...lastData.flat().map(Number).filter(n => !isNaN(n))) : 0;
         const newResident = [ 
             lastId + 1, 
             document.getElementById('nombreCompleto').value, document.getElementById('rut').value, 
@@ -199,9 +320,9 @@ async function handleAddResident(e) {
             document.getElementById('email').value, document.getElementById('telefono').value, 
             document.getElementById('estado').value, document.getElementById('valorGastoComun').value 
         ];
-        await appendSheetData('Residentes', [newResident]);
-        const residents = await readSheetData('Residentes!A2:I');
-        allResidentsData = [['ID_Residente', 'NombreCompleto', 'RUT', 'N_Parcela', 'Direccion', 'Email', 'Telefono', 'Estado', 'ValorGastoComun'], ...residents];
+        await appendSheetData(SPREADSHEET_ID, 'Residentes', [newResident]);
+        const residents = await readSheetData(SPREADSHEET_ID, 'Residentes!A2:J');
+        allResidentsData = [['ID_Residente', 'NombreCompleto', 'RUT', 'N_Parcela', 'Direccion', 'Email', 'Telefono', 'Estado', 'ValorGastoComun', 'ID_Sheet_Pagos'], ...residents];
         hideModal(); switchView('residentes');
     } catch (error) { console.error("Error al agregar residente:", error); alert("Error al guardar: " + error.result.error.message);
     } finally { hideLoader(); }
@@ -209,18 +330,18 @@ async function handleAddResident(e) {
 
 function handleResidentTableClick(e) {
     const rowIndex = e.target.getAttribute('data-row-index');
-    if (e.target.matches('.icon-delete')) { if (confirm('¿Está seguro de que desea eliminar a este residente? Esta acción no se puede deshacer.')) { deleteSheetRow('Residentes', rowIndex); } }
+    if (e.target.matches('.icon-delete')) { if (confirm('¿Está seguro?')) { deleteSheetRow(SPREADSHEET_ID, 'Residentes', rowIndex); } }
     if (e.target.matches('.icon-edit')) { showEditResidentModal(rowIndex); }
 }
 
 function showEditResidentModal(rowIndex) {
-    const arrayIndex = parseInt(rowIndex) - 1; // El índice del array es la fila de la hoja - 1
+    const arrayIndex = parseInt(rowIndex) - 1;
     const residentData = allResidentsData[arrayIndex];
     if (!residentData) { alert("Error: No se encontraron los datos para editar."); return; }
-    const formHtml = `<h2>Editar Residente</h2><form id="edit-resident-form"><input type="hidden" id="rowIndex" value="${rowIndex}"><label for="nombreCompleto">Nombre Completo:</label><input type="text" id="nombreCompleto" value="${residentData[1] || ''}" required><label for="rut">RUT:</label><input type="text" id="rut" value="${residentData[2] || ''}" required><label for="nParcela">N° Parcela:</label><input type="text" id="nParcela" value="${residentData[3] || ''}" required><label for="direccion">Dirección:</label><input type="text" id="direccion" value="${residentData[4] || ''}"><label for="email">Email:</label><input type="email" id="email" value="${residentData[5] || ''}" required><label for="telefono">Teléfono:</label><input type="tel" id="telefono" value="${residentData[6] || ''}"><label for="estado">Estado:</label><select id="estado"><option value="Activo">Activo</option><option value="Moroso">Moroso</option><option value="Inactivo">Inactivo</option></select><label for="valorGastoComun">Valor Gasto Común:</label><input type="number" id="valorGastoComun" value="${residentData[8] || ''}" required><button type="submit" class="cta-button">Actualizar Residente</button></form>`;
+    const formHtml = `<h2>Editar Residente</h2><form id="edit-resident-form"><input type="hidden" id="rowIndex" value="${rowIndex}"><label for="nombreCompleto">Nombre Completo:</label><input type="text" id="nombreCompleto" value="${residentData[1] || ''}" required><label for="rut">RUT:</label><input type="text" id="rut" value="${residentData[2] || ''}" required><label for="nParcela">N° Parcela:</label><input type="text" id="nParcela" value="${residentData[3] || ''}" required><label for="direccion">Dirección:</label><input type="text" id="direccion" value="${residentData[4] || ''}"><label for="email">Email:</label><input type="email" id="email" value="${residentData[5] || ''}" required><label for="telefono">Teléfono:</label><input type="tel" id="telefono" value="${residentData[6] || ''}"><label for="estado">Estado:</label><select id="estado"><option value="Activo">Activo</option><option value="Moroso">Moroso</option><option value="Inactivo">Inactivo</option></select><label for="valorGastoComun">Valor Gasto Común:</label><input type="number" id="valorGastoComun" value="${residentData[8] || ''}" required><label for="idSheetPagos">ID Planilla Pagos:</label><input type="text" id="idSheetPagos" value="${residentData[9] || ''}"></form><button id="save-edit-resident" class="cta-button">Actualizar Residente</button>`;
     showModal(formHtml);
     document.getElementById('estado').value = residentData[7] || 'Activo';
-    document.getElementById('edit-resident-form').addEventListener('submit', handleUpdateResident);
+    document.getElementById('save-edit-resident').addEventListener('click', handleUpdateResident);
 }
 
 async function handleUpdateResident(e) {
@@ -233,11 +354,12 @@ async function handleUpdateResident(e) {
             document.getElementById('nombreCompleto').value, document.getElementById('rut').value,
             document.getElementById('nParcela').value, document.getElementById('direccion').value,
             document.getElementById('email').value, document.getElementById('telefono').value,
-            document.getElementById('estado').value, document.getElementById('valorGastoComun').value
+            document.getElementById('estado').value, document.getElementById('valorGastoComun').value,
+            document.getElementById('idSheetPagos').value
         ];
-        await updateSheetRow('Residentes', rowIndex, [updatedValues]);
-        const residents = await readSheetData('Residentes!A2:I');
-        allResidentsData = [['ID_Residente', 'NombreCompleto', 'RUT', 'N_Parcela', 'Direccion', 'Email', 'Telefono', 'Estado', 'ValorGastoComun'], ...residents];
+        await updateSheetRow(SPREADSHEET_ID, 'Residentes', rowIndex, [updatedValues]);
+        const residents = await readSheetData(SPREADSHEET_ID, 'Residentes!A2:J');
+        allResidentsData = [['ID_Residente', 'NombreCompleto', 'RUT', 'N_Parcela', 'Direccion', 'Email', 'Telefono', 'Estado', 'ValorGastoComun', 'ID_Sheet_Pagos'], ...residents];
         hideModal();
         switchView('residentes');
     } catch (error) {
@@ -245,15 +367,6 @@ async function handleUpdateResident(e) {
         alert("Error al actualizar: " + error.result.error.message);
     } finally {
         hideLoader();
-    }
-}
-
-function filterResidentTable() {
-    const filter = document.getElementById('resident-search').value.toUpperCase();
-    const table = document.getElementById('residentes-table'); const tr = table.getElementsByTagName('tr');
-    for (let i = 1; i < tr.length; i++) {
-        const tds = tr[i].getElementsByTagName('td');
-        if (tds.length > 0 && (tds[0].textContent.toUpperCase().indexOf(filter) > -1 || tds[1].textContent.toUpperCase().indexOf(filter) > -1 || tds[2].textContent.toUpperCase().indexOf(filter) > -1)) { tr[i].style.display = ""; } else { tr[i].style.display = "none"; }
     }
 }
 
@@ -267,56 +380,51 @@ function exportResidentsToExcel() {
     ws['!cols'] = [ {wch:5}, {wch:30}, {wch:12}, {wch:10}, {wch:40}, {wch:30}, {wch:15}, {wch:10}, {wch:20} ];
     const range = XLSX.utils.decode_range(ws['!ref']);
     for (let R = range.s.r + 1; R <= range.e.r; ++R) {
-        const cell_address = { c: 8, r: R }; // Column I (index 8)
+        const cell_address = { c: 8, r: R };
         const cell_ref = XLSX.utils.encode_cell(cell_address);
-        if (ws[cell_ref] && ws[cell_ref].v !== undefined) {
-            ws[cell_ref].t = 'n';
-            ws[cell_ref].z = '$ #,##0';
-        }
+        if (ws[cell_ref] && ws[cell_ref].v !== undefined) { ws[cell_ref].t = 'n'; ws[cell_ref].z = '$ #,##0'; }
     }
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Residentes");
     XLSX.writeFile(wb, "Listado_Residentes.xlsx");
 }
 
-function formatCurrency(value) {
-    if (typeof value !== 'number' || isNaN(value)) return '$0';
-    return new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP', minimumFractionDigits: 0 }).format(value);
+function filterResidentTable() {
+    const filter = document.getElementById('resident-search').value.toUpperCase();
+    const table = document.getElementById('residentes-table'); const tr = table.getElementsByTagName('tr');
+    for (let i = 1; i < tr.length; i++) {
+        const tds = tr[i].getElementsByTagName('td');
+        if (tds.length > 0 && (tds[0].textContent.toUpperCase().indexOf(filter) > -1 || tds[1].textContent.toUpperCase().indexOf(filter) > -1 || tds[2].textContent.toUpperCase().indexOf(filter) > -1)) { tr[i].style.display = ""; } else { tr[i].style.display = "none"; }
+    }
 }
 
-// --- FUNCIONES DE API DE GOOGLE SHEETS ---
-
-async function readSheetData(range) {
-    const response = await gapi.client.sheets.spreadsheets.values.get({ spreadsheetId: SPREADSHEET_ID, range: range });
+// --- FUNCIONES DE API DE GOOGLE SHEETS (ADAPTADAS) ---
+async function readSheetData(spreadsheetId, range) {
+    const response = await gapi.client.sheets.spreadsheets.values.get({ spreadsheetId, range });
     return response.result.values || [];
 }
 
-async function appendSheetData(sheetName, values) {
-    return gapi.client.sheets.spreadsheets.values.append({
-        spreadsheetId: SPREADSHEET_ID, range: `${sheetName}!A1`, valueInputOption: 'USER_ENTERED', resource: { values: values },
-    });
+async function appendSheetData(spreadsheetId, sheetName, values) {
+    return gapi.client.sheets.spreadsheets.values.append({ spreadsheetId, range: `${sheetName}!A1`, valueInputOption: 'USER_ENTERED', resource: { values } });
 }
 
-async function updateSheetRow(sheetName, rowIndex, values) {
+async function updateSheetRow(spreadsheetId, sheetName, rowIndex, values) {
     const range = `${sheetName}!A${rowIndex}`;
-    return gapi.client.sheets.spreadsheets.values.update({
-        spreadsheetId: SPREADSHEET_ID, range: range,
-        valueInputOption: 'USER_ENTERED', resource: { values: values }
-    });
+    return gapi.client.sheets.spreadsheets.values.update({ spreadsheetId, range, valueInputOption: 'USER_ENTERED', resource: { values } });
 }
 
-async function deleteSheetRow(sheetName, rowIndex) {
+async function deleteSheetRow(spreadsheetId, sheetName, rowIndex) {
     showLoader();
     try {
-        const sheetMetadata = await gapi.client.sheets.spreadsheets.get({ spreadsheetId: SPREADSHEET_ID });
+        const sheetMetadata = await gapi.client.sheets.spreadsheets.get({ spreadsheetId });
         const sheet = sheetMetadata.result.sheets.find(s => s.properties.title === sheetName);
         if (!sheet) throw new Error(`Hoja "${sheetName}" no encontrada.`);
         await gapi.client.sheets.spreadsheets.batchUpdate({
-            spreadsheetId: SPREADSHEET_ID,
+            spreadsheetId,
             resource: { requests: [{ deleteDimension: { range: { sheetId: sheet.properties.sheetId, dimension: "ROWS", startIndex: parseInt(rowIndex) - 1, endIndex: parseInt(rowIndex) } } }] }
         });
-        const residents = await readSheetData('Residentes!A2:I');
-        allResidentsData = [['ID_Residente', 'NombreCompleto', 'RUT', 'N_Parcela', 'Direccion', 'Email', 'Telefono', 'Estado', 'ValorGastoComun'], ...residents];
+        const residents = await readSheetData(SPREADSHEET_ID, 'Residentes!A2:J');
+        allResidentsData = [['ID_Residente', 'NombreCompleto', 'RUT', 'N_Parcela', 'Direccion', 'Email', 'Telefono', 'Estado', 'ValorGastoComun', 'ID_Sheet_Pagos'], ...residents];
         alert("Fila eliminada correctamente."); 
         switchView('residentes');
     } catch (err) { 
@@ -325,4 +433,9 @@ async function deleteSheetRow(sheetName, rowIndex) {
     } finally {
         hideLoader();
     }
+}
+
+function formatCurrency(value) {
+    if (typeof value !== 'number' || isNaN(value)) return '$0';
+    return new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP', minimumFractionDigits: 0 }).format(value);
 }
