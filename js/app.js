@@ -202,39 +202,7 @@ window.App = new App();
 
 // Inicializar cuando el DOM esté listo
 document.addEventListener('DOMContentLoaded', () => {
-    console.log('DOM cargado, inicializando aplicación...');
-    
-    // Simular autenticación exitosa para desarrollo
-    setTimeout(() => {
-        // Ocultar pantalla de carga
-        const loadingScreen = document.getElementById('loading-screen');
-        if (loadingScreen) {
-            loadingScreen.classList.add('hidden');
-        }
-        
-        // Mostrar aplicación principal
-        const mainApp = document.getElementById('main-app');
-        if (mainApp) {
-            mainApp.classList.remove('hidden');
-        }
-        
-        // Configurar botón de logout
-        const logoutBtn = document.getElementById('logout-btn');
-        if (logoutBtn) {
-            logoutBtn.addEventListener('click', () => {
-                // Simular logout
-                location.reload();
-            });
-        }
-        
-        // Mostrar información del usuario
-        const userInfo = document.getElementById('user-info');
-        if (userInfo) {
-            userInfo.textContent = 'Administrador del Sistema';
-        }
-        
-        // Inicializar la aplicación
-        window.App.init();
-    }, 2000); // Simular tiempo de carga
+    console.log('DOM cargado, esperando autenticación...');
+    // La aplicación se inicializará cuando la autenticación esté completa
 });
 
