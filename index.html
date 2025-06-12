@@ -3,20 +3,22 @@
 <head>
   <meta charset="UTF-8" />
   <title>Condominio Los Molles - Administración</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
   <link href="https://fonts.googleapis.com/css?family=Poppins:400,600&display=swap" rel="stylesheet" />
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://accounts.google.com/gsi/client" async defer></script>
   <script src="https://apis.google.com/js/api.js"></script>
   <style>
-    /* Diseño moderno inspirado en Windows 11 */
-    body {
-      margin: 0;
+    /* Diseño moderno inspirado en Windows 11, sistema responsive a pantalla completa */
+    html, body {
+      margin: 0; padding: 0; height: 100%;
       font-family: 'Poppins', Arial, sans-serif;
       background: #f3f4f6;
       color: #222;
       -webkit-font-smoothing: antialiased;
       -moz-osx-font-smoothing: grayscale;
+      overflow-x: hidden;
+      min-width: 320px;
     }
     #login-section {
       display: flex;
@@ -25,13 +27,16 @@
       justify-content: center;
       height: 100vh;
       background: #f3f4f6;
+      padding: 0 16px;
+      box-sizing: border-box;
     }
     #login-card {
       background: rgba(255 255 255 / 0.85);
       border-radius: 20px;
       box-shadow: 0 8px 32px rgb(33 118 174 / 0.15);
       padding: 40px 56px;
-      min-width: 320px;
+      max-width: 480px;
+      width: 100%;
       text-align: center;
       backdrop-filter: blur(10px);
       border: 1px solid rgba(33, 118, 174, 0.2);
@@ -59,6 +64,10 @@
     }
     #app-section {
       display: none;
+      height: 100vh;
+      width: 100vw;
+      overflow: hidden;
+      box-sizing: border-box;
     }
     .sidebar {
       position: fixed;
@@ -74,6 +83,8 @@
       z-index: 10;
       backdrop-filter: blur(10px);
       box-shadow: inset 1px 0 0 rgb(33 118 174 / 0.1);
+      overflow-y: auto;
+      height: 100vh;
     }
     .sidebar h2 {
       text-align: center;
@@ -94,6 +105,7 @@
       transition: background 0.3s, border-color 0.3s;
       cursor: pointer;
       user-select: none;
+      white-space: nowrap;
     }
     .nav-link.active,
     .nav-link:hover {
@@ -104,10 +116,11 @@
     .main-content {
       margin-left: 220px;
       padding: 40px 56px;
-      min-height: 100vh;
+      height: 100vh;
+      overflow-y: auto;
       background: #f3f4f6;
       transition: margin 0.3s;
-      max-width: 900px;
+      box-sizing: border-box;
     }
     @media (max-width: 900px) {
       .sidebar {
@@ -124,7 +137,6 @@
       .main-content {
         margin-left: 60px;
         padding: 24px 16px;
-        max-width: 100%;
       }
     }
     .section-title {
@@ -134,7 +146,7 @@
       margin-bottom: 28px;
       user-select: none;
     }
-    /* Dashboard widgets en fila horizontal, todos en una línea */
+    /* Dashboard widgets en fila horizontal, scroll si necesario */
     .dashboard-widgets {
       display: flex;
       flex-wrap: nowrap;
@@ -402,12 +414,27 @@
       <!-- DASHBOARD -->
       <div id="dashboard-section">
         <div class="section-title">Dashboard</div>
-        <div class="dashboard-widgets">
-          <div class="widget" id="res-activos"><div class="widget-title">Residentes Activos</div><div class="widget-value">--</div></div>
-          <div class="widget" id="ing-mes"><div class="widget-title">Ingresos del Mes</div><div class="widget-value">--</div></div>
-          <div class="widget" id="egre-mes"><div class="widget-title">Egresos del Mes</div><div class="widget-value">--</div></div>
-          <div class="widget" id="saldo-caja"><div class="widget-title">Saldo de Caja</div><div class="widget-value">--</div></div>
-          <div class="widget" id="mant-pend"><div class="widget-title">Mantenciones Pendientes/Urgentes</div><div class="widget-value">--</div></div>
+        <div class="dashboard-widgets" style="display:flex; gap:24px; flex-wrap: nowrap; overflow-x:auto; margin-bottom:36px;">
+          <div class="widget" id="res-activos" style="min-width: 220px;">
+            <div class="widget-title">Residentes Activos</div>
+            <div class="widget-value">--</div>
+          </div>
+          <div class="widget" id="ing-mes" style="min-width: 220px;">
+            <div class="widget-title">Ingresos del Mes</div>
+            <div class="widget-value">--</div>
+          </div>
+          <div class="widget" id="egre-mes" style="min-width: 220px;">
+            <div class="widget-title">Egresos del Mes</div>
+            <div class="widget-value">--</div>
+          </div>
+          <div class="widget" id="saldo-caja" style="min-width: 220px;">
+            <div class="widget-title">Saldo de Caja</div>
+            <div class="widget-value">--</div>
+          </div>
+          <div class="widget" id="mant-pend" style="min-width: 220px;">
+            <div class="widget-title">Mantenciones Pendientes/Urgentes</div>
+            <div class="widget-value">--</div>
+          </div>
         </div>
         <div style="background:#fff; border-radius:14px; padding:28px 24px; box-shadow:0 2px 8px #d0e3f140; margin-bottom:32px;">
           <h3 style="color:#2176ae;">Ingresos vs Egresos (últimos 12 meses)</h3>
