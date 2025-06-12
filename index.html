@@ -121,6 +121,7 @@
       background: #f3f4f6;
       transition: margin 0.3s;
       box-sizing: border-box;
+      max-width: 100vw;
     }
     @media (max-width: 900px) {
       .sidebar {
@@ -150,8 +151,8 @@
     .dashboard-widgets {
       display: flex;
       flex-wrap: nowrap;
-      gap: 28px;
-      margin-bottom: 44px;
+      gap: 24px;
+      margin-bottom: 36px;
       max-width: 100%;
       overflow-x: auto;
       padding-bottom: 10px;
@@ -178,6 +179,7 @@
       user-select: none;
       min-width: 220px;
       flex: 0 0 auto;
+      white-space: nowrap;
     }
     .widget:before {
       content: "";
@@ -196,6 +198,8 @@
       margin-bottom: 10px;
       font-weight: 600;
       z-index: 1;
+      white-space: normal;
+      line-height: 1.3;
     }
     .widget-value {
       font-size: 2.6rem;
@@ -241,6 +245,7 @@
       box-shadow: 0 4px 12px rgb(33 118 174 / 0.4);
       transition: background 0.3s, box-shadow 0.3s;
       user-select: none;
+      white-space: nowrap;
     }
     .btn:hover {
       background: linear-gradient(135deg, #2d7f5e, #2176ae);
@@ -251,6 +256,8 @@
       border-collapse: separate;
       border-spacing: 0 12px;
       background: transparent;
+      table-layout: fixed;
+      word-wrap: break-word;
     }
     .residente-table thead tr th {
       background: transparent;
@@ -260,7 +267,19 @@
       padding: 12px 14px;
       text-align: left;
       user-select: none;
+      white-space: nowrap;
     }
+    /* Ajustar anchos para columnas que necesitan más espacio para evitar saltos */
+    .residente-table thead tr th:nth-child(1) { width: 20%; }
+    .residente-table thead tr th:nth-child(2) { width: 12%; }
+    .residente-table thead tr th:nth-child(3) { width: 10%; }
+    .residente-table thead tr th:nth-child(4) { width: 18%; }
+    .residente-table thead tr th:nth-child(5) { width: 15%; }
+    .residente-table thead tr th:nth-child(6) { width: 12%; }
+    .residente-table thead tr th:nth-child(7) { width: 10%; }
+    .residente-table thead tr th:nth-child(8) { width: 12%; }
+    .residente-table thead tr th:nth-child(9) { width: 11%; }
+
     .residente-table tbody tr {
       background: rgba(255 255 255 / 0.85);
       box-shadow: 0 4px 20px rgb(33 118 174 / 0.1);
@@ -275,6 +294,9 @@
       vertical-align: middle;
       font-size: 1rem;
       color: #444;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
     .acciones-btn {
       background: none;
@@ -414,27 +436,12 @@
       <!-- DASHBOARD -->
       <div id="dashboard-section">
         <div class="section-title">Dashboard</div>
-        <div class="dashboard-widgets" style="display:flex; gap:24px; flex-wrap: nowrap; overflow-x:auto; margin-bottom:36px;">
-          <div class="widget" id="res-activos" style="min-width: 220px;">
-            <div class="widget-title">Residentes Activos</div>
-            <div class="widget-value">--</div>
-          </div>
-          <div class="widget" id="ing-mes" style="min-width: 220px;">
-            <div class="widget-title">Ingresos del Mes</div>
-            <div class="widget-value">--</div>
-          </div>
-          <div class="widget" id="egre-mes" style="min-width: 220px;">
-            <div class="widget-title">Egresos del Mes</div>
-            <div class="widget-value">--</div>
-          </div>
-          <div class="widget" id="saldo-caja" style="min-width: 220px;">
-            <div class="widget-title">Saldo de Caja</div>
-            <div class="widget-value">--</div>
-          </div>
-          <div class="widget" id="mant-pend" style="min-width: 220px;">
-            <div class="widget-title">Mantenciones Pendientes/Urgentes</div>
-            <div class="widget-value">--</div>
-          </div>
+        <div class="dashboard-widgets">
+          <div class="widget" id="res-activos"><div class="widget-title">Residentes Activos</div><div class="widget-value">--</div></div>
+          <div class="widget" id="ing-mes"><div class="widget-title">Ingresos del Mes</div><div class="widget-value">--</div></div>
+          <div class="widget" id="egre-mes"><div class="widget-title">Egresos del Mes</div><div class="widget-value">--</div></div>
+          <div class="widget" id="saldo-caja"><div class="widget-title">Saldo de Caja</div><div class="widget-value">--</div></div>
+          <div class="widget" id="mant-pend"><div class="widget-title">Mantenciones<br>Pendientes</div><div class="widget-value">--</div></div>
         </div>
         <div style="background:#fff; border-radius:14px; padding:28px 24px; box-shadow:0 2px 8px #d0e3f140; margin-bottom:32px;">
           <h3 style="color:#2176ae;">Ingresos vs Egresos (últimos 12 meses)</h3>
@@ -613,7 +620,7 @@
         { id: 'ing-mes', label: 'Ingresos del Mes', value: '--' },
         { id: 'egre-mes', label: 'Egresos del Mes', value: '--' },
         { id: 'saldo-caja', label: 'Saldo de Caja', value: '--' },
-        { id: 'mant-pend', label: 'Mantenciones Pendientes/Urgentes', value: '--' },
+        { id: 'mant-pend', label: 'Mantenciones<br>Pendientes', value: '--' },
       ];
       let residentes = await gapi.client.sheets.spreadsheets.values.get({
         spreadsheetId: SPREADSHEET_ID,
@@ -651,7 +658,7 @@
       widgets[4].value = mantData.filter((row) => row[5] === 'Pendiente' || row[5] === 'Urgente').length;
       widgets.forEach((w) => {
         const el = document.getElementById(w.id);
-        if (el) el.querySelector('.widget-value').textContent = w.value;
+        if (el) el.querySelector('.widget-value').innerHTML = w.value;
       });
 
       // Morosidad
