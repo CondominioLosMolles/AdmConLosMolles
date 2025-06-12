@@ -9,14 +9,15 @@
   <script src="https://accounts.google.com/gsi/client" async defer></script>
   <script src="https://apis.google.com/js/api.js"></script>
   <style>
-    body { margin: 0; font-family: 'Poppins', Arial, sans-serif; background: #e3f0fa; color: #222; }
-    #login-section { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; background: #e3f0fa; }
-    #login-card { background: #fff; border-radius: 16px; box-shadow: 0 2px 16px #0001; padding: 36px 48px; min-width: 320px; text-align: center; }
+    body { margin: 0; font-family: 'Poppins', Arial, sans-serif; background: #eaf1fb; color: #222; }
+    #login-section { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; background: #eaf1fb; }
+    #login-card { background: #fff; border-radius: 18px; box-shadow: 0 8px 32px #0002; padding: 36px 48px; min-width: 320px; text-align: center; }
     #login-card h2 { color: #2176ae; margin-bottom: 18px; }
     #login-card p { color: #444; margin-bottom: 28px; }
     .loading { color: #2176ae; margin-top: 20px; }
     .error-message { color: #e74c3c; margin-top: 10px; }
     #app-section { display: none; }
+    /* Menú lateral y layout */
     .sidebar { position: fixed; left: 0; top: 0; bottom: 0; width: 220px; background: #e3f0fa; border-right: 1px solid #d0e3f1; padding: 32px 0 0 0; display: flex; flex-direction: column; z-index: 10; }
     .sidebar h2 { text-align: center; font-weight: 600; color: #2176ae; margin-bottom: 24px; font-size: 1.4rem; letter-spacing: 1px; }
     .nav-link { padding: 14px 32px; color: #2176ae; text-decoration: none; font-weight: 500; font-size: 1.05rem; border-left: 4px solid transparent; transition: background 0.2s, border-color 0.2s; cursor: pointer; }
@@ -26,14 +27,67 @@
     .section-title { font-size: 1.5rem; font-weight: 600; color: #2176ae; margin-bottom: 20px; }
     .btn { background: #2176ae; color: #fff; border: none; border-radius: 8px; padding: 10px 22px; font-size: 1rem; font-weight: 600; cursor: pointer; transition: background 0.2s; }
     .btn:hover { background: #14496b; }
-    .residente-actions { display: flex; justify-content: space-between; margin-bottom: 18px; flex-wrap: wrap; gap: 10px; }
-    .residente-actions input { padding: 8px 14px; border: 1px solid #c4d7e7; border-radius: 8px; font-size: 1rem; outline: none; width: 220px; transition: border 0.2s; }
+    /* Dashboard widgets estilo moderno */
+    .dashboard-widgets {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 24px;
+      margin-bottom: 36px;
+    }
+    .widget {
+      background: rgba(255,255,255,0.8);
+      border-radius: 18px;
+      box-shadow: 0 4px 24px #2176ae22, 0 1.5px 4px #0001;
+      padding: 26px 32px;
+      flex: 1 1 220px;
+      min-width: 220px;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      backdrop-filter: blur(8px);
+      border: 1.5px solid #e3f0fa;
+      position: relative;
+      overflow: hidden;
+    }
+    .widget:before {
+      content: "";
+      position: absolute;
+      right: -35px; top: -35px;
+      width: 70px; height: 70px;
+      background: linear-gradient(135deg, #2176ae22 0%, #2d7f5e22 100%);
+      border-radius: 50%;
+      z-index: 0;
+    }
+    .widget-title {
+      font-size: 1.04rem;
+      color: #888;
+      margin-bottom: 6px;
+      font-weight: 500;
+      z-index: 1;
+    }
+    .widget-value {
+      font-size: 2.3rem;
+      color: #2176ae;
+      font-weight: 700;
+      margin-bottom: 4px;
+      z-index: 1;
+      letter-spacing: 1px;
+    }
+    /* Residentes tabla demo */
     .residente-table { width: 100%; border-collapse: collapse; background: #fff; border-radius: 12px; overflow: hidden; box-shadow: 0 2px 8px #d0e3f140; }
     .residente-table th, .residente-table td { padding: 12px 10px; text-align: left; border-bottom: 1px solid #e3f0fa; font-size: 1rem; }
     .residente-table th { background: #f0f6fa; color: #2176ae; font-weight: 600; }
     .residente-table td { color: #444; }
     .acciones-btn { background: none; border: none; cursor: pointer; font-size: 1.2rem; margin-right: 8px; color: #2176ae; }
     .acciones-btn:hover { color: #e67e22; }
+    .estado-chip {
+      display: inline-block; padding: 6px 16px; border-radius: 18px; font-weight: 600; font-size: 0.98rem;
+      background: #eee; color: #666; min-width: 80px; text-align: center;
+    }
+    .estado-activo { background: #e5fbe5; color: #1e824c; border: 1px solid #b8e6c1; }
+    .estado-moroso { background: #fdeaea; color: #c0392b; border: 1px solid #f5b7b1; }
+    .estado-inactivo { background: #f2f3f4; color: #888; border: 1px solid #d5d8dc; }
+    /* Modal */
     .modal-bg { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: #2228; display: flex; align-items: center; justify-content: center; z-index: 100; }
     .modal { background: #fff; border-radius: 14px; padding: 32px 28px; min-width: 320px; max-width: 400px; box-shadow: 0 2px 16px #0002; position: relative; }
     .modal h3 { margin-top: 0; color: #2176ae; }
@@ -61,13 +115,12 @@
       <h2>Los Molles</h2>
       <a class="nav-link active" onclick="showSection('dashboard')">Dashboard</a>
       <a class="nav-link" onclick="showSection('residentes')">Residentes</a>
-      <!-- Puedes ir agregando los demás módulos aquí -->
     </div>
     <div class="main-content">
       <!-- DASHBOARD -->
       <div id="dashboard-section">
         <div class="section-title">Dashboard</div>
-        <div id="dashboard-widgets" style="display: flex; gap: 24px; flex-wrap: wrap; margin-bottom: 36px;"></div>
+        <div class="dashboard-widgets" id="dashboard-widgets"></div>
         <div style="background:#fff; border-radius:14px; padding:28px 24px; box-shadow:0 2px 8px #d0e3f140; margin-bottom:32px;">
           <h3 style="color:#2176ae;">Ingresos vs Egresos (últimos 12 meses)</h3>
           <canvas id="chart-ing-egre" height="80"></canvas>
@@ -230,7 +283,7 @@
       }
     }
 
-    // DASHBOARD: carga datos reales
+    // DASHBOARD: carga datos reales y gráfico escalado
     async function cargarDashboard() {
       // Widgets
       const widgets = [
@@ -247,7 +300,7 @@
         range: 'Residentes!A2:I'
       });
       const residentesData = residentes.result.values || [];
-      const activos = residentesData.filter(row => row[6] === 'Activo').length;
+      const activos = residentesData.filter(row => row[7] === 'Activo').length;
       widgets[0].value = activos;
       // Ingresos del mes
       const now = new Date();
@@ -260,7 +313,7 @@
       const pagosData = pagos.result.values || [];
       const pagosMes = pagosData.filter(row => (row[4] || '').startsWith(`${año}-${mes}`));
       const totalPagado = pagosMes.reduce((sum, row) => sum + (parseInt(row[6]) || 0), 0);
-      widgets[1].value = '$' + totalPagado.toLocaleString('es-CL');
+      widgets[1].value = totalPagado > 0 ? '$' + totalPagado.toLocaleString('es-CL') : '--';
       // Egresos del mes
       let egresos = await gapi.client.sheets.spreadsheets.values.get({
         spreadsheetId: SPREADSHEET_ID,
@@ -269,11 +322,11 @@
       const egresosData = egresos.result.values || [];
       const egresosMes = egresosData.filter(row => (row[1] || '').startsWith(`${año}-${mes}`));
       const totalEgresos = egresosMes.reduce((sum, row) => sum + (parseInt(row[5]) || 0), 0);
-      widgets[2].value = '$' + totalEgresos.toLocaleString('es-CL');
+      widgets[2].value = totalEgresos > 0 ? '$' + totalEgresos.toLocaleString('es-CL') : '--';
       // Saldo de caja
       const totalPagadoAll = pagosData.reduce((sum, row) => sum + (parseInt(row[6]) || 0), 0);
       const totalEgresosAll = egresosData.reduce((sum, row) => sum + (parseInt(row[5]) || 0), 0);
-      widgets[3].value = '$' + (totalPagadoAll - totalEgresosAll).toLocaleString('es-CL');
+      widgets[3].value = (totalPagadoAll || totalEgresosAll) ? '$' + (totalPagadoAll - totalEgresosAll).toLocaleString('es-CL') : '--';
       // Mantenciones pendientes/urgentes
       let mant = await gapi.client.sheets.spreadsheets.values.get({
         spreadsheetId: SPREADSHEET_ID,
@@ -287,13 +340,13 @@
       });
       document.getElementById('dashboard-widgets').innerHTML = html;
       // Morosidad
-      const morosos = residentesData.filter(row => row[6] === 'Moroso');
+      const morosos = residentesData.filter(row => row[7] === 'Moroso');
       const morososList = morosos.map(row => row[3]).join(', ');
       let deudaTotal = 0;
       morosos.forEach(moroso => {
-        const pagosMoroso = pagosData.filter(row => row[2] === moroso[0]);
+        const pagosMoroso = pagosData.filter(row => row[1] === moroso[0]);
         pagosMoroso.forEach(pm => {
-          if (parseInt(pm[8]) > 0) deudaTotal += parseInt(pm[8]);
+          if (parseInt(pm[12]) > 0) deudaTotal += parseInt(pm[12]);
         });
       });
       document.getElementById('dashboard-morosidad').innerHTML = `
@@ -302,19 +355,40 @@
         <div>Parcelas morosas: <span>${morososList}</span></div>
         <div>Total deuda: <b>$${deudaTotal.toLocaleString('es-CL')}</b></div>
       `;
-      // Gráfico demo (puedes reemplazarlo por datos reales)
+      // Gráfico: valores reales si hay, eje Y escalado
       let ctx = document.getElementById('chart-ing-egre').getContext('2d');
       if (window.myChart) window.myChart.destroy();
+      // Demo: si no hay datos, muestra vacío
+      let ingresosArr = [], egresosArr = [], labelsArr = [];
+      for(let i=11;i>=0;i--) {
+        let fecha = new Date(now.getFullYear(), now.getMonth()-i, 1);
+        let label = fecha.toLocaleString('es-CL', {month:'short'}).charAt(0).toUpperCase() + fecha.toLocaleString('es-CL', {month:'short'}).slice(1);
+        labelsArr.push(label);
+        let periodo = `${fecha.getFullYear()}-${(fecha.getMonth()+1).toString().padStart(2,'0')}`;
+        let pag = pagosData.filter(row => (row[4]||'').startsWith(periodo));
+        let eg = egresosData.filter(row => (row[1]||'').startsWith(periodo));
+        ingresosArr.push(pag.reduce((sum, row) => sum + (parseInt(row[6])||0), 0));
+        egresosArr.push(eg.reduce((sum, row) => sum + (parseInt(row[5])||0), 0));
+      }
+      // Escalado eje Y: $100.000 hasta $1.000.000, luego automático
+      let maxVal = Math.max(...ingresosArr, ...egresosArr, 1000000);
+      let stepSize = 100000;
+      if (maxVal > 1000000 && maxVal <= 5000000) stepSize = 500000;
+      else if (maxVal > 5000000 && maxVal <= 10000000) stepSize = 1000000;
+      else if (maxVal > 10000000) stepSize = 5000000;
       window.myChart = new Chart(ctx, {
         type: 'bar',
         data: {
-          labels: ['Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic', 'Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun'],
+          labels: labelsArr,
           datasets: [
-            {label:'Ingresos', data:[2450000,2600000,3100000,3800000,4200000,5000000,6000000,7000000,9000000,12000000,17000000,22000000], backgroundColor:'#2d7f5e'},
-            {label:'Egresos', data:[1120000,1300000,1500000,2000000,2500000,3000000,4000000,5000000,7000000,9000000,12000000,16000000], backgroundColor:'#e67e22'}
+            {label:'Ingresos', data:ingresosArr, backgroundColor:'#2d7f5e'},
+            {label:'Egresos', data:egresosArr, backgroundColor:'#e67e22'}
           ]
         },
-        options: {plugins:{legend:{position:'bottom'}},scales:{y:{beginAtZero:true}}}
+        options: {
+          plugins:{legend:{position:'bottom'}},
+          scales:{y:{beginAtZero:true, stepSize:stepSize}}
+        }
       });
     }
 
@@ -333,13 +407,14 @@
       const tbody = document.getElementById('tbody-residentes');
       tbody.innerHTML = '';
       residentesDataCache.filter(row => {
-        // [0]=ID_Residente, [1]=Nombre, [2]=RUT, [3]=N_Parcela, [4]=Direccion, [5]=Email, [6]=Telefono, [7]=Estado, [8]=Valor_Gasto_Comun
         return (
           row[1]?.toLowerCase().includes(filtro) ||
           row[2]?.toLowerCase().includes(filtro) ||
           String(row[3] || '').includes(filtro)
         );
       }).forEach((row, idx) => {
+        let estado = row[7]||'';
+        let estadoClass = estado==='Activo' ? 'estado-activo' : (estado==='Moroso' ? 'estado-moroso' : 'estado-inactivo');
         tbody.innerHTML += `
           <tr>
             <td>${row[1]||''}</td>
@@ -348,7 +423,7 @@
             <td>${row[4]||''}</td>
             <td>${row[5]||''}</td>
             <td>${row[6]||''}</td>
-            <td>${row[7]||''}</td>
+            <td><span class="estado-chip ${estadoClass}">${estado}</span></td>
             <td>${row[8]? '$'+Number(row[8]).toLocaleString('es-CL') : ''}</td>
             <td>
               <button class="acciones-btn" title="Editar" onclick="abrirModalResidente('${row[0]}')">&#9998;</button>
@@ -360,7 +435,6 @@
     }
     function filtrarResidentes() { renderResidentes(); }
 
-    // Modal agregar/editar residente
     function abrirModalResidente(id=null) {
       document.getElementById('modal-residente-bg').style.display = '';
       if (id) {
@@ -426,7 +500,6 @@
       if (!confirm('¿Está seguro de que desea eliminar a este residente?')) return;
       let idx = residentesDataCache.findIndex(r => r[0] === id);
       if (idx > -1) {
-        // Borra la fila correspondiente (la API requiere el número de fila, empezando en 0)
         await gapi.client.sheets.spreadsheets.batchUpdate({
           spreadsheetId: SPREADSHEET_ID,
           requests: [{
@@ -434,7 +507,7 @@
               range: {
                 sheetId: 0, // Asegúrate que la hoja "Residentes" es la primera (sheetId: 0)
                 dimension: "ROWS",
-                startIndex: idx + 1, // +1 porque la cabecera está en la fila 1
+                startIndex: idx + 1,
                 endIndex: idx + 2
               }
             }
