@@ -11,22 +11,65 @@
   <!-- Google API Client -->
   <script src="https://apis.google.com/js/api.js"></script>
   <style>
+    /* Estilos Globales y de Layout */
     body {
       margin: 0;
       font-family: 'Poppins', Arial, sans-serif;
-      background: #e3f0fa;
+      background: #f7fafc;
       color: #222;
     }
-    #login-section {
-      display: flex; flex-direction: column; align-items: center; justify-content: center;
-      height: 100vh; background: #e3f0fa;
+    .sidebar {
+      position: fixed;
+      left: 0; top: 0; bottom: 0;
+      width: 220px;
+      background: #e3f0fa;
+      border-right: 1px solid #d0e3f1;
+      padding: 32px 0 0 0;
+      display: flex;
+      flex-direction: column;
+      z-index: 10;
     }
-    #login-card {
-      background: #fff; border-radius: 16px; box-shadow: 0 2px 16px #0001;
-      padding: 36px 48px; min-width: 320px; text-align: center;
+    .sidebar h2 {
+      text-align: center;
+      font-weight: 600;
+      color: #2176ae;
+      margin-bottom: 24px;
+      font-size: 1.4rem;
+      letter-spacing: 1px;
     }
-    #login-card h2 { color: #2176ae; margin-bottom: 18px; }
-    #login-card p { color: #444; margin-bottom: 28px; }
+    .nav-link {
+      padding: 14px 32px;
+      color: #2176ae;
+      text-decoration: none;
+      font-weight: 500;
+      font-size: 1.05rem;
+      border-left: 4px solid transparent;
+      transition: background 0.2s, border-color 0.2s;
+      cursor: pointer;
+    }
+    .nav-link.active, .nav-link:hover {
+      background: #d0e3f1;
+      border-left: 4px solid #2176ae;
+    }
+    .main-content {
+      margin-left: 220px;
+      padding: 36px 48px;
+      min-height: 100vh;
+      background: #f7fafc;
+      transition: margin 0.2s;
+    }
+    @media (max-width: 900px) {
+      .sidebar { width: 60px; padding: 16px 0 0 0; }
+      .sidebar h2 { display: none; }
+      .nav-link { padding: 12px 16px; font-size: 0.95rem; }
+      .main-content { margin-left: 60px; padding: 24px 10px; }
+    }
+    .section-title {
+      font-size: 1.5rem;
+      font-weight: 600;
+      color: #2176ae;
+      margin-bottom: 20px;
+    }
     .btn {
       background: #2176ae;
       color: #fff;
@@ -37,39 +80,371 @@
       font-weight: 600;
       cursor: pointer;
       transition: background 0.2s;
-      margin-top: 14px;
     }
     .btn:hover { background: #14496b; }
+
+    /* Login */
+    #login-section {
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      height: 100vh; background: #e3f0fa;
+    }
+    #login-card {
+      background: #fff; border-radius: 16px; box-shadow: 0 2px 16px #0001;
+      padding: 36px 48px; min-width: 320px; text-align: center;
+    }
+    #login-card h2 { color: #2176ae; margin-bottom: 18px; }
+    #login-card p { color: #444; margin-bottom: 28px; }
     .loading { color: #2176ae; margin-top: 20px; }
-    /* ... (agrega aquí los estilos del dashboard y módulos según vayas avanzando) ... */
+    .error-message { color: #e74c3c; margin-top: 10px; }
+
+    /* Dashboard widgets */
+    .dashboard-widgets {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 24px;
+      margin-bottom: 36px;
+    }
+    .widget {
+      background: #fff;
+      border-radius: 15px;
+      box-shadow: 0 2px 8px #d0e3f140;
+      padding: 28px 32px;
+      flex: 1 1 220px;
+      min-width: 220px;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+    }
+    .widget-title {
+      font-size: 1.04rem;
+      color: #888;
+      margin-bottom: 6px;
+      font-weight: 500;
+    }
+    .widget-value {
+      font-size: 2.2rem;
+      color: #2176ae;
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+    .widget-extra {
+      font-size: 0.98rem;
+      color: #2d7f5e;
+      margin-top: 2px;
+    }
+
+    /* Residentes */
+    .residente-actions {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 18px;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+    .residente-actions input {
+      padding: 8px 14px;
+      border: 1px solid #c4d7e7;
+      border-radius: 8px;
+      font-size: 1rem;
+      outline: none;
+      width: 220px;
+      transition: border 0.2s;
+    }
+    .residente-table {
+      width: 100%;
+      border-collapse: collapse;
+      background: #fff;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 2px 8px #d0e3f140;
+    }
+    .residente-table th, .residente-table td {
+      padding: 12px 10px;
+      text-align: left;
+      border-bottom: 1px solid #e3f0fa;
+      font-size: 1rem;
+    }
+    .residente-table th {
+      background: #f0f6fa;
+      color: #2176ae;
+      font-weight: 600;
+    }
+    .residente-table td {
+      color: #444;
+    }
+    .acciones-btn {
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-size: 1.2rem;
+      margin-right: 8px;
+      color: #2176ae;
+    }
+    .acciones-btn:hover { color: #e67e22; }
+
+    /* Modal */
+    .modal-bg {
+      position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+      background: #2228;
+      display: flex; align-items: center; justify-content: center;
+      z-index: 100;
+    }
+    .modal {
+      background: #fff;
+      border-radius: 14px;
+      padding: 32px 28px;
+      min-width: 320px;
+      max-width: 400px;
+      box-shadow: 0 2px 16px #0002;
+      position: relative;
+    }
+    .modal h3 { margin-top: 0; color: #2176ae; }
+    .modal label { display: block; margin-top: 12px; font-weight: 500; }
+    .modal input, .modal select {
+      width: 100%;
+      padding: 8px 10px;
+      border: 1px solid #c4d7e7;
+      border-radius: 8px;
+      font-size: 1rem;
+      margin-top: 4px;
+    }
+    .modal .btn { width: 100%; margin-top: 18px; }
+    .close-modal {
+      position: absolute; top: 12px; right: 16px;
+      background: none; border: none; font-size: 1.3rem; color: #888; cursor: pointer;
+    }
+    .close-modal:hover { color: #e74c3c; }
+
+    /* Gastos Comunes */
+    .gc-busqueda {
+      display: flex; gap: 16px; margin-bottom: 22px; flex-wrap: wrap;
+    }
+    .gc-busqueda input, .gc-busqueda select {
+      padding: 8px 14px; border: 1px solid #c4d7e7; border-radius: 8px; font-size: 1rem; outline: none; min-width:220px;
+    }
+    .gc-table {
+      width: 100%; border-collapse: collapse; background: #fff; border-radius: 12px; overflow: hidden; box-shadow: 0 2px 8px #d0e3f140;
+    }
+    .gc-table th, .gc-table td {
+      padding: 10px 8px; text-align: center; border-bottom: 1px solid #e3f0fa; font-size: 0.98rem;
+    }
+    .gc-table th { background: #f0f6fa; color: #2176ae; font-weight: 600; }
+    .gc-table td { color: #444; }
+    .gc-table td.saldo-neg { color: #e74c3c; font-weight: bold; }
+    .gc-table td.saldo-pos { color: #2d7f5e; font-weight: bold; }
+    .gc-table td.estado-pagado { color: #2d7f5e; font-weight: bold; }
+    .gc-table td.estado-pend { color: #e67e22; font-weight: bold; }
   </style>
 </head>
 <body>
-  <!-- LOGIN -->
+  <!-- SECCIÓN DE LOGIN -->
   <div id="login-section">
     <div id="login-card">
       <h2>Condominio Los Molles</h2>
       <p>Inicia sesión con tu cuenta de Google para administrar el sistema.</p>
       <button class="btn" id="btn-login" onclick="handleAuthClick()">Acceder con Google</button>
       <div class="loading" id="login-loading" style="display:none;">Conectando con Google...</div>
-      <div class="loading" id="login-error" style="color:#e74c3c;display:none;"></div>
+      <div class="error-message" id="login-error" style="display:none;"></div>
     </div>
   </div>
-  <!-- APP -->
+
+  <!-- SECCIÓN PRINCIPAL DE LA APLICACIÓN (oculta hasta autenticación) -->
   <div id="app-section" style="display:none;">
-    <!-- Aquí irá el menú lateral y los módulos: dashboard, residentes, gastos comunes, etc. -->
-    <div style="padding:36px;">
-      <h2 style="color:#2176ae;">¡Autenticación exitosa!</h2>
-      <p>Ya puedes avanzar con el desarrollo de los módulos. El acceso a Google Sheets, Drive y Gmail está habilitado.</p>
-      <div id="user-email"></div>
-      <!-- Aquí se mostrarán los módulos según vayas avanzando -->
+    <div class="sidebar">
+      <h2>Los Molles</h2>
+      <a class="nav-link active" onclick="showSection('dashboard')">Dashboard</a>
+      <a class="nav-link" onclick="showSection('residentes')">Residentes</a>
+      <a class="nav-link" onclick="showSection('gastos')">Gastos Comunes</a>
+      <!-- Marcadores de posición para otros módulos -->
+      <a class="nav-link" style="color:#bbb;cursor:not-allowed;">Contabilidad</a>
+      <a class="nav-link" style="color:#bbb;cursor:not-allowed;">Comunicaciones</a>
+      <a class="nav-link" style="color:#bbb;cursor:not-allowed;">Mantenciones</a>
+      <a class="nav-link" style="color:#bbb;cursor:not-allowed;">Multas</a>
+      <a class="nav-link" style="color:#bbb;cursor:not-allowed;">Asambleas</a>
+      <a class="nav-link" style="color:#bbb;cursor:not-allowed;">Informes</a>
+    </div>
+
+    <div class="main-content">
+      <!-- MÓDULO DASHBOARD -->
+      <div id="dashboard-section" style="display:none;">
+        <div class="dashboard-widgets">
+          <div class="widget">
+            <div class="widget-title">Residentes Activos</div>
+            <div class="widget-value" id="res-activos">34</div>
+          </div>
+          <div class="widget">
+            <div class="widget-title">Ingresos del Mes</div>
+            <div class="widget-value" id="ing-mes">$2.450.000</div>
+          </div>
+          <div class="widget">
+            <div class="widget-title">Egresos del Mes</div>
+            <div class="widget-value" id="egre-mes">$1.120.000</div>
+          </div>
+          <div class="widget">
+            <div class="widget-title">Saldo de Caja</div>
+            <div class="widget-value" id="saldo-caja">$18.900.000</div>
+          </div>
+          <div class="widget">
+            <div class="widget-title">Mantenciones Pendientes/Urgentes</div>
+            <div class="widget-value" id="mant-pend">2</div>
+          </div>
+        </div>
+        <div style="background:#fff; border-radius:14px; padding:28px 24px; box-shadow:0 2px 8px #d0e3f140; margin-bottom:32px;">
+          <h3 style="color:#2176ae;">Ingresos vs Egresos (últimos 12 meses)</h3>
+          <canvas id="chart-ing-egre" height="80"></canvas>
+        </div>
+        <div style="display:flex; gap:40px; flex-wrap:wrap;">
+          <div style="flex:1;">
+            <h4 style="color:#2176ae;margin-bottom:8px;">Morosidad</h4>
+            <div>Cantidad de morosos: <b id="morosos-cant">4</b></div>
+            <div>Parcelas morosas: <span id="morosos-list">12, 14, 22, 33</span></div>
+            <div>Total deuda: <b id="morosos-deuda">$1.200.000</b></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- MÓDULO RESIDENTES -->
+      <div id="residentes-section" style="display:none;">
+        <div class="section-title">Residentes</div>
+        <div class="residente-actions">
+          <input type="text" id="busqueda-residente" placeholder="Buscar por nombre o parcela..." oninput="filtrarResidentes()">
+          <button class="btn" onclick="abrirModalResidente()">Agregar Residente</button>
+        </div>
+        <table class="residente-table" id="tabla-residentes">
+          <thead>
+            <tr>
+              <th>Nombre Completo</th>
+              <th>RUT</th>
+              <th>N° Parcela</th>
+              <th>Dirección</th>
+              <th>Email</th>
+              <th>Teléfono</th>
+              <th>Estado</th>
+              <th>Valor Gasto Común</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="tbody-residentes">
+            <!-- Datos de ejemplo, reemplazar por integración a Google Sheets -->
+          </tbody>
+        </table>
+      </div>
+      <!-- Modal Agregar/Editar Residente -->
+      <div id="modal-residente-bg" class="modal-bg" style="display:none;">
+        <div class="modal">
+          <button class="close-modal" onclick="cerrarModalResidente()">&times;</button>
+          <h3 id="modal-titulo">Agregar Residente</h3>
+          <form id="form-residente" onsubmit="guardarResidente(event)">
+            <input type="hidden" id="residente-id">
+            <label>Nombre Completo
+              <input type="text" id="res-nombre" required>
+            </label>
+            <label>RUT
+              <input type="text" id="res-rut" required>
+            </label>
+            <label>N° Parcela
+              <input type="number" id="res-parcela" required>
+            </label>
+            <label>Dirección
+              <input type="text" id="res-direccion" required>
+            </label>
+            <label>Email
+              <input type="email" id="res-email" required>
+            </label>
+            <label>Teléfono
+              <input type="text" id="res-telefono" required>
+            </label>
+            <label>Estado
+              <select id="res-estado" required>
+                <option value="Activo">Activo</option>
+                <option value="Moroso">Moroso</option>
+                <option value="Inactivo">Inactivo</option>
+              </select>
+            </label>
+            <label>Valor Gasto Común
+              <input type="number" id="res-gasto" required>
+            </label>
+            <button class="btn" type="submit">Guardar</button>
+          </form>
+        </div>
+      </div>
+
+      <!-- MÓDULO GASTOS COMUNES -->
+      <div id="gastos-section" style="display:none; max-width:1100px; margin:auto;">
+        <div class="section-title">Gastos Comunes</div>
+        <div style="margin-bottom: 20px;">
+          <label>TMC Anual (%):
+            <input type="number" id="gc-tmc-anual" value="2.4" step="0.1" onchange="gcRenderHistorial(document.getElementById('gc-selector').value, gcResidentes.find(r => String(r.parcela) === document.getElementById('gc-selector').value)?.valorGC)" style="width: 100px; padding: 5px; border-radius: 5px; border: 1px solid #ccc;">
+          </label>
+          <p style="font-size: 0.9em; color: #666;">Este valor afecta el cálculo del interés por mora.</p>
+        </div>
+        <div class="gc-busqueda">
+          <input type="text" id="gc-buscar" placeholder="Buscar por N° Parcela o Nombre" oninput="gcBuscarResidente()">
+          <select id="gc-selector" onchange="gcSeleccionarResidente()">
+            <option value="">Selecciona un residente...</option>
+            <!-- Demo: reemplaza por residentes reales -->
+            <option value="14">Parcela 14 - María González</option>
+            <option value="12">Parcela 12 - Carlos Pérez</option>
+            <option value="22">Parcela 22 - Ana Torres</option>
+            <option value="33">Parcela 33 - Luis Muñoz</option>
+          </select>
+        </div>
+        <div id="gc-historial" style="margin-top:30px; display:none;">
+          <h4>Historial de Pagos - Parcela <span id="gc-nparcela"></span> - <span id="gc-nombre"></span></h4>
+          <table class="gc-table">
+            <thead>
+              <tr>
+                <th>Mes</th>
+                <th>Valor GC</th>
+                <th>Fecha Venc.</th>
+                <th>Monto Pagado</th>
+                <th>Saldo</th>
+                <th>Interés Mora</th>
+                <th>¼ Multa</th>
+                <th>Meses Mora</th>
+                <th>Deuda Total</th>
+                <th>Estado</th>
+                <th>Comprobante</th>
+              </tr>
+            </thead>
+            <tbody id="gc-tbody"></tbody>
+          </table>
+          <button class="btn" style="margin-top:18px;" onclick="gcAbrirModalPago()">Registrar Pago</button>
+        </div>
+        <!-- Modal Registrar Pago -->
+        <div id="gc-modal-pago-bg" class="modal-bg" style="display:none;">
+          <div class="modal">
+            <button class="close-modal" onclick="gcCerrarModalPago()">&times;</button>
+            <h3>Registrar Pago</h3>
+            <form id="gc-form-pago" onsubmit="gcGuardarPago(event)">
+              <label>Monto Pagado
+                <input type="number" id="gc-monto-pagado" required>
+              </label>
+              <label>Fecha de Pago
+                <input type="date" id="gc-fecha-pago" required>
+              </label>
+              <label>Método de Pago
+                <select id="gc-metodo-pago" required>
+                  <option value="Transferencia">Transferencia</option>
+                  <option value="Efectivo">Efectivo</option>
+                </select>
+              </label>
+              <label>Adjuntar Comprobante
+                <input type="file" id="gc-comprobante" accept=".pdf,.jpg,.jpeg,.png" required>
+              </label>
+              <button class="btn" type="submit">Guardar Pago</button>
+            </form>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
+
   <script>
     // CONFIGURACIÓN DE CREDENCIALES Y API
     const CLIENT_ID = '997872453031-5o8s2o6v3qt722fb3p51a2r7bo24ncee.apps.googleusercontent.com';
     const API_KEY = 'AIzaSyA4nUkMycf_CHZE7TaBBD_WUyWMvSXUwoU';
-    const SPREADSHEET_ID = '1bFo5dBC3HM0xupginTBe-hrrUNgkiuUn4fkXXzHide8';
+    const SPREADSHEET_ID = '1bFo5dBC3HM0xupginTBe-hrrUNgkiuUn4fkXXHide8'; // Utiliza tu ID de Google Sheet
     const SCOPES = 'https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/drive https://www.googleapis.com/auth/gmail.send';
 
     let GoogleAuth;
@@ -92,48 +467,390 @@
         scope: SCOPES
       }).then(() => {
         GoogleAuth = gapi.auth2.getAuthInstance();
-        // Si ya está autenticado, mostrar app
-        if (GoogleAuth.isSignedIn.get()) {
-          onSignIn(GoogleAuth.currentUser.get());
-        }
+        GoogleAuth.isSignedIn.listen(updateSigninStatus); // Escuchar cambios de estado de sesión
+        updateSigninStatus(GoogleAuth.isSignedIn.get()); // Actualizar estado inicial
       }, error => {
         document.getElementById('login-error').style.display = '';
-        document.getElementById('login-error').innerText = 'Error inicializando Google API: ' + error.details;
+        document.getElementById('login-error').innerText = 'Error al inicializar la API de Google: ' + (error.details || error.error);
+        document.getElementById('login-loading').style.display = 'none';
       });
+    }
+
+    function updateSigninStatus(isSignedIn) {
+      if (isSignedIn) {
+        onSignIn(GoogleAuth.currentUser.get());
+      } else {
+        document.getElementById('login-section').style.display = 'flex';
+        document.getElementById('app-section').style.display = 'none';
+        document.getElementById('login-loading').style.display = 'none';
+        document.getElementById('login-error').style.display = 'none';
+      }
     }
 
     function handleAuthClick() {
       document.getElementById('login-loading').style.display = '';
+      document.getElementById('login-error').style.display = 'none';
       gapi.auth2.getAuthInstance().signIn().then(user => {
-        onSignIn(user);
+        // El estado de inicio de sesión será manejado por updateSigninStatus
       }).catch(err => {
         document.getElementById('login-loading').style.display = 'none';
         document.getElementById('login-error').style.display = '';
-        document.getElementById('login-error').innerText = 'Error de autenticación: ' + err.error;
+        document.getElementById('login-error').innerText = 'Error de autenticación: ' + (err.error || err.details);
       });
     }
 
     function onSignIn(googleUser) {
       const profile = googleUser.getBasicProfile();
       currentUserEmail = profile.getEmail();
-      if (currentUserEmail !== "losmollestunquen@gmail.com") {
+      if (currentUserEmail !== "losmollestunquen@gmail.com") { // Valida el email del administrador
         document.getElementById('login-loading').style.display = 'none';
         document.getElementById('login-error').style.display = '';
-        document.getElementById('login-error').innerText = 'Solo el administrador autorizado puede ingresar.';
-        GoogleAuth.signOut();
+        document.getElementById('login-error').innerText = 'Acceso denegado. Solo el administrador autorizado puede ingresar.';
+        GoogleAuth.signOut(); // Cierra sesión para usuario no autorizado
         return;
       }
       document.getElementById('login-section').style.display = 'none';
       document.getElementById('app-section').style.display = '';
-      document.getElementById('user-email').innerHTML = `<b>Usuario autenticado:</b> ${currentUserEmail}`;
+      showSection('dashboard'); // Muestra el Dashboard después de un login exitoso
       document.getElementById('login-loading').style.display = 'none';
       document.getElementById('login-error').style.display = 'none';
-      // Aquí puedes cargar el dashboard o el módulo que quieras mostrar primero
     }
 
     // Cargar la API al inicio
     window.onload = function() {
       handleClientLoad();
+    }
+
+    // --- NAVEGACIÓN ---
+    function showSection(sec) {
+      document.querySelectorAll('.nav-link').forEach(link => link.classList.remove('active'));
+      document.getElementById('dashboard-section').style.display = 'none';
+      document.getElementById('residentes-section').style.display = 'none';
+      document.getElementById('gastos-section').style.display = 'none';
+
+      if (sec === 'dashboard') {
+        document.querySelectorAll('.nav-link')[0].classList.add('active');
+        document.getElementById('dashboard-section').style.display = '';
+        renderDashboardChart();
+      } else if (sec === 'residentes') {
+        document.querySelectorAll('.nav-link')[1].classList.add('active');
+        document.getElementById('residentes-section').style.display = '';
+        renderResidentes();
+      } else if (sec === 'gastos') {
+        document.querySelectorAll('.nav-link')[2].classList.add('active');
+        document.getElementById('gastos-section').style.display = '';
+      }
+    }
+
+    // --- MÓDULO DASHBOARD (DATOS DEMO) ---
+    let myChartInstance = null; // Para almacenar la instancia de Chart.js
+
+    function renderDashboardChart() {
+      const ctx = document.getElementById('chart-ing-egre').getContext('2d');
+      if (myChartInstance) myChartInstance.destroy(); // Destruye instancia anterior
+
+      myChartInstance = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: ['Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic', 'Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun'],
+          datasets: [
+            {label:'Ingresos', data:[2450000,2600000,3100000,3800000,4200000,5000000,6000000,7000000,9000000,12000000,17000000,22000000], backgroundColor:'#2d7f5e'},
+            {label:'Egresos', data:[1120000,1300000,1500000,2000000,2500000,3000000,4000000,5000000,7000000,9000000,12000000,16000000], backgroundColor:'#e67e22'}
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            y: {
+              beginAtZero: true,
+              ticks: {
+                callback: function(value) {
+                  // Escalado dinámico según la magnitud del valor en pesos chilenos
+                  if (value >= 1000000000) return '$' + (value/1000000000).toFixed(1) + 'B';
+                  if (value >= 1000000) return '$' + (value/1000000).toFixed(1) + 'M';
+                  if (value >= 1000) return '$' + (value/1000).toFixed(0) + 'K';
+                  return '$' + value;
+                },
+              }
+            }
+          },
+          plugins: {
+            legend:{position:'bottom'}
+          }
+        }
+      });
+    }
+
+    // --- MÓDULO RESIDENTES (DATOS DEMO) ---
+    let residentes = [
+      {id:1, nombre:"María González", rut:"12.345.678-9", parcela:14, direccion:"Calle Falsa 123", email:"maria@gmail.com", telefono:"987654321", estado:"Activo", gasto:65000},
+      {id:2, nombre:"Carlos Pérez", rut:"21.543.876-5", parcela:12, direccion:"Avenida Siempre Viva 456", email:"carlos@gmail.com", telefono:"912345678", estado:"Moroso", gasto:65000},
+      {id:3, nombre:"Ana Torres", rut:"18.234.567-0", parcela:22, direccion:"Pasaje Noche Oscura 789", email:"ana@gmail.com", telefono:"923456789", estado:"Activo", gasto:65000},
+      {id:4, nombre:"Luis Muñoz", rut:"11.222.333-4", parcela:33, direccion:"Camino del Sol 101", email:"luis@gmail.com", telefono:"934567890", estado:"Moroso", gasto:65000}
+    ];
+
+    function renderResidentes() {
+      const filtro = document.getElementById('busqueda-residente').value.trim().toLowerCase();
+      const tbody = document.getElementById('tbody-residentes');
+      tbody.innerHTML = '';
+      
+      const filteredResidentes = residentes.filter(r => {
+        // Determina si la búsqueda es numérica (para N° Parcela) o textual (para Nombre)
+        const isNumericSearch = !isNaN(parseFloat(filtro)) && isFinite(filtro);
+        if (isNumericSearch) {
+          // Si es numérica, solo busca por N° Parcela (coincidencia exacta)
+          return String(r.parcela) === filtro;
+        } else {
+          // Si es textual, busca por Nombre (coincidencia parcial)
+          return r.nombre.toLowerCase().includes(filtro);
+        }
+      });
+
+      filteredResidentes.forEach(r => {
+        tbody.innerHTML += `
+          <tr>
+            <td>${r.nombre}</td>
+            <td>${r.rut}</td>
+            <td>${r.parcela}</td>
+            <td>${r.direccion}</td>
+            <td>${r.email}</td>
+            <td>${r.telefono}</td>
+            <td>${r.estado}</td>
+            <td>$${r.gasto.toLocaleString('es-CL')}</td>
+            <td>
+              <button class="acciones-btn" title="Editar" onclick="abrirModalResidente(${r.id})">&#9998;</button>
+              <button class="acciones-btn" title="Eliminar" onclick="eliminarResidente(${r.id})">&#128465;</button>
+            </td>
+          </tr>
+        `;
+      });
+    }
+
+    function filtrarResidentes() { renderResidentes(); }
+
+    function abrirModalResidente(id = null) {
+      document.getElementById('modal-residente-bg').style.display = '';
+      if (id) {
+        const r = residentes.find(x => x.id === id);
+        document.getElementById('modal-titulo').innerText = 'Editar Residente';
+        document.getElementById('residente-id').value = r.id;
+        document.getElementById('res-nombre').value = r.nombre;
+        document.getElementById('res-rut').value = r.rut;
+        document.getElementById('res-parcela').value = r.parcela;
+        document.getElementById('res-direccion').value = r.direccion;
+        document.getElementById('res-email').value = r.email;
+        document.getElementById('res-telefono').value = r.telefono;
+        document.getElementById('res-estado').value = r.estado;
+        document.getElementById('res-gasto').value = r.gasto;
+      } else {
+        document.getElementById('modal-titulo').innerText = 'Agregar Residente';
+        document.getElementById('form-residente').reset();
+        document.getElementById('residente-id').value = '';
+      }
+    }
+    function cerrarModalResidente() {
+      document.getElementById('modal-residente-bg').style.display = 'none';
+    }
+    function guardarResidente(e) {
+      e.preventDefault();
+      const id = document.getElementById('residente-id').value;
+      const nuevo = {
+        id: id ? Number(id) : Date.now(),
+        nombre: document.getElementById('res-nombre').value,
+        rut: document.getElementById('res-rut').value,
+        parcela: Number(document.getElementById('res-parcela').value),
+        direccion: document.getElementById('res-direccion').value,
+        email: document.getElementById('res-email').value,
+        telefono: document.getElementById('res-telefono').value,
+        estado: document.getElementById('res-estado').value,
+        gasto: Number(document.getElementById('res-gasto').value)
+      };
+      if (id) {
+        const idx = residentes.findIndex(x => x.id === Number(id));
+        residentes[idx] = nuevo;
+      } else {
+        residentes.push(nuevo);
+      }
+      cerrarModalResidente();
+      renderResidentes();
+    }
+    function eliminarResidente(id) {
+      if (confirm('¿Está seguro de que desea eliminar a este residente?')) {
+        residentes = residentes.filter(x => x.id !== id);
+        renderResidentes();
+      }
+    }
+
+    // --- MÓDULO GASTOS COMUNES (DATOS DEMO) ---
+    const gcResidentes = [
+      {parcela:14, nombre:"María González", valorGC:65000},
+      {parcela:12, nombre:"Carlos Pérez", valorGC:65000},
+      {parcela:22, nombre:"Ana Torres", valorGC:65000},
+      {parcela:33, nombre:"Luis Muñoz", valorGC:65000}
+    ];
+    // Datos demo de pagos, en un sistema real esto vendría de Google Sheets
+    const gcPagosDemo = {
+      14: [
+        {mes:"Ene", periodo:"2025-01", pagado:65000, fechaPago:"2025-01-09", metodo:"Transferencia", comprobante:"ok.pdf"},
+        {mes:"Feb", periodo:"2025-02", pagado:0, fechaPago:"", metodo:"", comprobante:""},
+        {mes:"Mar", periodo:"2025-03", pagado:0, fechaPago:"", metodo:"", comprobante:""}
+      ],
+      12: [
+        {mes:"Ene", periodo:"2025-01", pagado:65000, fechaPago:"2025-01-10", metodo:"Efectivo", comprobante:"ok.pdf"},
+        {mes:"Feb", periodo:"2025-02", pagado:0, fechaPago:"", metodo:"", comprobante:""},
+        {mes:"Mar", periodo:"2025-03", pagado:0, fechaPago:"", metodo:"", comprobante:""}
+      ],
+      22: [
+        {mes:"Ene", periodo:"2025-01", pagado:0, fechaPago:"", metodo:"", comprobante:""},
+        {mes:"Feb", periodo:"2025-02", pagado:0, fechaPago:"", metodo:"", comprobante:""},
+        {mes:"Mar", periodo:"2025-03", pagado:0, fechaPago:"", metodo:"", comprobante:""}
+      ],
+      33: [
+        {mes:"Ene", periodo:"2025-01", pagado:65000, fechaPago:"2025-01-07", metodo:"Transferencia", comprobante:"ok.pdf"},
+        {mes:"Feb", periodo:"2025-02", pagado:65000, fechaPago:"2025-02-10", metodo:"Transferencia", comprobante:"ok.pdf"},
+        {mes:"Mar", periodo:"2025-03", pagado:0, fechaPago:"", metodo:"", comprobante:""}
+      ]
+    };
+
+    function gcBuscarResidente() {
+      const val = document.getElementById('gc-buscar').value.trim().toLowerCase();
+      const selector = document.getElementById('gc-selector');
+      for (let i = 1; i < selector.options.length; i++) {
+        const optEl = selector.options[i];
+        const parcela = optEl.value;
+        const nombre = optEl.textContent.split('-')[1] ? optEl.textContent.split('-')[1].trim().toLowerCase() : "";
+        
+        let visible = false;
+        if (!val) { 
+          visible = true; // Si la búsqueda está vacía, muestra todas las opciones
+        } else if (!isNaN(parseFloat(val)) && isFinite(val)) { 
+          if (parcela === val) visible = true; // Si es un número, busca por parcela (exacto)
+        } else { 
+          if (nombre.includes(val)) visible = true; // Si es texto, busca por nombre (parcial)
+        }
+        optEl.style.display = visible ? '' : 'none';
+      }
+    }
+
+    function gcSeleccionarResidente() {
+      const parcela = document.getElementById('gc-selector').value;
+      if (!parcela) {
+        document.getElementById('gc-historial').style.display = 'none';
+        return;
+      }
+      const residente = gcResidentes.find(r => String(r.parcela) === parcela);
+      document.getElementById('gc-nparcela').innerText = residente.parcela;
+      document.getElementById('gc-nombre').innerText = residente.nombre;
+      gcRenderHistorial(parcela, residente.valorGC);
+      document.getElementById('gc-historial').style.display = '';
+    }
+
+    function gcRenderHistorial(parcela, valorGC) {
+      const tbody = document.getElementById('gc-tbody');
+      const hoy = new Date();
+      const TMCanual = parseFloat(document.getElementById('gc-tmc-anual').value || '0');
+      const TMCmensual = TMCanual / 12; // TMC mensual
+
+      tbody.innerHTML = '';
+      const pagos = gcPagosDemo[parcela] || [];
+      
+      pagos.forEach(p => {
+        const fechaVenc = new Date(p.periodo + '-10T23:59:59'); // Fecha de vencimiento (día 10 del mes)
+        const pagado = p.pagado;
+        let saldo = valorGC - pagado;
+
+        let mesesMora = 0;
+        let interes = 0;
+        let multa = 0;
+        let deudaTotal = 0;
+        let estado = "Pagado";
+
+        // Cálculo de meses de mora
+        if (pagado < valorGC) {
+          if (hoy > fechaVenc) { // Si la fecha actual es posterior al vencimiento
+            let vencYear = fechaVenc.getFullYear();
+            let vencMonth = fechaVenc.getMonth();
+            let currentYear = hoy.getFullYear();
+            let currentMonth = hoy.getMonth();
+            
+            // Calcula la diferencia en meses enteros desde el mes de vencimiento
+            mesesMora = (currentYear - vencYear) * 12 + (currentMonth - vencMonth);
+            
+            // Si la mora es en el mismo mes de vencimiento pero ya pasó el día 10, es 1 mes de mora.
+            if (currentYear === vencYear && currentMonth === vencMonth && hoy.getDate() > 10) {
+              mesesMora = 1;
+            }
+            // Si el mes actual es posterior al de vencimiento y estamos en los primeros 10 días del mes
+            // se considera un mes de mora si ya pasó el 10 del mes anterior de vencimiento.
+            else if (currentYear > vencYear || (currentYear === vencYear && currentMonth > vencMonth)) {
+                if (hoy.getDate() > 10) {
+                    mesesMora += 1; // Si ya pasó el 10 de este mes, se suma un mes adicional
+                }
+            }
+            // Asegura al menos 1 mes de mora si ya pasó la fecha de vencimiento
+            if (mesesMora < 1 && hoy > fechaVenc) mesesMora = 1;
+          }
+        }
+        
+        // Aplicar reglas para interés y multa
+        if (mesesMora > 0) {
+          // Interés: solo una vez, en el primer mes de atraso
+          interes = (valorGC * TMCmensual) / 100;
+
+          // Multa: acumulativa por cada mes de mora (1/4 del valor GC por cada mes de atraso)
+          multa = (valorGC * 0.25) * mesesMora;
+        }
+
+        deudaTotal = (valorGC + interes + multa) - pagado;
+        if (deudaTotal <= 0 && pagado >= valorGC) { 
+          estado = "Pagado";
+          deudaTotal = 0; // Si está pagado, la deuda es 0
+          saldo = 0; // Si está pagado, el saldo pendiente es 0
+        } else {
+          estado = "Pendiente";
+        }
+
+        const saldoClass = saldo > 0 ? "saldo-neg" : "saldo-pos"; 
+        const estadoClass = estado === "Pagado" ? "estado-pagado" : "estado-pend";
+        
+        tbody.innerHTML += `
+          <tr>
+            <td>${p.mes}</td>
+            <td>$${valorGC.toLocaleString('es-CL')}</td>
+            <td>${fechaVenc.toLocaleDateString('es-CL')}</td>
+            <td>$${pagado.toLocaleString('es-CL')}</td>
+            <td class="${saldoClass}">$${Math.abs(saldo).toLocaleString('es-CL')} ${saldo > 0 ? '(Pendiente)' : '(Favor)'}</td>
+            <td>$${interes.toLocaleString('es-CL', {maximumFractionDigits:0})}</td>
+            <td>$${multa.toLocaleString('es-CL', {maximumFractionDigits:0})}</td>
+            <td>${mesesMora}</td>
+            <td>$${deudaTotal.toLocaleString('es-CL', {maximumFractionDigits:0})}</td>
+            <td class="${estadoClass}">${estado}</td>
+            <td>${p.comprobante ? `<a href="#">Ver</a> <button title="Descargar Comprobante PDF generado">&#x1F4BE;</button>` : ''}</td>
+          </tr>
+        `;
+      });
+    }
+
+    function gcAbrirModalPago() {
+      document.getElementById('gc-modal-pago-bg').style.display = '';
+      document.getElementById('gc-form-pago').reset();
+      document.getElementById('gc-fecha-pago').valueAsDate = new Date();
+    }
+    function gcCerrarModalPago() {
+      document.getElementById('gc-modal-pago-bg').style.display = 'none';
+    }
+    function gcGuardarPago(e) {
+      e.preventDefault();
+      // Este es un placeholder. Aquí integrarías las llamadas reales a Google Sheets, Drive (para el comprobante) y Gmail (para enviar el correo).
+      alert('Pago registrado (demo). En la versión final, esto se guardaría en Google Sheets, se subiría el comprobante a Drive y se enviaría el correo al residente.');
+      console.log('Monto:', document.getElementById('gc-monto-pagado').value);
+      console.log('Fecha:', document.getElementById('gc-fecha-pago').value);
+      console.log('Método:', document.getElementById('gc-metodo-pago').value);
+      console.log('Comprobante File:', document.getElementById('gc-comprobante').files[0]);
+      gcCerrarModalPago();
+      // Una vez que la integración real esté hecha, descomenta la siguiente línea para actualizar la tabla:
+      // gcRenderHistorial(document.getElementById('gc-selector').value, gcResidentes.find(r => String(r.parcela) === document.getElementById('gc-selector').value)?.valorGC);
     }
   </script>
 </body>
