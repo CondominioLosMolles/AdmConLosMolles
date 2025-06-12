@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <title>CondominioLosMolles - Administración</title>
+  <title>Condominio Los Molles - Administración</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <!-- Tipografía moderna -->
   <link href="https://fonts.googleapis.com/css?family=Poppins:400,600&display=swap" rel="stylesheet">
@@ -186,21 +186,7 @@
     <div id="login-card">
       <h2>Condominio Los Molles</h2>
       <p>Inicia sesión con tu cuenta de Google para administrar el sistema.</p>
-      <div id="g_id_onload"
-        data-client_id="997872453031-5o8s2o6v3qt722fb3p51a2r7bo24ncee.apps.googleusercontent.com"
-        data-context="signin"
-        data-ux_mode="popup"
-        data-callback="onGoogleSignIn"
-        data-auto_prompt="false">
-      </div>
-      <div class="g_id_signin"
-        data-type="standard"
-        data-shape="rectangular"
-        data-theme="outline"
-        data-text="sign_in_with"
-        data-size="large"
-        data-logo_alignment="left">
-      </div>
+      <div id="g_id_signin"></div>
     </div>
   </div>
   <!-- APP -->
@@ -313,11 +299,9 @@
   </div>
   <script>
     // --- LOGIN GOOGLE OAUTH ---
-    let userEmail = "";
-    function onGoogleSignIn(response) {
-      // Decodifica el JWT para obtener el email
+    function handleCredentialResponse(response) {
       const payload = JSON.parse(atob(response.credential.split('.')[1]));
-      userEmail = payload.email;
+      const userEmail = payload.email;
       if (userEmail === "losmollestunquen@gmail.com") {
         document.getElementById('login-section').style.display = 'none';
         document.getElementById('app-section').style.display = '';
@@ -326,6 +310,17 @@
         alert("Solo el administrador autorizado puede ingresar.");
       }
     }
+    window.onload = function() {
+      google.accounts.id.initialize({
+        client_id: "997872453031-5o8s2o6v3qt722fb3p51a2r7bo24ncee.apps.googleusercontent.com",
+        callback: handleCredentialResponse
+      });
+      google.accounts.id.renderButton(
+        document.getElementById("g_id_signin"),
+        { theme: "outline", size: "large", width: 300 }
+      );
+      google.accounts.id.prompt();
+    };
 
     // --- NAVEGACIÓN ---
     function showSection(sec) {
@@ -405,13 +400,14 @@
       let val = document.getElementById('gc-buscar').value.trim().toLowerCase();
       let selector = document.getElementById('gc-selector');
       for (let i = 1; i < selector.options.length; i++) {
-        let opt = selector.options[i];
-        let [parcela, nombre] = opt.textContent.match(/\d+/)[0], opt.textContent.split('-')[1];
+        let optEl = selector.options[i];
+        let parcela = optEl.value;
+        let nombre = optEl.textContent.split('-')[1] ? optEl.textContent.split('-')[1].trim().toLowerCase() : "";
         let visible = false;
         if (!val) visible = true;
         else if (!isNaN(val) && parcela === val) visible = true;
-        else if (nombre && nombre.toLowerCase().includes(val)) visible = true;
-        opt.style.display = visible ? '' : 'none';
+        else if (nombre && nombre.includes(val)) visible = true;
+        optEl.style.display = visible ? '' : 'none';
       }
     }
 
