@@ -9,7 +9,6 @@
   <script src="https://accounts.google.com/gsi/client" async defer></script>
   <script src="https://apis.google.com/js/api.js"></script>
   <style>
-    /* --- (Todo el CSS que ya teníamos, sin cambios) --- */
     /* Diseño moderno inspirado en Windows 11, sistema responsive a pantalla completa */
     html, body {
       margin: 0; padding: 0; height: 100%;
@@ -148,6 +147,7 @@
       margin-bottom: 28px;
       user-select: none;
     }
+    /* Dashboard widgets en fila horizontal, scroll si necesario */
     .dashboard-widgets {
       display: flex;
       flex-wrap: nowrap;
@@ -233,6 +233,7 @@
       border-color: #2176ae;
       box-shadow: 0 0 10px #2176aeaa;
     }
+    /* Modernizar botón agregar residente */
     .btn {
       background: linear-gradient(135deg, #2176ae, #2d7f5e);
       color: white;
@@ -269,15 +270,17 @@
       user-select: none;
       white-space: nowrap;
     }
-    .residente-table thead tr th:nth-child(1) { width: 22%; }
-    .residente-table thead tr th:nth-child(2) { width: 13%; }
-    .residente-table thead tr th:nth-child(3) { width: 9%; }
-    .residente-table thead tr th:nth-child(4) { width: 18%; }
-    .residente-table thead tr th:nth-child(5) { width: 15%; }
-    .residente-table thead tr th:nth-child(6) { width: 12%; }
-    .residente-table thead tr th:nth-child(7) { width: 12%; }
-    .residente-table thead tr th:nth-child(8) { width: 11%; }
-    .residente-table thead tr th:nth-child(9) { width: 10%; }
+    /* Ajustar anchos para columnas para evitar corte en Estado y mejorar espacio en Gasto Común */
+    .residente-table thead tr th:nth-child(1) { width: 22%; } /* Nombre Completo */
+    .residente-table thead tr th:nth-child(2) { width: 12%; } /* RUT */
+    .residente-table thead tr th:nth-child(3) { width: 8%; }  /* N° Parcela reducido */
+    .residente-table thead tr th:nth-child(4) { width: 18%; } /* Dirección */
+    .residente-table thead tr th:nth-child(5) { width: 15%; } /* Email */
+    .residente-table thead tr th:nth-child(6) { width: 12%; } /* Teléfono */
+    .residente-table thead tr th:nth-child(7) { width: 11%; } /* Estado aumentado */
+    .residente-table thead tr th:nth-child(8) { width: 12%; } /* Gasto Común */
+    .residente-table thead tr th:nth-child(9) { width: 10%; } /* Acciones */
+
     .residente-table tbody tr {
       background: rgba(255 255 255 / 0.85);
       box-shadow: 0 4px 20px rgb(33 118 174 / 0.1);
@@ -430,243 +433,434 @@
       <h2>Los Molles</h2>
       <a class="nav-link active" onclick="showSection('dashboard')">Dashboard</a>
       <a class="nav-link" onclick="showSection('residentes')">Residentes</a>
-      <a class="nav-link" onclick="showGastosComunes()">Gastos Comunes</a>
     </div>
     <div class="main-content">
       <!-- DASHBOARD -->
       <div id="dashboard-section">
-        <!-- (Dashboard content as before) -->
+        <div class="section-title">Dashboard</div>
+        <div class="dashboard-widgets" style="display:flex; gap:24px; flex-wrap: nowrap; overflow-x:auto; margin-bottom:36px;">
+          <div class="widget" id="res-activos" style="min-width: 220px;">
+            <div class="widget-title">Residentes Activos</div>
+            <div class="widget-value">--</div>
+          </div>
+          <div class="widget" id="ing-mes" style="min-width: 220px;">
+            <div class="widget-title">Ingresos del Mes</div>
+            <div class="widget-value">--</div>
+          </div>
+          <div class="widget" id="egre-mes" style="min-width: 220px;">
+            <div class="widget-title">Egresos del Mes</div>
+            <div class="widget-value">--</div>
+          </div>
+          <div class="widget" id="saldo-caja" style="min-width: 220px;">
+            <div class="widget-title">Saldo de Caja</div>
+            <div class="widget-value">--</div>
+          </div>
+          <div class="widget" id="mant-pend" style="min-width: 220px; white-space: normal; text-align: center;">
+            <div class="widget-title">Mantenciones<br>Pendientes</div>
+            <div class="widget-value">--</div>
+          </div>
+        </div>
+        <div style="background:#fff; border-radius:14px; padding:28px 24px; box-shadow:0 2px 8px #d0e3f140; margin-bottom:32px;">
+          <h3 style="color:#2176ae;">Ingresos vs Egresos (últimos 12 meses)</h3>
+          <canvas id="chart-ing-egre" height="80"></canvas>
+        </div>
+        <div id="dashboard-morosidad"></div>
       </div>
 
       <!-- RESIDENTES -->
       <div id="residentes-section" style="display:none;">
-        <!-- (Residentes content as before) -->
-      </div>
-
-      <!-- Gastos Comunes -->
-      <div id="gastos-comunes-section" style="display:none;">
-        <div class="section-title">Gastos Comunes</div>
-
-        <div class="residente-actions" style="margin-bottom: 24px;">
+        <div class="section-title">Residentes</div>
+        <div class="residente-actions">
           <input
             type="text"
-            id="busqueda-gastos"
+            id="busqueda-residente"
             placeholder="Buscar por nombre, RUT o parcela..."
-            oninput="filtrarGastosComunes()"
-            aria-label="Buscar gastos comunes"
-            style="width: 320px;"
+            oninput="filtrarResidentes()"
+            aria-label="Buscar residentes"
           />
-          <button class="btn" onclick="abrirModalGasto()">Agregar Gasto Común</button>
+          <button class="btn" onclick="abrirModalResidente()">Agregar Residente</button>
         </div>
-
-        <table class="residente-table" id="tabla-gastos" aria-label="Tabla de gastos comunes">
+        <table class="residente-table" id="tabla-residentes" aria-label="Tabla de residentes">
           <thead>
             <tr>
-              <th style="width: 20%;">Nombre Residente</th>
+              <th style="width: 22%;">Nombre Completo</th>
               <th style="width: 14%;">RUT</th>
-              <th style="width: 10%;">N° Parcela</th>
-              <th style="width: 15%;">Fecha Pago</th>
-              <th style="width: 15%;">Monto</th>
-              <th style="width: 10%;">Interés (%)</th>
-              <th style="width: 10%;">Multa (%)</th>
-              <th style="width: 10%;">Total a Pagar</th>
+              <th style="width: 8%;">N° Parcela</th>
+              <th style="width: 18%;">Dirección</th>
+              <th style="width: 15%;">Email</th>
+              <th style="width: 12%;">Teléfono</th>
+              <th style="width: 13%;">Estado</th>
+              <th style="width: 10%;">Gasto Común</th>
               <th style="width: 10%;">Acciones</th>
             </tr>
           </thead>
-          <tbody id="tbody-gastos"></tbody>
+          <tbody id="tbody-residentes"></tbody>
         </table>
+      </div>
 
-        <!-- Modal Agregar/Editar Gasto Común -->
-        <div id="modal-gasto-bg" class="modal-bg" style="display:none;" role="dialog" aria-modal="true" aria-labelledby="modal-gasto-titulo">
-          <div class="modal">
-            <button class="close-modal" onclick="cerrarModalGasto()" aria-label="Cerrar">&times;</button>
-            <h3 id="modal-gasto-titulo">Agregar Gasto Común</h3>
-            <form id="form-gasto" onsubmit="guardarGasto(event)">
-              <input type="hidden" id="gasto-id" />
-              <label for="gasto-residente">Nombre Residente</label>
-              <input type="text" id="gasto-residente" required autocomplete="off" />
-              <label for="gasto-rut">RUT</label>
-              <input type="text" id="gasto-rut" required />
-              <label for="gasto-parcela">N° Parcela</label>
-              <input type="number" id="gasto-parcela" required />
-              <label for="gasto-fecha">Fecha Pago</label>
-              <input type="date" id="gasto-fecha" required />
-              <label for="gasto-monto">Monto</label>
-              <input type="number" id="gasto-monto" min="0" required />
-              <label for="gasto-interes">Interés (%)</label>
-              <input type="number" id="gasto-interes" min="0" step="0.01" value="0" required />
-              <label for="gasto-multa">Multa (%)</label>
-              <input type="number" id="gasto-multa" min="0" step="0.01" value="0" required />
-              <label for="gasto-total">Total a Pagar</label>
-              <input type="number" id="gasto-total" readonly />
-              <button class="btn" type="submit">Guardar</button>
-            </form>
-          </div>
+      <!-- Modal Agregar/Editar Residente -->
+      <div id="modal-residente-bg" class="modal-bg" style="display:none;" role="dialog" aria-modal="true" aria-labelledby="modal-titulo">
+        <div class="modal">
+          <button class="close-modal" onclick="cerrarModalResidente()" aria-label="Cerrar">&times;</button>
+          <h3 id="modal-titulo">Agregar Residente</h3>
+          <form id="form-residente" onsubmit="guardarResidente(event)">
+            <input type="hidden" id="residente-id" />
+            <label for="res-nombre">Nombre Completo</label>
+            <input type="text" id="res-nombre" required />
+            <label for="res-rut">RUT</label>
+            <input type="text" id="res-rut" required />
+            <label for="res-parcela">N° Parcela</label>
+            <input type="number" id="res-parcela" required />
+            <label for="res-direccion">Dirección</label>
+            <input type="text" id="res-direccion" required />
+            <label for="res-email">Email</label>
+            <input type="email" id="res-email" required />
+            <label for="res-telefono">Teléfono</label>
+            <input type="text" id="res-telefono" required />
+            <label for="res-estado">Estado</label>
+            <select id="res-estado" required>
+              <option value="Activo">Activo</option>
+              <option value="Moroso">Moroso</option>
+              <option value="Inactivo">Inactivo</option>
+            </select>
+            <label for="res-gasto">Gasto Común</label>
+            <input type="number" id="res-gasto" required />
+            <button class="btn" type="submit">Guardar</button>
+          </form>
         </div>
       </div>
     </div>
   </div>
 
   <script>
-    // --- (Funciones previas: initializeGapiClient, handleCredentialResponse, parseJwt, showSection, showGastosComunes, cargarDashboard, cargarResidentes, etc.) ---
-    // Solo agregamos las funciones para Gastos Comunes y la integración con navegación
+    const CLIENT_ID = '997872453031-5o8s2o6v3qt722fb3p51a2r7bo24ncee.apps.googleusercontent.com';
+    const API_KEY = 'AIzaSyA4nUkMycf_CHZE7TaBBD_WUyWMvSXUwoU';
+    const SPREADSHEET_ID = '1bFo5dBC3HM0xupginTBe-hrrUNgkiuUn4fkXXzHide8';
+    const SCOPES =
+      'https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/drive https://www.googleapis.com/auth/gmail.send';
+    let tokenClient,
+      accessToken = null,
+      currentUserEmail = '';
 
-    // Variables para almacenar gastos comunes
-    let gastosComunesData = [];
-
-    // Filtrar gastos comunes
-    function filtrarGastosComunes() {
-      const filtro = document.getElementById('busqueda-gastos').value.trim().toLowerCase();
-      const tbody = document.getElementById('tbody-gastos');
-      tbody.innerHTML = '';
-      gastosComunesData
-        .filter(gasto => 
-          gasto.nombre.toLowerCase().includes(filtro) ||
-          gasto.rut.toLowerCase().includes(filtro) ||
-          String(gasto.parcela).includes(filtro)
-        )
-        .forEach(gasto => {
-          tbody.innerHTML += `
-            <tr>
-              <td>${gasto.nombre}</td>
-              <td>${gasto.rut}</td>
-              <td>${gasto.parcela}</td>
-              <td>${gasto.fecha}</td>
-              <td>$${Number(gasto.monto).toLocaleString('es-CL')}</td>
-              <td>${gasto.interes}%</td>
-              <td>${gasto.multa}%</td>
-              <td>$${Number(gasto.total).toLocaleString('es-CL')}</td>
-              <td>
-                <button class="acciones-btn" title="Editar" onclick="abrirModalGasto('${gasto.id}')">&#9998;</button>
-                <button class="acciones-btn" title="Eliminar" onclick="eliminarGasto('${gasto.id}')">&#128465;</button>
-              </td>
-            </tr>
-          `;
-        });
+    async function initializeGapiClient() {
+      gapi.load('client', async () => {
+        try {
+          await gapi.client.init({
+            apiKey: API_KEY,
+            discoveryDocs: [
+              'https://sheets.googleapis.com/$discovery/rest?version=v4',
+              'https://www.googleapis.com/discovery/v1/apis/drive/v3/rest',
+              'https://gmail.googleapis.com/$discovery/rest?version=v1',
+            ],
+          });
+          tokenClient = google.accounts.oauth2.initTokenClient({
+            client_id: CLIENT_ID,
+            scope: SCOPES,
+            callback: (tokenResponse) => {
+              if (tokenResponse && tokenResponse.access_token) {
+                accessToken = tokenResponse.access_token;
+                gapi.client.setToken({ access_token: accessToken });
+                document.getElementById('app-section').style.display = 'block';
+                document.getElementById('login-section').style.display = 'none';
+                cargarDashboard();
+                cargarResidentes();
+              }
+            },
+          });
+        } catch (error) {
+          document.getElementById('login-error').textContent =
+            'Error al inicializar la API de Google: ' + error.message;
+          document.getElementById('login-error').style.display = 'block';
+          document.getElementById('login-loading').style.display = 'none';
+        }
+      });
     }
 
-    // Cargar gastos comunes desde Google Sheets
-    async function cargarGastosComunes() {
+    function handleCredentialResponse(response) {
+      document.getElementById('login-loading').style.display = 'block';
+      document.getElementById('login-error').style.display = 'none';
       try {
-        const res = await gapi.client.sheets.spreadsheets.values.get({
-          spreadsheetId: SPREADSHEET_ID,
-          range: 'Pagos_GC!A2:Q',
-        });
-        const rows = res.result.values || [];
-        gastosComunesData = rows.map(row => ({
-          id: row[0],
-          nombre: row[1],
-          rut: row[2],
-          parcela: row[3],
-          fecha: row[4],
-          monto: Number(row[6]) || 0,
-          interes: Number(row[7]) || 0,
-          multa: Number(row[8]) || 0,
-          total: Number(row[9]) || 0
-        }));
-        filtrarGastosComunes();
+        const payload = parseJwt(response.credential);
+        currentUserEmail = payload.email;
+        if (currentUserEmail !== 'losmollestunquen@gmail.com') {
+          document.getElementById('login-error').textContent = 'Solo el administrador autorizado puede ingresar.';
+          document.getElementById('login-error').style.display = 'block';
+          document.getElementById('login-loading').style.display = 'none';
+          return;
+        }
+        if (tokenClient) {
+          tokenClient.requestAccessToken();
+        } else {
+          document.getElementById('login-error').textContent = 'Error: Cliente de token no inicializado.';
+          document.getElementById('login-error').style.display = 'block';
+          document.getElementById('login-loading').style.display = 'none';
+        }
       } catch (error) {
-        console.error('Error al cargar gastos comunes:', error);
+        document.getElementById('login-error').textContent = 'Error al procesar credenciales: ' + error.message;
+        document.getElementById('login-error').style.display = 'block';
+        document.getElementById('login-loading').style.display = 'none';
       }
     }
 
-    // Abrir modal gastos comunes
-    function abrirModalGasto(id = null) {
-      document.getElementById('modal-gasto-bg').style.display = 'flex';
+    function parseJwt(token) {
+      const base64Url = token.split('.')[1];
+      const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+      const jsonPayload = decodeURIComponent(
+        atob(base64)
+          .split('')
+          .map(function (c) {
+            return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+          })
+          .join('')
+      );
+      return JSON.parse(jsonPayload);
+    }
+
+    function showSection(sec) {
+      document.querySelectorAll('.nav-link').forEach((link) => link.classList.remove('active'));
+      document.getElementById('dashboard-section').style.display = 'none';
+      document.getElementById('residentes-section').style.display = 'none';
+      if (sec === 'dashboard') {
+        document.querySelectorAll('.nav-link')[0].classList.add('active');
+        document.getElementById('dashboard-section').style.display = '';
+        cargarDashboard();
+      } else if (sec === 'residentes') {
+        document.querySelectorAll('.nav-link')[1].classList.add('active');
+        document.getElementById('residentes-section').style.display = '';
+        cargarResidentes();
+      }
+    }
+
+    async function cargarDashboard() {
+      const widgets = [
+        { id: 'res-activos', label: 'Residentes Activos', value: '--' },
+        { id: 'ing-mes', label: 'Ingresos del Mes', value: '--' },
+        { id: 'egre-mes', label: 'Egresos del Mes', value: '--' },
+        { id: 'saldo-caja', label: 'Saldo de Caja', value: '--' },
+        { id: 'mant-pend', label: 'Mantenciones<br>Pendientes', value: '--' },
+      ];
+      let residentes = await gapi.client.sheets.spreadsheets.values.get({
+        spreadsheetId: SPREADSHEET_ID,
+        range: 'Residentes!A2:I',
+      });
+      const residentesData = residentes.result.values || [];
+      widgets[0].value = residentesData.filter((row) => row[7] === 'Activo').length;
+      const now = new Date();
+      const mes = (now.getMonth() + 1).toString().padStart(2, '0');
+      const año = now.getFullYear();
+      let pagos = await gapi.client.sheets.spreadsheets.values.get({
+        spreadsheetId: SPREADSHEET_ID,
+        range: 'Pagos_GC!A2:Q',
+      });
+      const pagosData = pagos.result.values || [];
+      const pagosMes = pagosData.filter((row) => (row[4] || '').startsWith(`${año}-${mes}`));
+      const totalPagado = pagosMes.reduce((sum, row) => sum + (parseInt(row[6]) || 0), 0);
+      widgets[1].value = totalPagado > 0 ? '$' + totalPagado.toLocaleString('es-CL') : '--';
+      let egresos = await gapi.client.sheets.spreadsheets.values.get({
+        spreadsheetId: SPREADSHEET_ID,
+        range: 'Egresos!A2:G',
+      });
+      const egresosData = egresos.result.values || [];
+      const egresosMes = egresosData.filter((row) => (row[1] || '').startsWith(`${año}-${mes}`));
+      const totalEgresos = egresosMes.reduce((sum, row) => sum + (parseInt(row[5]) || 0), 0);
+      widgets[2].value = totalEgresos > 0 ? '$' + totalEgresos.toLocaleString('es-CL') : '--';
+      const totalPagadoAll = pagosData.reduce((sum, row) => sum + (parseInt(row[6]) || 0), 0);
+      const totalEgresosAll = egresosData.reduce((sum, row) => sum + (parseInt(row[5]) || 0), 0);
+      widgets[3].value = totalPagadoAll || totalEgresosAll ? '$' + (totalPagadoAll - totalEgresosAll).toLocaleString('es-CL') : '--';
+      let mant = await gapi.client.sheets.spreadsheets.values.get({
+        spreadsheetId: SPREADSHEET_ID,
+        range: 'Mantenciones!A2:H',
+      });
+      const mantData = mant.result.values || [];
+      widgets[4].value = mantData.filter((row) => row[5] === 'Pendiente' || row[5] === 'Urgente').length;
+      widgets.forEach((w) => {
+        const el = document.getElementById(w.id);
+        if (el) el.querySelector('.widget-value').innerHTML = w.value;
+      });
+
+      // Morosidad
+      const morosos = residentesData.filter((row) => row[7] === 'Moroso');
+      const morososList = morosos.map((row) => row[3]).join(', ');
+      let deudaTotal = 0;
+      morosos.forEach((moroso) => {
+        const pagosMoroso = pagosData.filter((row) => row[1] === moroso[0]);
+        pagosMoroso.forEach((pm) => {
+          if (parseInt(pm[12]) > 0) deudaTotal += parseInt(pm[12]);
+        });
+      });
+      document.getElementById('dashboard-morosidad').innerHTML = `
+        <h4 style="color:#2176ae;margin-bottom:8px;">Morosidad</h4>
+        <div>Cantidad de morosos: <b>${morosos.length}</b></div>
+        <div>Parcelas morosas: <span>${morososList}</span></div>
+        <div>Total deuda: <b>$${deudaTotal.toLocaleString('es-CL')}</b></div>
+      `;
+
+      // Gráfico con eje Y corregido y etiquetas en pesos chilenos
+      let ctx = document.getElementById('chart-ing-egre').getContext('2d');
+      if (window.myChart) window.myChart.destroy();
+      let ingresosArr = [],
+        egresosArr = [],
+        labelsArr = [];
+      for (let i = 11; i >= 0; i--) {
+        let fecha = new Date(now.getFullYear(), now.getMonth() - i, 1);
+        let label =
+          fecha
+            .toLocaleString('es-CL', { month: 'short' })
+            .charAt(0)
+            .toUpperCase() + fecha.toLocaleString('es-CL', { month: 'short' }).slice(1);
+        labelsArr.push(label);
+        let periodo = `${fecha.getFullYear()}-${(fecha.getMonth() + 1).toString().padStart(2, '0')}`;
+        let pag = pagosData.filter((row) => (row[4] || '').startsWith(periodo));
+        let eg = egresosData.filter((row) => (row[1] || '').startsWith(periodo));
+        ingresosArr.push(pag.reduce((sum, row) => sum + (parseInt(row[6]) || 0), 0));
+        egresosArr.push(eg.reduce((sum, row) => sum + (parseInt(row[5]) || 0), 0));
+      }
+      let maxVal = Math.max(...ingresosArr, ...egresosArr, 100000);
+      let stepSize = 100000;
+      if (maxVal > 1000000 && maxVal <= 5000000) stepSize = 500000;
+      else if (maxVal > 5000000 && maxVal <= 10000000) stepSize = 1000000;
+      else if (maxVal > 10000000) stepSize = 5000000;
+      window.myChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: labelsArr,
+          datasets: [
+            { label: 'Ingresos', data: ingresosArr, backgroundColor: '#2d7f5e' },
+            { label: 'Egresos', data: egresosArr, backgroundColor: '#e67e22' },
+          ],
+        },
+        options: {
+          plugins: { legend: { position: 'bottom' } },
+          scales: {
+            y: {
+              beginAtZero: true,
+              stepSize: stepSize,
+              max: Math.ceil(maxVal / stepSize) * stepSize,
+              ticks: {
+                callback: function (value) {
+                  return '$' + value.toLocaleString('es-CL');
+                },
+              },
+            },
+          },
+        },
+      });
+    }
+
+    // Residentes: carga y registro real
+    let residentesDataCache = [];
+    async function cargarResidentes() {
+      let res = await gapi.client.sheets.spreadsheets.values.get({
+        spreadsheetId: SPREADSHEET_ID,
+        range: 'Residentes!A2:I',
+      });
+      residentesDataCache = res.result.values || [];
+      renderResidentes();
+    }
+    function renderResidentes() {
+      const filtro = document.getElementById('busqueda-residente').value.trim().toLowerCase();
+      const tbody = document.getElementById('tbody-residentes');
+      tbody.innerHTML = '';
+      residentesDataCache
+        .filter((row) => {
+          return (
+            row[1]?.toLowerCase().includes(filtro) ||
+            row[2]?.toLowerCase().includes(filtro) ||
+            String(row[3] || '').includes(filtro)
+          );
+        })
+        .forEach((row) => {
+          let estado = row[7] || '';
+          let estadoClass =
+            estado === 'Activo' ? 'estado-activo' : estado === 'Moroso' ? 'estado-moroso' : 'estado-inactivo';
+          tbody.innerHTML += `
+          <tr>
+            <td>${row[1] || ''}</td>
+            <td>${row[2] || ''}</td>
+            <td>${row[3] || ''}</td>
+            <td>${row[4] || ''}</td>
+            <td>${row[5] || ''}</td>
+            <td>${row[6] || ''}</td>
+            <td><span class="estado-chip ${estadoClass}">${estado}</span></td>
+            <td>${row[8] ? '$' + Number(row[8]).toLocaleString('es-CL') : ''}</td>
+            <td>
+              <button class="acciones-btn" title="Editar" onclick="abrirModalResidente('${row[0]}')">&#9998;</button>
+              <button class="acciones-btn" title="Eliminar" onclick="eliminarResidente('${row[0]}')">&#128465;</button>
+            </td>
+          </tr>
+        `;
+        });
+    }
+    function filtrarResidentes() {
+      renderResidentes();
+    }
+
+    function abrirModalResidente(id = null) {
+      document.getElementById('modal-residente-bg').style.display = 'flex';
       if (id) {
-        const gasto = gastosComunesData.find(g => g.id === id);
-        if (!gasto) return;
-        document.getElementById('modal-gasto-titulo').innerText = 'Editar Gasto Común';
-        document.getElementById('gasto-id').value = gasto.id;
-        document.getElementById('gasto-residente').value = gasto.nombre;
-        document.getElementById('gasto-rut').value = gasto.rut;
-        document.getElementById('gasto-parcela').value = gasto.parcela;
-        document.getElementById('gasto-fecha').value = gasto.fecha;
-        document.getElementById('gasto-monto').value = gasto.monto;
-        document.getElementById('gasto-interes').value = gasto.interes;
-        document.getElementById('gasto-multa').value = gasto.multa;
-        document.getElementById('gasto-total').value = gasto.total;
+        let row = residentesDataCache.find((r) => r[0] === id);
+        document.getElementById('modal-titulo').innerText = 'Editar Residente';
+        document.getElementById('residente-id').value = row[0];
+        document.getElementById('res-nombre').value = row[1] || '';
+        document.getElementById('res-rut').value = row[2] || '';
+        document.getElementById('res-parcela').value = row[3] || '';
+        document.getElementById('res-direccion').value = row[4] || '';
+        document.getElementById('res-email').value = row[5] || '';
+        document.getElementById('res-telefono').value = row[6] || '';
+        document.getElementById('res-estado').value = row[7] || 'Activo';
+        document.getElementById('res-gasto').value = row[8] || '';
       } else {
-        document.getElementById('modal-gasto-titulo').innerText = 'Agregar Gasto Común';
-        document.getElementById('form-gasto').reset();
-        document.getElementById('gasto-id').value = '';
-        document.getElementById('gasto-total').value = '';
+        document.getElementById('modal-titulo').innerText = 'Agregar Residente';
+        document.getElementById('form-residente').reset();
+        document.getElementById('residente-id').value = '';
       }
     }
-
-    // Cerrar modal gastos comunes
-    function cerrarModalGasto() {
-      document.getElementById('modal-gasto-bg').style.display = 'none';
+    function cerrarModalResidente() {
+      document.getElementById('modal-residente-bg').style.display = 'none';
     }
-
-    // Calcular total a pagar con interés y multa
-    function calcularTotal() {
-      const monto = Number(document.getElementById('gasto-monto').value) || 0;
-      const interes = Number(document.getElementById('gasto-interes').value) || 0;
-      const multa = Number(document.getElementById('gasto-multa').value) || 0;
-      const total = monto + (monto * interes / 100) + (monto * multa / 100);
-      document.getElementById('gasto-total').value = total.toFixed(0);
-    }
-
-    document.getElementById('gasto-monto').addEventListener('input', calcularTotal);
-    document.getElementById('gasto-interes').addEventListener('input', calcularTotal);
-    document.getElementById('gasto-multa').addEventListener('input', calcularTotal);
-
-    // Guardar gasto común
-    async function guardarGasto(event) {
-      event.preventDefault();
-      const id = document.getElementById('gasto-id').value || Date.now().toString();
-      const nombre = document.getElementById('gasto-residente').value.trim();
-      const rut = document.getElementById('gasto-rut').value.trim();
-      const parcela = document.getElementById('gasto-parcela').value.trim();
-      const fecha = document.getElementById('gasto-fecha').value;
-      const monto = Number(document.getElementById('gasto-monto').value);
-      const interes = Number(document.getElementById('gasto-interes').value);
-      const multa = Number(document.getElementById('gasto-multa').value);
-      const total = Number(document.getElementById('gasto-total').value);
-
-      if (!nombre || !rut || !parcela || !fecha || monto <= 0) {
-        alert('Por favor, complete todos los campos correctamente.');
-        return;
-      }
-
-      const fila = [id, nombre, rut, parcela, fecha, '', monto, interes, multa, total];
-
-      try {
-        if (document.getElementById('gasto-id').value) {
-          const idx = gastosComunesData.findIndex(g => g.id === id);
-          if (idx === -1) throw new Error('Gasto no encontrado para editar.');
+    async function guardarResidente(e) {
+      e.preventDefault();
+      const id = document.getElementById('residente-id').value;
+      const values = [
+        id || Date.now().toString(),
+        document.getElementById('res-nombre').value,
+        document.getElementById('res-rut').value,
+        document.getElementById('res-parcela').value,
+        document.getElementById('res-direccion').value,
+        document.getElementById('res-email').value,
+        document.getElementById('res-telefono').value,
+        document.getElementById('res-estado').value,
+        document.getElementById('res-gasto').value,
+      ];
+      if (id) {
+        let idx = residentesDataCache.findIndex((r) => r[0] === id);
+        if (idx > -1) {
           await gapi.client.sheets.spreadsheets.values.update({
             spreadsheetId: SPREADSHEET_ID,
-            range: `Pagos_GC!A${idx + 2}:J${idx + 2}`,
+            range: `Residentes!A${idx + 2}:I${idx + 2}`,
             valueInputOption: 'RAW',
-            values: [fila],
-          });
-        } else {
-          await gapi.client.sheets.spreadsheets.values.append({
-            spreadsheetId: SPREADSHEET_ID,
-            range: 'Pagos_GC!A2:J',
-            valueInputOption: 'RAW',
-            insertDataOption: 'INSERT_ROWS',
-            values: [fila],
+            values: [values],
           });
         }
-        cerrarModalGasto();
-        cargarGastosComunes();
-      } catch (error) {
-        alert('Error al guardar el gasto común: ' + error.message);
+      } else {
+        await gapi.client.sheets.spreadsheets.values.append({
+          spreadsheetId: SPREADSHEET_ID,
+          range: 'Residentes!A2:I',
+          valueInputOption: 'RAW',
+          insertDataOption: 'INSERT_ROWS',
+          values: [values],
+        });
       }
+      cerrarModalResidente();
+      cargarResidentes();
     }
-
-    // Eliminar gasto común
-    async function eliminarGasto(id) {
-      if (!confirm('¿Está seguro de que desea eliminar este gasto común?')) return;
-      try {
+    async function eliminarResidente(id) {
+      if (!confirm('¿Está seguro de que desea eliminar a este residente?')) return;
+      let idx = residentesDataCache.findIndex((r) => r[0] === id);
+      if (idx > -1) {
         const spreadsheet = await gapi.client.sheets.spreadsheets.get({ spreadsheetId: SPREADSHEET_ID });
-        const sheet = spreadsheet.result.sheets.find(s => s.properties.title === 'Pagos_GC');
+        const sheet = spreadsheet.result.sheets.find((s) => s.properties.title === 'Residentes');
         const sheetId = sheet ? sheet.properties.sheetId : 0;
-        const idx = gastosComunesData.findIndex(g => g.id === id);
-        if (idx === -1) throw new Error('Gasto común no encontrado.');
         await gapi.client.sheets.spreadsheets.batchUpdate({
           spreadsheetId: SPREADSHEET_ID,
           requests: [
@@ -682,13 +876,9 @@
             },
           ],
         });
-        cargarGastosComunes();
-      } catch (error) {
-        alert('Error al eliminar el gasto común: ' + error.message);
+        cargarResidentes();
       }
     }
-
-    // --- (Aquí van las funciones previas: initializeGapiClient, handleCredentialResponse, parseJwt, cargarDashboard, cargarResidentes, etc.) ---
 
     window.onload = function () {
       initializeGapiClient();
@@ -708,5 +898,279 @@
       });
     };
   </script>
+  <!-- Módulo Gastos Comunes -->
+<div id="gastos-comunes-section" style="display:none;">
+  <div class="section-title">Gastos Comunes</div>
+
+  <div class="residente-actions" style="margin-bottom: 24px;">
+    <input
+      type="text"
+      id="busqueda-gastos"
+      placeholder="Buscar por nombre, RUT o parcela..."
+      oninput="filtrarGastosComunes()"
+      aria-label="Buscar gastos comunes"
+      style="width: 320px;"
+    />
+    <button class="btn" onclick="abrirModalGasto()">Agregar Gasto Común</button>
+  </div>
+
+  <table class="residente-table" id="tabla-gastos" aria-label="Tabla de gastos comunes">
+    <thead>
+      <tr>
+        <th style="width: 20%;">Nombre Residente</th>
+        <th style="width: 14%;">RUT</th>
+        <th style="width: 10%;">N° Parcela</th>
+        <th style="width: 15%;">Fecha Pago</th>
+        <th style="width: 15%;">Monto</th>
+        <th style="width: 10%;">Interés (%)</th>
+        <th style="width: 10%;">Multa (%)</th>
+        <th style="width: 10%;">Total a Pagar</th>
+        <th style="width: 10%;">Acciones</th>
+      </tr>
+    </thead>
+    <tbody id="tbody-gastos"></tbody>
+  </table>
+
+  <!-- Modal Agregar/Editar Gasto Común -->
+  <div id="modal-gasto-bg" class="modal-bg" style="display:none;" role="dialog" aria-modal="true" aria-labelledby="modal-gasto-titulo">
+    <div class="modal">
+      <button class="close-modal" onclick="cerrarModalGasto()" aria-label="Cerrar">&times;</button>
+      <h3 id="modal-gasto-titulo">Agregar Gasto Común</h3>
+      <form id="form-gasto" onsubmit="guardarGasto(event)">
+        <input type="hidden" id="gasto-id" />
+        <label for="gasto-residente">Nombre Residente</label>
+        <input type="text" id="gasto-residente" required autocomplete="off" />
+        <label for="gasto-rut">RUT</label>
+        <input type="text" id="gasto-rut" required />
+        <label for="gasto-parcela">N° Parcela</label>
+        <input type="number" id="gasto-parcela" required />
+        <label for="gasto-fecha">Fecha Pago</label>
+        <input type="date" id="gasto-fecha" required />
+        <label for="gasto-monto">Monto</label>
+        <input type="number" id="gasto-monto" min="0" required />
+        <label for="gasto-interes">Interés (%)</label>
+        <input type="number" id="gasto-interes" min="0" step="0.01" value="0" required />
+        <label for="gasto-multa">Multa (%)</label>
+        <input type="number" id="gasto-multa" min="0" step="0.01" value="0" required />
+        <label for="gasto-total">Total a Pagar</label>
+        <input type="number" id="gasto-total" readonly />
+        <button class="btn" type="submit">Guardar</button>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+  // Variables para almacenar gastos comunes
+  let gastosComunesData = [];
+
+  // Función para mostrar el módulo gastos comunes
+  function showGastosComunes() {
+    document.getElementById('dashboard-section').style.display = 'none';
+    document.getElementById('residentes-section').style.display = 'none';
+    document.getElementById('gastos-comunes-section').style.display = 'block';
+    cargarGastosComunes();
+  }
+
+  // Filtrar gastos comunes por nombre, RUT o parcela
+  function filtrarGastosComunes() {
+    const filtro = document.getElementById('busqueda-gastos').value.trim().toLowerCase();
+    const tbody = document.getElementById('tbody-gastos');
+    tbody.innerHTML = '';
+    gastosComunesData
+      .filter(gasto => 
+        gasto.nombre.toLowerCase().includes(filtro) ||
+        gasto.rut.toLowerCase().includes(filtro) ||
+        String(gasto.parcela).includes(filtro)
+      )
+      .forEach(gasto => {
+        tbody.innerHTML += `
+          <tr>
+            <td>${gasto.nombre}</td>
+            <td>${gasto.rut}</td>
+            <td>${gasto.parcela}</td>
+            <td>${gasto.fecha}</td>
+            <td>$${Number(gasto.monto).toLocaleString('es-CL')}</td>
+            <td>${gasto.interes}%</td>
+            <td>${gasto.multa}%</td>
+            <td>$${Number(gasto.total).toLocaleString('es-CL')}</td>
+            <td>
+              <button class="acciones-btn" title="Editar" onclick="abrirModalGasto('${gasto.id}')">&#9998;</button>
+              <button class="acciones-btn" title="Eliminar" onclick="eliminarGasto('${gasto.id}')">&#128465;</button>
+            </td>
+          </tr>
+        `;
+      });
+  }
+
+  // Cargar gastos comunes desde Google Sheets
+  async function cargarGastosComunes() {
+    try {
+      const res = await gapi.client.sheets.spreadsheets.values.get({
+        spreadsheetId: SPREADSHEET_ID,
+        range: 'Pagos_GC!A2:Q',
+      });
+      const rows = res.result.values || [];
+      gastosComunesData = rows.map(row => {
+        // Asumiendo columnas: ID, nombre, rut, parcela, fecha, monto, interes, multa, total
+        return {
+          id: row[0],
+          nombre: row[1],
+          rut: row[2],
+          parcela: row[3],
+          fecha: row[4],
+          monto: Number(row[6]) || 0,
+          interes: Number(row[7]) || 0,
+          multa: Number(row[8]) || 0,
+          total: Number(row[9]) || 0
+        };
+      });
+      filtrarGastosComunes();
+    } catch (error) {
+      console.error('Error al cargar gastos comunes:', error);
+    }
+  }
+
+  // Abrir modal para agregar o editar gasto común
+  function abrirModalGasto(id = null) {
+    document.getElementById('modal-gasto-bg').style.display = 'flex';
+    if (id) {
+      const gasto = gastosComunesData.find(g => g.id === id);
+      if (!gasto) return;
+      document.getElementById('modal-gasto-titulo').innerText = 'Editar Gasto Común';
+      document.getElementById('gasto-id').value = gasto.id;
+      document.getElementById('gasto-residente').value = gasto.nombre;
+      document.getElementById('gasto-rut').value = gasto.rut;
+      document.getElementById('gasto-parcela').value = gasto.parcela;
+      document.getElementById('gasto-fecha').value = gasto.fecha;
+      document.getElementById('gasto-monto').value = gasto.monto;
+      document.getElementById('gasto-interes').value = gasto.interes;
+      document.getElementById('gasto-multa').value = gasto.multa;
+      document.getElementById('gasto-total').value = gasto.total;
+    } else {
+      document.getElementById('modal-gasto-titulo').innerText = 'Agregar Gasto Común';
+      document.getElementById('form-gasto').reset();
+      document.getElementById('gasto-id').value = '';
+      document.getElementById('gasto-total').value = '';
+    }
+  }
+
+  // Cerrar modal gastos comunes
+  function cerrarModalGasto() {
+    document.getElementById('modal-gasto-bg').style.display = 'none';
+  }
+
+  // Calcular total a pagar con interés y multa
+  function calcularTotal() {
+    const monto = Number(document.getElementById('gasto-monto').value) || 0;
+    const interes = Number(document.getElementById('gasto-interes').value) || 0;
+    const multa = Number(document.getElementById('gasto-multa').value) || 0;
+    const total = monto + (monto * interes / 100) + (monto * multa / 100);
+    document.getElementById('gasto-total').value = total.toFixed(0);
+  }
+
+  // Escuchar cambios para recalcular total automáticamente
+  document.getElementById('gasto-monto')?.addEventListener('input', calcularTotal);
+  document.getElementById('gasto-interes')?.addEventListener('input', calcularTotal);
+  document.getElementById('gasto-multa')?.addEventListener('input', calcularTotal);
+
+  // Guardar gasto común (agregar o editar)
+  async function guardarGasto(event) {
+    event.preventDefault();
+    const id = document.getElementById('gasto-id').value || Date.now().toString();
+    const nombre = document.getElementById('gasto-residente').value.trim();
+    const rut = document.getElementById('gasto-rut').value.trim();
+    const parcela = document.getElementById('gasto-parcela').value.trim();
+    const fecha = document.getElementById('gasto-fecha').value;
+    const monto = Number(document.getElementById('gasto-monto').value);
+    const interes = Number(document.getElementById('gasto-interes').value);
+    const multa = Number(document.getElementById('gasto-multa').value);
+    const total = Number(document.getElementById('gasto-total').value);
+
+    // Validar campos básicos
+    if (!nombre || !rut || !parcela || !fecha || monto <= 0) {
+      alert('Por favor, complete todos los campos correctamente.');
+      return;
+    }
+
+    // Preparar fila para Google Sheets (ajustar columnas según tu hoja)
+    const fila = [id, nombre, rut, parcela, fecha, '', monto, interes, multa, total];
+
+    try {
+      if (document.getElementById('gasto-id').value) {
+        // Editar: buscar índice y actualizar fila
+        const idx = gastosComunesData.findIndex(g => g.id === id);
+        if (idx === -1) throw new Error('Gasto no encontrado para editar.');
+        await gapi.client.sheets.spreadsheets.values.update({
+          spreadsheetId: SPREADSHEET_ID,
+          range: `Pagos_GC!A${idx + 2}:J${idx + 2}`,
+          valueInputOption: 'RAW',
+          values: [fila],
+        });
+      } else {
+        // Agregar nuevo
+        await gapi.client.sheets.spreadsheets.values.append({
+          spreadsheetId: SPREADSHEET_ID,
+          range: 'Pagos_GC!A2:J',
+          valueInputOption: 'RAW',
+          insertDataOption: 'INSERT_ROWS',
+          values: [fila],
+        });
+      }
+      cerrarModalGasto();
+      cargarGastosComunes();
+    } catch (error) {
+      alert('Error al guardar el gasto común: ' + error.message);
+    }
+  }
+
+  // Eliminar gasto común
+  async function eliminarGasto(id) {
+    if (!confirm('¿Está seguro de que desea eliminar este gasto común?')) return;
+    try {
+      const spreadsheet = await gapi.client.sheets.spreadsheets.get({ spreadsheetId: SPREADSHEET_ID });
+      const sheet = spreadsheet.result.sheets.find(s => s.properties.title === 'Pagos_GC');
+      const sheetId = sheet ? sheet.properties.sheetId : 0;
+      const idx = gastosComunesData.findIndex(g => g.id === id);
+      if (idx === -1) throw new Error('Gasto común no encontrado.');
+      await gapi.client.sheets.spreadsheets.batchUpdate({
+        spreadsheetId: SPREADSHEET_ID,
+        requests: [
+          {
+            deleteDimension: {
+              range: {
+                sheetId: sheetId,
+                dimension: 'ROWS',
+                startIndex: idx + 1,
+                endIndex: idx + 2,
+              },
+            },
+          },
+        ],
+      });
+      cargarGastosComunes();
+    } catch (error) {
+      alert('Error al eliminar el gasto común: ' + error.message);
+    }
+  }
+
+  // Integrar módulo en navegación
+  document.querySelector('.sidebar').insertAdjacentHTML('beforeend', `
+    <a class="nav-link" onclick="showGastosComunes()">Gastos Comunes</a>
+  `);
+
+  // Función para mostrar módulo Gastos Comunes
+  function showGastosComunes() {
+    document.getElementById('dashboard-section').style.display = 'none';
+    document.getElementById('residentes-section').style.display = 'none';
+    document.getElementById('gastos-comunes-section').style.display = 'block';
+
+    // Actualizar navegación activa
+    document.querySelectorAll('.nav-link').forEach(link => link.classList.remove('active'));
+    Array.from(document.querySelectorAll('.nav-link')).find(link => link.textContent === 'Gastos Comunes').classList.add('active');
+
+    cargarGastosComunes();
+  }
+</script>
 </body>
 </html>
