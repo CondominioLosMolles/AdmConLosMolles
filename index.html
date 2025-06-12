@@ -44,12 +44,6 @@
       <h2>Condominio Los Molles</h2>
       <p>Inicia sesión con tu cuenta de Google para administrar el sistema.</p>
       <div id="g_id_signin"></div>
-      <div id="g_id_onload" 
-         data-client_id="997872453031-5o8s2o6v3qt722fb3p51a2r7bo24ncee.apps.googleusercontent.com"
-         data-context="signin"
-         data-callback="handleCredentialResponse"
-         data-auto_prompt="false">
-      </div>
       <div class="loading" id="login-loading" style="display:none;">Conectando con Google...</div>
       <div class="error-message" id="login-error" style="display:none;"></div>
     </div>
@@ -70,8 +64,9 @@
     
     let tokenClient;
     let accessToken = null;
-    
-    // Función para inicializar la API de Google
+    let currentUserEmail = "";
+
+    // Inicializar la API de Google
     function initializeGapiClient() {
       gapi.load('client', async () => {
         try {
@@ -83,8 +78,6 @@
               "https://gmail.googleapis.com/$discovery/rest?version=v1"
             ]
           });
-          console.log("GAPI client loaded");
-          
           // Inicializar el cliente de token OAuth2
           tokenClient = google.accounts.oauth2.initTokenClient({
             client_id: CLIENT_ID,
@@ -92,16 +85,10 @@
             callback: (tokenResponse) => {
               if (tokenResponse && tokenResponse.access_token) {
                 accessToken = tokenResponse.access_token;
-                // Configurar el token en gapi.client
                 gapi.client.setToken({access_token: accessToken});
-                console.log("Token de acceso obtenido y configurado");
-                
-                // Aquí puedes cargar el contenido inicial de tu aplicación
                 document.getElementById('app-section').style.display = 'block';
                 document.getElementById('login-section').style.display = 'none';
                 document.getElementById('login-loading').style.display = 'none';
-                
-                // Ejemplo: mostrar información del usuario
                 document.getElementById('user-info').innerHTML = `
                   <h3>Sesión iniciada correctamente</h3>
                   <p>Usuario: ${currentUserEmail}</p>
@@ -112,38 +99,27 @@
             }
           });
         } catch (error) {
-          console.error("Error al inicializar GAPI client:", error);
           document.getElementById('login-error').textContent = 'Error al inicializar la API de Google: ' + error.message;
           document.getElementById('login-error').style.display = 'block';
           document.getElementById('login-loading').style.display = 'none';
         }
       });
     }
-    
-    // Variable para almacenar el email del usuario
-    let currentUserEmail = "";
-    
+
     // Función que maneja la respuesta de autenticación de Google Identity Services
     function handleCredentialResponse(response) {
       document.getElementById('login-loading').style.display = 'block';
       document.getElementById('login-error').style.display = 'none';
-      
       try {
         // Decodificar el token JWT para obtener la información del usuario
         const payload = parseJwt(response.credential);
         currentUserEmail = payload.email;
-        
-        // Verificar que sea el usuario administrador autorizado
         if (currentUserEmail !== "losmollestunquen@gmail.com") {
           document.getElementById('login-error').textContent = 'Solo el administrador autorizado puede ingresar.';
           document.getElementById('login-error').style.display = 'block';
           document.getElementById('login-loading').style.display = 'none';
           return;
         }
-        
-        console.log("Usuario autenticado:", currentUserEmail);
-        
-        // Solicitar token OAuth para acceder a las APIs de Google
         if (tokenClient) {
           tokenClient.requestAccessToken();
         } else {
@@ -152,13 +128,12 @@
           document.getElementById('login-loading').style.display = 'none';
         }
       } catch (error) {
-        console.error("Error al procesar credenciales:", error);
         document.getElementById('login-error').textContent = 'Error al procesar credenciales: ' + error.message;
         document.getElementById('login-error').style.display = 'block';
         document.getElementById('login-loading').style.display = 'none';
       }
     }
-    
+
     // Función para decodificar el token JWT
     function parseJwt(token) {
       const base64Url = token.split('.')[1];
@@ -168,38 +143,30 @@
       }).join(''));
       return JSON.parse(jsonPayload);
     }
-    
+
     // Función para cargar el dashboard (ejemplo)
     function cargarDashboard() {
       // Aquí irían las llamadas a la API de Google Sheets para cargar datos
-      console.log("Cargando dashboard...");
-      // Ejemplo: leer datos de la hoja de cálculo
       gapi.client.sheets.spreadsheets.values.get({
         spreadsheetId: SPREADSHEET_ID,
         range: 'Residentes!A:H'
       }).then(response => {
         const values = response.result.values || [];
-        console.log("Datos de residentes cargados:", values.length);
-        // Aquí procesarías y mostrarías los datos
+        alert("Datos de residentes cargados: " + values.length);
       }).catch(error => {
-        console.error("Error al cargar datos:", error);
+        alert("Error al cargar datos: " + error.message);
       });
     }
-    
+
     // Inicializar todo cuando la página cargue
     window.onload = function() {
-      // Inicializar la API de Google
       initializeGapiClient();
-      
-      // Inicializar el botón de inicio de sesión de Google
       google.accounts.id.initialize({
         client_id: CLIENT_ID,
         callback: handleCredentialResponse,
         auto_select: false,
         cancel_on_tap_outside: true
       });
-      
-      // Renderizar el botón de inicio de sesión
       google.accounts.id.renderButton(
         document.getElementById('g_id_signin'),
         { 
