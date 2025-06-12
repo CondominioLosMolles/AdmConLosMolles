@@ -9,7 +9,7 @@
   <script src="https://accounts.google.com/gsi/client" async defer></script>
   <script src="https://apis.google.com/js/api.js"></script>
   <style>
-    /* Estilo general inspirado en Windows 11: moderno, limpio, con glassmorphism */
+    /* Diseño moderno inspirado en Windows 11 */
     body {
       margin: 0;
       font-family: 'Poppins', Arial, sans-serif;
@@ -107,6 +107,7 @@
       min-height: 100vh;
       background: #f3f4f6;
       transition: margin 0.3s;
+      max-width: 900px;
     }
     @media (max-width: 900px) {
       .sidebar {
@@ -123,6 +124,7 @@
       .main-content {
         margin-left: 60px;
         padding: 24px 16px;
+        max-width: 100%;
       }
     }
     .section-title {
@@ -132,7 +134,7 @@
       margin-bottom: 28px;
       user-select: none;
     }
-    /* Dashboard widgets en columna */
+    /* Dashboard widgets en columna vertical */
     .dashboard-widgets {
       display: flex;
       flex-direction: column;
@@ -478,7 +480,7 @@
       accessToken = null,
       currentUserEmail = '';
 
-    function initializeGapiClient() {
+    async function initializeGapiClient() {
       gapi.load('client', async () => {
         try {
           await gapi.client.init({
@@ -652,7 +654,10 @@
         egresosArr.push(eg.reduce((sum, row) => sum + (parseInt(row[5]) || 0), 0));
       }
       let maxVal = Math.max(...ingresosArr, ...egresosArr, 100000);
-      // Forcing stepSize to 100000 and format ticks as pesos chilenos
+      let stepSize = 100000;
+      if (maxVal > 1000000 && maxVal <= 5000000) stepSize = 500000;
+      else if (maxVal > 5000000 && maxVal <= 10000000) stepSize = 1000000;
+      else if (maxVal > 10000000) stepSize = 5000000;
       window.myChart = new Chart(ctx, {
         type: 'bar',
         data: {
@@ -667,8 +672,8 @@
           scales: {
             y: {
               beginAtZero: true,
-              stepSize: 100000,
-              max: Math.ceil(maxVal / 100000) * 100000,
+              stepSize: stepSize,
+              max: Math.ceil(maxVal / stepSize) * stepSize,
               ticks: {
                 callback: function (value) {
                   return '$' + value.toLocaleString('es-CL');
