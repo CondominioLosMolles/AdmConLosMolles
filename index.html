@@ -1,101 +1,353 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
   <title>Condominio Los Molles - Administración</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link href="https://fonts.googleapis.com/css?family=Poppins:400,600&display=swap" rel="stylesheet">
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link href="https://fonts.googleapis.com/css?family=Poppins:400,600&display=swap" rel="stylesheet" />
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://accounts.google.com/gsi/client" async defer></script>
   <script src="https://apis.google.com/js/api.js"></script>
   <style>
-    body { margin: 0; font-family: 'Poppins', Arial, sans-serif; background: #eaf1fb; color: #222; }
-    #login-section { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; background: #eaf1fb; }
-    #login-card { background: #fff; border-radius: 18px; box-shadow: 0 8px 32px #0002; padding: 36px 48px; min-width: 320px; text-align: center; }
-    #login-card h2 { color: #2176ae; margin-bottom: 18px; }
-    #login-card p { color: #444; margin-bottom: 28px; }
-    .loading { color: #2176ae; margin-top: 20px; }
-    .error-message { color: #e74c3c; margin-top: 10px; }
-    #app-section { display: none; }
-    /* Menú lateral y layout */
-    .sidebar { position: fixed; left: 0; top: 0; bottom: 0; width: 220px; background: #e3f0fa; border-right: 1px solid #d0e3f1; padding: 32px 0 0 0; display: flex; flex-direction: column; z-index: 10; }
-    .sidebar h2 { text-align: center; font-weight: 600; color: #2176ae; margin-bottom: 24px; font-size: 1.4rem; letter-spacing: 1px; }
-    .nav-link { padding: 14px 32px; color: #2176ae; text-decoration: none; font-weight: 500; font-size: 1.05rem; border-left: 4px solid transparent; transition: background 0.2s, border-color 0.2s; cursor: pointer; }
-    .nav-link.active, .nav-link:hover { background: #d0e3f1; border-left: 4px solid #2176ae; }
-    .main-content { margin-left: 220px; padding: 36px 48px; min-height: 100vh; background: #f7fafc; transition: margin 0.2s; }
-    @media (max-width: 900px) { .sidebar { width: 60px; padding: 16px 0 0 0; } .sidebar h2 { display: none; } .nav-link { padding: 12px 16px; font-size: 0.95rem; } .main-content { margin-left: 60px; padding: 24px 10px; } }
-    .section-title { font-size: 1.5rem; font-weight: 600; color: #2176ae; margin-bottom: 20px; }
-    .btn { background: #2176ae; color: #fff; border: none; border-radius: 8px; padding: 10px 22px; font-size: 1rem; font-weight: 600; cursor: pointer; transition: background 0.2s; }
-    .btn:hover { background: #14496b; }
-    /* Dashboard widgets estilo moderno */
+    /* Estilo general inspirado en Windows 11: moderno, limpio, con glassmorphism */
+    body {
+      margin: 0;
+      font-family: 'Poppins', Arial, sans-serif;
+      background: #f3f4f6;
+      color: #222;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+    #login-section {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      background: #f3f4f6;
+    }
+    #login-card {
+      background: rgba(255 255 255 / 0.85);
+      border-radius: 20px;
+      box-shadow: 0 8px 32px rgb(33 118 174 / 0.15);
+      padding: 40px 56px;
+      min-width: 320px;
+      text-align: center;
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(33, 118, 174, 0.2);
+    }
+    #login-card h2 {
+      color: #2176ae;
+      margin-bottom: 20px;
+      font-weight: 600;
+      font-size: 2rem;
+    }
+    #login-card p {
+      color: #444;
+      margin-bottom: 32px;
+      font-size: 1.1rem;
+    }
+    .loading {
+      color: #2176ae;
+      margin-top: 20px;
+      font-weight: 600;
+    }
+    .error-message {
+      color: #e74c3c;
+      margin-top: 12px;
+      font-weight: 600;
+    }
+    #app-section {
+      display: none;
+    }
+    /* Sidebar */
+    .sidebar {
+      position: fixed;
+      left: 0;
+      top: 0;
+      bottom: 0;
+      width: 220px;
+      background: rgba(255 255 255 / 0.8);
+      border-right: 1px solid rgba(33, 118, 174, 0.2);
+      padding: 40px 0 0 0;
+      display: flex;
+      flex-direction: column;
+      z-index: 10;
+      backdrop-filter: blur(10px);
+      box-shadow: inset 1px 0 0 rgb(33 118 174 / 0.1);
+    }
+    .sidebar h2 {
+      text-align: center;
+      font-weight: 700;
+      color: #2176ae;
+      margin-bottom: 32px;
+      font-size: 1.6rem;
+      letter-spacing: 1.2px;
+      user-select: none;
+    }
+    .nav-link {
+      padding: 16px 36px;
+      color: #2176ae;
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 1.1rem;
+      border-left: 4px solid transparent;
+      transition: background 0.3s, border-color 0.3s;
+      cursor: pointer;
+      user-select: none;
+    }
+    .nav-link.active,
+    .nav-link:hover {
+      background: rgba(33, 118, 174, 0.1);
+      border-left: 4px solid #2176ae;
+      color: #14496b;
+    }
+    .main-content {
+      margin-left: 220px;
+      padding: 40px 56px;
+      min-height: 100vh;
+      background: #f3f4f6;
+      transition: margin 0.3s;
+    }
+    @media (max-width: 900px) {
+      .sidebar {
+        width: 60px;
+        padding: 16px 0 0 0;
+      }
+      .sidebar h2 {
+        display: none;
+      }
+      .nav-link {
+        padding: 12px 16px;
+        font-size: 0.95rem;
+      }
+      .main-content {
+        margin-left: 60px;
+        padding: 24px 16px;
+      }
+    }
+    /* Section titles */
+    .section-title {
+      font-size: 1.75rem;
+      font-weight: 700;
+      color: #2176ae;
+      margin-bottom: 28px;
+      user-select: none;
+    }
+    /* Dashboard widgets */
     .dashboard-widgets {
       display: flex;
       flex-wrap: wrap;
-      gap: 24px;
-      margin-bottom: 36px;
+      gap: 28px;
+      margin-bottom: 44px;
     }
     .widget {
-      background: rgba(255,255,255,0.8);
-      border-radius: 18px;
-      box-shadow: 0 4px 24px #2176ae22, 0 1.5px 4px #0001;
-      padding: 26px 32px;
-      flex: 1 1 220px;
-      min-width: 220px;
+      background: rgba(255 255 255 / 0.85);
+      border-radius: 20px;
+      box-shadow: 0 10px 30px rgb(33 118 174 / 0.12);
+      padding: 32px 36px;
+      flex: 1 1 230px;
+      min-width: 230px;
       display: flex;
       flex-direction: column;
       align-items: flex-start;
-      backdrop-filter: blur(8px);
-      border: 1.5px solid #e3f0fa;
+      backdrop-filter: blur(14px);
+      border: 1.5px solid rgba(33, 118, 174, 0.15);
       position: relative;
       overflow: hidden;
+      user-select: none;
     }
     .widget:before {
       content: "";
       position: absolute;
-      right: -35px; top: -35px;
-      width: 70px; height: 70px;
-      background: linear-gradient(135deg, #2176ae22 0%, #2d7f5e22 100%);
+      right: -40px;
+      top: -40px;
+      width: 80px;
+      height: 80px;
+      background: linear-gradient(135deg, #2176ae33 0%, #2d7f5e33 100%);
       border-radius: 50%;
       z-index: 0;
     }
     .widget-title {
-      font-size: 1.04rem;
-      color: #888;
-      margin-bottom: 6px;
-      font-weight: 500;
+      font-size: 1.1rem;
+      color: #555;
+      margin-bottom: 10px;
+      font-weight: 600;
       z-index: 1;
     }
     .widget-value {
-      font-size: 2.3rem;
+      font-size: 2.6rem;
+      color: #2176ae;
+      font-weight: 800;
+      margin-bottom: 6px;
+      z-index: 1;
+      letter-spacing: 1.1px;
+    }
+    /* Residentes tabla */
+    .residente-actions {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 24px;
+      flex-wrap: wrap;
+      gap: 14px;
+    }
+    .residente-actions input {
+      padding: 12px 18px;
+      border: 1.5px solid #c4d7e7;
+      border-radius: 12px;
+      font-size: 1.1rem;
+      outline: none;
+      width: 280px;
+      transition: border-color 0.3s;
+      box-shadow: inset 0 2px 4px rgb(33 118 174 / 0.1);
+    }
+    .residente-actions input:focus {
+      border-color: #2176ae;
+      box-shadow: 0 0 10px #2176aeaa;
+    }
+    .residente-table {
+      width: 100%;
+      border-collapse: separate;
+      border-spacing: 0 10px;
+      background: transparent;
+    }
+    .residente-table thead tr th {
+      background: transparent;
       color: #2176ae;
       font-weight: 700;
-      margin-bottom: 4px;
-      z-index: 1;
-      letter-spacing: 1px;
+      font-size: 1.1rem;
+      padding: 12px 14px;
+      text-align: left;
+      user-select: none;
     }
-    /* Residentes tabla demo */
-    .residente-table { width: 100%; border-collapse: collapse; background: #fff; border-radius: 12px; overflow: hidden; box-shadow: 0 2px 8px #d0e3f140; }
-    .residente-table th, .residente-table td { padding: 12px 10px; text-align: left; border-bottom: 1px solid #e3f0fa; font-size: 1rem; }
-    .residente-table th { background: #f0f6fa; color: #2176ae; font-weight: 600; }
-    .residente-table td { color: #444; }
-    .acciones-btn { background: none; border: none; cursor: pointer; font-size: 1.2rem; margin-right: 8px; color: #2176ae; }
-    .acciones-btn:hover { color: #e67e22; }
+    .residente-table tbody tr {
+      background: rgba(255 255 255 / 0.85);
+      box-shadow: 0 4px 20px rgb(33 118 174 / 0.1);
+      border-radius: 16px;
+      transition: background 0.3s;
+    }
+    .residente-table tbody tr:hover {
+      background: rgba(33, 118, 174, 0.1);
+    }
+    .residente-table tbody tr td {
+      padding: 14px 16px;
+      vertical-align: middle;
+      font-size: 1rem;
+      color: #444;
+    }
+    .acciones-btn {
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-size: 1.3rem;
+      margin-right: 12px;
+      color: #2176ae;
+      transition: color 0.3s;
+    }
+    .acciones-btn:hover {
+      color: #e67e22;
+    }
     .estado-chip {
-      display: inline-block; padding: 6px 16px; border-radius: 18px; font-weight: 600; font-size: 0.98rem;
-      background: #eee; color: #666; min-width: 80px; text-align: center;
+      display: inline-block;
+      padding: 6px 18px;
+      border-radius: 20px;
+      font-weight: 700;
+      font-size: 1rem;
+      user-select: none;
+      min-width: 90px;
+      text-align: center;
+      transition: background-color 0.3s, color 0.3s;
     }
-    .estado-activo { background: #e5fbe5; color: #1e824c; border: 1px solid #b8e6c1; }
-    .estado-moroso { background: #fdeaea; color: #c0392b; border: 1px solid #f5b7b1; }
-    .estado-inactivo { background: #f2f3f4; color: #888; border: 1px solid #d5d8dc; }
+    .estado-activo {
+      background-color: #e6f4ea;
+      color: #2d7f5e;
+      border: 1.5px solid #a6d8a8;
+    }
+    .estado-moroso {
+      background-color: #fdecea;
+      color: #c0392b;
+      border: 1.5px solid #f5b7b1;
+    }
+    .estado-inactivo {
+      background-color: #f2f3f4;
+      color: #888;
+      border: 1.5px solid #d5d8dc;
+    }
     /* Modal */
-    .modal-bg { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: #2228; display: flex; align-items: center; justify-content: center; z-index: 100; }
-    .modal { background: #fff; border-radius: 14px; padding: 32px 28px; min-width: 320px; max-width: 400px; box-shadow: 0 2px 16px #0002; position: relative; }
-    .modal h3 { margin-top: 0; color: #2176ae; }
-    .modal label { display: block; margin-top: 12px; font-weight: 500; }
-    .modal input, .modal select { width: 100%; padding: 8px 10px; border: 1px solid #c4d7e7; border-radius: 8px; font-size: 1rem; margin-top: 4px; }
-    .modal .btn { width: 100%; margin-top: 18px; }
-    .close-modal { position: absolute; top: 12px; right: 16px; background: none; border: none; font-size: 1.3rem; color: #888; cursor: pointer; }
-    .close-modal:hover { color: #e74c3c; }
+    .modal-bg {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: #2228;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+    }
+    .modal {
+      background: #fff;
+      border-radius: 20px;
+      padding: 36px 32px;
+      min-width: 360px;
+      max-width: 460px;
+      box-shadow: 0 6px 24px #0003;
+      position: relative;
+    }
+    .modal h3 {
+      margin-top: 0;
+      color: #2176ae;
+      font-weight: 700;
+      font-size: 1.8rem;
+      user-select: none;
+    }
+    .modal label {
+      display: block;
+      margin-top: 18px;
+      font-weight: 600;
+      font-size: 1rem;
+      user-select: none;
+    }
+    .modal input,
+    .modal select {
+      width: 100%;
+      padding: 10px 14px;
+      border: 1.5px solid #c4d7e7;
+      border-radius: 14px;
+      font-size: 1rem;
+      margin-top: 6px;
+      outline-offset: 2px;
+      transition: border-color 0.3s;
+    }
+    .modal input:focus,
+    .modal select:focus {
+      border-color: #2176ae;
+      box-shadow: 0 0 10px #2176aeaa;
+    }
+    .modal .btn {
+      width: 100%;
+      margin-top: 28px;
+      font-size: 1.1rem;
+      font-weight: 700;
+      padding: 12px 0;
+      border-radius: 14px;
+    }
+    .close-modal {
+      position: absolute;
+      top: 14px;
+      right: 18px;
+      background: none;
+      border: none;
+      font-size: 1.6rem;
+      color: #888;
+      cursor: pointer;
+      transition: color 0.3s;
+      user-select: none;
+    }
+    .close-modal:hover {
+      color: #e74c3c;
+    }
   </style>
 </head>
 <body>
@@ -109,6 +361,7 @@
       <div class="error-message" id="login-error" style="display:none;"></div>
     </div>
   </div>
+
   <!-- APP -->
   <div id="app-section">
     <div class="sidebar">
@@ -127,14 +380,21 @@
         </div>
         <div id="dashboard-morosidad"></div>
       </div>
+
       <!-- RESIDENTES -->
       <div id="residentes-section" style="display:none;">
         <div class="section-title">Residentes</div>
         <div class="residente-actions">
-          <input type="text" id="busqueda-residente" placeholder="Buscar por nombre, RUT o parcela..." oninput="filtrarResidentes()">
+          <input
+            type="text"
+            id="busqueda-residente"
+            placeholder="Buscar por nombre, RUT o parcela..."
+            oninput="filtrarResidentes()"
+            aria-label="Buscar residentes"
+          />
           <button class="btn" onclick="abrirModalResidente()">Agregar Residente</button>
         </div>
-        <table class="residente-table" id="tabla-residentes">
+        <table class="residente-table" id="tabla-residentes" aria-label="Tabla de residentes">
           <thead>
             <tr>
               <th>Nombre Completo</th>
@@ -151,54 +411,51 @@
           <tbody id="tbody-residentes"></tbody>
         </table>
       </div>
+
       <!-- Modal Agregar/Editar Residente -->
-      <div id="modal-residente-bg" class="modal-bg" style="display:none;">
+      <div id="modal-residente-bg" class="modal-bg" style="display:none;" role="dialog" aria-modal="true" aria-labelledby="modal-titulo">
         <div class="modal">
-          <button class="close-modal" onclick="cerrarModalResidente()">&times;</button>
+          <button class="close-modal" onclick="cerrarModalResidente()" aria-label="Cerrar">&times;</button>
           <h3 id="modal-titulo">Agregar Residente</h3>
           <form id="form-residente" onsubmit="guardarResidente(event)">
-            <input type="hidden" id="residente-id">
-            <label>Nombre Completo
-              <input type="text" id="res-nombre" required>
-            </label>
-            <label>RUT
-              <input type="text" id="res-rut" required>
-            </label>
-            <label>N° Parcela
-              <input type="number" id="res-parcela" required>
-            </label>
-            <label>Dirección
-              <input type="text" id="res-direccion" required>
-            </label>
-            <label>Email
-              <input type="email" id="res-email" required>
-            </label>
-            <label>Teléfono
-              <input type="text" id="res-telefono" required>
-            </label>
-            <label>Estado
-              <select id="res-estado" required>
-                <option value="Activo">Activo</option>
-                <option value="Moroso">Moroso</option>
-                <option value="Inactivo">Inactivo</option>
-              </select>
-            </label>
-            <label>Valor Gasto Común
-              <input type="number" id="res-gasto" required>
-            </label>
+            <input type="hidden" id="residente-id" />
+            <label for="res-nombre">Nombre Completo</label>
+            <input type="text" id="res-nombre" required />
+            <label for="res-rut">RUT</label>
+            <input type="text" id="res-rut" required />
+            <label for="res-parcela">N° Parcela</label>
+            <input type="number" id="res-parcela" required />
+            <label for="res-direccion">Dirección</label>
+            <input type="text" id="res-direccion" required />
+            <label for="res-email">Email</label>
+            <input type="email" id="res-email" required />
+            <label for="res-telefono">Teléfono</label>
+            <input type="text" id="res-telefono" required />
+            <label for="res-estado">Estado</label>
+            <select id="res-estado" required>
+              <option value="Activo">Activo</option>
+              <option value="Moroso">Moroso</option>
+              <option value="Inactivo">Inactivo</option>
+            </select>
+            <label for="res-gasto">Valor Gasto Común</label>
+            <input type="number" id="res-gasto" required />
             <button class="btn" type="submit">Guardar</button>
           </form>
         </div>
       </div>
     </div>
   </div>
+
   <script>
-    // CONFIGURACIÓN GOOGLE
+    // Configuración Google
     const CLIENT_ID = '997872453031-5o8s2o6v3qt722fb3p51a2r7bo24ncee.apps.googleusercontent.com';
     const API_KEY = 'AIzaSyA4nUkMycf_CHZE7TaBBD_WUyWMvSXUwoU';
     const SPREADSHEET_ID = '1bFo5dBC3HM0xupginTBe-hrrUNgkiuUn4fkXXzHide8';
-    const SCOPES = 'https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/drive https://www.googleapis.com/auth/gmail.send';
-    let tokenClient, accessToken = null, currentUserEmail = "";
+    const SCOPES =
+      'https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/drive https://www.googleapis.com/auth/gmail.send';
+    let tokenClient,
+      accessToken = null,
+      currentUserEmail = '';
 
     function initializeGapiClient() {
       gapi.load('client', async () => {
@@ -206,10 +463,10 @@
           await gapi.client.init({
             apiKey: API_KEY,
             discoveryDocs: [
-              "https://sheets.googleapis.com/$discovery/rest?version=v4",
-              "https://www.googleapis.com/discovery/v1/apis/drive/v3/rest",
-              "https://gmail.googleapis.com/$discovery/rest?version=v1"
-            ]
+              'https://sheets.googleapis.com/$discovery/rest?version=v4',
+              'https://www.googleapis.com/discovery/v1/apis/drive/v3/rest',
+              'https://gmail.googleapis.com/$discovery/rest?version=v1',
+            ],
           });
           tokenClient = google.accounts.oauth2.initTokenClient({
             client_id: CLIENT_ID,
@@ -217,16 +474,17 @@
             callback: (tokenResponse) => {
               if (tokenResponse && tokenResponse.access_token) {
                 accessToken = tokenResponse.access_token;
-                gapi.client.setToken({access_token: accessToken});
+                gapi.client.setToken({ access_token: accessToken });
                 document.getElementById('app-section').style.display = 'block';
                 document.getElementById('login-section').style.display = 'none';
                 cargarDashboard();
                 cargarResidentes();
               }
-            }
+            },
           });
         } catch (error) {
-          document.getElementById('login-error').textContent = 'Error al inicializar la API de Google: ' + error.message;
+          document.getElementById('login-error').textContent =
+            'Error al inicializar la API de Google: ' + error.message;
           document.getElementById('login-error').style.display = 'block';
           document.getElementById('login-loading').style.display = 'none';
         }
@@ -239,7 +497,7 @@
       try {
         const payload = parseJwt(response.credential);
         currentUserEmail = payload.email;
-        if (currentUserEmail !== "losmollestunquen@gmail.com") {
+        if (currentUserEmail !== 'losmollestunquen@gmail.com') {
           document.getElementById('login-error').textContent = 'Solo el administrador autorizado puede ingresar.';
           document.getElementById('login-error').style.display = 'block';
           document.getElementById('login-loading').style.display = 'none';
@@ -262,14 +520,19 @@
     function parseJwt(token) {
       const base64Url = token.split('.')[1];
       const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-      const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
-        return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
-      }).join(''));
+      const jsonPayload = decodeURIComponent(
+        atob(base64)
+          .split('')
+          .map(function (c) {
+            return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+          })
+          .join('')
+      );
       return JSON.parse(jsonPayload);
     }
 
     function showSection(sec) {
-      document.querySelectorAll('.nav-link').forEach(link => link.classList.remove('active'));
+      document.querySelectorAll('.nav-link').forEach((link) => link.classList.remove('active'));
       document.getElementById('dashboard-section').style.display = 'none';
       document.getElementById('residentes-section').style.display = 'none';
       if (sec === 'dashboard') {
@@ -283,7 +546,7 @@
       }
     }
 
-    // DASHBOARD: carga datos reales y gráfico escalado
+    // Dashboard: carga datos reales y gráfico con eje Y corregido
     async function cargarDashboard() {
       // Widgets
       const widgets = [
@@ -291,16 +554,16 @@
         { id: 'ing-mes', label: 'Ingresos del Mes', value: '--' },
         { id: 'egre-mes', label: 'Egresos del Mes', value: '--' },
         { id: 'saldo-caja', label: 'Saldo de Caja', value: '--' },
-        { id: 'mant-pend', label: 'Mantenciones Pendientes/Urgentes', value: '--' }
+        { id: 'mant-pend', label: 'Mantenciones Pendientes/Urgentes', value: '--' },
       ];
       let html = '';
       // Residentes activos
       let residentes = await gapi.client.sheets.spreadsheets.values.get({
         spreadsheetId: SPREADSHEET_ID,
-        range: 'Residentes!A2:I'
+        range: 'Residentes!A2:I',
       });
       const residentesData = residentes.result.values || [];
-      const activos = residentesData.filter(row => row[7] === 'Activo').length;
+      const activos = residentesData.filter((row) => row[7] === 'Activo').length;
       widgets[0].value = activos;
       // Ingresos del mes
       const now = new Date();
@@ -308,44 +571,44 @@
       const año = now.getFullYear();
       let pagos = await gapi.client.sheets.spreadsheets.values.get({
         spreadsheetId: SPREADSHEET_ID,
-        range: 'Pagos_GC!A2:Q'
+        range: 'Pagos_GC!A2:Q',
       });
       const pagosData = pagos.result.values || [];
-      const pagosMes = pagosData.filter(row => (row[4] || '').startsWith(`${año}-${mes}`));
+      const pagosMes = pagosData.filter((row) => (row[4] || '').startsWith(`${año}-${mes}`));
       const totalPagado = pagosMes.reduce((sum, row) => sum + (parseInt(row[6]) || 0), 0);
       widgets[1].value = totalPagado > 0 ? '$' + totalPagado.toLocaleString('es-CL') : '--';
       // Egresos del mes
       let egresos = await gapi.client.sheets.spreadsheets.values.get({
         spreadsheetId: SPREADSHEET_ID,
-        range: 'Egresos!A2:G'
+        range: 'Egresos!A2:G',
       });
       const egresosData = egresos.result.values || [];
-      const egresosMes = egresosData.filter(row => (row[1] || '').startsWith(`${año}-${mes}`));
+      const egresosMes = egresosData.filter((row) => (row[1] || '').startsWith(`${año}-${mes}`));
       const totalEgresos = egresosMes.reduce((sum, row) => sum + (parseInt(row[5]) || 0), 0);
       widgets[2].value = totalEgresos > 0 ? '$' + totalEgresos.toLocaleString('es-CL') : '--';
       // Saldo de caja
       const totalPagadoAll = pagosData.reduce((sum, row) => sum + (parseInt(row[6]) || 0), 0);
       const totalEgresosAll = egresosData.reduce((sum, row) => sum + (parseInt(row[5]) || 0), 0);
-      widgets[3].value = (totalPagadoAll || totalEgresosAll) ? '$' + (totalPagadoAll - totalEgresosAll).toLocaleString('es-CL') : '--';
+      widgets[3].value = totalPagadoAll || totalEgresosAll ? '$' + (totalPagadoAll - totalEgresosAll).toLocaleString('es-CL') : '--';
       // Mantenciones pendientes/urgentes
       let mant = await gapi.client.sheets.spreadsheets.values.get({
         spreadsheetId: SPREADSHEET_ID,
-        range: 'Mantenciones!A2:H'
+        range: 'Mantenciones!A2:H',
       });
       const mantData = mant.result.values || [];
-      const mantPend = mantData.filter(row => row[5] === 'Pendiente' || row[5] === 'Urgente').length;
+      const mantPend = mantData.filter((row) => row[5] === 'Pendiente' || row[5] === 'Urgente').length;
       widgets[4].value = mantPend;
-      widgets.forEach(w => {
+      widgets.forEach((w) => {
         html += `<div class="widget"><div class="widget-title">${w.label}</div><div class="widget-value" id="${w.id}">${w.value}</div></div>`;
       });
       document.getElementById('dashboard-widgets').innerHTML = html;
       // Morosidad
-      const morosos = residentesData.filter(row => row[7] === 'Moroso');
-      const morososList = morosos.map(row => row[3]).join(', ');
+      const morosos = residentesData.filter((row) => row[7] === 'Moroso');
+      const morososList = morosos.map((row) => row[3]).join(', ');
       let deudaTotal = 0;
-      morosos.forEach(moroso => {
-        const pagosMoroso = pagosData.filter(row => row[1] === moroso[0]);
-        pagosMoroso.forEach(pm => {
+      morosos.forEach((moroso) => {
+        const pagosMoroso = pagosData.filter((row) => row[1] === moroso[0]);
+        pagosMoroso.forEach((pm) => {
           if (parseInt(pm[12]) > 0) deudaTotal += parseInt(pm[12]);
         });
       });
@@ -355,23 +618,28 @@
         <div>Parcelas morosas: <span>${morososList}</span></div>
         <div>Total deuda: <b>$${deudaTotal.toLocaleString('es-CL')}</b></div>
       `;
-      // Gráfico: valores reales si hay, eje Y escalado
+      // Gráfico con eje Y corregido
       let ctx = document.getElementById('chart-ing-egre').getContext('2d');
       if (window.myChart) window.myChart.destroy();
-      // Demo: si no hay datos, muestra vacío
-      let ingresosArr = [], egresosArr = [], labelsArr = [];
-      for(let i=11;i>=0;i--) {
-        let fecha = new Date(now.getFullYear(), now.getMonth()-i, 1);
-        let label = fecha.toLocaleString('es-CL', {month:'short'}).charAt(0).toUpperCase() + fecha.toLocaleString('es-CL', {month:'short'}).slice(1);
+      let ingresosArr = [],
+        egresosArr = [],
+        labelsArr = [];
+      for (let i = 11; i >= 0; i--) {
+        let fecha = new Date(now.getFullYear(), now.getMonth() - i, 1);
+        let label =
+          fecha
+            .toLocaleString('es-CL', { month: 'short' })
+            .charAt(0)
+            .toUpperCase() + fecha.toLocaleString('es-CL', { month: 'short' }).slice(1);
         labelsArr.push(label);
-        let periodo = `${fecha.getFullYear()}-${(fecha.getMonth()+1).toString().padStart(2,'0')}`;
-        let pag = pagosData.filter(row => (row[4]||'').startsWith(periodo));
-        let eg = egresosData.filter(row => (row[1]||'').startsWith(periodo));
-        ingresosArr.push(pag.reduce((sum, row) => sum + (parseInt(row[6])||0), 0));
-        egresosArr.push(eg.reduce((sum, row) => sum + (parseInt(row[5])||0), 0));
+        let periodo = `${fecha.getFullYear()}-${(fecha.getMonth() + 1).toString().padStart(2, '0')}`;
+        let pag = pagosData.filter((row) => (row[4] || '').startsWith(periodo));
+        let eg = egresosData.filter((row) => (row[1] || '').startsWith(periodo));
+        ingresosArr.push(pag.reduce((sum, row) => sum + (parseInt(row[6]) || 0), 0));
+        egresosArr.push(eg.reduce((sum, row) => sum + (parseInt(row[5]) || 0), 0));
       }
       // Escalado eje Y: $100.000 hasta $1.000.000, luego automático
-      let maxVal = Math.max(...ingresosArr, ...egresosArr, 1000000);
+      let maxVal = Math.max(...ingresosArr, ...egresosArr, 100000);
       let stepSize = 100000;
       if (maxVal > 1000000 && maxVal <= 5000000) stepSize = 500000;
       else if (maxVal > 5000000 && maxVal <= 10000000) stepSize = 1000000;
@@ -381,23 +649,36 @@
         data: {
           labels: labelsArr,
           datasets: [
-            {label:'Ingresos', data:ingresosArr, backgroundColor:'#2d7f5e'},
-            {label:'Egresos', data:egresosArr, backgroundColor:'#e67e22'}
-          ]
+            { label: 'Ingresos', data: ingresosArr, backgroundColor: '#2d7f5e' },
+            { label: 'Egresos', data: egresosArr, backgroundColor: '#e67e22' },
+          ],
         },
         options: {
-          plugins:{legend:{position:'bottom'}},
-          scales:{y:{beginAtZero:true, stepSize:stepSize}}
-        }
+          plugins: { legend: { position: 'bottom' } },
+          scales: {
+            y: {
+              beginAtZero: true,
+              stepSize: stepSize,
+              ticks: {
+                callback: function (value) {
+                  // Mostrar $ con formato miles y millones
+                  if (value >= 1000000) return '$' + (value / 1000000).toFixed(1) + 'M';
+                  if (value >= 1000) return '$' + (value / 1000).toFixed(0) + 'K';
+                  return '$' + value;
+                },
+              },
+            },
+          },
+        },
       });
     }
 
-    // RESIDENTES: carga y registro real
+    // Residentes: carga y registro real
     let residentesDataCache = [];
     async function cargarResidentes() {
       let res = await gapi.client.sheets.spreadsheets.values.get({
         spreadsheetId: SPREADSHEET_ID,
-        range: 'Residentes!A2:I'
+        range: 'Residentes!A2:I',
       });
       residentesDataCache = res.result.values || [];
       renderResidentes();
@@ -406,49 +687,54 @@
       const filtro = document.getElementById('busqueda-residente').value.trim().toLowerCase();
       const tbody = document.getElementById('tbody-residentes');
       tbody.innerHTML = '';
-      residentesDataCache.filter(row => {
-        return (
-          row[1]?.toLowerCase().includes(filtro) ||
-          row[2]?.toLowerCase().includes(filtro) ||
-          String(row[3] || '').includes(filtro)
-        );
-      }).forEach((row, idx) => {
-        let estado = row[7]||'';
-        let estadoClass = estado==='Activo' ? 'estado-activo' : (estado==='Moroso' ? 'estado-moroso' : 'estado-inactivo');
-        tbody.innerHTML += `
+      residentesDataCache
+        .filter((row) => {
+          return (
+            row[1]?.toLowerCase().includes(filtro) ||
+            row[2]?.toLowerCase().includes(filtro) ||
+            String(row[3] || '').includes(filtro)
+          );
+        })
+        .forEach((row) => {
+          let estado = row[7] || '';
+          let estadoClass =
+            estado === 'Activo' ? 'estado-activo' : estado === 'Moroso' ? 'estado-moroso' : 'estado-inactivo';
+          tbody.innerHTML += `
           <tr>
-            <td>${row[1]||''}</td>
-            <td>${row[2]||''}</td>
-            <td>${row[3]||''}</td>
-            <td>${row[4]||''}</td>
-            <td>${row[5]||''}</td>
-            <td>${row[6]||''}</td>
+            <td>${row[1] || ''}</td>
+            <td>${row[2] || ''}</td>
+            <td>${row[3] || ''}</td>
+            <td>${row[4] || ''}</td>
+            <td>${row[5] || ''}</td>
+            <td>${row[6] || ''}</td>
             <td><span class="estado-chip ${estadoClass}">${estado}</span></td>
-            <td>${row[8]? '$'+Number(row[8]).toLocaleString('es-CL') : ''}</td>
+            <td>${row[8] ? '$' + Number(row[8]).toLocaleString('es-CL') : ''}</td>
             <td>
               <button class="acciones-btn" title="Editar" onclick="abrirModalResidente('${row[0]}')">&#9998;</button>
               <button class="acciones-btn" title="Eliminar" onclick="eliminarResidente('${row[0]}')">&#128465;</button>
             </td>
           </tr>
         `;
-      });
+        });
     }
-    function filtrarResidentes() { renderResidentes(); }
+    function filtrarResidentes() {
+      renderResidentes();
+    }
 
-    function abrirModalResidente(id=null) {
-      document.getElementById('modal-residente-bg').style.display = '';
+    function abrirModalResidente(id = null) {
+      document.getElementById('modal-residente-bg').style.display = 'flex';
       if (id) {
-        let row = residentesDataCache.find(r => r[0] === id);
+        let row = residentesDataCache.find((r) => r[0] === id);
         document.getElementById('modal-titulo').innerText = 'Editar Residente';
         document.getElementById('residente-id').value = row[0];
-        document.getElementById('res-nombre').value = row[1]||'';
-        document.getElementById('res-rut').value = row[2]||'';
-        document.getElementById('res-parcela').value = row[3]||'';
-        document.getElementById('res-direccion').value = row[4]||'';
-        document.getElementById('res-email').value = row[5]||'';
-        document.getElementById('res-telefono').value = row[6]||'';
-        document.getElementById('res-estado').value = row[7]||'Activo';
-        document.getElementById('res-gasto').value = row[8]||'';
+        document.getElementById('res-nombre').value = row[1] || '';
+        document.getElementById('res-rut').value = row[2] || '';
+        document.getElementById('res-parcela').value = row[3] || '';
+        document.getElementById('res-direccion').value = row[4] || '';
+        document.getElementById('res-email').value = row[5] || '';
+        document.getElementById('res-telefono').value = row[6] || '';
+        document.getElementById('res-estado').value = row[7] || 'Activo';
+        document.getElementById('res-gasto').value = row[8] || '';
       } else {
         document.getElementById('modal-titulo').innerText = 'Agregar Residente';
         document.getElementById('form-residente').reset();
@@ -462,7 +748,7 @@
       e.preventDefault();
       const id = document.getElementById('residente-id').value;
       const values = [
-        id || (Date.now().toString()),
+        id || Date.now().toString(),
         document.getElementById('res-nombre').value,
         document.getElementById('res-rut').value,
         document.getElementById('res-parcela').value,
@@ -470,27 +756,25 @@
         document.getElementById('res-email').value,
         document.getElementById('res-telefono').value,
         document.getElementById('res-estado').value,
-        document.getElementById('res-gasto').value
+        document.getElementById('res-gasto').value,
       ];
       if (id) {
-        // Editar: buscar fila y actualizar
-        let idx = residentesDataCache.findIndex(r => r[0] === id);
+        let idx = residentesDataCache.findIndex((r) => r[0] === id);
         if (idx > -1) {
           await gapi.client.sheets.spreadsheets.values.update({
             spreadsheetId: SPREADSHEET_ID,
-            range: `Residentes!A${idx+2}:I${idx+2}`,
+            range: `Residentes!A${idx + 2}:I${idx + 2}`,
             valueInputOption: 'RAW',
-            values: [values]
+            values: [values],
           });
         }
       } else {
-        // Agregar nuevo
         await gapi.client.sheets.spreadsheets.values.append({
           spreadsheetId: SPREADSHEET_ID,
           range: 'Residentes!A2:I',
           valueInputOption: 'RAW',
           insertDataOption: 'INSERT_ROWS',
-          values: [values]
+          values: [values],
         });
       }
       cerrarModalResidente();
@@ -498,37 +782,43 @@
     }
     async function eliminarResidente(id) {
       if (!confirm('¿Está seguro de que desea eliminar a este residente?')) return;
-      let idx = residentesDataCache.findIndex(r => r[0] === id);
+      let idx = residentesDataCache.findIndex((r) => r[0] === id);
       if (idx > -1) {
         await gapi.client.sheets.spreadsheets.batchUpdate({
           spreadsheetId: SPREADSHEET_ID,
-          requests: [{
-            deleteDimension: {
-              range: {
-                sheetId: 0, // Asegúrate que la hoja "Residentes" es la primera (sheetId: 0)
-                dimension: "ROWS",
-                startIndex: idx + 1,
-                endIndex: idx + 2
-              }
-            }
-          }]
+          requests: [
+            {
+              deleteDimension: {
+                range: {
+                  sheetId: 0, // Asegúrate que la hoja "Residentes" es la primera (sheetId: 0)
+                  dimension: 'ROWS',
+                  startIndex: idx + 1,
+                  endIndex: idx + 2,
+                },
+              },
+            },
+          ],
         });
         cargarResidentes();
       }
     }
 
-    window.onload = function() {
+    window.onload = function () {
       initializeGapiClient();
       google.accounts.id.initialize({
         client_id: CLIENT_ID,
         callback: handleCredentialResponse,
         auto_select: false,
-        cancel_on_tap_outside: true
+        cancel_on_tap_outside: true,
       });
-      google.accounts.id.renderButton(
-        document.getElementById('g_id_signin'),
-        { theme: 'outline', size: 'large', type: 'standard', text: 'signin_with', shape: 'rectangular', logo_alignment: 'left' }
-      );
+      google.accounts.id.renderButton(document.getElementById('g_id_signin'), {
+        theme: 'outline',
+        size: 'large',
+        type: 'standard',
+        text: 'signin_with',
+        shape: 'rectangular',
+        logo_alignment: 'left',
+      });
     };
   </script>
 </body>
