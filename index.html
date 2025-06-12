@@ -9,7 +9,6 @@
   <script src="https://accounts.google.com/gsi/client" async defer></script>
   <script src="https://apis.google.com/js/api.js"></script>
   <style>
-    /* Estilo general inspirado en Windows 11: moderno, limpio, con glassmorphism */
     body {
       margin: 0;
       font-family: 'Poppins', Arial, sans-serif;
@@ -60,7 +59,6 @@
     #app-section {
       display: none;
     }
-    /* Sidebar */
     .sidebar {
       position: fixed;
       left: 0;
@@ -126,7 +124,6 @@
         padding: 24px 16px;
       }
     }
-    /* Section titles */
     .section-title {
       font-size: 1.75rem;
       font-weight: 700;
@@ -134,7 +131,6 @@
       margin-bottom: 28px;
       user-select: none;
     }
-    /* Dashboard widgets */
     .dashboard-widgets {
       display: flex;
       flex-wrap: wrap;
@@ -183,7 +179,6 @@
       z-index: 1;
       letter-spacing: 1.1px;
     }
-    /* Residentes tabla */
     .residente-actions {
       display: flex;
       justify-content: space-between;
@@ -198,17 +193,35 @@
       font-size: 1.1rem;
       outline: none;
       width: 280px;
-      transition: border-color 0.3s;
+      transition: border-color 0.3s, box-shadow 0.3s;
       box-shadow: inset 0 2px 4px rgb(33 118 174 / 0.1);
     }
     .residente-actions input:focus {
       border-color: #2176ae;
       box-shadow: 0 0 10px #2176aeaa;
     }
+    /* Modernizar botón agregar residente */
+    .btn {
+      background: linear-gradient(135deg, #2176ae, #2d7f5e);
+      color: white;
+      border-radius: 12px;
+      padding: 12px 28px;
+      font-weight: 700;
+      font-size: 1.1rem;
+      border: none;
+      cursor: pointer;
+      box-shadow: 0 4px 12px rgb(33 118 174 / 0.4);
+      transition: background 0.3s, box-shadow 0.3s;
+      user-select: none;
+    }
+    .btn:hover {
+      background: linear-gradient(135deg, #2d7f5e, #2176ae);
+      box-shadow: 0 6px 18px rgb(33 118 174 / 0.6);
+    }
     .residente-table {
       width: 100%;
       border-collapse: separate;
-      border-spacing: 0 10px;
+      border-spacing: 0 12px;
       background: transparent;
     }
     .residente-table thead tr th {
@@ -243,6 +256,7 @@
       margin-right: 12px;
       color: #2176ae;
       transition: color 0.3s;
+      user-select: none;
     }
     .acciones-btn:hover {
       color: #e67e22;
@@ -273,7 +287,6 @@
       color: #888;
       border: 1.5px solid #d5d8dc;
     }
-    /* Modal */
     .modal-bg {
       position: fixed;
       top: 0;
@@ -548,7 +561,6 @@
 
     // Dashboard: carga datos reales y gráfico con eje Y corregido
     async function cargarDashboard() {
-      // Widgets
       const widgets = [
         { id: 'res-activos', label: 'Residentes Activos', value: '--' },
         { id: 'ing-mes', label: 'Ingresos del Mes', value: '--' },
@@ -557,7 +569,6 @@
         { id: 'mant-pend', label: 'Mantenciones Pendientes/Urgentes', value: '--' },
       ];
       let html = '';
-      // Residentes activos
       let residentes = await gapi.client.sheets.spreadsheets.values.get({
         spreadsheetId: SPREADSHEET_ID,
         range: 'Residentes!A2:I',
@@ -565,7 +576,6 @@
       const residentesData = residentes.result.values || [];
       const activos = residentesData.filter((row) => row[7] === 'Activo').length;
       widgets[0].value = activos;
-      // Ingresos del mes
       const now = new Date();
       const mes = (now.getMonth() + 1).toString().padStart(2, '0');
       const año = now.getFullYear();
@@ -577,7 +587,6 @@
       const pagosMes = pagosData.filter((row) => (row[4] || '').startsWith(`${año}-${mes}`));
       const totalPagado = pagosMes.reduce((sum, row) => sum + (parseInt(row[6]) || 0), 0);
       widgets[1].value = totalPagado > 0 ? '$' + totalPagado.toLocaleString('es-CL') : '--';
-      // Egresos del mes
       let egresos = await gapi.client.sheets.spreadsheets.values.get({
         spreadsheetId: SPREADSHEET_ID,
         range: 'Egresos!A2:G',
@@ -586,11 +595,9 @@
       const egresosMes = egresosData.filter((row) => (row[1] || '').startsWith(`${año}-${mes}`));
       const totalEgresos = egresosMes.reduce((sum, row) => sum + (parseInt(row[5]) || 0), 0);
       widgets[2].value = totalEgresos > 0 ? '$' + totalEgresos.toLocaleString('es-CL') : '--';
-      // Saldo de caja
       const totalPagadoAll = pagosData.reduce((sum, row) => sum + (parseInt(row[6]) || 0), 0);
       const totalEgresosAll = egresosData.reduce((sum, row) => sum + (parseInt(row[5]) || 0), 0);
       widgets[3].value = totalPagadoAll || totalEgresosAll ? '$' + (totalPagadoAll - totalEgresosAll).toLocaleString('es-CL') : '--';
-      // Mantenciones pendientes/urgentes
       let mant = await gapi.client.sheets.spreadsheets.values.get({
         spreadsheetId: SPREADSHEET_ID,
         range: 'Mantenciones!A2:H',
@@ -618,7 +625,7 @@
         <div>Parcelas morosas: <span>${morososList}</span></div>
         <div>Total deuda: <b>$${deudaTotal.toLocaleString('es-CL')}</b></div>
       `;
-      // Gráfico con eje Y corregido
+      // Gráfico con eje Y corregido y etiquetas en pesos chilenos
       let ctx = document.getElementById('chart-ing-egre').getContext('2d');
       if (window.myChart) window.myChart.destroy();
       let ingresosArr = [],
@@ -638,7 +645,6 @@
         ingresosArr.push(pag.reduce((sum, row) => sum + (parseInt(row[6]) || 0), 0));
         egresosArr.push(eg.reduce((sum, row) => sum + (parseInt(row[5]) || 0), 0));
       }
-      // Escalado eje Y: $100.000 hasta $1.000.000, luego automático
       let maxVal = Math.max(...ingresosArr, ...egresosArr, 100000);
       let stepSize = 100000;
       if (maxVal > 1000000 && maxVal <= 5000000) stepSize = 500000;
@@ -661,7 +667,6 @@
               stepSize: stepSize,
               ticks: {
                 callback: function (value) {
-                  // Mostrar $ con formato miles y millones
                   if (value >= 1000000) return '$' + (value / 1000000).toFixed(1) + 'M';
                   if (value >= 1000) return '$' + (value / 1000).toFixed(0) + 'K';
                   return '$' + value;
@@ -784,15 +789,19 @@
       if (!confirm('¿Está seguro de que desea eliminar a este residente?')) return;
       let idx = residentesDataCache.findIndex((r) => r[0] === id);
       if (idx > -1) {
+        // Obtener sheetId dinámicamente para evitar error 400
+        const spreadsheet = await gapi.client.sheets.spreadsheets.get({ spreadsheetId: SPREADSHEET_ID });
+        const sheet = spreadsheet.result.sheets.find((s) => s.properties.title === 'Residentes');
+        const sheetId = sheet ? sheet.properties.sheetId : 0;
         await gapi.client.sheets.spreadsheets.batchUpdate({
           spreadsheetId: SPREADSHEET_ID,
           requests: [
             {
               deleteDimension: {
                 range: {
-                  sheetId: 0, // Asegúrate que la hoja "Residentes" es la primera (sheetId: 0)
+                  sheetId: sheetId,
                   dimension: 'ROWS',
-                  startIndex: idx + 1,
+                  startIndex: idx + 1, // +1 por cabecera
                   endIndex: idx + 2,
                 },
               },
