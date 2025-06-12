@@ -1,5 +1,5 @@
 :root {
-    --primary-bg: #f8f9fa;
+    --primary-bg: #f7fafc;
     --sidebar-bg: #ffffff;
     --text-color: #343a40;
     --text-muted: #6c757d;
@@ -8,7 +8,7 @@
     --accent-color-vibrant: #0069d9;
     --success-color: #28a745;
     --danger-color: #dc3545;
-    --warning-color: #ffc107;
+    --warning-color: #e67e22; /* Tono de tu ejemplo */
     --font-family: 'Poppins', sans-serif;
     --shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
@@ -298,6 +298,58 @@ input[type="text"], input[type="search"], input[type="email"], input[type="tel"]
 .status-activo { background-color: var(--success-color); }
 .status-moroso { background-color: var(--danger-color); }
 .status-inactivo { background-color: var(--text-muted); }
+
+
+/* --- NUEVOS ESTILOS DEL EJEMPLO PARA GASTOS COMUNES --- */
+.section-title {
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: #2176ae;
+    margin-bottom: 20px;
+}
+.gc-busqueda {
+    display: flex;
+    gap: 16px;
+    margin-bottom: 22px;
+    flex-wrap: wrap;
+    align-items: center;
+}
+.gc-busqueda input, .gc-busqueda select {
+    padding: 8px 14px;
+    border: 1px solid #c4d7e7;
+    border-radius: 8px;
+    font-size: 1rem;
+    outline: none;
+    min-width: 220px;
+}
+.gc-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: #fff;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 2px 8px #d0e3f140;
+}
+.gc-table th, .gc-table td {
+    padding: 12px 10px;
+    text-align: center;
+    border-bottom: 1px solid #e3f0fa;
+    font-size: 0.95rem;
+}
+.gc-table th {
+    background: #f0f6fa;
+    color: var(--accent-color);
+    font-weight: 600;
+}
+.gc-table td {
+    color: #444;
+}
+.gc-table td.saldo-neg { color: #e74c3c; font-weight: bold; }
+.gc-table td.saldo-pos { color: var(--success-color); font-weight: bold; }
+.gc-table td.estado-pagado { color: var(--success-color); font-weight: bold; }
+.gc-table td.estado-pend { color: var(--warning-color); font-weight: bold; }
+/* --- FIN NUEVOS ESTILOS --- */
+
 
 @media (max-width: 992px) {
     .sidebar { width: 200px; }
