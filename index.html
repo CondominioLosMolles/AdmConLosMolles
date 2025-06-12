@@ -879,7 +879,258 @@
         cargarResidentes();
       }
     }
+<!-- HTML del módulo Gastos Comunes -->
+<div id="gastos-comunes-section" style="display:none;">
+  <div class="section-title">Gastos Comunes</div>
 
+  <div class="residente-actions" style="margin-bottom: 24px;">
+    <input
+      type="text"
+      id="busqueda-gastos"
+      placeholder="Buscar por nombre, RUT o parcela..."
+      oninput="filtrarGastosComunes()"
+      aria-label="Buscar gastos comunes"
+      style="width: 320px;"
+    />
+    <button class="btn" onclick="abrirModalGasto()">Agregar Gasto Común</button>
+  </div>
+
+  <table class="residente-table" id="tabla-gastos" aria-label="Tabla de gastos comunes">
+    <thead>
+      <tr>
+        <th style="width: 20%;">Nombre Residente</th>
+        <th style="width: 14%;">RUT</th>
+        <th style="width: 10%;">N° Parcela</th>
+        <th style="width: 15%;">Fecha Pago</th>
+        <th style="width: 15%;">Monto</th>
+        <th style="width: 10%;">Interés (%)</th>
+        <th style="width: 10%;">Multa (%)</th>
+        <th style="width: 10%;">Total a Pagar</th>
+        <th style="width: 10%;">Acciones</th>
+      </tr>
+    </thead>
+    <tbody id="tbody-gastos"></tbody>
+  </table>
+
+  <!-- Modal Agregar/Editar Gasto Común -->
+  <div id="modal-gasto-bg" class="modal-bg" style="display:none;" role="dialog" aria-modal="true" aria-labelledby="modal-gasto-titulo">
+    <div class="modal">
+      <button class="close-modal" onclick="cerrarModalGasto()" aria-label="Cerrar">&times;</button>
+      <h3 id="modal-gasto-titulo">Agregar Gasto Común</h3>
+      <form id="form-gasto" onsubmit="guardarGasto(event)">
+        <input type="hidden" id="gasto-id" />
+        <label for="gasto-residente">Nombre Residente</label>
+        <input type="text" id="gasto-residente" required autocomplete="off" />
+        <label for="gasto-rut">RUT</label>
+        <input type="text" id="gasto-rut" required />
+        <label for="gasto-parcela">N° Parcela</label>
+        <input type="number" id="gasto-parcela" required />
+        <label for="gasto-fecha">Fecha Pago</label>
+        <input type="date" id="gasto-fecha" required />
+        <label for="gasto-monto">Monto</label>
+        <input type="number" id="gasto-monto" min="0" required />
+        <label for="gasto-interes">Interés (%)</label>
+        <input type="number" id="gasto-interes" min="0" step="0.01" value="0" required />
+        <label for="gasto-multa">Multa (%)</label>
+        <input type="number" id="gasto-multa" min="0" step="0.01" value="0" required />
+        <label for="gasto-total">Total a Pagar</label>
+        <input type="number" id="gasto-total" readonly />
+        <button class="btn" type="submit">Guardar</button>
+      </form>
+    </div>
+  </div>
+
+<script>
+  // Variables para almacenar gastos comunes
+  let gastosComunesData = [];
+
+  // Función para mostrar módulo Gastos Comunes
+  function showGastosComunes() {
+    document.getElementById('dashboard-section').style.display = 'none';
+    document.getElementById('residentes-section').style.display = 'none';
+    document.getElementById('gastos-comunes-section').style.display = 'block';
+
+    // Actualizar navegación activa
+    document.querySelectorAll('.nav-link').forEach(link => link.classList.remove('active'));
+    Array.from(document.querySelectorAll('.nav-link')).find(link => link.textContent === 'Gastos Comunes').classList.add('active');
+
+    cargarGastosComunes();
+  }
+
+  // Filtrar gastos comunes
+  function filtrarGastosComunes() {
+    const filtro = document.getElementById('busqueda-gastos').value.trim().toLowerCase();
+    const tbody = document.getElementById('tbody-gastos');
+    tbody.innerHTML = '';
+    gastosComunesData
+      .filter(gasto =>
+        gasto.nombre.toLowerCase().includes(filtro) ||
+        gasto.rut.toLowerCase().includes(filtro) ||
+        String(gasto.parcela).includes(filtro)
+      )
+      .forEach(gasto => {
+        tbody.innerHTML += `
+          <tr>
+            <td>${gasto.nombre}</td>
+            <td>${gasto.rut}</td>
+            <td>${gasto.parcela}</td>
+            <td>${gasto.fecha}</td>
+            <td>$${Number(gasto.monto).toLocaleString('es-CL')}</td>
+            <td>${gasto.interes}%</td>
+            <td>${gasto.multa}%</td>
+            <td>$${Number(gasto.total).toLocaleString('es-CL')}</td>
+            <td>
+              <button class="acciones-btn" title="Editar" onclick="abrirModalGasto('${gasto.id}')">&#9998;</button>
+              <button class="acciones-btn" title="Eliminar" onclick="eliminarGasto('${gasto.id}')">&#128465;</button>
+            </td>
+          </tr>
+        `;
+      });
+  }
+
+  // Cargar gastos comunes desde Google Sheets
+  async function cargarGastosComunes() {
+    try {
+      const res = await gapi.client.sheets.spreadsheets.values.get({
+        spreadsheetId: SPREADSHEET_ID,
+        range: 'Pagos_GC!A2:Q',
+      });
+      const rows = res.result.values || [];
+      gastosComunesData = rows.map(row => ({
+        id: row[0],
+        nombre: row[1],
+        rut: row[2],
+        parcela: row[3],
+        fecha: row[4],
+        monto: Number(row[6]) || 0,
+        interes: Number(row[7]) || 0,
+        multa: Number(row[8]) || 0,
+        total: Number(row[9]) || 0
+      }));
+      filtrarGastosComunes();
+    } catch (error) {
+      console.error('Error al cargar gastos comunes:', error);
+    }
+  }
+
+  // Abrir modal para agregar o editar gasto común
+  function abrirModalGasto(id = null) {
+    document.getElementById('modal-gasto-bg').style.display = 'flex';
+    if (id) {
+      const gasto = gastosComunesData.find(g => g.id === id);
+      if (!gasto) return;
+      document.getElementById('modal-gasto-titulo').innerText = 'Editar Gasto Común';
+      document.getElementById('gasto-id').value = gasto.id;
+      document.getElementById('gasto-residente').value = gasto.nombre;
+      document.getElementById('gasto-rut').value = gasto.rut;
+      document.getElementById('gasto-parcela').value = gasto.parcela;
+      document.getElementById('gasto-fecha').value = gasto.fecha;
+      document.getElementById('gasto-monto').value = gasto.monto;
+      document.getElementById('gasto-interes').value = gasto.interes;
+      document.getElementById('gasto-multa').value = gasto.multa;
+      document.getElementById('gasto-total').value = gasto.total;
+    } else {
+      document.getElementById('modal-gasto-titulo').innerText = 'Agregar Gasto Común';
+      document.getElementById('form-gasto').reset();
+      document.getElementById('gasto-id').value = '';
+      document.getElementById('gasto-total').value = '';
+    }
+  }
+
+  // Cerrar modal gastos comunes
+  function cerrarModalGasto() {
+    document.getElementById('modal-gasto-bg').style.display = 'none';
+  }
+
+  // Calcular total a pagar con interés y multa
+  function calcularTotal() {
+    const monto = Number(document.getElementById('gasto-monto').value) || 0;
+    const interes = Number(document.getElementById('gasto-interes').value) || 0;
+    const multa = Number(document.getElementById('gasto-multa').value) || 0;
+    const total = monto + (monto * interes / 100) + (monto * multa / 100);
+    document.getElementById('gasto-total').value = total.toFixed(0);
+  }
+
+  // Asignar eventos para cálculo automático
+  document.getElementById('gasto-monto').addEventListener('input', calcularTotal);
+  document.getElementById('gasto-interes').addEventListener('input', calcularTotal);
+  document.getElementById('gasto-multa').addEventListener('input', calcularTotal);
+
+  // Guardar gasto común (agregar o editar)
+  async function guardarGasto(event) {
+    event.preventDefault();
+    const id = document.getElementById('gasto-id').value || Date.now().toString();
+    const nombre = document.getElementById('gasto-residente').value.trim();
+    const rut = document.getElementById('gasto-rut').value.trim();
+    const parcela = document.getElementById('gasto-parcela').value.trim();
+    const fecha = document.getElementById('gasto-fecha').value;
+    const monto = Number(document.getElementById('gasto-monto').value);
+    const interes = Number(document.getElementById('gasto-interes').value);
+    const multa = Number(document.getElementById('gasto-multa').value);
+    const total = Number(document.getElementById('gasto-total').value);
+
+    if (!nombre || !rut || !parcela || !fecha || monto <= 0) {
+      alert('Por favor, complete todos los campos correctamente.');
+      return;
+    }
+
+    const fila = [id, nombre, rut, parcela, fecha, '', monto, interes, multa, total];
+
+    try {
+      if (document.getElementById('gasto-id').value) {
+        const idx = gastosComunesData.findIndex(g => g.id === id);
+        if (idx === -1) throw new Error('Gasto no encontrado para editar.');
+        await gapi.client.sheets.spreadsheets.values.update({
+          spreadsheetId: SPREADSHEET_ID,
+          range: `Pagos_GC!A${idx + 2}:J${idx + 2}`,
+          valueInputOption: 'RAW',
+          values: [fila],
+        });
+      } else {
+        await gapi.client.sheets.spreadsheets.values.append({
+          spreadsheetId: SPREADSHEET_ID,
+          range: 'Pagos_GC!A2:J',
+          valueInputOption: 'RAW',
+          insertDataOption: 'INSERT_ROWS',
+          values: [fila],
+        });
+      }
+      cerrarModalGasto();
+      cargarGastosComunes();
+    } catch (error) {
+      alert('Error al guardar el gasto común: ' + error.message);
+    }
+  }
+
+  // Eliminar gasto común
+  async function eliminarGasto(id) {
+    if (!confirm('¿Está seguro de que desea eliminar este gasto común?')) return;
+    try {
+      const spreadsheet = await gapi.client.sheets.spreadsheets.get({ spreadsheetId: SPREADSHEET_ID });
+      const sheet = spreadsheet.result.sheets.find(s => s.properties.title === 'Pagos_GC');
+      const sheetId = sheet ? sheet.properties.sheetId : 0;
+      const idx = gastosComunesData.findIndex(g => g.id === id);
+      if (idx === -1) throw new Error('Gasto común no encontrado.');
+      await gapi.client.sheets.spreadsheets.batchUpdate({
+        spreadsheetId: SPREADSHEET_ID,
+        requests: [
+          {
+            deleteDimension: {
+              range: {
+                sheetId: sheetId,
+                dimension: 'ROWS',
+                startIndex: idx + 1,
+                endIndex: idx + 2,
+              },
+            },
+          },
+        ],
+      });
+      cargarGastosComunes();
+    } catch (error) {
+      alert('Error al eliminar el gasto común: ' + error.message);
+    }
+  }
     window.onload = function () {
       initializeGapiClient();
       google.accounts.id.initialize({
