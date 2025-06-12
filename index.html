@@ -9,7 +9,7 @@
   <script src="https://accounts.google.com/gsi/client" async defer></script>
   <script src="https://apis.google.com/js/api.js"></script>
   <style>
-    /* --- CSS tal como estaba en el código aprobado --- */
+    /* --- Estilos completos según el código aprobado y trabajado --- */
     html, body {
       margin: 0; padding: 0; height: 100%;
       font-family: 'Poppins', Arial, sans-serif;
@@ -210,7 +210,6 @@
       letter-spacing: 1.1px;
       white-space: nowrap;
     }
-    /* Residentes tabla */
     .residente-actions {
       display: flex;
       justify-content: space-between;
@@ -560,11 +559,32 @@
   </div>
 
   <script>
-    // --- Funciones y variables que ya teníamos (initializeGapiClient, handleCredentialResponse, parseJwt, cargarDashboard, cargarResidentes, etc.) ---
-    // No se modifica nada de lo previo, solo agregamos funciones para Gastos Comunes:
+    // --- Variables y funciones previas intactas ---
+    // (initializeGapiClient, handleCredentialResponse, parseJwt, cargarDashboard, cargarResidentes, showSection, filtrarResidentes, etc.)
 
+    // Variables para Gastos Comunes
     let gastosComunesData = [];
 
+    // Función para mostrar módulos
+    function showSection(sec) {
+      document.getElementById('dashboard-section').style.display = sec === 'dashboard' ? 'block' : 'none';
+      document.getElementById('residentes-section').style.display = sec === 'residentes' ? 'block' : 'none';
+      document.getElementById('gastos-comunes-section').style.display = sec === 'gastos' ? 'block' : 'none';
+
+      // Actualizar navegación activa
+      document.querySelectorAll('.nav-link').forEach(link => link.classList.remove('active'));
+      if(sec === 'dashboard') document.querySelector('.nav-link:nth-child(1)').classList.add('active');
+      else if(sec === 'residentes') document.querySelector('.nav-link:nth-child(2)').classList.add('active');
+      else if(sec === 'gastos') document.querySelector('.nav-link:nth-child(3)').classList.add('active');
+    }
+
+    // Mostrar módulo Gastos Comunes
+    function showGastosComunes() {
+      showSection('gastos');
+      cargarGastosComunes();
+    }
+
+    // Filtrar gastos comunes
     function filtrarGastosComunes() {
       const filtro = document.getElementById('busqueda-gastos').value.trim().toLowerCase();
       const tbody = document.getElementById('tbody-gastos');
@@ -595,6 +615,7 @@
         });
     }
 
+    // Cargar gastos comunes desde Google Sheets
     async function cargarGastosComunes() {
       try {
         const res = await gapi.client.sheets.spreadsheets.values.get({
@@ -619,6 +640,7 @@
       }
     }
 
+    // Abrir modal gastos comunes
     function abrirModalGasto(id = null) {
       document.getElementById('modal-gasto-bg').style.display = 'flex';
       if (id) {
@@ -642,10 +664,12 @@
       }
     }
 
+    // Cerrar modal gastos comunes
     function cerrarModalGasto() {
       document.getElementById('modal-gasto-bg').style.display = 'none';
     }
 
+    // Calcular total a pagar con interés y multa
     function calcularTotal() {
       const monto = Number(document.getElementById('gasto-monto').value) || 0;
       const interes = Number(document.getElementById('gasto-interes').value) || 0;
@@ -658,6 +682,7 @@
     document.getElementById('gasto-interes').addEventListener('input', calcularTotal);
     document.getElementById('gasto-multa').addEventListener('input', calcularTotal);
 
+    // Guardar gasto común
     async function guardarGasto(event) {
       event.preventDefault();
       const id = document.getElementById('gasto-id').value || Date.now().toString();
@@ -703,6 +728,7 @@
       }
     }
 
+    // Eliminar gasto común
     async function eliminarGasto(id) {
       if (!confirm('¿Está seguro de que desea eliminar este gasto común?')) return;
       try {
