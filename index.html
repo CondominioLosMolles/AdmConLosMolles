@@ -9,6 +9,7 @@
   <script src="https://accounts.google.com/gsi/client" async defer></script>
   <script src="https://apis.google.com/js/api.js"></script>
   <style>
+    /* Estilo general inspirado en Windows 11: moderno, limpio, con glassmorphism */
     body {
       margin: 0;
       font-family: 'Poppins', Arial, sans-serif;
@@ -131,9 +132,13 @@
       margin-bottom: 28px;
       user-select: none;
     }
+    /* Dashboard widgets con Mantenciones al lado derecho de Saldo de Caja */
     .dashboard-widgets {
-      display: flex;
-      flex-wrap: wrap;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      grid-template-areas:
+        "res-activos ing-mes egre-mes"
+        "saldo-caja saldo-caja mant-pend";
       gap: 28px;
       margin-bottom: 44px;
     }
@@ -142,8 +147,6 @@
       border-radius: 20px;
       box-shadow: 0 10px 30px rgb(33 118 174 / 0.12);
       padding: 32px 36px;
-      flex: 1 1 230px;
-      min-width: 230px;
       display: flex;
       flex-direction: column;
       align-items: flex-start;
@@ -153,6 +156,11 @@
       overflow: hidden;
       user-select: none;
     }
+    #res-activos { grid-area: res-activos; }
+    #ing-mes { grid-area: ing-mes; }
+    #egre-mes { grid-area: egre-mes; }
+    #saldo-caja { grid-area: saldo-caja; }
+    #mant-pend { grid-area: mant-pend; }
     .widget:before {
       content: "";
       position: absolute;
@@ -179,6 +187,7 @@
       z-index: 1;
       letter-spacing: 1.1px;
     }
+    /* Residentes tabla */
     .residente-actions {
       display: flex;
       justify-content: space-between;
@@ -386,7 +395,13 @@
       <!-- DASHBOARD -->
       <div id="dashboard-section">
         <div class="section-title">Dashboard</div>
-        <div class="dashboard-widgets" id="dashboard-widgets"></div>
+        <div class="dashboard-widgets">
+          <div class="widget" id="res-activos"><div class="widget-title">Residentes Activos</div><div class="widget-value">--</div></div>
+          <div class="widget" id="ing-mes"><div class="widget-title">Ingresos del Mes</div><div class="widget-value">--</div></div>
+          <div class="widget" id="egre-mes"><div class="widget-title">Egresos del Mes</div><div class="widget-value">--</div></div>
+          <div class="widget" id="saldo-caja"><div class="widget-title">Saldo de Caja</div><div class="widget-value">--</div></div>
+          <div class="widget" id="mant-pend"><div class="widget-title">Mantenciones Pendientes/Urgentes</div><div class="widget-value">--</div></div>
+        </div>
         <div style="background:#fff; border-radius:14px; padding:28px 24px; box-shadow:0 2px 8px #d0e3f140; margin-bottom:32px;">
           <h3 style="color:#2176ae;">Ingresos vs Egresos (últimos 12 meses)</h3>
           <canvas id="chart-ing-egre" height="80"></canvas>
@@ -460,7 +475,6 @@
   </div>
 
   <script>
-    // Configuración Google
     const CLIENT_ID = '997872453031-5o8s2o6v3qt722fb3p51a2r7bo24ncee.apps.googleusercontent.com';
     const API_KEY = 'AIzaSyA4nUkMycf_CHZE7TaBBD_WUyWMvSXUwoU';
     const SPREADSHEET_ID = '1bFo5dBC3HM0xupginTBe-hrrUNgkiuUn4fkXXzHide8';
@@ -559,7 +573,6 @@
       }
     }
 
-    // Dashboard: carga datos reales y gráfico con eje Y corregido
     async function cargarDashboard() {
       const widgets = [
         { id: 'res-activos', label: 'Residentes Activos', value: '--' },
@@ -606,9 +619,10 @@
       const mantPend = mantData.filter((row) => row[5] === 'Pendiente' || row[5] === 'Urgente').length;
       widgets[4].value = mantPend;
       widgets.forEach((w) => {
-        html += `<div class="widget"><div class="widget-title">${w.label}</div><div class="widget-value" id="${w.id}">${w.value}</div></div>`;
+        html += `<div class="widget" id="${w.id}"><div class="widget-title">${w.label}</div><div class="widget-value">${w.value}</div></div>`;
       });
-      document.getElementById('dashboard-widgets').innerHTML = html;
+      document.querySelector('.dashboard-widgets').innerHTML = html;
+
       // Morosidad
       const morosos = residentesData.filter((row) => row[7] === 'Moroso');
       const morososList = morosos.map((row) => row[3]).join(', ');
@@ -625,6 +639,7 @@
         <div>Parcelas morosas: <span>${morososList}</span></div>
         <div>Total deuda: <b>$${deudaTotal.toLocaleString('es-CL')}</b></div>
       `;
+
       // Gráfico con eje Y corregido y etiquetas en pesos chilenos
       let ctx = document.getElementById('chart-ing-egre').getContext('2d');
       if (window.myChart) window.myChart.destroy();
@@ -789,7 +804,6 @@
       if (!confirm('¿Está seguro de que desea eliminar a este residente?')) return;
       let idx = residentesDataCache.findIndex((r) => r[0] === id);
       if (idx > -1) {
-        // Obtener sheetId dinámicamente para evitar error 400
         const spreadsheet = await gapi.client.sheets.spreadsheets.get({ spreadsheetId: SPREADSHEET_ID });
         const sheet = spreadsheet.result.sheets.find((s) => s.properties.title === 'Residentes');
         const sheetId = sheet ? sheet.properties.sheetId : 0;
@@ -801,7 +815,7 @@
                 range: {
                   sheetId: sheetId,
                   dimension: 'ROWS',
-                  startIndex: idx + 1, // +1 por cabecera
+                  startIndex: idx + 1,
                   endIndex: idx + 2,
                 },
               },
