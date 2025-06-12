@@ -1,5 +1,5 @@
 // =================================================================================
-// ARCHIVO SCRIPT.JS FINAL Y COMPLETO
+// ARCHIVO SCRIPT.JS FINAL Y COMPLETO (VERSIÓN ESTABLE)
 // =================================================================================
 
 // CONFIGURACIÓN DE CREDENCIALES Y API
@@ -17,7 +17,7 @@ const loader = document.getElementById('loader-wrapper');
 const modalContainer = document.getElementById('modal-container');
 const modalBody = document.getElementById('modal-body');
 
-// --- FLUJO DE AUTENTICACIÓN (CORREGIDO Y MODERNO) ---
+// --- FLUJO DE AUTENTICACIÓN MODERNO Y ESTABLE ---
 function gapiLoaded() {
     gapi.load('client', initializeGapiClient);
 }
@@ -35,8 +35,9 @@ function gisLoaded() {
     tokenClient = google.accounts.oauth2.initTokenClient({
         client_id: CLIENT_ID,
         scope: SCOPES,
-        callback: handleTokenResponse,
+        callback: handleTokenResponse, // Usar un callback manejado
     });
+    // Mostrar el botón de login solo cuando todo esté listo
     document.getElementById('login-container').style.display = 'flex';
     loader.style.display = 'none';
     document.getElementById('login-button').addEventListener('click', () => tokenClient.requestAccessToken({ prompt: 'consent' }));
@@ -47,6 +48,9 @@ async function handleTokenResponse(resp) {
         handleAuthError("Hubo un error al obtener el permiso de su cuenta de Google.");
         return;
     }
+    // Ocultar login e iniciar la app
+    document.getElementById('login-container').style.display = 'none';
+    document.getElementById('app-container').style.display = 'flex';
     await startApp();
 }
 
@@ -54,6 +58,8 @@ function handleAuthError(message) {
     loader.innerHTML = `<p style="color:red; text-align:center; padding: 20px;"><b>${message}</b><br/>Verifique la configuración en Google Cloud y que las cookies de terceros estén habilitadas.</p>`;
     loader.style.display = 'flex';
 }
+
+// --- LÓGICA GENERAL DE LA APLICACIÓN ---
 
 document.addEventListener('DOMContentLoaded', () => {
     document.querySelector('.sidebar').addEventListener('click', (e) => {
@@ -86,8 +92,6 @@ function handleSignoutClick() {
 }
 
 async function startApp() {
-    document.getElementById('login-container').style.display = 'none';
-    document.getElementById('app-container').style.display = 'flex';
     const residents = await readSheetData(SPREADSHEET_ID, 'Residentes!A2:J');
     allResidentsData = [['ID_Residente', 'NombreCompleto', 'RUT', 'N_Parcela', 'Direccion', 'Email', 'Telefono', 'Estado', 'ValorGastoComun', 'ID_Sheet_Pagos'], ...residents];
     switchView('dashboard');
