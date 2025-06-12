@@ -1,61 +1,140 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Administración Condominio Los Molles</title>
-    <link rel="stylesheet" href="style.css">
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.5/xlsx.full.min.js"></script>
+  <meta charset="UTF-8">
+  <title>Condominio Los Molles - Administración</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <!-- Tipografía moderna -->
+  <link href="https://fonts.googleapis.com/css?family=Poppins:400,600&display=swap" rel="stylesheet">
+  <!-- Chart.js para el Dashboard -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- Google API Client -->
+  <script src="https://apis.google.com/js/api.js"></script>
+  <style>
+    body {
+      margin: 0;
+      font-family: 'Poppins', Arial, sans-serif;
+      background: #e3f0fa;
+      color: #222;
+    }
+    #login-section {
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      height: 100vh; background: #e3f0fa;
+    }
+    #login-card {
+      background: #fff; border-radius: 16px; box-shadow: 0 2px 16px #0001;
+      padding: 36px 48px; min-width: 320px; text-align: center;
+    }
+    #login-card h2 { color: #2176ae; margin-bottom: 18px; }
+    #login-card p { color: #444; margin-bottom: 28px; }
+    .btn {
+      background: #2176ae;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      padding: 10px 22px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s;
+      margin-top: 14px;
+    }
+    .btn:hover { background: #14496b; }
+    .loading { color: #2176ae; margin-top: 20px; }
+    /* ... (agrega aquí los estilos del dashboard y módulos según vayas avanzando) ... */
+  </style>
 </head>
 <body>
-    <div id="loader-wrapper">
-        <div class="spinner"></div>
-        <p>Cargando...</p>
+  <!-- LOGIN -->
+  <div id="login-section">
+    <div id="login-card">
+      <h2>Condominio Los Molles</h2>
+      <p>Inicia sesión con tu cuenta de Google para administrar el sistema.</p>
+      <button class="btn" id="btn-login" onclick="handleAuthClick()">Acceder con Google</button>
+      <div class="loading" id="login-loading" style="display:none;">Conectando con Google...</div>
+      <div class="loading" id="login-error" style="color:#e74c3c;display:none;"></div>
     </div>
-
-    <div id="login-container" style="display: none;">
-        <div class="login-box">
-            <h1>CondominioLosMolles</h1>
-            <p>Por favor, inicie sesión con su cuenta de Google para continuar.</p>
-            <button id="login-button">Iniciar Sesión con Google</button>
-        </div>
+  </div>
+  <!-- APP -->
+  <div id="app-section" style="display:none;">
+    <!-- Aquí irá el menú lateral y los módulos: dashboard, residentes, gastos comunes, etc. -->
+    <div style="padding:36px;">
+      <h2 style="color:#2176ae;">¡Autenticación exitosa!</h2>
+      <p>Ya puedes avanzar con el desarrollo de los módulos. El acceso a Google Sheets, Drive y Gmail está habilitado.</p>
+      <div id="user-email"></div>
+      <!-- Aquí se mostrarán los módulos según vayas avanzando -->
     </div>
+  </div>
+  <script>
+    // CONFIGURACIÓN DE CREDENCIALES Y API
+    const CLIENT_ID = '997872453031-5o8s2o6v3qt722fb3p51a2r7bo24ncee.apps.googleusercontent.com';
+    const API_KEY = 'AIzaSyA4nUkMycf_CHZE7TaBBD_WUyWMvSXUwoU';
+    const SPREADSHEET_ID = '1bFo5dBC3HM0xupginTBe-hrrUNgkiuUn4fkXXzHide8';
+    const SCOPES = 'https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/drive https://www.googleapis.com/auth/gmail.send';
 
-    <div id="app-container" style="display: none;">
-        <nav class="sidebar">
-            <div class="sidebar-header">
-                <h3>Condominio<br>Los Molles</h3>
-            </div>
-            <ul>
-                <li><a href="#" class="nav-link active" data-view="dashboard">Dashboard</a></li>
-                <li><a href="#" class="nav-link" data-view="residentes">Residentes</a></li>
-                <li><a href="#" class="nav-link" data-view="gastos-comunes">Gastos Comunes</a></li>
-                <li><a href="#" class="nav-link" data-view="contabilidad">Contabilidad</a></li>
-                <li><a href="#" class="nav-link" data-view="comunicaciones">Comunicaciones</a></li>
-                <li><a href="#" class="nav-link" data-view="mantenciones">Mantenciones</a></li>
-                <li><a href="#" class="nav-link" data-view="multas">Multas</a></li>
-                <li><a href="#" class="nav-link" data-view="asambleas">Asambleas</a></li>
-                <li><a href="#" class="nav-link" data-view="informes">Informes</a></li>
-                <li><a href="#" id="logout-button">Cerrar Sesión</a></li>
-            </ul>
-        </nav>
+    let GoogleAuth;
+    let currentUserEmail = "";
 
-        <main id="main-content">
-            </main>
-    </div>
+    // Cargar e inicializar la API de Google
+    function handleClientLoad() {
+      gapi.load('client:auth2', initClient);
+    }
 
-    <div id="modal-container" class="modal-container" style="display: none;">
-        <div class="modal-content">
-            <span class="close-modal-button">&times;</span>
-            <div id="modal-body">
-                </div>
-        </div>
-    </div>
+    function initClient() {
+      gapi.client.init({
+        apiKey: API_KEY,
+        clientId: CLIENT_ID,
+        discoveryDocs: [
+          "https://sheets.googleapis.com/$discovery/rest?version=v4",
+          "https://www.googleapis.com/discovery/v1/apis/drive/v3/rest",
+          "https://gmail.googleapis.com/$discovery/rest?version=v1"
+        ],
+        scope: SCOPES
+      }).then(() => {
+        GoogleAuth = gapi.auth2.getAuthInstance();
+        // Si ya está autenticado, mostrar app
+        if (GoogleAuth.isSignedIn.get()) {
+          onSignIn(GoogleAuth.currentUser.get());
+        }
+      }, error => {
+        document.getElementById('login-error').style.display = '';
+        document.getElementById('login-error').innerText = 'Error inicializando Google API: ' + error.details;
+      });
+    }
 
-    <script async defer src="https://apis.google.com/js/api.js" onload="gapiLoaded()"></script>
-    <script async defer src="https://accounts.google.com/gsi/client" onload="gisLoaded()"></script>
-    <script src="script.js"></script>
+    function handleAuthClick() {
+      document.getElementById('login-loading').style.display = '';
+      gapi.auth2.getAuthInstance().signIn().then(user => {
+        onSignIn(user);
+      }).catch(err => {
+        document.getElementById('login-loading').style.display = 'none';
+        document.getElementById('login-error').style.display = '';
+        document.getElementById('login-error').innerText = 'Error de autenticación: ' + err.error;
+      });
+    }
+
+    function onSignIn(googleUser) {
+      const profile = googleUser.getBasicProfile();
+      currentUserEmail = profile.getEmail();
+      if (currentUserEmail !== "losmollestunquen@gmail.com") {
+        document.getElementById('login-loading').style.display = 'none';
+        document.getElementById('login-error').style.display = '';
+        document.getElementById('login-error').innerText = 'Solo el administrador autorizado puede ingresar.';
+        GoogleAuth.signOut();
+        return;
+      }
+      document.getElementById('login-section').style.display = 'none';
+      document.getElementById('app-section').style.display = '';
+      document.getElementById('user-email').innerHTML = `<b>Usuario autenticado:</b> ${currentUserEmail}`;
+      document.getElementById('login-loading').style.display = 'none';
+      document.getElementById('login-error').style.display = 'none';
+      // Aquí puedes cargar el dashboard o el módulo que quieras mostrar primero
+    }
+
+    // Cargar la API al inicio
+    window.onload = function() {
+      handleClientLoad();
+    }
+  </script>
 </body>
 </html>
