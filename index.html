@@ -171,7 +171,7 @@
       padding: 32px 36px;
       display: flex;
       flex-direction: column;
-      align-items: flex-start;
+      align-items: center;
       backdrop-filter: blur(14px);
       border: 1.5px solid rgba(33, 118, 174, 0.15);
       position: relative;
@@ -180,6 +180,7 @@
       min-width: 220px;
       flex: 0 0 auto;
       white-space: nowrap;
+      text-align: center;
     }
     .widget:before {
       content: "";
@@ -200,7 +201,6 @@
       z-index: 1;
       white-space: normal;
       line-height: 1.3;
-      text-align: center;
     }
     .widget-value {
       font-size: 2.6rem;
@@ -210,7 +210,6 @@
       z-index: 1;
       letter-spacing: 1.1px;
       white-space: nowrap;
-      text-align: center;
     }
     /* Residentes tabla */
     .residente-actions {
@@ -272,15 +271,15 @@
       white-space: nowrap;
     }
     /* Ajustar anchos para columnas para evitar corte en Estado y mejorar espacio en Gasto Común */
-    .residente-table thead tr th:nth-child(1) { width: 20%; }
-    .residente-table thead tr th:nth-child(2) { width: 14%; }
-    .residente-table thead tr th:nth-child(3) { width: 10%; }
-    .residente-table thead tr th:nth-child(4) { width: 18%; }
-    .residente-table thead tr th:nth-child(5) { width: 15%; }
-    .residente-table thead tr th:nth-child(6) { width: 12%; }
-    .residente-table thead tr th:nth-child(7) { width: 12%; }
-    .residente-table thead tr th:nth-child(8) { width: 13%; }
-    .residente-table thead tr th:nth-child(9) { width: 10%; }
+    .residente-table thead tr th:nth-child(1) { width: 22%; } /* Nombre Completo */
+    .residente-table thead tr th:nth-child(2) { width: 12%; } /* RUT */
+    .residente-table thead tr th:nth-child(3) { width: 8%; }  /* N° Parcela reducido */
+    .residente-table thead tr th:nth-child(4) { width: 18%; } /* Dirección */
+    .residente-table thead tr th:nth-child(5) { width: 15%; } /* Email */
+    .residente-table thead tr th:nth-child(6) { width: 12%; } /* Teléfono */
+    .residente-table thead tr th:nth-child(7) { width: 11%; } /* Estado aumentado */
+    .residente-table thead tr th:nth-child(8) { width: 12%; } /* Gasto Común */
+    .residente-table thead tr th:nth-child(9) { width: 10%; } /* Acciones */
 
     .residente-table tbody tr {
       background: rgba(255 255 255 / 0.85);
@@ -485,13 +484,13 @@
           <thead>
             <tr>
               <th style="width: 22%;">Nombre Completo</th>
-              <th style="width: 16%;">RUT</th>
-              <th style="width: 10%;">N° Parcela</th>
+              <th style="width: 14%;">RUT</th>
+              <th style="width: 8%;">N° Parcela</th>
               <th style="width: 18%;">Dirección</th>
-              <th style="width: 14%;">Email</th>
+              <th style="width: 15%;">Email</th>
               <th style="width: 12%;">Teléfono</th>
-              <th style="width: 10%;">Estado</th>
-              <th style="width: 12%;">Valor Gasto Común</th>
+              <th style="width: 13%;">Estado</th>
+              <th style="width: 10%;">Gasto Común</th>
               <th style="width: 10%;">Acciones</th>
             </tr>
           </thead>
@@ -524,7 +523,7 @@
               <option value="Moroso">Moroso</option>
               <option value="Inactivo">Inactivo</option>
             </select>
-            <label for="res-gasto">Valor Gasto Común</label>
+            <label for="res-gasto">Gasto Común</label>
             <input type="number" id="res-gasto" required />
             <button class="btn" type="submit">Guardar</button>
           </form>
