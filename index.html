@@ -134,13 +134,22 @@
       margin-bottom: 28px;
       user-select: none;
     }
-    /* Dashboard widgets en columna vertical */
+    /* Dashboard widgets en fila horizontal, todos en una línea */
     .dashboard-widgets {
       display: flex;
-      flex-direction: column;
+      flex-wrap: nowrap;
       gap: 28px;
       margin-bottom: 44px;
-      max-width: 600px;
+      max-width: 100%;
+      overflow-x: auto;
+      padding-bottom: 10px;
+    }
+    .dashboard-widgets::-webkit-scrollbar {
+      height: 8px;
+    }
+    .dashboard-widgets::-webkit-scrollbar-thumb {
+      background: #2176ae88;
+      border-radius: 4px;
     }
     .widget {
       background: rgba(255 255 255 / 0.85);
@@ -155,7 +164,8 @@
       position: relative;
       overflow: hidden;
       user-select: none;
-      width: 100%;
+      min-width: 220px;
+      flex: 0 0 auto;
     }
     .widget:before {
       content: "";
@@ -182,6 +192,7 @@
       margin-bottom: 6px;
       z-index: 1;
       letter-spacing: 1.1px;
+      white-space: nowrap;
     }
     /* Residentes tabla */
     .residente-actions {
