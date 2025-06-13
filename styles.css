@@ -1,1 +1,57 @@
+/* Estilos globales */
+body {
+  margin: 0;
+  font-family: 'Poppins', Arial, sans-serif;
+  background: #f3f4f6;
+  color: #222;
+  display: flex;
+  min-height: 100vh;
+}
 
+.sidebar {
+  width: 220px;
+  background-color: #2176ae;
+  color: white;
+  padding: 20px;
+  box-sizing: border-box;
+}
+
+.sidebar ul {
+  list-style: none;
+  padding-left: 0;
+}
+
+.sidebar ul li {
+  margin-bottom: 12px;
+}
+
+.sidebar ul li a {
+  color: white;
+  text-decoration: none;
+  font-weight: 600;
+  display: block;
+  padding: 8px 12px;
+  border-radius: 6px;
+  transition: background-color 0.3s ease;
+}
+
+.sidebar ul li a:hover,
+.sidebar ul li a.active {
+  background-color: #145374;
+}
+
+main#contenedor-principal {
+  flex-grow: 1;
+  padding: 24px;
+  background: white;
+  overflow-y: auto;
+}
+
+/* Mensajes de error */
+.error {
+  color: #e74c3c;
+  font-weight: 700;
+  padding: 20px;
+  background: #fddede;
+  border-radius: 8px;
+}
