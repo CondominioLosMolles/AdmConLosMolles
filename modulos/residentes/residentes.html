@@ -1,1 +1,28 @@
-
+<section aria-label="Residentes">
+  <h1>Residentes</h1>
+  <div>
+    <input
+      type="text"
+      id="busqueda-residente"
+      placeholder="Buscar por nombre, RUT o parcela..."
+      aria-label="Buscar residentes"
+    />
+    <button id="btn-agregar-residente">Agregar Residente</button>
+  </div>
+  <table aria-label="Tabla de residentes" id="tabla-residentes" border="1" cellpadding="8" cellspacing="0">
+    <thead>
+      <tr>
+        <th>Nombre Completo</th>
+        <th>RUT</th>
+        <th>N° Parcela</th>
+        <th>Dirección</th>
+        <th>Email</th>
+        <th>Teléfono</th>
+        <th>Estado</th>
+        <th>Gasto Común</th>
+        <th>Acciones</th>
+      </tr>
+    </thead>
+    <tbody id="tbody-residentes"></tbody>
+  </table>
+</section>
