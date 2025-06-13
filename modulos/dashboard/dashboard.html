@@ -1,5 +1,28 @@
-<section aria-label="Dashboard">
-  <h1>Dashboard</h1>
-  <p>Bienvenido al panel principal del sistema.</p>
-  <!-- Aquí puedes agregar gráficos, estadísticas, etc. -->
-</section>
+<div class="section-title">Dashboard</div>
+<div class="dashboard-widgets" style="display:flex; gap:24px; flex-wrap: nowrap; overflow-x:auto; margin-bottom:36px;">
+  <div class="widget" id="res-activos" style="min-width: 220px;">
+    <div class="widget-title">Residentes Activos</div>
+    <div class="widget-value">--</div>
+  </div>
+  <div class="widget" id="ing-mes" style="min-width: 220px;">
+    <div class="widget-title">Ingresos del Mes</div>
+    <div class="widget-value">--</div>
+  </div>
+  <div class="widget" id="egre-mes" style="min-width: 220px;">
+    <div class="widget-title">Egresos del Mes</div>
+    <div class="widget-value">--</div>
+  </div>
+  <div class="widget" id="saldo-caja" style="min-width: 220px;">
+    <div class="widget-title">Saldo de Caja</div>
+    <div class="widget-value">--</div>
+  </div>
+  <div class="widget" id="mant-pend" style="min-width: 220px; white-space: normal; text-align: center;">
+    <div class="widget-title">Mantenciones<br>Pendientes</div>
+    <div class="widget-value">--</div>
+  </div>
+</div>
+<div style="background:#fff; border-radius:14px; padding:28px 24px; box-shadow:0 2px 8px #d0e3f140; margin-bottom:32px;">
+  <h3 style="color:#2176ae;">Ingresos vs Egresos (últimos 12 meses)</h3>
+  <canvas id="chart-ing-egre" height="80"></canvas>
+</div>
+<div id="dashboard-morosidad"></div>
