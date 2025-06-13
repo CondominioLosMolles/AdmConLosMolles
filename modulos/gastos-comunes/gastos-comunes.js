@@ -1,126 +1,168 @@
-console.log('Módulo Gastos Comunes cargado');
+export let gastosComunesData = [];
 
-const selectParcela = document.getElementById('select-parcela');
-const inputYear = document.getElementById('input-year');
-const timcValor = document.getElementById('timc-valor');
-const timcMes = document.getElementById('timc-mes');
-const btnGuardarTimc = document.getElementById('btn-guardar-timc');
-const timcValoresCont = document.getElementById('timc-valores');
-const anioTimcSpan = document.getElementById('anio-timc');
-const tbodyGastos = document.getElementById('tbody-gastos');
-
-let gastosData = []; // Cargar desde Google Sheets
-let timcData = {};   // Objeto clave "mes-año" => valor TIMC
-let residentesData = []; // Cargar desde Google Sheets
-
-// Generar opciones de parcela 1 a 26
-if(selectParcela){
-  for(let i=1; i<=26; i++){
-    const option = document.createElement('option');
-    option.value = i.toString();
-    option.textContent = `Parcela ${i}`;
-    selectParcela.appendChild(option);
-  }
-}
-
-// Renderizar listado TIMC
-function renderTimcListado() {
-  if(!timcValoresCont || !anioTimcSpan) return;
-  const anio = inputYear.value;
-  anioTimcSpan.textContent = anio;
-  timcValoresCont.innerHTML = '';
-  for(let m=1; m<=12; m++){
-    const key = `${m}-${anio}`;
-    const val = timcData[key] || 0;
-    const div = document.createElement('div');
-    div.textContent = `Mes ${m}: ${val}%`;
-    timcValoresCont.appendChild(div);
-  }
-}
-
-// Filtrar y mostrar gastos según parcela y año
-function filtrarGastos() {
-  if(!tbodyGastos) return;
-  const parcela = selectParcela.value;
-  const year = inputYear.value;
-  tbodyGastos.innerHTML = '';
-
-  gastosData.forEach(gasto => {
-    if((parcela === '' || gasto.parcela === parcela) && gasto.periodo.startsWith(year)){
-      // Cálculos simplificados para demo
-      const saldo = gasto.valorGC - gasto.montoPagado;
-      const estado = saldo <= 0 ? 'Pagado' : 'Pendiente';
-
-      const tr = document.createElement('tr');
-      tr.innerHTML = `
-        <td>${gasto.nombre}</td>
-        <td>${gasto.parcela}</td>
-        <td>$${gasto.valorGC.toLocaleString('es-CL')}</td>
-        <td>${gasto.periodo}</td>
-        <td>${gasto.fechaVencimiento}</td>
-        <td>$${gasto.montoPagado.toLocaleString('es-CL')}</td>
-        <td>$${saldo.toLocaleString('es-CL')}</td>
-        <td>${gasto.interes || 0}</td>
-        <td>${gasto.multa || 0}</td>
-        <td>${gasto.mesesImpagos || 0}</td>
-        <td>${gasto.deudaTotal || 0}</td>
-        <td>${gasto.fechaPago || ''}</td>
-        <td>${gasto.metodoPago || ''}</td>
-        <td>${estado}</td>
-        <td>
-          <button title="Editar">&#9998;</button>
-          <button title="Eliminar">&#128465;</button>
-        </td>
+export function filtrarGastosComunes() {
+  const filtro = document.getElementById('busqueda-gastos').value.trim().toLowerCase();
+  const tbody = document.getElementById('tbody-gastos');
+  tbody.innerHTML = '';
+  gastosComunesData
+    .filter(gasto =>
+      gasto.nombre.toLowerCase().includes(filtro) ||
+      gasto.rut.toLowerCase().includes(filtro) ||
+      String(gasto.parcela).includes(filtro)
+    )
+    .forEach(gasto => {
+      tbody.innerHTML += `
+        <tr>
+          <td>${gasto.nombre}</td>
+          <td>${gasto.rut}</td>
+          <td>${gasto.parcela}</td>
+          <td>${gasto.fecha}</td>
+          <td>$${Number(gasto.monto).toLocaleString('es-CL')}</td>
+          <td>${gasto.interes}%</td>
+          <td>${gasto.multa}%</td>
+          <td>$${Number(gasto.total).toLocaleString('es-CL')}</td>
+          <td>
+            <button class="acciones-btn" title="Editar" onclick="abrirModalGasto('${gasto.id}')">&#9998;</button>
+            <button class="acciones-btn" title="Eliminar" onclick="eliminarGasto('${gasto.id}')">&#128465;</button>
+          </td>
+        </tr>
       `;
-      tbodyGastos.appendChild(tr);
-    }
-  });
+    });
 }
 
-// Eventos para filtros y botones
-if(selectParcela) selectParcela.addEventListener('change', filtrarGastos);
-if(inputYear) inputYear.addEventListener('change', () => {
-  renderTimcListado();
-  filtrarGastos();
-});
-if(btnGuardarTimc){
-  btnGuardarTimc.addEventListener('click', () => {
-    alert('Funcionalidad para guardar TIMC pendiente de implementar');
-  });
-}
-
-// Simulación de datos para demo
-gastosData = [
-  {
-    nombre: 'Juan Pérez',
-    parcela: '1',
-    valorGC: 50000,
-    periodo: '2025-06',
-    fechaVencimiento: '2025-06-10',
-    montoPagado: 30000,
-    interes: 0,
-    multa: 0,
-    mesesImpagos: 0,
-    deudaTotal: 50000,
-    fechaPago: '2025-06-05',
-    metodoPago: 'Transferencia'
-  },
-  {
-    nombre: 'María López',
-    parcela: '2',
-    valorGC: 55000,
-    periodo: '2025-06',
-    fechaVencimiento: '2025-06-10',
-    montoPagado: 55000,
-    interes: 0,
-    multa: 0,
-    mesesImpagos: 0,
-    deudaTotal: 55000,
-    fechaPago: '2025-06-03',
-    metodoPago: 'Efectivo'
+export async function cargarGastosComunes() {
+  try {
+    const res = await gapi.client.sheets.spreadsheets.values.get({
+      spreadsheetId: SPREADSHEET_ID,
+      range: 'Pagos_GC!A2:Q',
+    });
+    const rows = res.result.values || [];
+    gastosComunesData = rows.map(row => ({
+      id: row[0],
+      nombre: row[1],
+      rut: row[2],
+      parcela: row[3],
+      fecha: row[4],
+      monto: Number(row[6]) || 0,
+      interes: Number(row[7]) || 0,
+      multa: Number(row[8]) || 0,
+      total: Number(row[9]) || 0
+    }));
+    filtrarGastosComunes();
+  } catch (error) {
+    console.error('Error al cargar gastos comunes:', error);
   }
-];
+}
 
-renderTimcListado();
-filtrarGastos();
+export function abrirModalGasto(id = null) {
+  document.getElementById('modal-gasto-bg').style.display = 'flex';
+  if (id) {
+    const gasto = gastosComunesData.find(g => g.id === id);
+    if (!gasto) return;
+    document.getElementById('modal-gasto-titulo').innerText = 'Editar Gasto Común';
+    document.getElementById('gasto-id').value = gasto.id;
+    document.getElementById('gasto-residente').value = gasto.nombre;
+    document.getElementById('gasto-rut').value = gasto.rut;
+    document.getElementById('gasto-parcela').value = gasto.parcela;
+    document.getElementById('gasto-fecha').value = gasto.fecha;
+    document.getElementById('gasto-monto').value = gasto.monto;
+    document.getElementById('gasto-interes').value = gasto.interes;
+    document.getElementById('gasto-multa').value = gasto.multa;
+    document.getElementById('gasto-total').value = gasto.total;
+  } else {
+    document.getElementById('modal-gasto-titulo').innerText = 'Agregar Gasto Común';
+    document.getElementById('form-gasto').reset();
+    document.getElementById('gasto-id').value = '';
+    document.getElementById('gasto-total').value = '';
+  }
+}
 
+export function cerrarModalGasto() {
+  document.getElementById('modal-gasto-bg').style.display = 'none';
+}
+
+export function calcularTotal() {
+  const monto = Number(document.getElementById('gasto-monto').value) || 0;
+  const interes = Number(document.getElementById('gasto-interes').value) || 0;
+  const multa = Number(document.getElementById('gasto-multa').value) || 0;
+  const total = monto + (monto * interes / 100) + (monto * multa / 100);
+  document.getElementById('gasto-total').value = total.toFixed(0);
+}
+
+document.getElementById('gasto-monto')?.addEventListener('input', calcularTotal);
+document.getElementById('gasto-interes')?.addEventListener('input', calcularTotal);
+document.getElementById('gasto-multa')?.addEventListener('input', calcularTotal);
+
+export async function guardarGasto(event) {
+  event.preventDefault();
+  const id = document.getElementById('gasto-id').value || Date.now().toString();
+  const nombre = document.getElementById('gasto-residente').value.trim();
+  const rut = document.getElementById('gasto-rut').value.trim();
+  const parcela = document.getElementById('gasto-parcela').value.trim();
+  const fecha = document.getElementById('gasto-fecha').value;
+  const monto = Number(document.getElementById('gasto-monto').value);
+  const interes = Number(document.getElementById('gasto-interes').value);
+  const multa = Number(document.getElementById('gasto-multa').value);
+  const total = Number(document.getElementById('gasto-total').value);
+
+  if (!nombre || !rut || !parcela || !fecha || monto <= 0) {
+    alert('Por favor, complete todos los campos correctamente.');
+    return;
+  }
+
+  const fila = [id, nombre, rut, parcela, fecha, '', monto, interes, multa, total];
+
+  try {
+    if (document.getElementById('gasto-id').value) {
+      const idx = gastosComunesData.findIndex(g => g.id === id);
+      if (idx === -1) throw new Error('Gasto no encontrado para editar.');
+      await gapi.client.sheets.spreadsheets.values.update({
+        spreadsheetId: SPREADSHEET_ID,
+        range: `Pagos_GC!A${idx + 2}:J${idx + 2}`,
+        valueInputOption: 'RAW',
+        values: [fila],
+      });
+    } else {
+      await gapi.client.sheets.spreadsheets.values.append({
+        spreadsheetId: SPREADSHEET_ID,
+        range: 'Pagos_GC!A2:J',
+        valueInputOption: 'RAW',
+        insertDataOption: 'INSERT_ROWS',
+        values: [fila],
+      });
+    }
+    cerrarModalGasto();
+    cargarGastosComunes();
+  } catch (error) {
+    alert('Error al guardar el gasto común: ' + error.message);
+  }
+}
+
+export async function eliminarGasto(id) {
+  if (!confirm('¿Está seguro de que desea eliminar este gasto común?')) return;
+  try {
+    const spreadsheet = await gapi.client.sheets.spreadsheets.get({ spreadsheetId: SPREADSHEET_ID });
+    const sheet = spreadsheet.result.sheets.find(s => s.properties.title === 'Pagos_GC');
+    const sheetId = sheet ? sheet.properties.sheetId : 0;
+    const idx = gastosComunesData.findIndex(g => g.id === id);
+    if (idx === -1) throw new Error('Gasto común no encontrado.');
+    await gapi.client.sheets.spreadsheets.batchUpdate({
+      spreadsheetId: SPREADSHEET_ID,
+      requests: [
+        {
+          deleteDimension: {
+            range: {
+              sheetId: sheetId,
+              dimension: 'ROWS',
+              startIndex: idx + 1,
+              endIndex: idx + 2,
+            },
+          },
+        },
+      ],
+    });
+    cargarGastosComunes();
+  } catch (error) {
+    alert('Error al eliminar el gasto común: ' + error.message);
+  }
+}
