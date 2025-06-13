@@ -5,43 +5,16 @@ const SPREADSHEET_ID = '1bFo5dBC3HM0xupginTBe-hrrUNgkiuUn4fkXXzHide8';
 const SCOPES =
   'https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/drive https://www.googleapis.com/auth/gmail.send';
 
-let tokenClient, accessToken = null, currentUserEmail = '';
+let tokenClient;
+let accessToken = null;
+let currentUserEmail = '';
 
 const appSection = document.getElementById('app-section');
 const loginSection = document.getElementById('login-section');
 const mainContent = document.getElementById('main-content');
 const navLinks = document.querySelectorAll('.nav-link');
 
-async function initializeGapiClient() {
-  return new Promise((resolve, reject) => {
-    gapi.load('client', async () => {
-      try {
-        await gapi.client.init({
-          apiKey: API_KEY,
-          discoveryDocs: [
-            'https://sheets.googleapis.com/$discovery/rest?version=v4',
-            'https://www.googleapis.com/discovery/v1/apis/drive/v3/rest',
-            'https://gmail.googleapis.com/$discovery/rest?version=v1',
-          ],
-        });
-        tokenClient = google.accounts.oauth2.initTokenClient({
-          client_id: CLIENT_ID,
-          scope: SCOPES,
-          callback: (tokenResponse) => {
-            if (tokenResponse && tokenResponse.access_token) {
-              accessToken = tokenResponse.access_token;
-              gapi.client.setToken({ access_token: accessToken });
-              resolve();
-            }
-          },
-        });
-      } catch (error) {
-        reject(error);
-      }
-    });
-  });
-}
-
+// Función para decodificar JWT
 function parseJwt(token) {
   const base64Url = token.split('.')[1];
   const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
@@ -54,7 +27,8 @@ function parseJwt(token) {
   return JSON.parse(jsonPayload);
 }
 
-function handleCredentialResponse(response) {
+// Definir handleCredentialResponse en ámbito global para Google Identity Services
+window.handleCredentialResponse = function(response) {
   document.getElementById('login-loading').style.display = 'block';
   document.getElementById('login-error').style.display = 'none';
   try {
@@ -78,8 +52,49 @@ function handleCredentialResponse(response) {
     document.getElementById('login-error').style.display = 'block';
     document.getElementById('login-loading').style.display = 'none';
   }
+};
+
+// Inicializa el cliente GAPI y tokenClient
+async function initializeGapiClient() {
+  return new Promise((resolve, reject) => {
+    gapi.load('client', async () => {
+      try {
+        await gapi.client.init({
+          apiKey: API_KEY,
+          discoveryDocs: [
+            'https://sheets.googleapis.com/$discovery/rest?version=v4',
+            'https://www.googleapis.com/discovery/v1/apis/drive/v3/rest',
+            'https://gmail.googleapis.com/$discovery/rest?version=v1',
+          ],
+        });
+        tokenClient = google.accounts.oauth2.initTokenClient({
+          client_id: CLIENT_ID,
+          scope: SCOPES,
+          callback: (tokenResponse) => {
+            if (tokenResponse && tokenResponse.access_token) {
+              accessToken = tokenResponse.access_token;
+              gapi.client.setToken({ access_token: accessToken });
+              // Mostrar app y cargar módulo dashboard
+              loginSection.style.display = 'none';
+              appSection.style.display = 'flex';
+              setActiveNav('dashboard');
+              loadModule('dashboard');
+            }
+          },
+        });
+        resolve();
+      } catch (error) {
+        document.getElementById('login-error').textContent =
+          'Error al inicializar la API de Google: ' + error.message;
+        document.getElementById('login-error').style.display = 'block';
+        document.getElementById('login-loading').style.display = 'none';
+        reject(error);
+      }
+    });
+  });
 }
 
+// Carga dinámica de módulos HTML, JS y CSS
 async function loadModule(moduleName) {
   try {
     const html = await fetch(`modulos/${moduleName}/${moduleName}.html`).then(res => res.text());
@@ -98,6 +113,7 @@ async function loadModule(moduleName) {
   }
 }
 
+// Actualiza la navegación activa
 function setActiveNav(moduleName) {
   navLinks.forEach(link => {
     if (link.dataset.module === moduleName) link.classList.add('active');
@@ -105,6 +121,7 @@ function setActiveNav(moduleName) {
   });
 }
 
+// Control de navegación por menú lateral
 navLinks.forEach(link => {
   link.addEventListener('click', e => {
     e.preventDefault();
@@ -114,11 +131,12 @@ navLinks.forEach(link => {
   });
 });
 
+// Inicialización al cargar la página
 window.onload = async () => {
   await initializeGapiClient();
   google.accounts.id.initialize({
     client_id: CLIENT_ID,
-    callback: handleCredentialResponse,
+    callback: window.handleCredentialResponse,
     auto_select: false,
     cancel_on_tap_outside: true,
   });
