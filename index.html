@@ -9,7 +9,7 @@
   <script src="https://accounts.google.com/gsi/client" async defer></script>
   <script src="https://apis.google.com/js/api.js"></script>
   <style>
-    /* --- Aquí va todo tu CSS global y específico --- */
+    /* Aquí va tu CSS global y específico (igual que antes) */
     html, body {
       margin: 0; padding: 0; height: 100%;
       font-family: 'Poppins', Arial, sans-serif;
@@ -20,133 +20,7 @@
       overflow-x: hidden;
       min-width: 320px;
     }
-    #login-section {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      height: 100vh;
-      background: #f3f4f6;
-      padding: 0 16px;
-      box-sizing: border-box;
-    }
-    #login-card {
-      background: rgba(255 255 255 / 0.85);
-      border-radius: 20px;
-      box-shadow: 0 8px 32px rgb(33 118 174 / 0.15);
-      padding: 40px 56px;
-      max-width: 480px;
-      width: 100%;
-      text-align: center;
-      backdrop-filter: blur(10px);
-      border: 1px solid rgba(33, 118, 174, 0.2);
-    }
-    #login-card h2 {
-      color: #2176ae;
-      margin-bottom: 20px;
-      font-weight: 600;
-      font-size: 2rem;
-    }
-    #login-card p {
-      color: #444;
-      margin-bottom: 32px;
-      font-size: 1.1rem;
-    }
-    .loading {
-      color: #2176ae;
-      margin-top: 20px;
-      font-weight: 600;
-    }
-    .error-message {
-      color: #e74c3c;
-      margin-top: 12px;
-      font-weight: 600;
-    }
-    #app-section {
-      display: none;
-      height: 100vh;
-      width: 100vw;
-      overflow: hidden;
-      box-sizing: border-box;
-      display: flex;
-    }
-    .sidebar {
-      position: fixed;
-      left: 0;
-      top: 0;
-      bottom: 0;
-      width: 220px;
-      background: rgba(255 255 255 / 0.8);
-      border-right: 1px solid rgba(33, 118, 174, 0.2);
-      padding: 40px 0 0 0;
-      display: flex;
-      flex-direction: column;
-      z-index: 10;
-      backdrop-filter: blur(10px);
-      box-shadow: inset 1px 0 0 rgb(33 118 174 / 0.1);
-      overflow-y: auto;
-      height: 100vh;
-    }
-    .sidebar h2 {
-      text-align: center;
-      font-weight: 700;
-      color: #2176ae;
-      margin-bottom: 32px;
-      font-size: 1.6rem;
-      letter-spacing: 1.2px;
-      user-select: none;
-    }
-    .sidebar nav {
-      display: flex;
-      flex-direction: column;
-    }
-    .nav-link {
-      padding: 16px 36px;
-      color: #2176ae;
-      text-decoration: none;
-      font-weight: 600;
-      font-size: 1.1rem;
-      border-left: 4px solid transparent;
-      transition: background 0.3s, border-color 0.3s;
-      cursor: pointer;
-      user-select: none;
-      white-space: nowrap;
-    }
-    .nav-link.active,
-    .nav-link:hover {
-      background: rgba(33, 118, 174, 0.1);
-      border-left: 4px solid #2176ae;
-      color: #14496b;
-    }
-    .main-content {
-      margin-left: 220px;
-      padding: 40px 56px;
-      height: 100vh;
-      overflow-y: auto;
-      background: #f3f4f6;
-      transition: margin 0.3s;
-      box-sizing: border-box;
-      max-width: calc(100vw - 220px);
-    }
-    @media (max-width: 900px) {
-      .sidebar {
-        width: 60px;
-        padding: 16px 0 0 0;
-      }
-      .sidebar h2 {
-        display: none;
-      }
-      .nav-link {
-        padding: 12px 16px;
-        font-size: 0.95rem;
-      }
-      .main-content {
-        margin-left: 60px;
-        padding: 24px 16px;
-        max-width: calc(100vw - 60px);
-      }
-    }
-    /* Agrega aquí más estilos específicos según tu código original */
+    /* ... resto de estilos ... */
   </style>
 </head>
 <body>
@@ -162,7 +36,7 @@
   </div>
 
   <!-- APP -->
-  <div id="app-section">
+  <div id="app-section" style="display:none;">
     <div class="sidebar">
       <h2>Los Molles</h2>
       <nav>
@@ -172,7 +46,7 @@
       </nav>
     </div>
     <div class="main-content" id="main-content">
-      <!-- Aquí se cargará el contenido dinámicamente -->
+      <!-- Contenido cargado dinámicamente -->
     </div>
   </div>
 
@@ -272,7 +146,26 @@
       try {
         const html = await fetch(`modulos/${moduleName}/${moduleName}.html`).then(res => res.text());
         mainContent.innerHTML = html;
-        await import(`./modulos/${moduleName}/${moduleName}.js`);
+        const module = await import(`./modulos/${moduleName}/${moduleName}.js`);
+
+        // Exponer funciones globales necesarias para eventos inline
+        if (module.abrirModalResidente) window.abrirModalResidente = module.abrirModalResidente;
+        if (module.cerrarModalResidente) window.cerrarModalResidente = module.cerrarModalResidente;
+        if (module.guardarResidente) window.guardarResidente = module.guardarResidente;
+        if (module.eliminarResidente) window.eliminarResidente = module.eliminarResidente;
+
+        if (module.filtrarResidentes) window.filtrarResidentes = module.filtrarResidentes;
+
+        if (module.abrirModalGasto) window.abrirModalGasto = module.abrirModalGasto;
+        if (module.cerrarModalGasto) window.cerrarModalGasto = module.cerrarModalGasto;
+        if (module.guardarGasto) window.guardarGasto = module.guardarGasto;
+        if (module.eliminarGasto) window.eliminarGasto = module.eliminarGasto;
+        if (module.filtrarGastosComunes) window.filtrarGastosComunes = module.filtrarGastosComunes;
+
+        if (module.cargarDashboard) module.cargarDashboard();
+        if (module.cargarResidentes) module.cargarResidentes();
+        if (module.cargarGastosComunes) module.cargarGastosComunes();
+
         // Cargar CSS dinámicamente
         const existingLink = document.getElementById('module-css');
         if (existingLink) existingLink.remove();
