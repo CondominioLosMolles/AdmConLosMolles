@@ -1,1 +1,56 @@
+<section aria-label="Gastos Comunes">
+  <h1>Gastos Comunes</h1>
+
+  <div>
+    <label for="select-parcela">Parcela:</label>
+    <select id="select-parcela" aria-label="Filtrar por parcela">
+      <option value="">Todas las parcelas</option>
+      <!-- Opciones 1 a 26 generadas dinámicamente -->
+    </select>
+
+    <label for="input-year">Año:</label>
+    <input type="number" id="input-year" min="2023" max="2030" value="2025" aria-label="Filtrar por año" />
+
+    <label for="timc-valor">TIMC (%):</label>
+    <input type="number" id="timc-valor" step="0.1" placeholder="TIMC (%)" aria-label="Valor TIMC" />
+
+    <label for="timc-mes">Mes TIMC:</label>
+    <select id="timc-mes" aria-label="Mes TIMC">
+      <option value="1">Enero</option><option value="2">Febrero</option><option value="3">Marzo</option>
+      <option value="4">Abril</option><option value="5">Mayo</option><option value="6">Junio</option>
+      <option value="7">Julio</option><option value="8">Agosto</option><option value="9">Septiembre</option>
+      <option value="10">Octubre</option><option value="11">Noviembre</option><option value="12">Diciembre</option>
+    </select>
+
+    <button id="btn-guardar-timc">Guardar TIMC</button>
+  </div>
+
+  <div id="timc-listado" aria-live="polite" style="margin-top: 1em;">
+    <h2>TIMC Registrados (<span id="anio-timc">2025</span>)</h2>
+    <div id="timc-valores"></div>
+  </div>
+
+  <table id="tabla-gastos" border="1" cellpadding="8" cellspacing="0" aria-label="Tabla de gastos comunes" style="margin-top: 1em; width: 100%;">
+    <thead>
+      <tr>
+        <th>Nombre Residente</th>
+        <th>Parcela</th>
+        <th>Valor Gasto Común</th>
+        <th>Período</th>
+        <th>Fecha Vencimiento</th>
+        <th>Monto Pagado</th>
+        <th>Saldo</th>
+        <th>Interés</th>
+        <th>Multa 1/4</th>
+        <th>Meses Impagos</th>
+        <th>Deuda Total</th>
+        <th>Fecha Pago</th>
+        <th>Método Pago</th>
+        <th>Estado</th>
+        <th>Acciones</th>
+      </tr>
+    </thead>
+    <tbody id="tbody-gastos"></tbody>
+  </table>
+</section>
 
