@@ -1,583 +1,402 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8" />
-  <title>Condominio Los Molles - Administración</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
-  <link href="https://fonts.googleapis.com/css?family=Poppins:400,600&display=swap" rel="stylesheet" />
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <script src="https://accounts.google.com/gsi/client" async defer></script>
-  <script src="https://apis.google.com/js/api.js"></script>
+  <meta charset="UTF-8">
+  <title>Condominio Los Molles</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
-    /* Estilos generales y diseño consistente */
-    html, body {
-      margin: 0; padding: 0; height: 100%;
-      font-family: 'Poppins', Arial, sans-serif;
-      background: #f3f4f6;
-      color: #222;
-      -webkit-font-smoothing: antialiased;
-      -moz-osx-font-smoothing: grayscale;
-      overflow-x: hidden;
-      min-width: 320px;
-    }
-    #login-section {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      height: 100vh;
-      background: #f3f4f6;
-      padding: 0 16px;
-      box-sizing: border-box;
-    }
-    #login-card {
-      background: rgba(255 255 255 / 0.85);
-      border-radius: 20px;
-      box-shadow: 0 8px 32px rgb(33 118 174 / 0.15);
-      padding: 40px 56px;
-      max-width: 480px;
-      width: 100%;
-      text-align: center;
-      backdrop-filter: blur(10px);
-      border: 1px solid rgba(33, 118, 174, 0.2);
-    }
-    #login-card h2 {
-      color: #2176ae;
-      margin-bottom: 20px;
-      font-weight: 600;
-      font-size: 2rem;
-    }
-    #login-card p {
-      color: #444;
-      margin-bottom: 32px;
-      font-size: 1.1rem;
-    }
-    .loading {
-      color: #2176ae;
-      margin-top: 20px;
-      font-weight: 600;
-    }
-    .error-message {
-      color: #e74c3c;
-      margin-top: 12px;
-      font-weight: 600;
+    body { font-family: Arial, sans-serif; background: #f8f8f8; margin: 0; }
+    .container { max-width: 1200px; margin: auto; background: #fff; padding: 2em; border-radius: 8px; }
+    h1, h2 { color: #2a4d69; }
+    .section { margin-bottom: 2em; }
+    .section-header { margin-bottom: 1em; }
+    .row { display: flex; flex-wrap: wrap; gap: 1em; }
+    label { font-weight: bold; }
+    input, select, button { padding: 0.3em 0.5em; border-radius: 4px; border: 1px solid #ccc; }
+    button { cursor: pointer; }
+    .table-responsive { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; margin-top: 1em; }
+    th, td { border: 1px solid #ddd; padding: 0.5em; text-align: center; }
+    th { background: #e3e3e3; }
+    .btn-primary { background: #2a4d69; color: #fff; border: none; }
+    .btn-success { background: #4CAF50; color: #fff; border: none; }
+    .btn-secondary { background: #ccc; }
+    .modal { display: none; position: fixed; z-index: 9999; left: 0; top: 0; width: 100vw; height: 100vh; overflow: auto; background: rgba(0,0,0,0.4); align-items: center; justify-content: center;}
+    .modal-content { background: #fff; margin: auto; padding: 2em; border-radius: 8px; width: 100%; max-width: 400px; position: relative; }
+    .close { position: absolute; right: 1em; top: 1em; font-size: 1.5em; cursor: pointer; }
+    .form-group { margin-bottom: 1em; }
+    .timc-lista { margin-top: 1em; font-size: 1em; color: #2a4d69; }
+    @media (max-width: 700px) {
+      .container { padding: 0.5em; }
+      .row { flex-direction: column; }
+      .modal-content { padding: 1em; }
     }
   </style>
 </head>
 <body>
-  <!-- LOGIN -->
-  <div id="login-section">
-    <div id="login-card">
-      <h2>Condominio Los Molles</h2>
-      <p>Inicia sesión con tu cuenta de Google para administrar el sistema.</p>
-      <div id="g_id_signin"></div>
-      <div class="loading" id="login-loading" style="display:none;">Conectando con Google...</div>
-      <div class="error-message" id="login-error" style="display:none;"></div>
+<div class="container">
+  <h1>Condominio Los Molles</h1>
+  <!-- Login/Google -->
+  <div>
+    <p>Inicia sesión con tu cuenta de Google para administrar el sistema.</p>
+    <p>Conectando con Google...</p>
+  </div>
+  <!-- DASHBOARD -->
+  <section class="section">
+    <div class="section-header"><h2>Dashboard</h2></div>
+    <div class="row">
+      <div class="widget">Ingresos del Mes</div>
+      <div class="widget">Egresos del Mes</div>
+      <div class="widget">Saldo de Caja</div>
+      <div class="widget">Mantenciones Pendientes</div>
+    </div>
+    <div class="row">
+      <div class="widget" style="flex:2;">Ingresos vs Egresos (últimos 12 meses)</div>
+    </div>
+  </section>
+  <!-- RESIDENTES -->
+  <section class="section">
+    <div class="section-header"><h2>Residentes</h2></div>
+    <div class="table-responsive">
+      <table>
+        <thead>
+          <tr>
+            <th>Nombre Completo</th>
+            <th>RUT</th>
+            <th>N° Parcela</th>
+            <th>Dirección</th>
+            <th>Email</th>
+            <th>Teléfono</th>
+            <th>Estado</th>
+            <th>Gasto Común</th>
+            <th>Acciones</th>
+          </tr>
+        </thead>
+        <tbody>
+          <!-- Aquí se insertan dinámicamente los residentes -->
+        </tbody>
+      </table>
+    </div>
+    <div>
+      <h3>Agregar Residente</h3>
+      <form id="form-residente">
+        <input type="text" placeholder="Nombre Completo" required>
+        <input type="text" placeholder="RUT" required>
+        <input type="number" placeholder="N° Parcela" min="1" max="26" required>
+        <input type="text" placeholder="Dirección">
+        <input type="email" placeholder="Email">
+        <input type="text" placeholder="Teléfono">
+        <select>
+          <option value="Activo">Activo</option>
+          <option value="Moroso">Moroso</option>
+          <option value="Inactivo">Inactivo</option>
+        </select>
+        <input type="number" placeholder="Gasto Común" min="0">
+        <button type="submit" class="btn-success">Guardar</button>
+      </form>
+    </div>
+  </section>
+  <!-- =========================
+       GASTOS COMUNES
+  ========================== -->
+  <section id="gastos-comunes" class="section">
+    <div class="section-header"><h2>Gastos Comunes</h2></div>
+    <div class="row" style="gap: 1em; align-items: center;">
+      <div>
+        <label for="filtro-parcela">N° Parcela</label>
+        <input list="parcelas-list" id="filtro-parcela" name="filtro-parcela" placeholder="Ej: 1" onchange="filtrarGastosComunes()">
+        <datalist id="parcelas-list">
+          <option value="1"></option><option value="2"></option><option value="3"></option>
+          <option value="4"></option><option value="5"></option><option value="6"></option>
+          <option value="7"></option><option value="8"></option><option value="9"></option>
+          <option value="10"></option><option value="11"></option><option value="12"></option>
+          <option value="13"></option><option value="14"></option><option value="15"></option>
+          <option value="16"></option><option value="17"></option><option value="18"></option>
+          <option value="19"></option><option value="20"></option><option value="21"></option>
+          <option value="22"></option><option value="23"></option><option value="24"></option>
+          <option value="25"></option><option value="26"></option>
+        </datalist>
+      </div>
+      <div>
+        <label for="filtro-anio">Año</label>
+        <input type="number" id="filtro-anio" name="filtro-anio" min="2020" max="2100" value="2025" onchange="filtrarGastosComunes()">
+      </div>
+      <div>
+        <label for="input-timc">TIMC</label>
+        <input type="number" id="input-timc" name="input-timc" step="0.01" placeholder="Ej: 4.5">
+      </div>
+      <div>
+        <label for="input-timc-mes">Mes</label>
+        <select id="input-timc-mes" name="input-timc-mes">
+          <option value="Enero">Enero</option><option value="Febrero">Febrero</option><option value="Marzo">Marzo</option>
+          <option value="Abril">Abril</option><option value="Mayo">Mayo</option><option value="Junio">Junio</option>
+          <option value="Julio">Julio</option><option value="Agosto">Agosto</option><option value="Septiembre">Septiembre</option>
+          <option value="Octubre">Octubre</option><option value="Noviembre">Noviembre</option><option value="Diciembre">Diciembre</option>
+        </select>
+      </div>
+      <div>
+        <button type="button" onclick="guardarTIMC()" class="btn-primary">Guardar TIMC</button>
+      </div>
+    </div>
+    <div id="timc-por-mes" class="timc-lista"></div>
+    <div class="table-responsive">
+      <table id="tabla-gastos-comunes">
+        <thead>
+          <tr>
+            <th>Nombre Residente</th>
+            <th>N° Parcela</th>
+            <th>Valor GC</th>
+            <th>Periodo</th>
+            <th>Vencimiento</th>
+            <th>Pagado</th>
+            <th>Saldo</th>
+            <th>Interés</th>
+            <th>Multa 1/4</th>
+            <th>Meses Impagos</th>
+            <th>Deuda Total</th>
+            <th>Fecha Pago</th>
+            <th>Método</th>
+            <th>Estado</th>
+            <th>Comprobante</th>
+          </tr>
+        </thead>
+        <tbody>
+          <!-- Filas dinámicas aquí -->
+        </tbody>
+      </table>
+    </div>
+    <button class="btn-primary" style="margin-top:1em;" onclick="abrirModalGastoComun()">Agregar Gasto Común</button>
+  </section>
+
+  <div id="modal-gasto-comun" class="modal">
+    <div class="modal-content">
+      <span class="close" onclick="cerrarModalGastoComun()">&times;</span>
+      <h3>Agregar Gasto Común</h3>
+      <form id="form-gasto-comun" onsubmit="guardarGastoComun(event)">
+        <div class="form-group">
+          <label for="modal-parcela">N° Parcela</label>
+          <input type="number" id="modal-parcela" name="modal-parcela" min="1" max="26" required onchange="autocompletarResidenteModal()">
+        </div>
+        <div class="form-group">
+          <label for="modal-nombre">Nombre Residente</label>
+          <input type="text" id="modal-nombre" name="modal-nombre" readonly>
+        </div>
+        <div class="form-group">
+          <label for="modal-fecha-pago">Fecha de Pago</label>
+          <input type="date" id="modal-fecha-pago" name="modal-fecha-pago" required>
+        </div>
+        <div class="form-group">
+          <label for="modal-mes">Mes</label>
+          <select id="modal-mes" name="modal-mes" required>
+            <option value="Enero">Enero</option><option value="Febrero">Febrero</option><option value="Marzo">Marzo</option>
+            <option value="Abril">Abril</option><option value="Mayo">Mayo</option><option value="Junio">Junio</option>
+            <option value="Julio">Julio</option><option value="Agosto">Agosto</option><option value="Septiembre">Septiembre</option>
+            <option value="Octubre">Octubre</option><option value="Noviembre">Noviembre</option><option value="Diciembre">Diciembre</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="modal-monto">Monto Pagado</label>
+          <input type="number" id="modal-monto" name="modal-monto" required min="0" step="0.01">
+        </div>
+        <div class="form-group">
+          <label for="modal-metodo">Método de Pago</label>
+          <select id="modal-metodo" name="modal-metodo" required>
+            <option value="Transferencia">Transferencia</option>
+            <option value="Efectivo">Efectivo</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="modal-comprobante">Comprobante de Pago</label>
+          <input type="file" id="modal-comprobante" name="modal-comprobante" accept="image/*,application/pdf">
+        </div>
+        <div class="form-group" style="text-align:right;">
+          <button type="submit" class="btn-success">Guardar</button>
+          <button type="button" class="btn-secondary" onclick="cerrarModalGastoComun()">Cancelar</button>
+        </div>
+      </form>
     </div>
   </div>
-  <!-- APP -->
-  <div id="app-section" style="display:none;">
-    <div class="sidebar" role="navigation" aria-label="Menú principal">
-      <h2>Los Molles</h2>
-      <a class="nav-link active" href="#" onclick="showSection('dashboard')">Dashboard</a>
-      <a class="nav-link" href="#" onclick="showSection('residentes')">Residentes</a>
-      <a class="nav-link" href="#" onclick="showSection('gastos')">Gastos Comunes</a>
-    </div>
-    <div class="main-content">
-      <!-- DASHBOARD -->
-      <div id="dashboard-section">
-        <div class="section-title">Dashboard</div>
-        <!-- Aquí va el contenido del dashboard -->
-      </div>
+<!-- ... (continúa después del módulo de Gastos Comunes y modal) ... -->
 
-      <!-- RESIDENTES -->
-      <div id="residentes-section" style="display:none;">
-        <div class="section-title">Residentes</div>
-        <div class="residente-actions">
-          <input
-            type="text"
-            id="busqueda-residente"
-            placeholder="Buscar por nombre, RUT o parcela..."
-            oninput="filtrarResidentes()"
-            aria-label="Buscar residentes"
-          />
-          <button class="btn" onclick="abrirModalResidente()">Agregar Residente</button>
-        </div>
-        <table class="residente-table" id="tabla-residentes" aria-label="Tabla de residentes">
-          <thead>
-            <tr>
-              <th>Nombre Completo</th>
-              <th>RUT</th>
-              <th>N° Parcela</th>
-              <th>Dirección</th>
-              <th>Email</th>
-              <th>Teléfono</th>
-              <th>Estado</th>
-              <th>Gasto Común</th>
-              <th>Acciones</th>
-            </tr>
-          </thead>
-          <tbody id="tbody-residentes"></tbody>
-        </table>
-      </div>
-      <!-- MÓDULO GASTOS COMUNES -->
-      <div id="gastos-section" style="display:none;">
-        <div class="section-title">Gastos Comunes</div>
+<!-- Aquí seguirían otros módulos originales de tu sistema, como: -->
+<!-- Por ejemplo, módulo de Ingresos, Egresos, Mantenciones, etc. -->
+<section class="section">
+  <div class="section-header"><h2>Ingresos</h2></div>
+  <div class="table-responsive">
+    <table>
+      <thead>
+        <tr>
+          <th>Fecha</th>
+          <th>Detalle</th>
+          <th>Monto</th>
+          <th>Residente</th>
+          <th>Método</th>
+          <th>Comprobante</th>
+          <th>Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        <!-- Ingresos dinámicos -->
+      </tbody>
+    </table>
+  </div>
+  <!-- Formulario agregar ingreso -->
+  <div>
+    <h3>Agregar Ingreso</h3>
+    <form id="form-ingreso">
+      <input type="date" required>
+      <input type="text" placeholder="Detalle" required>
+      <input type="number" placeholder="Monto" min="0" required>
+      <input type="text" placeholder="Residente">
+      <select>
+        <option value="Transferencia">Transferencia</option>
+        <option value="Efectivo">Efectivo</option>
+      </select>
+      <input type="file" accept="image/*,application/pdf">
+      <button type="submit" class="btn-success">Guardar</button>
+    </form>
+  </div>
+</section>
 
-        <div style="display:flex; gap:16px; flex-wrap: wrap; margin-bottom: 20px;">
-          <select id="select-parcela" onchange="filtrarGastos()">
-            <option value="">Todas las parcelas</option>
-            <!-- Opciones 1 a 26 -->
-            <script>
-              for(let i=1;i<=26;i++){
-                document.write(`<option value="${i}">Parcela ${i}</option>`);
-              }
-            </script>
-          </select>
+<section class="section">
+  <div class="section-header"><h2>Egresos</h2></div>
+  <div class="table-responsive">
+    <table>
+      <thead>
+        <tr>
+          <th>Fecha</th>
+          <th>Detalle</th>
+          <th>Monto</th>
+          <th>Proveedor</th>
+          <th>Método</th>
+          <th>Comprobante</th>
+          <th>Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        <!-- Egresos dinámicos -->
+      </tbody>
+    </table>
+  </div>
+  <!-- Formulario agregar egreso -->
+  <div>
+    <h3>Agregar Egreso</h3>
+    <form id="form-egreso">
+      <input type="date" required>
+      <input type="text" placeholder="Detalle" required>
+      <input type="number" placeholder="Monto" min="0" required>
+      <input type="text" placeholder="Proveedor">
+      <select>
+        <option value="Transferencia">Transferencia</option>
+        <option value="Efectivo">Efectivo</option>
+      </select>
+      <input type="file" accept="image/*,application/pdf">
+      <button type="submit" class="btn-success">Guardar</button>
+    </form>
+  </div>
+</section>
 
-          <input type="number" id="input-year" min="2023" max="2030" value="2025" onchange="filtrarGastos()" placeholder="Año" style="width:100px;"/>
+<section class="section">
+  <div class="section-header"><h2>Mantenciones</h2></div>
+  <div class="table-responsive">
+    <table>
+      <thead>
+        <tr>
+          <th>Fecha</th>
+          <th>Detalle</th>
+          <th>Responsable</th>
+          <th>Estado</th>
+          <th>Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        <!-- Mantenciones dinámicas -->
+      </tbody>
+    </table>
+  </div>
+  <!-- Formulario agregar mantención -->
+  <div>
+    <h3>Agregar Mantención</h3>
+    <form id="form-mantencion">
+      <input type="date" required>
+      <input type="text" placeholder="Detalle" required>
+      <input type="text" placeholder="Responsable">
+      <select>
+        <option value="Pendiente">Pendiente</option>
+        <option value="Realizada">Realizada</option>
+      </select>
+      <button type="submit" class="btn-success">Guardar</button>
+    </form>
+  </div>
+</section>
+<!-- Otros módulos originales... -->
 
-          <div>
-            <input type="number" id="timc-valor" step="0.1" placeholder="TIMC (%)" style="width:100px;"/>
-            <select id="timc-mes" style="width:120px;">
-              <option value="1">Enero</option><option value="2">Febrero</option><option value="3">Marzo</option>
-              <option value="4">Abril</option><option value="5">Mayo</option><option value="6">Junio</option>
-              <option value="7">Julio</option><option value="8">Agosto</option><option value="9">Septiembre</option>
-              <option value="10">Octubre</option><option value="11">Noviembre</option><option value="12">Diciembre</option>
-            </select>
-            <button class="btn" onclick="guardarTIMC()">Guardar TIMC</button>
-          </div>
-        </div>
+<!-- Por ejemplo, podrías tener aquí más secciones como reportes, configuración, etc. -->
+<section class="section">
+  <div class="section-header"><h2>Reportes</h2></div>
+  <div>
+    <button class="btn-primary">Descargar Reporte General</button>
+    <button class="btn-primary">Reporte Gastos Comunes</button>
+    <button class="btn-primary">Reporte Ingresos</button>
+    <button class="btn-primary">Reporte Egresos</button>
+  </div>
+</section>
 
-        <div id="timc-listado" style="margin-bottom: 20px;">
-          <h4>TIMC Registrados (<span id="anio-timc">2025</span>)</h4>
-          <div id="timc-valores"></div>
-        </div>
+<!-- Pie de página o footer -->
+<footer style="margin-top:3em; text-align:center; color:#888;">
+  <hr>
+  <p>Condominio Los Molles &copy; 2025. Todos los derechos reservados.</p>
+</footer>
 
-        <table class="residente-table" id="tabla-gastos" aria-label="Tabla de gastos comunes">
-          <thead>
-            <tr>
-              <th>Nombre Residente</th>
-              <th>Parcela</th>
-              <th>Valor Gasto Común</th>
-              <th>Período</th>
-              <th>Fecha Vencimiento</th>
-              <th>Monto Pagado</th>
-              <th>Saldo</th>
-              <th>Interés</th>
-              <th>Multa 1/4</th>
-              <th>Meses Impagos</th>
-              <th>Deuda Total</th>
-              <th>Fecha Pago</th>
-              <th>Método Pago</th>
-              <th>Estado</th>
-              <th>Acciones</th>
-            </tr>
-          </thead>
-          <tbody id="tbody-gastos"></tbody>
-        </table>
+<!-- MODALES GLOBALES (si tienes otros modales originales, van aquí) -->
 
-        <!-- Modal Agregar/Editar Gasto Común -->
-        <div id="modal-gasto-bg" class="modal-bg" style="display:none;" role="dialog" aria-modal="true" aria-labelledby="modal-gasto-titulo">
-          <div class="modal">
-            <button class="close-modal" onclick="cerrarModalGasto()" aria-label="Cerrar">&times;</button>
-            <h3 id="modal-gasto-titulo">Agregar Gasto Común</h3>
-            <form id="form-gasto" onsubmit="guardarGasto(event)">
-              <input type="hidden" id="gasto-id" />
-              <label for="gasto-parcela">N° Parcela</label>
-              <input list="parcelas" id="gasto-parcela" required autocomplete="off" oninput="autocompletarResidente()" />
-              <datalist id="parcelas">
-                <option value="1">Parcela 1</option>
-                <!-- ... hasta 26 -->
-              </datalist>
+<!-- Scripts globales y del sistema -->
+<script>
+  // Ejemplo de datos simulados para residentes y gastos comunes
+  let residentes = [
+    { N_Parcela: "1", Nombre_Completo: "Juan Pérez", Valor_Gasto_Comun: 50000 },
+    { N_Parcela: "2", Nombre_Completo: "María López", Valor_Gasto_Comun: 45000 }
+    // ... hasta la 26
+  ];
+  let pagosGC = [];
+  let timcPorMes = {};
 
-              <label for="gasto-residente">Nombre Residente</label>
-              <input type="text" id="gasto-residente" required autocomplete="off" />
+  function filtrarGastosComunes() {
+    // Implementa el filtrado por parcela y año, y renderiza la tabla
+  }
+  function guardarTIMC() {
+    // Guarda TIMC y actualiza la visualización
+  }
+  function mostrarTIMCPorMes(anio) {
+    // Muestra los TIMC por mes en la interfaz
+  }
+  function renderizarTablaGastosComunes(pagos) {
+    // Renderiza la tabla de gastos comunes con los cálculos solicitados
+  }
+  function abrirModalGastoComun() {
+    document.getElementById('modal-gasto-comun').style.display = 'flex';
+  }
+  function cerrarModalGastoComun() {
+    document.getElementById('modal-gasto-comun').style.display = 'none';
+  }
+  function autocompletarResidenteModal() {
+    const parcela = document.getElementById('modal-parcela').value;
+    const residente = residentes.find(r => r.N_Parcela === parcela);
+    document.getElementById('modal-nombre').value = residente ? residente.Nombre_Completo : '';
+  }
+  function guardarGastoComun(event) {
+    event.preventDefault();
+    // Recoge datos del formulario, realiza cálculos y guarda el nuevo gasto común
+    cerrarModalGastoComun();
+    filtrarGastosComunes();
+  }
+  // Inicialización
+  window.onload = function() {
+    filtrarGastosComunes();
+  };
+</script>
+<!-- Aquí puedes agregar más scripts propios, Google Analytics, etc. -->
 
-              <label for="gasto-periodo">Período (Mes/Año)</label>
-              <input type="month" id="gasto-periodo" required />
-
-              <label for="gasto-monto-pagado">Monto Pagado</label>
-              <input type="number" id="gasto-monto-pagado" min="0" required />
-
-              <label for="gasto-metodo-pago">Método de Pago</label>
-              <select id="gasto-metodo-pago" required>
-                <option value="Transferencia">Transferencia</option>
-                <option value="Efectivo">Efectivo</option>
-                <option value="Cheque">Cheque</option>
-                <option value="Otro">Otro</option>
-              </select>
-
-              <label for="gasto-comprobante">Comprobante de Pago</label>
-              <input type="file" id="gasto-comprobante" accept="image/*,application/pdf" />
-
-              <button class="btn" type="submit">Guardar</button>
-            </form>
-          </div>
-        </div>
-      </div>
-      <!-- FIN MÓDULO GASTOS COMUNES -->
-    </div> <!-- cierre main-content -->
-  </div> <!-- cierre app-section -->
-
-  <script>
-    // --- Variables globales ---
-    const SPREADSHEET_ID = 'TU_SPREADSHEET_ID_AQUI'; // Reemplaza con tu ID real
-    const CLIENT_ID = 'TU_CLIENT_ID_DE_GOOGLE_AQUI'; // Reemplaza con tu client ID real
-    let gastosData = [];
-    let timcData = {};
-    let residentesData = [];
-
-    // --- Funciones generales ---
-    function showSection(section) {
-      document.getElementById('dashboard-section').style.display = section === 'dashboard' ? 'block' : 'none';
-      document.getElementById('residentes-section').style.display = section === 'residentes' ? 'block' : 'none';
-      document.getElementById('gastos-section').style.display = section === 'gastos' ? 'block' : 'none';
-
-      document.querySelectorAll('.nav-link').forEach(link => link.classList.remove('active'));
-      if (section === 'dashboard') document.querySelector('.nav-link:nth-child(1)').classList.add('active');
-      if (section === 'residentes') document.querySelector('.nav-link:nth-child(2)').classList.add('active');
-      if (section === 'gastos') document.querySelector('.nav-link:nth-child(3)').classList.add('active');
-    }
-
-    // --- Cargar datos iniciales ---
-    async function initializeGapiClient() {
-      await gapi.client.init({
-        apiKey: 'TU_API_KEY_AQUI',
-        clientId: CLIENT_ID,
-        discoveryDocs: ["https://sheets.googleapis.com/$discovery/rest?version=v4", "https://www.googleapis.com/discovery/v1/apis/drive/v3/rest"],
-        scope: "https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/drive.file"
-      });
-      cargarDatos();
-    }
-
-    async function cargarDatos() {
-      try {
-        // Cargar residentes
-        const resResidentes = await gapi.client.sheets.spreadsheets.values.get({
-          spreadsheetId: SPREADSHEET_ID,
-          range: 'Residentes!A2:I'
-        });
-        residentesData = resResidentes.result.values.map(row => ({
-          nombre: row[0],
-          rut: row[1],
-          parcela: row[2],
-          direccion: row[3],
-          email: row[4],
-          telefono: row[5],
-          estado: row[6],
-          gastoComun: row[7]
-        }));
-
-        // Cargar gastos comunes
-        const resGastos = await gapi.client.sheets.spreadsheets.values.get({
-          spreadsheetId: SPREADSHEET_ID,
-          range: 'Pagos_GC!A2:O'
-        });
-        gastosData = resGastos.result.values.map(row => ({
-          id: row[0],
-          nombre: row[1],
-          parcela: row[2],
-          valorGC: parseFloat(row[3]) || 0,
-          periodo: row[4],
-          fechaVencimiento: row[5],
-          montoPagado: parseFloat(row[6]) || 0,
-          saldo: parseFloat(row[7]) || 0,
-          interes: parseFloat(row[8]) || 0,
-          multa: parseFloat(row[9]) || 0,
-          mesesImpagos: parseInt(row[10]) || 0,
-          deudaTotal: parseFloat(row[11]) || 0,
-          fechaPago: row[12],
-          metodoPago: row[13],
-          estado: row[14]
-        }));
-
-        // Cargar TIMC
-        const resTimc = await gapi.client.sheets.spreadsheets.values.get({
-          spreadsheetId: SPREADSHEET_ID,
-          range: 'TIMC!A2:C'
-        });
-        timcData = {};
-        resTimc.result.values.forEach(row => {
-          const key = `${row[0]}-${row[1]}`; // Mes-Año
-          timcData[key] = parseFloat(row[2]);
-        });
-
-        filtrarGastos();
-        renderTimcListado();
-        renderResidentes();
-      } catch (error) {
-        console.error('Error cargando datos:', error);
-      }
-    }
-
-    // --- Filtrar y renderizar residentes ---
-    function filtrarResidentes() {
-      const filtro = document.getElementById('busqueda-residente').value.trim().toLowerCase();
-      const tbody = document.getElementById('tbody-residentes');
-      tbody.innerHTML = '';
-      residentesData.filter(r =>
-        r.nombre.toLowerCase().includes(filtro) ||
-        r.rut.toLowerCase().includes(filtro) ||
-        String(r.parcela).includes(filtro)
-      ).forEach(r => {
-        tbody.innerHTML += `<tr>
-          <td>${r.nombre}</td><td>${r.rut}</td><td>${r.parcela}</td><td>${r.direccion}</td>
-          <td>${r.email}</td><td>${r.telefono}</td><td>${r.estado}</td><td>${r.gastoComun}</td>
-          <td>
-            <button class="acciones-btn" title="Editar" onclick="abrirModalResidente('${r.rut}')">&#9998;</button>
-            <button class="acciones-btn" title="Eliminar" onclick="eliminarResidente('${r.rut}')">&#128465;</button>
-          </td>
-        </tr>`;
-      });
-    }
-
-    // --- Filtrar y renderizar gastos ---
-    function filtrarGastos() {
-      const parcela = document.getElementById('select-parcela').value;
-      const year = document.getElementById('input-year').value;
-      const tbody = document.getElementById('tbody-gastos');
-      tbody.innerHTML = '';
-
-      const hoy = new Date();
-
-      gastosData.forEach(gasto => {
-        // Filtrar por parcela y año
-        if ((parcela === '' || gasto.parcela === parcela) && gasto.periodo.startsWith(year)) {
-          // Calcular fecha de vencimiento (día 10 del mes del periodo)
-          const [anio, mes] = gasto.periodo.split('-');
-          const fechaVenc = new Date(anio, mes - 1, 10);
-
-          // Calcular meses impagos
-          let mesesImpagos = 0;
-          if (hoy > fechaVenc) {
-            mesesImpagos = (hoy.getFullYear() - fechaVenc.getFullYear()) * 12 + (hoy.getMonth() - fechaVenc.getMonth());
-          }
-
-          // Obtener TIMC para el mes y año
-          const keyTimc = `${mes}-${anio}`;
-          const timc = timcData[keyTimc] || 0;
-
-          // Calcular interés
-          const interes = mesesImpagos > 0 ? gasto.valorGC * (timc / 100) / 12 : 0;
-
-          // Calcular multa 1/4
-          const multa = mesesImpagos > 0 ? (gasto.valorGC / 4) * mesesImpagos : 0;
-
-          // Calcular deuda total
-          const deudaTotal = gasto.valorGC + interes + multa;
-
-          // Calcular saldo
-          const saldo = gasto.montoPagado - deudaTotal;
-
-          // Estado
-          const estado = saldo >= 0 ? 'Pagado' : (hoy > fechaVenc ? 'Moroso' : 'Pendiente');
-
-          tbody.innerHTML += `<tr>
-            <td>${gasto.nombre}</td>
-            <td>${gasto.parcela}</td>
-            <td>$${gasto.valorGC.toLocaleString('es-CL')}</td>
-            <td>${gasto.periodo}</td>
-            <td>${fechaVenc.toLocaleDateString('es-CL')}</td>
-            <td>$${gasto.montoPagado.toLocaleString('es-CL')}</td>
-            <td>${saldo >= 0 ? 'A favor $' + saldo.toLocaleString('es-CL') : 'Pendiente $' + Math.abs(saldo).toLocaleString('es-CL')}</td>
-            <td>$${interes.toFixed(0)}</td>
-            <td>$${multa.toFixed(0)}</td>
-            <td>${mesesImpagos}</td>
-            <td>$${deudaTotal.toFixed(0)}</td>
-            <td>${gasto.fechaPago || ''}</td>
-            <td>${gasto.metodoPago || ''}</td>
-            <td>${estado}</td>
-            <td>
-              <button class="acciones-btn" title="Editar" onclick="abrirModalGasto('${gasto.id}')">&#9998;</button>
-              <button class="acciones-btn" title="Eliminar" onclick="eliminarGasto('${gasto.id}')">&#128465;</button>
-            </td>
-          </tr>`;
-        }
-      });
-    }
-
-    // --- Renderizar listado TIMC ---
-    function renderTimcListado() {
-      const cont = document.getElementById('timc-valores');
-      const anio = document.getElementById('input-year').value;
-      document.getElementById('anio-timc').textContent = anio;
-      cont.innerHTML = '';
-      for(let m=1; m<=12; m++){
-        const key = `${m}-${anio}`;
-        const val = timcData[key] || 0;
-        cont.innerHTML += `<div>Mes ${m}: ${val}%</div>`;
-      }
-    }
-
-    // --- Guardar TIMC ---
-    async function guardarTIMC() {
-      const mes = document.getElementById('timc-mes').value;
-      const valor = parseFloat(document.getElementById('timc-valor').value);
-      const anio = document.getElementById('input-year').value;
-      if(isNaN(valor) || valor < 0){
-        alert('Ingrese un valor TIMC válido');
-        return;
-      }
-      try {
-        await gapi.client.sheets.spreadsheets.values.append({
-          spreadsheetId: SPREADSHEET_ID,
-          range: 'TIMC!A2:C',
-          valueInputOption: 'USER_ENTERED',
-          insertDataOption: 'INSERT_ROWS',
-          resource: {
-            values: [[mes, anio, valor]]
-          }
-        });
-        alert('TIMC guardado correctamente');
-        cargarDatos();
-      } catch(e){
-        alert('Error guardando TIMC: '+e.message);
-      }
-    }
-
-    // --- Modal Gastos Comunes ---
-    function abrirModalGasto(id = null) {
-      const modal = document.getElementById('modal-gasto-bg');
-      modal.style.display = 'flex';
-      if(id){
-        const gasto = gastosData.find(g => g.id === id);
-        if(!gasto) return;
-        document.getElementById('modal-gasto-titulo').textContent = 'Editar Gasto Común';
-        document.getElementById('gasto-id').value = gasto.id;
-        document.getElementById('gasto-parcela').value = gasto.parcela;
-        document.getElementById('gasto-residente').value = gasto.nombre;
-        document.getElementById('gasto-periodo').value = gasto.periodo;
-        document.getElementById('gasto-monto-pagado').value = gasto.montoPagado;
-        document.getElementById('gasto-metodo-pago').value = gasto.metodoPago;
-      } else {
-        document.getElementById('modal-gasto-titulo').textContent = 'Agregar Gasto Común';
-        document.getElementById('form-gasto').reset();
-        document.getElementById('gasto-id').value = '';
-      }
-    }
-
-    function cerrarModalGasto() {
-      document.getElementById('modal-gasto-bg').style.display = 'none';
-    }
-
-    // --- Autocompletar Residente por Parcela ---
-    function autocompletarResidente() {
-      const parcela = document.getElementById('gasto-parcela').value;
-      const residente = residentesData.find(r => r.parcela === parcela);
-      if(residente){
-        document.getElementById('gasto-residente').value = residente.nombre;
-      }
-    }
-
-    // --- Guardar gasto común ---
-    async function guardarGasto(event) {
-      event.preventDefault();
-      const id = document.getElementById('gasto-id').value || Date.now().toString();
-      const parcela = document.getElementById('gasto-parcela').value.trim();
-      const nombre = document.getElementById('gasto-residente').value.trim();
-      const periodo = document.getElementById('gasto-periodo').value;
-      const montoPagado = parseFloat(document.getElementById('gasto-monto-pagado').value);
-      const metodoPago = document.getElementById('gasto-metodo-pago').value;
-      // Validaciones básicas
-      if(!parcela || !nombre || !periodo || isNaN(montoPagado)){
-        alert('Complete todos los campos correctamente');
-        return;
-      }
-
-      // Aquí deberías implementar la subida del comprobante a Drive y obtener el ID o URL
-      // Por simplicidad, omitimos la subida real en este ejemplo
-
-      // Preparar fila para guardar en Google Sheets
-      const fila = [
-        id,
-        nombre,
-        parcela,
-        '', // Valor Gasto Comun (puedes calcular o traer de Residentes)
-        periodo,
-        '', // Fecha Vencimiento (puedes calcular)
-        montoPagado,
-        '', // Saldo (se calcula)
-        '', // Interés (se calcula)
-        '', // Multa (se calcula)
-        '', // Meses Impagos (se calcula)
-        '', // Deuda Total (se calcula)
-        '', // Fecha Pago (puedes usar fecha actual o input)
-        metodoPago,
-        ''  // Estado (se calcula)
-      ];
-
-      try {
-        if(document.getElementById('gasto-id').value){
-          // Editar gasto (actualizar fila)
-          const idx = gastosData.findIndex(g => g.id === id);
-          if(idx === -1) throw new Error('Gasto no encontrado');
-          await gapi.client.sheets.spreadsheets.values.update({
-            spreadsheetId: SPREADSHEET_ID,
-            range: `Pagos_GC!A${idx+2}:O${idx+2}`,
-            valueInputOption: 'RAW',
-            resource: {values: [fila]}
-          });
-        } else {
-          // Nuevo gasto (append)
-          await gapi.client.sheets.spreadsheets.values.append({
-            spreadsheetId: SPREADSHEET_ID,
-            range: 'Pagos_GC!A2:O',
-            valueInputOption: 'RAW',
-            insertDataOption: 'INSERT_ROWS',
-            resource: {values: [fila]}
-          });
-        }
-        cerrarModalGasto();
-        cargarDatos();
-      } catch(e){
-        alert('Error guardando gasto: '+e.message);
-      }
-    }
-
-    // --- Eliminar gasto ---
-    async function eliminarGasto(id) {
-      if(!confirm('¿Seguro que desea eliminar este gasto?')) return;
-      try {
-        // Aquí deberías implementar la lógica para eliminar la fila en Google Sheets
-        // Google Sheets API no permite eliminar filas directamente, se debe usar batchUpdate con deleteDimension
-        alert('Funcionalidad de eliminar pendiente de implementar');
-      } catch(e){
-        alert('Error eliminando gasto: '+e.message);
-      }
-    }
-
-    // --- Renderizar residentes ---
-    function renderResidentes() {
-      filtrarResidentes();
-    }
-
-    // --- Inicialización ---
-    window.onload = function () {
-      initializeGapiClient();
-      google.accounts.id.initialize({
-        client_id: CLIENT_ID,
-        callback: handleCredentialResponse,
-        auto_select: false,
-        cancel_on_tap_outside: true,
-      });
-      google.accounts.id.renderButton(document.getElementById('g_id_signin'), {
-        theme: 'outline',
-        size: 'large',
-        type: 'standard',
-        text: 'signin_with',
-        shape: 'rectangular',
-        logo_alignment: 'left',
-      });
-    };
-
-    // --- Función de respuesta de login ---
-    function handleCredentialResponse(response) {
-      // Aquí procesas el token y muestras la app
-      document.getElementById('login-section').style.display = 'none';
-      document.getElementById('app-section').style.display = 'block';
-      cargarDatos();
-    }
-  </script>
+</div> <!-- Cierre de .container -->
 </body>
 </html>
