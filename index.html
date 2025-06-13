@@ -2,22 +2,39 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
-  <title>Condominio Los Molles</title>
+  <title>Condominio Los Molles - Administración</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+  <link href="https://fonts.googleapis.com/css?family=Poppins:400,600&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="styles.css" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <script src="https://apis.google.com/js/api.js"></script>
 </head>
 <body>
-  <nav class="sidebar" role="navigation" aria-label="Menú principal">
-    <ul>
-      <li><a href="#" data-modulo="dashboard">Dashboard</a></li>
-      <li><a href="#" data-modulo="residentes">Residentes</a></li>
-      <li><a href="#" data-modulo="gastos-comunes">Gastos Comunes</a></li>
-    </ul>
-  </nav>
+  <div id="login-section">
+    <div id="login-card">
+      <h2>Condominio Los Molles</h2>
+      <p>Inicia sesión con tu cuenta de Google para administrar el sistema.</p>
+      <div id="g_id_signin"></div>
+      <div class="loading" id="login-loading" style="display:none;">Conectando con Google...</div>
+      <div class="error-message" id="login-error" style="display:none;"></div>
+    </div>
+  </div>
 
-  <main id="contenedor-principal" tabindex="0" aria-live="polite">
-    <!-- Aquí se cargará el contenido de cada módulo -->
-  </main>
+  <div id="app-section" style="display:none;">
+    <div class="sidebar">
+      <h2>Los Molles</h2>
+      <nav>
+        <a href="#" data-module="dashboard" class="nav-link active">Dashboard</a>
+        <a href="#" data-module="residentes" class="nav-link">Residentes</a>
+        <a href="#" data-module="gastos-comunes" class="nav-link">Gastos Comunes</a>
+      </nav>
+    </div>
+    <div class="main-content" id="main-content">
+      <!-- Aquí se cargará el contenido de los módulos -->
+    </div>
+  </div>
 
-  <script type="module" src="main.js"></script>
+  <script src="main.js" type="module"></script>
 </body>
 </html>
