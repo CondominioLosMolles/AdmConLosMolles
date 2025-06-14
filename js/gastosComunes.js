@@ -1,1 +1,0 @@
-// Código JS de Gastos Comunes
