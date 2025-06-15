@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Condominio Los Molles</title>
+  <link rel="stylesheet" href="estilos.css" />
+</head>
+<body>
+  <header>
+    <h1>Condominio Los Molles</h1>
+  </header>
+  <nav>
+    <ul>
+      <li><a href="#" class="nav-link" onclick="showDashboard()">Dashboard</a></li>
+      <li><a href="#" class="nav-link" onclick="showResidentes()">Residentes</a></li>
+      <li><a href="#" class="nav-link" onclick="showGastosComunes()">Gastos Comunes</a></li>
+      <li><a href="#" class="nav-link" onclick="showContabilidad()">Contabilidad</a></li>
+      <li><a href="#" class="nav-link" onclick="showComunicaciones()">Comunicaciones</a></li>
+      <li><a href="#" class="nav-link" onclick="showMantenciones()">Mantenciones</a></li>
+      <li><a href="#" class="nav-link" onclick="showMultas()">Multas</a></li>
+      <li><a href="#" class="nav-link" onclick="showAsambleas()">Asambleas</a></li>
+      <li><a href="#" class="nav-link" onclick="showInformes()">Informes</a></li>
+    </ul>
+  </nav>
+  <main class="main-content">
+    <div id="dashboard-section">Cargando Dashboard...</div>
+    <div id="residentes-section" style="display:none">Cargando Residentes...</div>
+    <div id="gastos-comunes-section" style="display:none">Cargando Gastos Comunes...</div>
+    <div id="contabilidad-section" style="display:none">Cargando Contabilidad...</div>
+    <div id="comunicaciones-section" style="display:none">Cargando Comunicaciones...</div>
+    <div id="mantenciones-section" style="display:none">Cargando Mantenciones...</div>
+    <div id="multas-section" style="display:none">Cargando Multas...</div>
+    <div id="asambleas-section" style="display:none">Cargando Asambleas...</div>
+    <div id="informes-section" style="display:none">Cargando Informes...</div>
+  </main>
+  <footer>
+    <p>Condominio Los Molles &copy; 2025</p>
+  </footer>
+
+  <!-- Scripts de los módulos -->
+  <script src="js/dashboard.js"></script>
+  <script src="js/residentes.js"></script>
+  <script src="js/gastosComunes.js"></script>
+  <script src="js/contabilidad.js"></script>
+  <script src="js/comunicaciones.js"></script>
+  <script src="js/mantenciones.js"></script>
+  <script src="js/multas.js"></script>
+  <script src="js/asambleas.js"></script>
+  <script src="js/informes.js"></script>
+
+  <!-- Google API -->
+  <script src="https://apis.google.com/js/api.js"></script>
+  <script>
+    function start() {
+      gapi.load('client:auth2', () => {
+        gapi.client.init({
+          apiKey: 'TU_API_KEY',
+          clientId: 'TU_CLIENT_ID.apps.googleusercontent.com',
+          discoveryDocs: [
+            'https://www.googleapis.com/discovery/v1/apis/drive/v3/rest',
+            'https://www.googleapis.com/discovery/v1/apis/gmail/v1/rest',
+            'https://sheets.googleapis.com/$discovery/rest?version=v4'
+          ],
+          scope: 'https://www.googleapis.com/auth/drive https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/gmail.send'
+        }).then(() => {
+          console.log("✅ Google API inicializada");
+        });
+      });
+    }
+    start();
+  </script>
+</body>
+</html>
