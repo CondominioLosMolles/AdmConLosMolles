@@ -1,11 +1,10 @@
 // js/gastos_comunes.js
-// Módulo Gastos Comunes: Filtros, TIMC, tabla detallada, alta de pago, lógica de cálculo, exportación
+// Módulo Gastos Comunes: filtros, TIMC, tabla detallada, alta de pago, lógica de cálculo, exportación
 
 async function cargarGastosComunes() {
   limpiarMainContent();
   mostrarSpinner();
 
-  // Cargar residentes y pagos
   let residentes = [], pagos = [];
   try {
     residentes = await obtenerResidentes();
@@ -16,12 +15,11 @@ async function cargarGastosComunes() {
     return;
   }
 
-  // 1. Filtros y TIMC
+  // Filtros y TIMC
   const main = document.getElementById('main-content');
   const currentYear = new Date().getFullYear();
   let filtroParcela = '', filtroAnio = currentYear.toString();
 
-  // TIMC por mes: obtenemos los TIMC únicos del año seleccionado
   function getTIMCporMes(anio) {
     const meses = {};
     pagos.forEach(p => {
@@ -102,7 +100,7 @@ async function cargarGastosComunes() {
       for (let pago of pagos) {
         if (pago[4] && pago[4] === `${anio}-${mes}`) {
           pago[9] = valor; // Columna J: TIMC
-          await actualizarPagoGC(pago); // Debes implementar en sheets.js
+          await actualizarPagoGC(pago);
         }
       }
       pagos = await obtenerPagosGC();
@@ -174,19 +172,21 @@ async function cargarGastosComunes() {
       html += `<tr>
         <td>${p[1]}</td>
         <td>${p[2]}</td>
-        <td>${p[3]}</td>
+        <td>$${Number(p[3]||0).toLocaleString('es-CL')}</td>
         <td>${p[4]}</td>
         <td>${p[5]}</td>
-        <td>${p[6]}</td>
-        <td>${p[7]}</td>
-        <td>${p[8]}</td>
+        <td>$${Number(p[6]||0).toLocaleString('es-CL')}</td>
+        <td>$${Number(p[7]||0).toLocaleString('es-CL')}</td>
+        <td>$${Number(p[8]||0).toLocaleString('es-CL')}</td>
         <td>${p[9]}</td>
-        <td>${p[10]}</td>
+        <td>$${Number(p[10]||0).toLocaleString('es-CL')}</td>
         <td>${p[11]}</td>
-        <td>${p[12]}</td>
+        <td>$${Number(p[12]||0).toLocaleString('es-CL')}</td>
         <td>${p[13]}</td>
         <td>${p[14]}</td>
-        <td>${p[15]}</td>
+        <td>
+          <span class="estado-tag estado-${(p[15]||'').toLowerCase()}">${p[15]}</span>
+        </td>
         <td>${p[16] ? `<a href="${p[16]}" target="_blank">Ver</a>` : ''}</td>
       </tr>`;
     }
@@ -259,8 +259,7 @@ async function cargarGastosComunes() {
       mostrarSpinner();
       try {
         // Subir comprobante a Drive si existe
-        if (file && file.size > 0) {
-          // Debes obtener el ID de la carpeta de la parcela en Drive
+        if (file && file.size > 0 && typeof subirComprobante === 'function') {
           const carpetaId = await obtenerCarpetaDriveParcela(parcela); // Implementa en drive.js
           const res = await subirComprobante(file, carpetaId);
           idComprobanteDrive = res.id;
@@ -309,7 +308,6 @@ async function cargarGastosComunes() {
   // Funciones de cálculo
   function calcularInteres(valorGC, timc, fechaVenc, fechaPago) {
     if (!valorGC || !timc) return 0;
-    // Solo se cobra si paga después del 10
     const fv = new Date(fechaVenc);
     const fp = new Date(fechaPago);
     if (fp <= fv) return 0;
@@ -331,5 +329,4 @@ async function cargarGastosComunes() {
   ocultarSpinner();
 }
 
-// Evento de menú
 document.querySelector('[data-module="gastos_comunes"]').addEventListener('click', cargarGastosComunes);
