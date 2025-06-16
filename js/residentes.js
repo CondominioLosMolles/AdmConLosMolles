@@ -1,5 +1,5 @@
 // js/residentes.js
-// Módulo Residentes: Tabla, búsqueda, alta, edición, eliminación, exportación
+// Residentes: eliminar operativo, estados coloreados
 
 async function cargarResidentes() {
   limpiarMainContent();
@@ -185,5 +185,4 @@ async function cargarResidentes() {
   ocultarSpinner();
 }
 
-// Evento de menú
 document.querySelector('[data-module="residentes"]').addEventListener('click', cargarResidentes);
