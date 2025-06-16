@@ -11,7 +11,16 @@
   <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
 </head>
 <body>
-  <div id="app">
+  <div id="login-screen" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;background:#f4f8fb;">
+    <div style="background:#fff;padding:48px 36px;border-radius:16px;box-shadow:0 4px 32px #4e91f950;min-width:320px;max-width:90vw;">
+      <h2 style="text-align:center;color:#4e91f9;margin-bottom:24px;">Bienvenido a<br>Condominio Los Molles</h2>
+      <p style="text-align:center;margin-bottom:32px;color:#2a7ca3;">Para acceder a la administración, por favor inicia sesión con tu cuenta autorizada.</p>
+      <div style="display:flex;justify-content:center;">
+        <button id="loginBtn" class="btn" style="font-size:1.2em;padding:14px 36px;">Iniciar sesión con Google</button>
+      </div>
+    </div>
+  </div>
+  <div id="app" style="display:none;">
     <aside id="sidebar">
       <div class="logo">
         <span>Condominio</span><br>
@@ -54,7 +63,6 @@
     // --- Navegación activa robusta ---
     document.addEventListener('DOMContentLoaded', function() {
       const menuItems = document.querySelectorAll('#sidebar nav ul li[data-module]');
-
       function activaMenu(modulo) {
         menuItems.forEach(i => {
           if (i.getAttribute('data-module') === modulo) {
@@ -64,8 +72,6 @@
           }
         });
       }
-
-      // Listeners para cada módulo principal
       document.querySelector('[data-module="dashboard"]').addEventListener('click', () => {
         activaMenu('dashboard');
         cargarDashboard();
@@ -102,8 +108,6 @@
         activaMenu('informes');
         cargarInformes();
       });
-
-      // Si navegas por código, puedes usar: activaMenu('nombre_modulo');
       window.activaMenu = activaMenu;
     });
   </script>
