@@ -10,7 +10,7 @@ body {
 }
 #sidebar {
   width: 270px;
-  background: #f0f4f8;
+  background: #e9f1fb;
   padding: 32px 0 0 0;
   box-shadow: 2px 0 8px rgba(0,0,0,0.06);
   display: flex;
@@ -71,12 +71,16 @@ body {
   min-height: 100vh;
 }
 .widget {
-  background: #fff;
+  background: #f9fbfd;
   border-radius: 14px;
   padding: 36px 32px;
   margin-bottom: 24px;
-  box-shadow: 0 2px 16px rgba(78,145,249,0.08);
-  border: 1px solid #e6f0fa;
+  box-shadow: 0 2px 16px rgba(78,145,249,0.10);
+  border: 1.5px solid #e0e8f3;
+  transition: box-shadow 0.2s;
+}
+.widget:hover {
+  box-shadow: 0 4px 24px rgba(78,145,249,0.16);
 }
 .table {
   width: 100%;
@@ -100,7 +104,7 @@ body {
   border-bottom: none;
 }
 .btn {
-  background: linear-gradient(90deg,#4e91f9,#2a7ca3);
+  background: linear-gradient(90deg,#4e91f9 70%,#2a7ca3 100%);
   color: #fff;
   border: none;
   padding: 9px 24px;
@@ -110,10 +114,11 @@ body {
   font-weight: 600;
   margin-right: 8px;
   box-shadow: 0 1px 4px #4e91f930;
-  transition: background 0.2s;
+  transition: background 0.2s, box-shadow 0.2s;
 }
 .btn:hover {
-  background: linear-gradient(90deg,#2a7ca3,#4e91f9);
+  background: linear-gradient(90deg,#2a7ca3 70%,#4e91f9 100%);
+  box-shadow: 0 2px 12px #2a7ca330;
 }
 .btn.secondary {
   background: #e6f0fa;
@@ -141,6 +146,18 @@ h2, h3, h4 {
   font-weight: 700;
   margin-top: 0;
 }
+.estado-tag {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-weight: 600;
+  font-size: 0.98em;
+  background: #e0e0e0;
+  color: #555;
+}
+.estado-activo { background: #e4fae7; color: #1ba94c; }
+.estado-moroso { background: #ffeaea; color: #e74a3b; }
+.estado-inactivo { background: #f3f3f3; color: #888; }
 @media (max-width: 900px) {
   #app {
     flex-direction: column;
@@ -158,7 +175,6 @@ h2, h3, h4 {
     margin-bottom: 10px;
   }
 }
-
 /* MODAL GLOBAL */
 #modalResidente, #modalGC, #modalEgreso, #modalMantencion, #modalMulta, #modalAsamblea, #modalComunicacion {
   position: fixed !important;
@@ -170,13 +186,13 @@ h2, h3, h4 {
   background: rgba(36,60,89,0.22);
   transition: opacity 0.2s;
 }
-#modalResidente[style*="display: block"], 
-#modalGC[style*="display: block"], 
-#modalEgreso[style*="display: block"],
-#modalMantencion[style*="display: block"],
-#modalMulta[style*="display: block"],
-#modalAsamblea[style*="display: block"],
-#modalComunicacion[style*="display: block"] {
+#modalResidente[style*="display: flex"], 
+#modalGC[style*="display: flex"], 
+#modalEgreso[style*="display: flex"],
+#modalMantencion[style*="display: flex"],
+#modalMulta[style*="display: flex"],
+#modalAsamblea[style*="display: flex"],
+#modalComunicacion[style*="display: flex"] {
   display: flex !important;
 }
 #modalResidente > div,
