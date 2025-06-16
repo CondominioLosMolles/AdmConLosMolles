@@ -1,4 +1,5 @@
 // js/residentes.js
+
 async function cargarResidentes() {
   limpiarMainContent();
   mostrarSpinner();
@@ -29,21 +30,71 @@ async function cargarResidentes() {
         table-layout: fixed !important;
       }
       #tablaResidentes table th, #tablaResidentes table td {
-        white-space: nowrap !important;
-        overflow: hidden !important;
-        text-overflow: ellipsis !important;
-        max-width: 180px !important;
+        padding: 10px 6px;
+        border-bottom: 1px solid #e0e0e0;
+        font-size: 0.98em;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      #tablaResidentes table th.nombre, #tablaResidentes table td.nombre {
+        min-width: 160px;
+        max-width: 240px;
+        white-space: normal !important;
+        text-overflow: unset !important;
+        overflow: visible !important;
+        font-weight: 600;
+      }
+      #tablaResidentes table th.direccion, #tablaResidentes table td.direccion {
+        min-width: 110px;
+        max-width: 180px;
+        white-space: normal !important;
+        text-overflow: unset !important;
+        overflow: visible !important;
+      }
+      #tablaResidentes table th.email, #tablaResidentes table td.email {
+        min-width: 120px;
+        max-width: 180px;
+      }
+      #tablaResidentes table th.telefono, #tablaResidentes table td.telefono {
         min-width: 80px;
+        max-width: 120px;
+      }
+      #tablaResidentes table th.estado, #tablaResidentes table td.estado {
+        min-width: 70px;
+        max-width: 90px;
+        text-align: center;
+      }
+      #tablaResidentes table th.valorGC, #tablaResidentes table td.valorGC {
+        min-width: 80px;
+        max-width: 100px;
+        text-align: right;
       }
       #tablaResidentes table th.acciones, #tablaResidentes table td.acciones {
-        max-width: 90px !important;
-        min-width: 90px !important;
-        text-align: center !important;
+        min-width: 80px;
+        max-width: 100px;
+        text-align: center;
       }
-      #tablaResidentes .btn {
-        min-width: 34px;
-        padding: 6px 10px;
-        margin-right: 4px;
+      #tablaResidentes table tr:last-child td {
+        border-bottom: none;
+      }
+      @media (max-width: 900px) {
+        #tablaResidentes table th, #tablaResidentes table td {
+          font-size: 0.93em;
+          padding: 7px 3px;
+        }
+        #tablaResidentes table th.nombre, #tablaResidentes table td.nombre {
+          max-width: 120px;
+          min-width: 90px;
+        }
+        #tablaResidentes table th.direccion, #tablaResidentes table td.direccion {
+          max-width: 100px;
+          min-width: 60px;
+        }
+        #tablaResidentes table th.email, #tablaResidentes table td.email {
+          max-width: 100px;
+          min-width: 60px;
+        }
       }
     </style>
   `;
@@ -59,14 +110,14 @@ async function cargarResidentes() {
       <table class="table">
         <thead>
           <tr>
-            <th>Nombre Completo</th>
+            <th class="nombre">Nombre Completo</th>
             <th>RUT</th>
             <th>N° Parcela</th>
-            <th>Dirección</th>
-            <th>Email</th>
-            <th>Teléfono</th>
-            <th>Estado</th>
-            <th>Valor Gasto Común</th>
+            <th class="direccion">Dirección</th>
+            <th class="email">Email</th>
+            <th class="telefono">Teléfono</th>
+            <th class="estado">Estado</th>
+            <th class="valorGC">Valor Gasto Común</th>
             <th class="acciones">Acciones</th>
           </tr>
         </thead>
@@ -76,16 +127,16 @@ async function cargarResidentes() {
       const [id, nombre, rut, parcela, direccion, email, tel, estado, valorGC] = r;
       html += `
         <tr>
-          <td title="${nombre}">${nombre}</td>
+          <td class="nombre" title="${nombre}">${nombre}</td>
           <td title="${rut}">${rut}</td>
           <td title="${parcela}">${parcela}</td>
-          <td title="${direccion}">${direccion}</td>
-          <td title="${email}">${email}</td>
-          <td title="${tel}">${tel}</td>
-          <td>
+          <td class="direccion" title="${direccion}">${direccion}</td>
+          <td class="email" title="${email}">${email}</td>
+          <td class="telefono" title="${tel}">${tel}</td>
+          <td class="estado">
             <span class="estado-tag estado-${estado.toLowerCase()}">${estado}</span>
           </td>
-          <td title="${valorGC}">${valorGC}</td>
+          <td class="valorGC" title="${valorGC}">${valorGC}</td>
           <td class="acciones">
             <button class="btn secondary btn-editar" data-id="${id}" title="Editar">✏️</button>
             <button class="btn secondary btn-eliminar" data-id="${id}" title="Eliminar">🗑️</button>
@@ -224,4 +275,5 @@ async function cargarResidentes() {
   ocultarSpinner();
 }
 
+// Asegúrate de que este evento esté en tu index.html o en el módulo principal
 document.querySelector('[data-module="residentes"]').addEventListener('click', cargarResidentes);
