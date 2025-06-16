@@ -24,6 +24,23 @@ async function cargarResidentes() {
     </div>
     <div id="tablaResidentes"></div>
     <div id="modalResidente" style="display:none;"></div>
+    <style>
+      #tablaResidentes table td,
+      #tablaResidentes table th {
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 180px;
+      }
+      #tablaResidentes table th {
+        background: #e6f0fa;
+        font-weight: 600;
+        color: #4e91f9;
+      }
+      #tablaResidentes table td {
+        background: #f8fafc;
+      }
+    </style>
   `;
 
   function renderTabla(filtro = '') {
@@ -54,16 +71,16 @@ async function cargarResidentes() {
       const [id, nombre, rut, parcela, direccion, email, tel, estado, valorGC] = r;
       html += `
         <tr>
-          <td>${nombre}</td>
-          <td>${rut}</td>
-          <td>${parcela}</td>
-          <td>${direccion}</td>
-          <td>${email}</td>
-          <td>${tel}</td>
+          <td title="${nombre}">${nombre}</td>
+          <td title="${rut}">${rut}</td>
+          <td title="${parcela}">${parcela}</td>
+          <td title="${direccion}">${direccion}</td>
+          <td title="${email}">${email}</td>
+          <td title="${tel}">${tel}</td>
           <td>
             <span class="estado-tag estado-${estado.toLowerCase()}">${estado}</span>
           </td>
-          <td>${valorGC}</td>
+          <td title="${valorGC}">${valorGC}</td>
           <td>
             <button class="btn secondary btn-editar" data-id="${id}">✏️</button>
             <button class="btn secondary btn-eliminar" data-id="${id}">🗑️</button>
@@ -181,7 +198,7 @@ async function cargarResidentes() {
             requests: [{
               deleteDimension: {
                 range: {
-                  sheetId: SHEET_ID_RESIDENTES, // Asegúrate que esté bien definido en sheets.js
+                  sheetId: SHEET_ID_RESIDENTES,
                   dimension: "ROWS",
                   startIndex: row - 1,
                   endIndex: row
