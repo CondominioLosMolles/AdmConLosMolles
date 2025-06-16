@@ -128,6 +128,5 @@ function GastosComunes() {
   );
 }
 
-// Renderizamos el componente en el div con id root
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(React.createElement(GastosComunes));
