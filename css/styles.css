@@ -1,4 +1,3 @@
-/* === Estilos base y layout === */
 body {
   font-family: 'Poppins', 'Lato', 'Roboto', Arial, sans-serif;
   background: #f4f8fb;
@@ -104,7 +103,7 @@ body {
 }
 .table th.nombre, .table td.nombre {
   min-width: 160px;
-  max-width: 240px;
+  max-width: 260px;
   white-space: normal !important;
   text-overflow: unset !important;
   overflow: visible !important;
@@ -119,7 +118,7 @@ body {
 }
 .table th.email, .table td.email {
   min-width: 120px;
-  max-width: 180px;
+  max-width: 170px;
 }
 .table th.telefono, .table td.telefono {
   min-width: 80px;
