@@ -1,221 +1,331 @@
-let pagosData = [];
-let timcPorMes = {};
+// js/gastos_comunes.js
+// Módulo Gastos Comunes: Filtros, TIMC, tabla detallada, alta de pago, lógica de cálculo, exportación
 
-function showGastosComunes() {
-  document.querySelectorAll('.main-content > div').forEach(sec => sec.style.display = 'none');
-  document.getElementById('gastos-comunes-section').style.display = 'block';
-  document.querySelectorAll('.nav-link').forEach(link => link.classList.remove('active'));
-  Array.from(document.querySelectorAll('.nav-link')).find(link => link.textContent.includes('Gastos Comunes')).classList.add('active');
-  cargarGastosComunes();
-}
+async function cargarGastosComunes() {
+  limpiarMainContent();
+  mostrarSpinner();
 
-function cargarGastosComunes() {
-  gapi.client.sheets.spreadsheets.values.get({
-    spreadsheetId: SPREADSHEET_ID,
-    range: 'Pagos_GC!A2:Q'
-  }).then(response => {
-    const rows = response.result.values || [];
-    pagosData = rows.map(row => ({
-      id: row[0],
-      nombre: row[1],
-      rut: row[2],
-      parcela: row[3],
-      fecha: row[4],
-      metodo: row[5],
-      monto: Number(row[6]) || 0,
-      interes: Number(row[7]) || 0,
-      multa: Number(row[8]) || 0,
-      total: Number(row[9]) || 0,
-      periodo: row[10],
-      observacion: row[11],
-      deuda: Number(row[12]) || 0,
-      archivo: row[13],
-    }));
-    renderizarPagos();
-  });
-}
+  // Cargar residentes y pagos
+  let residentes = [], pagos = [];
+  try {
+    residentes = await obtenerResidentes();
+    pagos = await obtenerPagosGC();
+  } catch (e) {
+    ocultarSpinner();
+    mostrarMensaje('Error al cargar datos: ' + e.message, 'error');
+    return;
+  }
 
-function renderizarPagos() {
-  const filtro = document.getElementById('busqueda-gastos')?.value.trim().toLowerCase() || '';
-  const tbody = document.getElementById('tbody-gastos');
-  tbody.innerHTML = '';
+  // 1. Filtros y TIMC
+  const main = document.getElementById('main-content');
+  const currentYear = new Date().getFullYear();
+  let filtroParcela = '', filtroAnio = currentYear.toString();
 
-  pagosData
-    .filter(g =>
-      g.nombre.toLowerCase().includes(filtro) ||
-      g.rut.toLowerCase().includes(filtro) ||
-      String(g.parcela).includes(filtro)
-    )
-    .forEach(g => {
-      tbody.innerHTML += `
-        <tr>
-          <td>${g.nombre}</td>
-          <td>${g.rut}</td>
-          <td>${g.parcela}</td>
-          <td>${g.fecha}</td>
-          <td>$${g.monto.toLocaleString('es-CL')}</td>
-          <td>${g.interes}%</td>
-          <td>${g.multa}%</td>
-          <td>$${g.total.toLocaleString('es-CL')}</td>
-          <td>
-            <button class="acciones-btn" title="Editar" onclick="abrirModalGasto('${g.id}')">&#9998;</button>
-            <button class="acciones-btn" title="Eliminar" onclick="eliminarGasto('${g.id}')">&#128465;</button>
-          </td>
-        </tr>
-      `;
-    });
-}
-
-function filtrarGastosComunes() {
-  renderizarPagos();
-}
-function abrirModalGasto(id = '') {
-  const modal = document.getElementById('modal-gasto');
-  modal.style.display = 'block';
-
-  const form = modal.querySelector('form');
-  const gasto = pagosData.find(g => g.id === id) || {};
-
-  form.idGasto.value = gasto.id || '';
-  form.nombre.value = gasto.nombre || '';
-  form.rut.value = gasto.rut || '';
-  form.parcela.value = gasto.parcela || '';
-  form.fecha.value = gasto.fecha || '';
-  form.metodo.value = gasto.metodo || 'Transferencia';
-  form.monto.value = gasto.monto || '';
-  form.periodo.value = gasto.periodo || '';
-  form.observacion.value = gasto.observacion || '';
-}
-
-function cerrarModalGasto() {
-  document.getElementById('modal-gasto').style.display = 'none';
-}
-
-function guardarGasto(event) {
-  event.preventDefault();
-  const form = event.target;
-
-  const monto = Number(form.monto.value);
-  const fechaPago = new Date(form.fecha.value);
-  const periodo = form.periodo.value;
-  const [año, mes] = periodo.split('-');
-  const vencimiento = new Date(Number(año), Number(mes) - 1, 10);
-  const hoy = new Date();
-  const interes = (fechaPago > vencimiento) ? (timcPorMes[periodo] || 0) : 0;
-  const mesesAtraso = Math.max(0, hoy.getMonth() + 1 - Number(mes));
-  const multa = mesesAtraso * 0.25;
-  const total = Math.round(monto + monto * interes / 100 + monto * multa / 100);
-
-  const nuevo = {
-    id: form.idGasto.value || Date.now().toString(),
-    nombre: form.nombre.value,
-    rut: form.rut.value,
-    parcela: form.parcela.value,
-    fecha: form.fecha.value,
-    metodo: form.metodo.value,
-    monto,
-    interes,
-    multa,
-    total,
-    periodo,
-    observacion: form.observacion.value
-  };
-
-  // Guardar en Google Sheets (simplificado)
-  const fila = [
-    nuevo.id, nuevo.nombre, nuevo.rut, nuevo.parcela, nuevo.fecha, nuevo.metodo,
-    nuevo.monto, nuevo.interes, nuevo.multa, nuevo.total, nuevo.periodo,
-    nuevo.observacion, 0, '', '' // deuda, archivo, etc.
-  ];
-
-  gapi.client.sheets.spreadsheets.values.append({
-    spreadsheetId: SPREADSHEET_ID,
-    range: 'Pagos_GC!A2',
-    valueInputOption: 'RAW',
-    insertDataOption: 'INSERT_ROWS',
-    resource: {
-      values: [fila]
-    }
-  }).then(() => {
-    cerrarModalGasto();
-    cargarGastosComunes();
-    enviarComprobantePorCorreo(nuevo);
-    alert('✅ Pago registrado y comprobante enviado.');
-  });
-}
-function registrarTIMC() {
-  const periodo = document.getElementById('periodo-timc').value;
-  const timc = parseFloat(document.getElementById('valor-timc').value);
-  if (!periodo || isNaN(timc)) return alert('Falta ingresar período y valor TIMC');
-
-  timcPorMes[periodo] = timc;
-
-  const fila = [[periodo, timc]];
-  gapi.client.sheets.spreadsheets.values.append({
-    spreadsheetId: SPREADSHEET_ID,
-    range: 'TIMC!A2',
-    valueInputOption: 'RAW',
-    insertDataOption: 'INSERT_ROWS',
-    resource: {
-      values: fila
-    }
-  }).then(() => {
-    alert('✅ TIMC registrado');
-    renderizarTablaTIMC();
-  });
-}
-
-function renderizarTablaTIMC() {
-  const cuerpo = document.getElementById('tabla-timc-body');
-  cuerpo.innerHTML = '';
-  Object.entries(timcPorMes).forEach(([mes, valor]) => {
-    cuerpo.innerHTML += `
-      <tr>
-        <td style="padding: 4px 8px;">${mes}</td>
-        <td style="padding: 4px 8px;">${valor.toFixed(2)}%</td>
-      </tr>`;
-  });
-}
-function enviarComprobantePorCorreo(pago) {
-  const asunto = `Comprobante de Pago - Gasto Común Parcela ${pago.parcela}`;
-  const mensaje = `
-Estimado/a ${pago.nombre},
-
-Le informamos que su pago ha sido recepcionado por la administración del Condominio Los Molles.
-
-📌 Parcela: ${pago.parcela}  
-📅 Periodo: ${pago.periodo}  
-💵 Monto pagado: $${pago.monto.toLocaleString('es-CL')}  
-📈 Interés: ${pago.interes.toFixed(2)}%  
-⚠️ Multa: ${pago.multa.toFixed(2)}%  
-💰 Total aplicado: $${pago.total.toLocaleString('es-CL')}  
-
-Este pago ha sido registrado exitosamente.  
-Gracias por mantenerse al día con sus obligaciones comunitarias.
-
-Atentamente,  
-Administración Condominio Los Molles
-`;
-
-  // Buscar el correo del residente
-  gapi.client.sheets.spreadsheets.values.get({
-    spreadsheetId: SPREADSHEET_ID,
-    range: 'Residentes!A2:H'
-  }).then(res => {
-    const data = res.result.values;
-    const fila = data.find(r => r[5] === pago.parcela);
-    const correo = fila ? fila[3] : null;
-    if (!correo) return console.warn('No se encontró correo del residente');
-
-    gapi.client.gmail.users.messages.send({
-      userId: 'me',
-      resource: {
-        raw: btoa(
-          `To: ${correo}\r\n` +
-          `Subject: ${asunto}\r\n\r\n` +
-          mensaje
-        ).replace(/\+/g, '-').replace(/\//g, '_')
+  // TIMC por mes: obtenemos los TIMC únicos del año seleccionado
+  function getTIMCporMes(anio) {
+    const meses = {};
+    pagos.forEach(p => {
+      const periodo = p[4]; // Periodo ej '2025-07'
+      const timc = p[9];
+      if (periodo && periodo.startsWith(anio)) {
+        const mes = periodo.split('-')[1];
+        meses[mes] = timc;
       }
     });
-  });
+    return meses;
+  }
+
+  main.innerHTML = `
+    <h2>Gastos Comunes</h2>
+    <div style="display:flex;gap:16px;flex-wrap:wrap;align-items:center;">
+      <label>Parcela:
+        <input type="number" id="filtroParcela" min="1" max="26" placeholder="N° Parcela" style="width:80px;">
+      </label>
+      <label>Año:
+        <input type="number" id="filtroAnio" min="2020" max="2100" value="${currentYear}" style="width:90px;">
+      </label>
+      <button class="btn" id="btnFiltrarGC">Filtrar</button>
+      <button class="btn secondary" id="btnExportarGC">Descargar Excel</button>
+    </div>
+    <div style="margin:16px 0;">
+      <h4>Ingresar TIMC mensual</h4>
+      <form id="formTIMC" style="display:flex;gap:8px;align-items:center;">
+        <label>Mes:
+          <select id="timcMes" required>
+            ${Array.from({length:12},(_,i)=>`<option value="${(i+1).toString().padStart(2,'0')}">${(i+1).toString().padStart(2,'0')}</option>`).join('')}
+          </select>
+        </label>
+        <label>Año:
+          <input type="number" id="timcAnio" min="2020" max="2100" value="${currentYear}" style="width:90px;">
+        </label>
+        <label>TIMC (% anual):
+          <input type="number" id="timcValor" step="0.01" min="0" required style="width:80px;">
+        </label>
+        <button class="btn" type="submit">Guardar TIMC</button>
+      </form>
+      <div id="tablaTIMC"></div>
+    </div>
+    <div style="margin:24px 0;">
+      <button class="btn" id="btnAgregarGC">Agregar Gasto Común</button>
+    </div>
+    <div id="tablaGC"></div>
+    <div id="modalGC" style="display:none;"></div>
+  `;
+
+  // Mostrar TIMC por mes del año seleccionado
+  function renderTablaTIMC() {
+    const timcMeses = getTIMCporMes(document.getElementById('filtroAnio').value);
+    let html = '<b>TIMC por mes:</b><br><table class="table"><tr>' +
+      '<th>Mes</th>' +
+      '<th>TIMC (%)</th></tr>';
+    for (let i=1; i<=12; i++) {
+      const mes = i.toString().padStart(2,'0');
+      html += `<tr>
+        <td>${mes}</td>
+        <td>${timcMeses[mes] || '-'}</td>
+      </tr>`;
+    }
+    html += '</table>';
+    document.getElementById('tablaTIMC').innerHTML = html;
+  }
+  renderTablaTIMC();
+
+  // Guardar TIMC
+  document.getElementById('formTIMC').onsubmit = async (e) => {
+    e.preventDefault();
+    const mes = document.getElementById('timcMes').value;
+    const anio = document.getElementById('timcAnio').value;
+    const valor = document.getElementById('timcValor').value;
+    // Guardar TIMC en Pagos_GC para todos los registros de ese mes/año
+    mostrarSpinner();
+    try {
+      for (let pago of pagos) {
+        if (pago[4] && pago[4] === `${anio}-${mes}`) {
+          pago[9] = valor; // Columna J: TIMC
+          await actualizarPagoGC(pago); // Debes implementar en sheets.js
+        }
+      }
+      pagos = await obtenerPagosGC();
+      renderTablaTIMC();
+      mostrarMensaje('TIMC actualizado');
+    } catch (e) {
+      mostrarMensaje('Error al guardar TIMC: ' + e.message, 'error');
+    }
+    ocultarSpinner();
+  };
+
+  // Filtro
+  document.getElementById('btnFiltrarGC').onclick = () => {
+    filtroParcela = document.getElementById('filtroParcela').value;
+    filtroAnio = document.getElementById('filtroAnio').value;
+    renderTablaGC();
+    renderTablaTIMC();
+  };
+
+  // Exportar a Excel
+  document.getElementById('btnExportarGC').onclick = () => {
+    const datos = getPagosFiltrados();
+    const ws = XLSX.utils.aoa_to_sheet([
+      ["Nombre_Residente","N_Parcela","Valor_Gasto_Comun","Periodo","Fecha_Vencimiento","MontoPagado","Saldo","Interes","TIMC","Multa_1/4","Meses_Inpagos","Deuda_Total","Fecha_Pago","Metodo_Pago","Estado"],
+      ...datos.map(p=>p.slice(1,16))
+    ]);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "GastosComunes");
+    XLSX.writeFile(wb, "GastosComunes.xlsx");
+  };
+
+  // Filtrar pagos por parcela y año
+  function getPagosFiltrados() {
+    return pagos.filter(p => {
+      const parcelaOk = !filtroParcela || p[2] === filtroParcela;
+      const anioOk = !filtroAnio || (p[4] && p[4].startsWith(filtroAnio));
+      return parcelaOk && anioOk;
+    });
+  }
+
+  // Renderizar tabla de gastos comunes
+  function renderTablaGC() {
+    const datos = getPagosFiltrados();
+    let html = `
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Nombre Residente</th>
+            <th>N° Parcela</th>
+            <th>Valor Gasto Común</th>
+            <th>Periodo</th>
+            <th>Fecha Vencimiento</th>
+            <th>Monto Pagado</th>
+            <th>Saldo</th>
+            <th>Interés</th>
+            <th>TIMC</th>
+            <th>Multa 1/4</th>
+            <th>Meses Impagos</th>
+            <th>Deuda Total</th>
+            <th>Fecha Pago</th>
+            <th>Método Pago</th>
+            <th>Estado</th>
+            <th>Comprobante</th>
+          </tr>
+        </thead>
+        <tbody>
+    `;
+    for (const p of datos) {
+      html += `<tr>
+        <td>${p[1]}</td>
+        <td>${p[2]}</td>
+        <td>${p[3]}</td>
+        <td>${p[4]}</td>
+        <td>${p[5]}</td>
+        <td>${p[6]}</td>
+        <td>${p[7]}</td>
+        <td>${p[8]}</td>
+        <td>${p[9]}</td>
+        <td>${p[10]}</td>
+        <td>${p[11]}</td>
+        <td>${p[12]}</td>
+        <td>${p[13]}</td>
+        <td>${p[14]}</td>
+        <td>${p[15]}</td>
+        <td>${p[16] ? `<a href="${p[16]}" target="_blank">Ver</a>` : ''}</td>
+      </tr>`;
+    }
+    html += '</tbody></table>';
+    document.getElementById('tablaGC').innerHTML = html;
+  }
+  renderTablaGC();
+
+  // Botón agregar gasto común
+  document.getElementById('btnAgregarGC').onclick = () => mostrarModalGC();
+
+  // Formulario agregar pago de gasto común
+  function mostrarModalGC() {
+    const modal = document.getElementById('modalGC');
+    modal.style.display = 'block';
+    modal.innerHTML = `
+      <div style="background:#fff;padding:24px;border-radius:8px;max-width:500px;margin:40px auto;box-shadow:0 2px 8px #0001;">
+        <h3>Agregar Gasto Común</h3>
+        <form id="formGC">
+          <label>N° Parcela</label>
+          <input name="parcela" id="inputParcela" required type="number" min="1" max="26">
+          <label>Nombre Residente</label>
+          <input name="nombre" id="inputNombre" required readonly>
+          <label>Valor Gasto Común</label>
+          <input name="valorGC" id="inputValorGC" required readonly>
+          <label>Periodo (YYYY-MM)</label>
+          <input name="periodo" required pattern="\\d{4}-\\d{2}">
+          <label>Fecha de Pago</label>
+          <input name="fechaPago" required type="date">
+          <label>Monto Pagado</label>
+          <input name="montoPagado" required type="number">
+          <label>Método Pago</label>
+          <select name="metodoPago" required>
+            <option value="Transferencia">Transferencia</option>
+            <option value="Efectivo">Efectivo</option>
+            <option value="Deposito">Depósito</option>
+          </select>
+          <label>Comprobante</label>
+          <input name="comprobante" id="inputComprobante" type="file" accept="image/*,application/pdf">
+          <div style="margin-top:16px;text-align:right;">
+            <button class="btn" type="submit">Guardar</button>
+            <button class="btn secondary" type="button" id="btnCerrarModalGC">Cancelar</button>
+          </div>
+        </form>
+      </div>
+    `;
+    document.getElementById('btnCerrarModalGC').onclick = () => modal.style.display = 'none';
+
+    // Autocompletar nombre y valorGC al escribir parcela
+    document.getElementById('inputParcela').oninput = (e) => {
+      const parcela = e.target.value;
+      const residente = residentes.find(r => r[3] === parcela);
+      document.getElementById('inputNombre').value = residente ? residente[1] : '';
+      document.getElementById('inputValorGC').value = residente ? residente[8] : '';
+    };
+
+    document.getElementById('formGC').onsubmit = async (e) => {
+      e.preventDefault();
+      const fd = new FormData(e.target);
+      const parcela = fd.get('parcela');
+      const nombre = fd.get('nombre');
+      const valorGC = fd.get('valorGC');
+      const periodo = fd.get('periodo');
+      const fechaPago = fd.get('fechaPago');
+      const montoPagado = fd.get('montoPagado');
+      const metodoPago = fd.get('metodoPago');
+      const file = fd.get('comprobante');
+      let idComprobanteDrive = '';
+
+      mostrarSpinner();
+      try {
+        // Subir comprobante a Drive si existe
+        if (file && file.size > 0) {
+          // Debes obtener el ID de la carpeta de la parcela en Drive
+          const carpetaId = await obtenerCarpetaDriveParcela(parcela); // Implementa en drive.js
+          const res = await subirComprobante(file, carpetaId);
+          idComprobanteDrive = res.id;
+        }
+        // Calcular TIMC, interés, multa, meses impagos, deuda, saldo, estado
+        const timc = getTIMCporMes(periodo.split('-')[0])[periodo.split('-')[1]] || 0;
+        const fechaVencimiento = periodo + '-10';
+        const interes = calcularInteres(valorGC, timc);
+        const mesesImpagos = calcularMesesImpagos(fechaVencimiento, fechaPago);
+        const multa = calcularMulta(valorGC, mesesImpagos);
+        const deudaTotal = (+valorGC) + (+interes) + (+multa);
+        const saldo = (+montoPagado) - deudaTotal;
+        const estado = saldo >= 0 ? 'Pagado' : (new Date(fechaPago) > new Date(fechaVencimiento) ? 'Moroso' : 'Pendiente');
+
+        // Guardar pago en Sheets
+        await agregarPagoGC([
+          '', // ID autoincremental
+          nombre,
+          parcela,
+          valorGC,
+          periodo,
+          fechaVencimiento,
+          montoPagado,
+          saldo,
+          interes,
+          timc,
+          multa,
+          mesesImpagos,
+          deudaTotal,
+          fechaPago,
+          metodoPago,
+          estado,
+          idComprobanteDrive
+        ]);
+        modal.style.display = 'none';
+        pagos = await obtenerPagosGC();
+        renderTablaGC();
+        mostrarMensaje('Gasto común registrado');
+      } catch (e) {
+        mostrarMensaje('Error al guardar: ' + e.message, 'error');
+      }
+      ocultarSpinner();
+    };
+  }
+
+  // Funciones de cálculo
+  function calcularInteres(valorGC, timc) {
+    if (!valorGC || !timc) return 0;
+    return Math.round((+valorGC) * (+timc) / 100 / 12);
+  }
+  function calcularMulta(valorGC, mesesImpagos) {
+    if (!valorGC || !mesesImpagos) return 0;
+    return Math.round((+valorGC) * 0.25 * mesesImpagos);
+  }
+  function calcularMesesImpagos(fechaVenc, fechaPago) {
+    const fv = new Date(fechaVenc);
+    const fp = new Date(fechaPago);
+    if (fp <= fv) return 0;
+    let meses = (fp.getFullYear() - fv.getFullYear()) * 12 + (fp.getMonth() - fv.getMonth());
+    if (fp.getDate() > 10) meses += 1;
+    return meses;
+  }
+
+  ocultarSpinner();
 }
+
+// Evento de menú
+document.querySelector('[data-module="gastos_comunes"]').addEventListener('click', cargarGastosComunes);
