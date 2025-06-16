@@ -1,6 +1,6 @@
 // js/gastos_comunes.js
 
-// Estado local (debes reemplazar con carga real desde Google Sheets)
+// Estado local simulado (reemplaza con llamadas reales a Google Sheets)
 let timc = {};
 let gastosComunes = [];
 let residentes = [];
@@ -12,160 +12,179 @@ const meses = [
 ];
 
 // Función principal para cargar el módulo
-function cargarGastosComunes() {
+async function cargarGastosComunes() {
+  limpiarMainContent();
+  mostrarSpinner();
+
+  // Simula carga de datos (reemplaza con tu API)
+  await cargarDatosSimulados();
+
   const main = document.getElementById('main-content');
   main.innerHTML = `
-    <h2 style="display:flex; justify-content: space-between; align-items: center;">
-      Gastos Comunes
+    <h2>Gastos Comunes</h2>
+    <div style="display:flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px;">
+      <div style="flex:1; max-width: 60%;">
+        <label for="select-parcela">N° Parcela:</label><br>
+        <input list="lista-parcelas" id="select-parcela" placeholder="1-26" style="width:80px; padding:5px;">
+        <datalist id="lista-parcelas">
+          ${Array.from({length:26},(_,i) => `<option value="${i+1}">`).join('')}
+        </datalist>
+      </div>
+      <div style="flex:1; max-width: 30%;">
+        <label for="input-anio">Año:</label><br>
+        <input type="number" id="input-anio" value="${new Date().getFullYear()}" style="width:100px; padding:5px;">
+      </div>
       <div id="mini-timc" style="border:1px solid #ccc; padding:8px; font-size:0.85em; max-width: 250px; background:#fafafa;">
         <strong>Tasas TIMC por Mes</strong>
         <table style="width:100%; font-size:0.85em; border-collapse: collapse; margin-top:6px;">
           <tbody id="timc-visual"></tbody>
         </table>
       </div>
-    </h2>
+    </div>
 
-    <!-- Barra superior con filtros y TIMC -->
-    <section id="filtros-timc" style="display:flex; gap:20px; align-items:center; margin-bottom:20px; flex-wrap: wrap;">
-
-      <div>
-        <label for="select-parcela">N° Parcela:</label><br>
-        <input list="lista-parcelas" id="select-parcela" placeholder="1-26" style="width:80px; padding:5px;">
-        <datalist id="lista-parcelas">
-          ${Array.from({length:26},(_,i)=>`<option value="${i+1}">`).join('')}
-        </datalist>
-      </div>
-
-      <div>
-        <label for="input-anio">Año:</label><br>
-        <input type="number" id="input-anio" value="${new Date().getFullYear()}" style="width:100px; padding:5px;">
-      </div>
-
-      <div>
-        <label for="select-mes-timc">Mes TIMC:</label><br>
-        <select id="select-mes-timc" style="padding:5px;">
-          ${meses.map(m=>`<option value="${m}">${m}</option>`).join('')}
-        </select>
-      </div>
-
-      <div>
-        <label for="input-timc">Valor TIMC:</label><br>
-        <input type="number" id="input-timc" placeholder="Ej: 45" style="width:80px; padding:5px;">
-      </div>
-
-      <div style="align-self:flex-end;">
-        <button id="btn-guardar-timc" style="padding:8px 15px;">Guardar TIMC</button>
-      </div>
-    </section>
-
-    <!-- Tabla detalle gastos comunes -->
     <section id="detalle-gastos">
       <h3>Detalle de Gastos Comunes</h3>
-      <table id="tabla-gastos" style="width:100%; border-collapse: collapse;">
+      <table class="table" style="width:100%; border-collapse: collapse;">
         <thead>
           <tr>
-            <th style="border:1px solid #ccc; padding:8px;">Nombre Residente</th>
-            <th style="border:1px solid #ccc; padding:8px;">N° Parcela</th>
-            <th style="border:1px solid #ccc; padding:8px;">Valor Gasto Común</th>
-            <th style="border:1px solid #ccc; padding:8px;">Periodo</th>
-            <th style="border:1px solid #ccc; padding:8px;">Fecha Vencimiento</th>
-            <th style="border:1px solid #ccc; padding:8px;">Monto Pagado</th>
-            <th style="border:1px solid #ccc; padding:8px;">Saldo</th>
-            <th style="border:1px solid #ccc; padding:8px;">Interés</th>
-            <th style="border:1px solid #ccc; padding:8px;">Multa 1/4</th>
-            <th style="border:1px solid #ccc; padding:8px;">Meses Impagos</th>
-            <th style="border:1px solid #ccc; padding:8px;">Deuda Total</th>
-            <th style="border:1px solid #ccc; padding:8px;">Fecha Pago</th>
-            <th style="border:1px solid #ccc; padding:8px;">Método Pago</th>
-            <th style="border:1px solid #ccc; padding:8px;">Estado</th>
+            <th>Nombre Residente</th>
+            <th>N° Parcela</th>
+            <th>Valor Gasto Común</th>
+            <th>Periodo</th>
+            <th>Fecha Vencimiento</th>
+            <th>Monto Pagado</th>
+            <th>Saldo</th>
+            <th>Interés</th>
+            <th>Multa 1/4</th>
+            <th>Meses Impagos</th>
+            <th>Deuda Total</th>
+            <th>Fecha Pago</th>
+            <th>Método Pago</th>
+            <th>Estado</th>
           </tr>
         </thead>
         <tbody id="tbody-gastos">
           <tr><td colspan="14" style="text-align:center; padding:10px;">Seleccione parcela y año para ver los datos.</td></tr>
         </tbody>
       </table>
-      <button id="btn-abrir-form" style="margin-top:15px; padding:8px 20px;">Agregar Gasto Común</button>
+      <button class="btn" id="btnAgregarGasto">Agregar Gasto Común</button>
     </section>
 
-    <!-- Modal para agregar gasto común -->
-    <div id="modal-gasto" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.4); justify-content:center; align-items:center; z-index:1000;">
-      <div style="background:#fff; padding:20px; border-radius:8px; max-width:700px; width:90%; max-height:90vh; overflow-y:auto; box-shadow:0 0 10px rgba(0,0,0,0.3);">
+    <div id="modalGasto" class="modal" style="display:none;">
+      <div class="modal-content" style="max-width:600px; padding:20px;">
+        <span class="close" id="cerrarModal" style="float:right; cursor:pointer; font-size:1.5em;">&times;</span>
         <h3>Agregar Gasto Común</h3>
-        <form id="form-gasto-comun" style="display:flex; flex-wrap: wrap; gap:15px; align-items:flex-end;">
-          <div>
-            <label for="input-n-parcela">N° Parcela:</label><br>
-            <input type="number" id="input-n-parcela" min="1" max="26" required style="padding:5px; width:100px;">
+        <form id="formGastoComun" style="display:flex; flex-wrap: wrap; gap:15px;">
+          <div style="flex:1 1 100px;">
+            <label for="inputNParcela">N° Parcela:</label>
+            <input type="number" id="inputNParcela" min="1" max="26" required style="width:100%; padding:5px;">
           </div>
-          <div>
-            <label for="input-nombre-residente">Nombre Residente:</label><br>
-            <input type="text" id="input-nombre-residente" readonly style="padding:5px; width:250px; background:#eee;">
+          <div style="flex:1 1 200px;">
+            <label for="inputNombreResidente">Nombre Residente:</label>
+            <input type="text" id="inputNombreResidente" readonly style="width:100%; padding:5px; background:#eee;">
           </div>
-          <div>
-            <label for="input-valor-gasto">Valor Gasto Común:</label><br>
-            <input type="number" id="input-valor-gasto" readonly style="padding:5px; width:120px; background:#eee;">
+          <div style="flex:1 1 150px;">
+            <label for="inputValorGasto">Valor Gasto Común:</label>
+            <input type="number" id="inputValorGasto" readonly style="width:100%; padding:5px; background:#eee;">
           </div>
-          <div>
-            <label for="input-fecha-pago">Fecha Pago:</label><br>
-            <input type="date" id="input-fecha-pago" required style="padding:5px; width:160px;">
+          <div style="flex:1 1 150px;">
+            <label for="inputFechaPago">Fecha Pago:</label>
+            <input type="date" id="inputFechaPago" required style="width:100%; padding:5px;">
           </div>
-          <div>
-            <label for="select-mes-pago">Mes:</label><br>
-            <select id="select-mes-pago" required style="padding:5px; width:120px;">
-              ${meses.map(m=>`<option value="${m}">${m}</option>`).join('')}
+          <div style="flex:1 1 150px;">
+            <label for="selectMesPago">Mes:</label>
+            <select id="selectMesPago" required style="width:100%; padding:5px;">
+              ${meses.map(m => `<option value="${m}">${m}</option>`).join('')}
             </select>
           </div>
-          <div>
-            <label for="input-monto-pagado">Monto Pagado:</label><br>
-            <input type="number" id="input-monto-pagado" min="0" step="0.01" required style="padding:5px; width:120px;">
+          <div style="flex:1 1 150px;">
+            <label for="inputMontoPagado">Monto Pagado:</label>
+            <input type="number" id="inputMontoPagado" min="0" step="0.01" required style="width:100%; padding:5px;">
           </div>
-          <div>
-            <label for="select-metodo-pago">Método Pago:</label><br>
-            <select id="select-metodo-pago" required style="padding:5px; width:140px;">
+          <div style="flex:1 1 150px;">
+            <label for="selectMetodoPago">Método Pago:</label>
+            <select id="selectMetodoPago" required style="width:100%; padding:5px;">
               <option value="Transferencia">Transferencia</option>
               <option value="Efectivo">Efectivo</option>
             </select>
           </div>
-          <div>
-            <label>Comprobante Pago:</label><br>
-            <input type="file" id="input-comprobante" style="padding:5px;">
+          <div style="flex:1 1 100%;">
+            <label for="inputComprobante">Comprobante Pago:</label>
+            <input type="file" id="inputComprobante" style="width:100%; padding:5px;">
           </div>
-          <div style="flex-basis: 100%; text-align: right;">
-            <button type="button" id="btn-cerrar-modal" style="margin-right:10px; padding:8px 15px;">Cancelar</button>
-            <button type="submit" style="padding:8px 20px;">Guardar</button>
+          <div style="flex:1 1 100%; text-align:right;">
+            <button type="submit" class="btn">Guardar</button>
           </div>
         </form>
       </div>
     </div>
   `;
 
-  // Carga datos simulados (reemplaza con llamadas reales a Google Sheets)
-  cargarDatosSimulados();
-
-  // Actualiza mini tabla TIMC
   actualizarMiniTablaTimc();
+  filtrarDatos();
 
   // Eventos
-  document.getElementById('btn-guardar-timc').addEventListener('click', guardarTimc);
+  document.getElementById('btn-guardar-timc')?.addEventListener('click', guardarTimc);
   document.getElementById('select-parcela').addEventListener('input', filtrarDatos);
   document.getElementById('input-anio').addEventListener('input', filtrarDatos);
 
-  document.getElementById('btn-abrir-form').addEventListener('click', () => {
-    document.getElementById('modal-gasto').style.display = 'flex';
-  });
-  document.getElementById('btn-cerrar-modal').addEventListener('click', () => {
-    document.getElementById('modal-gasto').style.display = 'none';
-    document.getElementById('form-gasto-comun').reset();
+  document.getElementById('btnAgregarGasto').addEventListener('click', () => {
+    document.getElementById('modalGasto').style.display = 'flex';
   });
 
-  document.getElementById('input-n-parcela').addEventListener('input', rellenarDatosResidente);
-  document.getElementById('form-gasto-comun').addEventListener('submit', guardarGastoComun);
+  document.getElementById('cerrarModal').addEventListener('click', () => {
+    document.getElementById('modalGasto').style.display = 'none';
+    document.getElementById('formGastoComun').reset();
+  });
 
-  filtrarDatos();
+  document.getElementById('inputNParcela').addEventListener('input', rellenarDatosResidente);
+
+  document.getElementById('formGastoComun').addEventListener('submit', guardarGastoComun);
+
+  ocultarSpinner();
 }
 
-// Actualiza la mini tabla TIMC compacta
+// Funciones auxiliares (simuladas, reemplaza con tus llamadas reales)
+
+async function cargarDatosSimulados() {
+  // Simula carga de residentes
+  residentes = [
+    { N_Parcela: 1, Nombre_Completo: 'Juan Pérez', Valor_Gasto_Comun: 50000 },
+    { N_Parcela: 2, Nombre_Completo: 'María Gómez', Valor_Gasto_Comun: 45000 },
+    { N_Parcela: 3, Nombre_Completo: 'Carlos Díaz', Valor_Gasto_Comun: 52000 },
+    // ... hasta parcela 26
+  ];
+
+  // Simula TIMC
+  timc = {
+    Enero: 0.5, Febrero: 0.5, Marzo: 0.5, Abril: 0.5, Mayo: 0.5, Junio: 0.5,
+    Julio: 0.5, Agosto: 0.5, Septiembre: 0.5, Octubre: 0.5, Noviembre: 0.5, Diciembre: 0.5
+  };
+
+  // Simula gastos comunes
+  gastosComunes = [
+    {
+      Nombre_Residente: 'Juan Pérez',
+      N_Parcela: 1,
+      Valor_Gasto_Comun: 50000,
+      Periodo: 'Junio',
+      Fecha_Vencimiento: '2025-06-10',
+      Monto_Pagado: 45000,
+      Deuda_Total: 6000,
+      Interes: 1000,
+      Multa_1_4: 1500,
+      Meses_Inpagos: 1,
+      Fecha_Pago: '2025-06-15',
+      Metodo_Pago: 'Transferencia',
+      Estado: 'Mora'
+    },
+    // Más registros...
+  ];
+}
+
 function actualizarMiniTablaTimc() {
   const tbody = document.getElementById('timc-visual');
+  if (!tbody) return;
   tbody.innerHTML = '';
   for (const mes of meses) {
     const tr = document.createElement('tr');
@@ -174,23 +193,6 @@ function actualizarMiniTablaTimc() {
   }
 }
 
-// Guarda TIMC en Google Sheets (placeholder - debes implementar integración real)
-function guardarTimc() {
-  const mes = document.getElementById('select-mes-timc').value;
-  const valor = parseFloat(document.getElementById('input-timc').value);
-  if (isNaN(valor) || valor < 0) {
-    alert('Ingresa un valor TIMC válido.');
-    return;
-  }
-  timc[mes] = valor;
-  actualizarMiniTablaTimc();
-  alert(`TIMC para ${mes} guardado: ${valor}`);
-
-  // TODO: Implementa llamada a tu API o Google Sheets para guardar el valor en hoja "Pagos_GC" columna TIMC
-  // Ejemplo: guardarTimcEnGoogleSheets(mes, valor);
-}
-
-// Filtra y muestra gastos comunes según parcela y año
 function filtrarDatos() {
   const parcela = parseInt(document.getElementById('select-parcela').value);
   const anio = parseInt(document.getElementById('input-anio').value);
@@ -200,7 +202,6 @@ function filtrarDatos() {
     return;
   }
 
-  // Filtra gastos comunes por parcela y año (simulado)
   const filtrados = gastosComunes.filter(gasto =>
     gasto.N_Parcela === parcela &&
     new Date(gasto.Fecha_Vencimiento).getFullYear() === anio
@@ -216,11 +217,13 @@ function filtrarDatos() {
 
 function mostrarMensajeTabla(mensaje) {
   const tbody = document.getElementById('tbody-gastos');
+  if (!tbody) return;
   tbody.innerHTML = `<tr><td colspan="14" style="text-align:center; padding:10px;">${mensaje}</td></tr>`;
 }
 
 function mostrarGastosEnTabla(gastos) {
   const tbody = document.getElementById('tbody-gastos');
+  if (!tbody) return;
   tbody.innerHTML = '';
 
   gastos.forEach(gasto => {
@@ -259,11 +262,10 @@ function mostrarGastosEnTabla(gastos) {
   });
 }
 
-// Al ingresar N° parcela en el modal, rellena nombre y valor gasto común
 function rellenarDatosResidente() {
-  const nParcela = parseInt(document.getElementById('input-n-parcela').value);
-  const nombreInput = document.getElementById('input-nombre-residente');
-  const valorInput = document.getElementById('input-valor-gasto');
+  const nParcela = parseInt(document.getElementById('inputNParcela').value);
+  const nombreInput = document.getElementById('inputNombreResidente');
+  const valorInput = document.getElementById('inputValorGasto');
 
   if (!nParcela || nParcela < 1 || nParcela > 26) {
     nombreInput.value = '';
@@ -281,17 +283,16 @@ function rellenarDatosResidente() {
   }
 }
 
-// Guarda un nuevo gasto común (simulado)
-function guardarGastoComun(event) {
-  event.preventDefault();
+function guardarGastoComun(e) {
+  e.preventDefault();
 
-  const nParcela = parseInt(document.getElementById('input-n-parcela').value);
-  const nombreResidente = document.getElementById('input-nombre-residente').value.trim();
-  const valorGasto = parseFloat(document.getElementById('input-valor-gasto').value);
-  const fechaPago = document.getElementById('input-fecha-pago').value;
-  const mesPago = document.getElementById('select-mes-pago').value;
-  const montoPagado = parseFloat(document.getElementById('input-monto-pagado').value);
-  const metodoPago = document.getElementById('select-metodo-pago').value;
+  const nParcela = parseInt(document.getElementById('inputNParcela').value);
+  const nombreResidente = document.getElementById('inputNombreResidente').value.trim();
+  const valorGasto = parseFloat(document.getElementById('inputValorGasto').value);
+  const fechaPago = document.getElementById('inputFechaPago').value;
+  const mesPago = document.getElementById('selectMesPago').value;
+  const montoPagado = parseFloat(document.getElementById('inputMontoPagado').value);
+  const metodoPago = document.getElementById('selectMetodoPago').value;
 
   if (!nParcela || !nombreResidente || !fechaPago || !mesPago || isNaN(montoPagado) || montoPagado < 0) {
     alert('Por favor, completa todos los campos correctamente.');
@@ -336,46 +337,29 @@ function guardarGastoComun(event) {
   });
 
   alert('Gasto común guardado correctamente.');
-  document.getElementById('modal-gasto').style.display = 'none';
-  document.getElementById('form-gasto-comun').reset();
+  document.getElementById('modalGasto').style.display = 'none';
+  document.getElementById('formGastoComun').reset();
   filtrarDatos();
 
-  // TODO: Implementa la integración para guardar en Google Sheets hoja Pagos_GC y subir comprobante a Drive
+  // TODO: Implementa integración real con Google Sheets y Drive para guardar datos y subir comprobantes
 }
 
-// Simula carga inicial de datos (reemplaza con tu integración real)
-function cargarDatosSimulados() {
-  residentes = [
-    { N_Parcela: 1, Nombre_Completo: 'Juan Pérez', Valor_Gasto_Comun: 50000 },
-    { N_Parcela: 2, Nombre_Completo: 'María Gómez', Valor_Gasto_Comun: 45000 },
-    { N_Parcela: 3, Nombre_Completo: 'Carlos Díaz', Valor_Gasto_Comun: 52000 },
-    // Agrega más residentes hasta parcela 26
-  ];
-
-  timc = {
-    Enero: 0.5, Febrero: 0.5, Marzo: 0.5, Abril: 0.5, Mayo: 0.5, Junio: 0.5,
-    Julio: 0.5, Agosto: 0.5, Septiembre: 0.5, Octubre: 0.5, Noviembre: 0.5, Diciembre: 0.5
-  };
-
-  gastosComunes = [
-    {
-      Nombre_Residente: 'Juan Pérez',
-      N_Parcela: 1,
-      Valor_Gasto_Comun: 50000,
-      Periodo: 'Junio',
-      Fecha_Vencimiento: '2025-06-10',
-      Monto_Pagado: 45000,
-      Deuda_Total: 6000,
-      Interes: 1000,
-      Multa_1_4: 1500,
-      Meses_Inpagos: 1,
-      Fecha_Pago: '2025-06-15',
-      Metodo_Pago: 'Transferencia',
-      Estado: 'Mora'
-    },
-    // Más registros simulados...
-  ];
+function limpiarMainContent() {
+  const main = document.getElementById('main-content');
+  main.innerHTML = '';
 }
 
-// Exporta la función para que tu app la use
+function mostrarSpinner() {
+  // Implementa según tu app
+}
+
+function ocultarSpinner() {
+  // Implementa según tu app
+}
+
+function mostrarMensaje(msg, tipo = 'info') {
+  // Implementa según tu app
+}
+
+// Exporta la función para que se use desde index.html
 window.cargarGastosComunes = cargarGastosComunes;
