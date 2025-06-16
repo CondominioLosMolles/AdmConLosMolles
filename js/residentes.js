@@ -1,21 +1,19 @@
 // js/residentes.js
-// Módulo Residentes: Tabla, búsqueda, alta, edición, eliminación y exportación
+// Módulo Residentes: Tabla, búsqueda, alta, edición, eliminación, exportación
 
 async function cargarResidentes() {
   limpiarMainContent();
   mostrarSpinner();
 
-  // 1. Obtener datos desde Google Sheets
   let residentes = [];
   try {
-    residentes = await obtenerResidentes(); // Función definida en sheets.js
+    residentes = await obtenerResidentes();
   } catch (e) {
     ocultarSpinner();
     mostrarMensaje('Error al cargar residentes: ' + e.message, 'error');
     return;
   }
 
-  // 2. Renderizar búsqueda y botón agregar/exportar
   const main = document.getElementById('main-content');
   main.innerHTML = `
     <h2>Residentes</h2>
@@ -30,7 +28,6 @@ async function cargarResidentes() {
     <div id="modalResidente" style="display:none;"></div>
   `;
 
-  // 3. Renderizar tabla
   function renderTabla(filtro = '') {
     const filtrados = residentes.filter(r => {
       const [id, nombre, rut, parcela, direccion, email, tel, estado, valorGC] = r;
@@ -65,7 +62,9 @@ async function cargarResidentes() {
           <td>${direccion}</td>
           <td>${email}</td>
           <td>${tel}</td>
-          <td>${estado}</td>
+          <td>
+            <span class="estado-tag estado-${estado.toLowerCase()}">${estado}</span>
+          </td>
           <td>${valorGC}</td>
           <td>
             <button class="btn secondary btn-editar" data-id="${id}">✏️</button>
@@ -79,14 +78,11 @@ async function cargarResidentes() {
   }
   renderTabla();
 
-  // 4. Búsqueda en tiempo real
   document.getElementById('busquedaResidente').addEventListener('input', e => {
     renderTabla(e.target.value);
   });
 
-  // 5. Exportar a Excel
   document.getElementById('btnExportarResidentes').onclick = () => {
-    // Usa SheetJS para exportar
     const ws = XLSX.utils.aoa_to_sheet([
       ["Nombre Completo", "RUT", "N° Parcela", "Dirección", "Email", "Teléfono", "Estado", "Valor Gasto Común"],
       ...residentes.map(r => r.slice(1,9))
@@ -96,7 +92,6 @@ async function cargarResidentes() {
     XLSX.writeFile(wb, "Residentes.xlsx");
   };
 
-  // 6. Formulario agregar/editar residente (modal centrado y atractivo)
   function mostrarModalResidente(datos = null) {
     const modal = document.getElementById('modalResidente');
     modal.style.display = 'flex';
@@ -151,9 +146,9 @@ async function cargarResidentes() {
       mostrarSpinner();
       try {
         if (isEdit) {
-          await actualizarResidente(data); // Implementa en sheets.js
+          await actualizarResidente(data);
         } else {
-          await agregarResidente(data); // Implementa en sheets.js
+          await agregarResidente(data);
         }
         modal.style.display = 'none';
         cargarResidentes();
@@ -164,10 +159,8 @@ async function cargarResidentes() {
     };
   }
 
-  // 7. Botón agregar
   document.getElementById('btnAgregarResidente').onclick = () => mostrarModalResidente();
 
-  // 8. Acciones editar/eliminar
   document.getElementById('tablaResidentes').onclick = async (e) => {
     if (e.target.classList.contains('btn-editar')) {
       const id = e.target.dataset.id;
@@ -179,7 +172,7 @@ async function cargarResidentes() {
       if (confirm('¿Está seguro de que desea eliminar a este residente?')) {
         mostrarSpinner();
         try {
-          await eliminarResidente(id); // Implementa en sheets.js
+          await eliminarResidente(id); // sheets.js debe tener el sheetId correcto
           cargarResidentes();
         } catch (e) {
           mostrarMensaje('Error al eliminar: ' + e.message, 'error');
