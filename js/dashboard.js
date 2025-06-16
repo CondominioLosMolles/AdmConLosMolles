@@ -1,6 +1,4 @@
 // js/dashboard.js
-// Dashboard: gráfico compacto, eje Y CLP, layout original
-
 async function cargarDashboard() {
   limpiarMainContent();
   mostrarSpinner();
@@ -32,7 +30,7 @@ async function cargarDashboard() {
     .filter(p => parcelasMorosas.includes(p[2]) && p[15] === 'Moroso')
     .reduce((a,b) => a + Number(b[12]||0), 0);
 
-  // Layout original: widgets arriba, gráfico y resumen lado a lado
+  // Layout
   const main = document.getElementById('main-content');
   main.innerHTML = `
     <h2>Dashboard</h2>
@@ -71,17 +69,23 @@ async function cargarDashboard() {
     </div>
   `;
 
-  // Gráfico: eje Y CLP, step automático, compacto
+  // Gráfico: eje X con mes/año, eje Y CLP
   const labels = [];
+  const meses = [
+    'Enero','Febrero','Marzo','Abril','Mayo','Junio',
+    'Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'
+  ];
   const ingresosPorMes = [];
   const egresosPorMes = [];
   const hoy = new Date();
   for (let i = 11; i >= 0; i--) {
     const d = new Date(hoy.getFullYear(), hoy.getMonth() - i, 1);
-    const label = d.toISOString().slice(0,7);
-    labels.push(label);
-    ingresosPorMes.push(pagos.filter(p => p[4] === label).reduce((a,b) => a + Number(b[6]||0), 0));
-    egresosPorMes.push(egresos.filter(e => (e[1]||'').startsWith(label)).reduce((a,b) => a + Number(b[6]||0), 0));
+    const mesNombre = meses[d.getMonth()];
+    const anio = d.getFullYear();
+    labels.push(mesNombre + '\n' + anio);
+    const periodo = d.toISOString().slice(0,7);
+    ingresosPorMes.push(pagos.filter(p => p[4] === periodo).reduce((a,b) => a + Number(b[6]||0), 0));
+    egresosPorMes.push(egresos.filter(e => (e[1]||'').startsWith(periodo)).reduce((a,b) => a + Number(b[6]||0), 0));
   }
   setTimeout(() => {
     // Step automático en 100.000, ajustando al máximo valor
@@ -104,6 +108,15 @@ async function cargarDashboard() {
         maintainAspectRatio: false,
         plugins: { legend: { position: 'top' } },
         scales: {
+          x: {
+            ticks: {
+              callback: function(value, index, ticks) {
+                // Muestra "Junio" arriba y "2024" abajo
+                const [mes, anio] = this.getLabelForValue(value).split('\n');
+                return mes + '\n' + anio;
+              }
+            }
+          },
           y: {
             beginAtZero: true,
             suggestedMax: suggestedMax,
