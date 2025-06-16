@@ -1,281 +1,174 @@
 // js/gastos_comunes.js
 
-const SHEET_PAGOS_GC = 'Pagos_GC';
-const SHEET_RESIDENTES = 'Residentes';
+// Estado local para TIMC y gastos comunes
+const timc = {
+  Enero: '', Febrero: '',
+  Marzo: '', Abril: '',
+  Mayo: '', Junio: '',
+  Julio: '', Agosto: '',
+  Septiembre: '', Octubre: '',
+  Noviembre: '', Diciembre: ''
+};
 
-// Utilidades para obtener meses y helpers
-const MESES = [
-  'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
-  'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
-];
+const gastosComunes = [];
 
-// Carga el módulo Gastos Comunes
-async function cargarGastosComunes() {
-  limpiarMainContent();
-  mostrarSpinner();
+function cargarGastosComunes() {
+  const main = document.getElementById('main-content');
+  main.innerHTML = `
+    <h2>Gastos Comunes</h2>
 
-  // Cargar datos necesarios
-  let pagos = [];
-  let residentes = [];
-  try {
-    pagos = await obtenerPagosGC();
-    residentes = await obtenerResidentes();
-  } catch (e) {
-    ocultarSpinner();
-    mostrarMensaje('Error al cargar datos: ' + e.message, 'error');
+    <section id="timc-seccion" style="margin-bottom:30px;">
+      <h3>Tabla TIMC</h3>
+      <table id="tabla-timc" style="border-collapse: collapse; width: 100%;">
+        <tbody>
+          <tr id="fila-timc"></tr>
+        </tbody>
+      </table>
+      <button id="btn-guardar-timc" style="padding: 10px 20px; margin-top: 10px;">Guardar TIMC</button>
+    </section>
+
+    <section id="gastos-comunes-seccion">
+      <h3>Agregar Gasto Común</h3>
+      <div style="margin-bottom: 15px;">
+        <input type="text" id="input-descripcion" placeholder="Descripción" style="padding:5px; width: 300px; margin-right: 10px;">
+        <input type="number" id="input-monto" placeholder="Monto" style="padding:5px; width: 120px; margin-right: 10px;">
+        <button id="btn-agregar-gasto" style="padding: 6px 15px;">Agregar gasto común</button>
+      </div>
+      <h3>Gastos Comunes Registrados</h3>
+      <table id="tabla-gastos" style="border-collapse: collapse; width: 100%;">
+        <thead>
+          <tr>
+            <th style="border: 1px solid #ccc; padding: 8px;">Descripción</th>
+            <th style="border: 1px solid #ccc; padding: 8px;">Monto</th>
+          </tr>
+        </thead>
+        <tbody id="tbody-gastos">
+          <tr><td colspan="2" style="text-align:center; padding: 10px;">No hay gastos comunes agregados.</td></tr>
+        </tbody>
+      </table>
+    </section>
+  `;
+
+  construirTablaTIMC();
+  actualizarTablaGastos();
+
+  document.getElementById('btn-guardar-timc').addEventListener('click', guardarTimc);
+  document.getElementById('btn-agregar-gasto').addEventListener('click', agregarGastoComun);
+}
+
+function construirTablaTIMC() {
+  const fila = document.getElementById('fila-timc');
+  fila.innerHTML = ''; // Limpia fila
+
+  const meses = [
+    'Enero', 'Febrero',
+    'Marzo', 'Abril',
+    'Mayo', 'Junio',
+    'Julio', 'Agosto',
+    'Septiembre', 'Octubre',
+    'Noviembre', 'Diciembre'
+  ];
+
+  for (let i = 0; i < meses.length; i += 2) {
+    const td = document.createElement('td');
+    td.style.border = '1px solid #ccc';
+    td.style.padding = '10px';
+    td.style.verticalAlign = 'top';
+
+    // Mes superior
+    const divSuperior = document.createElement('div');
+    divSuperior.style.marginBottom = '10px';
+    const labelSuperior = document.createElement('label');
+    labelSuperior.textContent = meses[i];
+    const inputSuperior = document.createElement('input');
+    inputSuperior.type = 'number';
+    inputSuperior.value = timc[meses[i]];
+    inputSuperior.style.width = '80px';
+    inputSuperior.addEventListener('input', e => {
+      timc[meses[i]] = e.target.value;
+    });
+    divSuperior.appendChild(labelSuperior);
+    divSuperior.appendChild(document.createElement('br'));
+    divSuperior.appendChild(inputSuperior);
+
+    td.appendChild(divSuperior);
+
+    // Mes inferior (si existe)
+    if (meses[i + 1]) {
+      const divInferior = document.createElement('div');
+      const labelInferior = document.createElement('label');
+      labelInferior.textContent = meses[i + 1];
+      const inputInferior = document.createElement('input');
+      inputInferior.type = 'number';
+      inputInferior.value = timc[meses[i + 1]];
+      inputInferior.style.width = '80px';
+      inputInferior.addEventListener('input', e => {
+        timc[meses[i + 1]] = e.target.value;
+      });
+      divInferior.appendChild(labelInferior);
+      divInferior.appendChild(document.createElement('br'));
+      divInferior.appendChild(inputInferior);
+
+      td.appendChild(divInferior);
+    }
+
+    fila.appendChild(td);
+  }
+}
+
+function guardarTimc() {
+  // Aquí puedes agregar la lógica para guardar en backend o Google Sheets
+  alert('TIMC guardado:\n' + JSON.stringify(timc, null, 2));
+}
+
+function agregarGastoComun() {
+  const descInput = document.getElementById('input-descripcion');
+  const montoInput = document.getElementById('input-monto');
+  const descripcion = descInput.value.trim();
+  const monto = montoInput.value.trim();
+
+  if (!descripcion || !monto || isNaN(monto) || Number(monto) <= 0) {
+    alert('Por favor, ingresa una descripción válida y un monto mayor a 0.');
     return;
   }
 
-  // Estado UI
-  let parcelaSeleccionada = '';
-  let añoSeleccionado = new Date().getFullYear().toString();
+  gastosComunes.push({ descripcion, monto: Number(monto) });
+  descInput.value = '';
+  montoInput.value = '';
+  actualizarTablaGastos();
+}
 
-  // Render UI
-  renderUI();
+function actualizarTablaGastos() {
+  const tbody = document.getElementById('tbody-gastos');
+  tbody.innerHTML = '';
 
-  function renderUI() {
-    const main = document.getElementById('main-content');
-    main.innerHTML = `
-      <h2>Gastos Comunes</h2>
-      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:24px;flex-wrap:wrap;">
-        <div style="flex:2;min-width:260px;">
-          <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin-bottom:12px;">
-            <label>N° Parcela:</label>
-            <input id="gcParcela" type="number" min="1" max="26" style="width:60px;" placeholder="1-26" value="${parcelaSeleccionada}">
-            <label>Año:</label>
-            <input id="gcAnio" type="number" min="2020" max="2100" style="width:80px;" value="${añoSeleccionado}">
-          </div>
-          <div style="display:flex;gap:18px;align-items:end;">
-            <form id="formTimc" style="display:flex;gap:8px;align-items:end;">
-              <div>
-                <label style="font-size:0.97em;">Ingresar TIMC mensual</label>
-                <input id="timcValor" type="number" step="0.01" min="0" placeholder="Ej: 0.5" style="width:80px;">
-              </div>
-              <div>
-                <label style="font-size:0.97em;">Mes</label>
-                <select id="timcMes">
-                  ${MESES.map((m,i)=>`<option value="${i+1}">${m}</option>`).join('')}
-                </select>
-              </div>
-              <button class="btn" type="submit" style="padding:7px 16px;">Guardar TIMC</button>
-            </form>
-            <div id="timcMsg" style="font-size:0.93em;color:#1ba94c;margin-left:8px;"></div>
-          </div>
-        </div>
-        <div style="flex:1;min-width:210px;max-width:270px;">
-          <div style="background:#f5faff;border-radius:8px;padding:12px 16px;box-shadow:0 1px 6px #4e91f91a;">
-            <div style="font-weight:600;margin-bottom:6px;font-size:1.08em;text-align:right;">TIMC por Mes (${añoSeleccionado})</div>
-            <table style="width:100%;font-size:0.98em;">
-              <tbody id="tablaTimcMes"></tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-      <hr style="margin:18px 0 14px 0;">
-      <h3 style="margin-bottom:8px;">Detalle de Gastos Comunes</h3>
-      <div id="tablaGastosComunes"></div>
-    `;
-
-    document.getElementById('gcParcela').addEventListener('input', e => {
-      parcelaSeleccionada = e.target.value;
-      renderTablaGastos();
-    });
-    document.getElementById('gcAnio').addEventListener('input', e => {
-      añoSeleccionado = e.target.value;
-      renderTablaTimc();
-      renderTablaGastos();
-    });
-    document.getElementById('formTimc').onsubmit = async (e) => {
-      e.preventDefault();
-      await guardarTimc();
-    };
-
-    renderTablaTimc();
-    renderTablaGastos();
+  if (gastosComunes.length === 0) {
+    const tr = document.createElement('tr');
+    const td = document.createElement('td');
+    td.colSpan = 2;
+    td.style.textAlign = 'center';
+    td.style.padding = '10px';
+    td.textContent = 'No hay gastos comunes agregados.';
+    tr.appendChild(td);
+    tbody.appendChild(tr);
+    return;
   }
 
-  function renderTablaTimc() {
-    // Mostrar TIMC por mes para el año seleccionado
-    const timcPorMes = {};
-    pagos.forEach(pg => {
-      const periodo = pg[4] || ''; // Ej: "2025-06"
-      const [anio, mes] = periodo.split('-');
-      const timc = pg[9] || '';
-      if (anio === añoSeleccionado && mes && timc) timcPorMes[mes] = timc;
-    });
-    let html = '';
-    for (let i = 1; i <= 12; i++) {
-      const mesStr = i.toString().padStart(2, '0');
-      html += `<tr>
-        <td style="padding:2px 6px;text-align:left;">${MESES[i-1]}</td>
-        <td style="padding:2px 6px;text-align:right;">${timcPorMes[mesStr] || '-'}</td>
-      </tr>`;
-    }
-    document.getElementById('tablaTimcMes').innerHTML = html;
-  }
+  gastosComunes.forEach(gasto => {
+    const tr = document.createElement('tr');
 
-  async function guardarTimc() {
-    const timc = document.getElementById('timcValor').value.trim();
-    const mes = document.getElementById('timcMes').value;
-    if (!timc || isNaN(timc) || timc <= 0) {
-      mostrarMensaje('Ingrese un valor TIMC válido', 'error');
-      return;
-    }
-    // Busca si ya existe un registro para ese año/mes (puede ser por parcela 0 o un registro general)
-    const periodo = `${añoSeleccionado}-${mes.padStart(2,'0')}`;
-    let idx = pagos.findIndex(pg => (pg[4] === periodo && (!parcelaSeleccionada || pg[2] === parcelaSeleccionada)));
-    if (idx === -1) {
-      // Insertar nuevo registro de TIMC (puedes ajustar lógica según tu modelo)
-      const nuevaFila = [
-        '', // ID_Pago (autoincremental)
-        '', // Nombre_Residente
-        parcelaSeleccionada || '', // N_Parcela (vacío si es global)
-        '', // Valor_Gasto_Comun
-        periodo, // Periodo
-        '', // Fecha_Vencimiento
-        '', // MontoPagado
-        '', // Saldo Pendiente o a favor
-        '', // Interes
-        timc, // TIMC
-        '', // Multa_1/4
-        '', // Meses_Inpagos
-        '', // Deuda_Total
-        '', // Fecha_Pago
-        '', // Metodo_Pago
-        '', // Estado
-        ''  // ID_Comprobante_Drive
-      ];
-      await agregarPagoGC(nuevaFila);
-      pagos.push(nuevaFila);
-    } else {
-      // Actualizar registro existente
-      pagos[idx][9] = timc;
-      await actualizarPagoGC(pagos[idx]);
-    }
-    mostrarMensaje('TIMC guardado correctamente');
-    document.getElementById('timcValor').value = '';
-    renderTablaTimc();
-  }
+    const tdDesc = document.createElement('td');
+    tdDesc.style.border = '1px solid #ccc';
+    tdDesc.style.padding = '8px';
+    tdDesc.textContent = gasto.descripcion;
 
-  function renderTablaGastos() {
-    // Filtrar por parcela y año
-    let filtrados = pagos.filter(pg => {
-      const periodo = pg[4] || '';
-      const [anio, ] = periodo.split('-');
-      if (parcelaSeleccionada && pg[2] !== parcelaSeleccionada) return false;
-      if (añoSeleccionado && anio !== añoSeleccionado) return false;
-      return pg[1] && pg[2]; // Solo filas con residente y parcela
-    });
+    const tdMonto = document.createElement('td');
+    tdMonto.style.border = '1px solid #ccc';
+    tdMonto.style.padding = '8px';
+    tdMonto.textContent = `$${gasto.monto.toFixed(2)}`;
 
-    let html = `
-      <table class="table">
-        <thead>
-          <tr>
-            <th>Nombre Residente</th>
-            <th>N° Parcela</th>
-            <th>Valor GC</th>
-            <th>Periodo</th>
-            <th>Vencimiento</th>
-            <th>Monto Pagado</th>
-            <th>Saldo</th>
-            <th>Interés</th>
-            <th>TIMC</th>
-            <th>Multa 1/4</th>
-            <th>Meses Impagos</th>
-            <th>Deuda Total</th>
-            <th>Fecha Pago</th>
-            <th>Método</th>
-            <th>Estado</th>
-          </tr>
-        </thead>
-        <tbody>
-    `;
-    for (const pg of filtrados) {
-      const [
-        id, nombre, parcela, valorGC, periodo, fechaVenc, montoPagado, saldo, interes, timc,
-        multa, mesesImp, deudaTotal, fechaPago, metodo, estado
-      ] = pg;
-
-      // Fecha de vencimiento: día 10 del mes del periodo
-      let venc = '';
-      if (periodo) {
-        const [anio, mes] = periodo.split('-');
-        venc = `${anio}-${mes}-10`;
-      }
-
-      html += `
-        <tr>
-          <td title="${nombre}">${nombre || '-'}</td>
-          <td title="${parcela}">${parcela || '-'}</td>
-          <td title="${valorGC}">${valorGC || '-'}</td>
-          <td title="${periodo}">${periodo || '-'}</td>
-          <td title="${venc}">${venc || '-'}</td>
-          <td title="${montoPagado}">${montoPagado || '-'}</td>
-          <td title="${saldo}">${saldo || '-'}</td>
-          <td title="${interes}">${interes || '-'}</td>
-          <td title="${timc}">${timc || '-'}</td>
-          <td title="${multa}">${multa || '-'}</td>
-          <td title="${mesesImp}">${mesesImp || '-'}</td>
-          <td title="${deudaTotal}">${deudaTotal || '-'}</td>
-          <td title="${fechaPago}">${fechaPago || '-'}</td>
-          <td title="${metodo}">${metodo || '-'}</td>
-          <td title="${estado}">${estado || '-'}</td>
-        </tr>
-      `;
-    }
-    html += '</tbody></table>';
-    document.getElementById('tablaGastosComunes').innerHTML = html;
-  }
-
-  ocultarSpinner();
-}
-
-// --- FUNCIONES DE INTEGRACIÓN CON SHEETS ---
-
-// Lee todos los pagos GC
-async function obtenerPagosGC() {
-  const resp = await gapi.client.sheets.spreadsheets.values.get({
-    spreadsheetId: SPREADSHEET_ID,
-    range: SHEET_PAGOS_GC
-  });
-  return resp.result.values ? resp.result.values.slice(1) : [];
-}
-
-// Lee todos los residentes
-async function obtenerResidentes() {
-  const resp = await gapi.client.sheets.spreadsheets.values.get({
-    spreadsheetId: SPREADSHEET_ID,
-    range: SHEET_RESIDENTES
-  });
-  return resp.result.values ? resp.result.values.slice(1) : [];
-}
-
-// Agrega un pago GC (incluye TIMC)
-async function agregarPagoGC(fila) {
-  await gapi.client.sheets.spreadsheets.values.append({
-    spreadsheetId: SPREADSHEET_ID,
-    range: SHEET_PAGOS_GC,
-    valueInputOption: 'USER_ENTERED',
-    resource: { values: [fila] }
+    tr.appendChild(tdDesc);
+    tr.appendChild(tdMonto);
+    tbody.appendChild(tr);
   });
 }
-
-// Actualiza un pago GC (por fila, requiere lógica para encontrar la fila real si es necesario)
-async function actualizarPagoGC(fila) {
-  // Busca por Periodo y Parcela
-  const pagos = await obtenerPagosGC();
-  const idx = pagos.findIndex(pg => pg[4] === fila[4] && pg[2] === fila[2]);
-  if (idx === -1) return;
-  const row = idx + 2;
-  await gapi.client.sheets.spreadsheets.values.update({
-    spreadsheetId: SPREADSHEET_ID,
-    range: `${SHEET_PAGOS_GC}!A${row}:Q${row}`,
-    valueInputOption: 'USER_ENTERED',
-    resource: { values: [fila] }
-  });
-}
-
-// --- FIN FUNCIONES SHEETS ---
-
-// Asegúrate de que el menú dispare cargarGastosComunes al hacer click
-document.querySelector('[data-module="gastos-comunes"]').addEventListener('click', cargarGastosComunes);
