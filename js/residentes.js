@@ -1,6 +1,4 @@
 // js/residentes.js
-// Residentes: tabla, búsqueda, alta, edición, eliminación robusta, exportación
-
 async function cargarResidentes() {
   limpiarMainContent();
   mostrarSpinner();
@@ -170,21 +168,20 @@ async function cargarResidentes() {
     if (e.target.classList.contains('btn-eliminar')) {
       const id = e.target.dataset.id;
       if (!confirm('¿Está seguro de que desea eliminar a este residente?')) return;
-
       mostrarSpinner();
       try {
-        // Eliminar por fila: busca el índice real en la hoja
+        // Busca el índice real en la hoja actualizada
         const residentesActualizados = await obtenerResidentes();
         const idx = residentesActualizados.findIndex(r => r[0] === id);
         if (idx === -1) throw new Error('No encontrado');
-        const row = idx + 2; // +2 porque la hoja tiene encabezado
+        const row = idx + 2;
         await gapi.client.sheets.spreadsheets.batchUpdate({
           spreadsheetId: SPREADSHEET_ID,
           resource: {
             requests: [{
               deleteDimension: {
                 range: {
-                  sheetId: SHEET_ID_RESIDENTES, // Debe estar definido en sheets.js
+                  sheetId: SHEET_ID_RESIDENTES, // Asegúrate que esté bien definido en sheets.js
                   dimension: "ROWS",
                   startIndex: row - 1,
                   endIndex: row
@@ -196,7 +193,7 @@ async function cargarResidentes() {
         mostrarMensaje('Residente eliminado correctamente');
         cargarResidentes();
       } catch (e) {
-        mostrarMensaje('Error al eliminar: ' + (e.message || e), 'error');
+        mostrarMensaje('Error al eliminar: ' + (e.result?.error?.message || e.message || e), 'error');
       }
       ocultarSpinner();
     }
