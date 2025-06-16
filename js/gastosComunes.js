@@ -96,9 +96,9 @@ async function cargarGastosComunes() {
     const mes = document.getElementById('timcMes').value;
     const anio = document.getElementById('timcAnio').value;
     const valor = document.getElementById('timcValor').value;
-    // Guardar TIMC en Pagos_GC para todos los registros de ese mes/año
     mostrarSpinner();
     try {
+      // Actualiza el TIMC en todos los pagos del mes/año seleccionado
       for (let pago of pagos) {
         if (pago[4] && pago[4] === `${anio}-${mes}`) {
           pago[9] = valor; // Columna J: TIMC
@@ -201,9 +201,9 @@ async function cargarGastosComunes() {
   // Formulario agregar pago de gasto común
   function mostrarModalGC() {
     const modal = document.getElementById('modalGC');
-    modal.style.display = 'block';
+    modal.style.display = 'flex';
     modal.innerHTML = `
-      <div style="background:#fff;padding:24px;border-radius:8px;max-width:500px;margin:40px auto;box-shadow:0 2px 8px #0001;">
+      <div>
         <h3>Agregar Gasto Común</h3>
         <form id="formGC">
           <label>N° Parcela</label>
@@ -268,7 +268,7 @@ async function cargarGastosComunes() {
         // Calcular TIMC, interés, multa, meses impagos, deuda, saldo, estado
         const timc = getTIMCporMes(periodo.split('-')[0])[periodo.split('-')[1]] || 0;
         const fechaVencimiento = periodo + '-10';
-        const interes = calcularInteres(valorGC, timc);
+        const interes = calcularInteres(valorGC, timc, fechaVencimiento, fechaPago);
         const mesesImpagos = calcularMesesImpagos(fechaVencimiento, fechaPago);
         const multa = calcularMulta(valorGC, mesesImpagos);
         const deudaTotal = (+valorGC) + (+interes) + (+multa);
@@ -307,8 +307,12 @@ async function cargarGastosComunes() {
   }
 
   // Funciones de cálculo
-  function calcularInteres(valorGC, timc) {
+  function calcularInteres(valorGC, timc, fechaVenc, fechaPago) {
     if (!valorGC || !timc) return 0;
+    // Solo se cobra si paga después del 10
+    const fv = new Date(fechaVenc);
+    const fp = new Date(fechaPago);
+    if (fp <= fv) return 0;
     return Math.round((+valorGC) * (+timc) / 100 / 12);
   }
   function calcularMulta(valorGC, mesesImpagos) {
