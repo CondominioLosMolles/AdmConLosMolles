@@ -4,13 +4,13 @@ const SPREADSHEET_ID = '1bFo5dBC3HM0xupginTBe-hrrUNgkiuUn4fkXXzHide8';
 // Sheet IDs según el orden de las hojas en tu Google Sheet.
 // Cambia estos valores si el gid de la hoja es diferente.
 // Para obtener el sheetId correcto, abre la hoja y mira la URL: ...#gid=XXXXXXXX
-const SHEET_ID_RESIDENTES = 0;    // Cambia por el gid real de la hoja "Residentes"
-const SHEET_ID_PAGOS_GC = 1330360081;
-const SHEET_ID_EGRESOS = 1288949745;
-const SHEET_ID_MANTENCIONES = 1359064608;
-const SHEET_ID_MULTAS = 1647433509;
-const SHEET_ID_ASAMBLEAS = 1350299373;
-const SHEET_ID_COMUNICACIONES = 1221698899;
+const SHEET_ID_RESIDENTES = 1835488459;    // Cambia por el gid real de la hoja "Residentes"
+const SHEET_ID_PAGOS_GC = 1954366455;
+const SHEET_ID_EGRESOS = 1945700474;
+const SHEET_ID_MANTENCIONES = 895242560;
+const SHEET_ID_MULTAS = 456683145;
+const SHEET_ID_ASAMBLEAS = 791789730;
+const SHEET_ID_COMUNICACIONES = 569621527;
 
 // -------- RESIDENTES --------
 async function obtenerResidentes() {
