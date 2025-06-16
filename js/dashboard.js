@@ -1,6 +1,4 @@
 // js/dashboard.js
-// Dashboard: widgets arriba, gráfico compacto, eje Y en pesos chilenos y ticks crecientes
-
 async function cargarDashboard() {
   limpiarMainContent();
   mostrarSpinner();
@@ -58,8 +56,8 @@ async function cargarDashboard() {
         <div>Mantenciones Pendientes/Urgentes</div>
       </div>
     </div>
-    <div class="widget" style="margin-bottom:16px;max-width:900px;width:100%;margin:auto;">
-      <canvas id="graficoIngresosEgresos" height="240"></canvas>
+    <div class="widget" style="margin-bottom:16px;max-width:900px;width:100%;margin:auto;padding:24px 16px;">
+      <canvas id="graficoIngresosEgresos" style="max-height:320px;height:320px;"></canvas>
     </div>
     <div class="widget" style="max-width:440px;margin:auto;">
       <h4>Resumen de Morosidad</h4>
@@ -69,7 +67,7 @@ async function cargarDashboard() {
     </div>
   `;
 
-  // Gráfico: eje Y en CLP, ticks de $100.000 hasta $1.000.000, luego automático
+  // Gráfico: eje Y en CLP, ticks de $100.000 hasta el valor máximo, ajustando automáticamente
   const labels = [];
   const ingresosPorMes = [];
   const egresosPorMes = [];
@@ -82,9 +80,12 @@ async function cargarDashboard() {
     egresosPorMes.push(egresos.filter(e => (e[1]||'').startsWith(label)).reduce((a,b) => a + Number(b[6]||0), 0));
   }
   setTimeout(() => {
-    const maxY = Math.max(...ingresosPorMes, ...egresosPorMes, 1000000);
+    const maxY = Math.max(...ingresosPorMes, ...egresosPorMes, 100000);
+    // Calcular el stepSize (siempre 100.000, pero si el máximo es > 1 millón, sigue creciendo de a 100.000)
     let stepSize = 100000;
-    if (maxY > 1000000) stepSize = Math.ceil(maxY / 10 / 100000) * 100000;
+    let maxTicks = Math.ceil(maxY / stepSize);
+    // Si el máximo no es múltiplo exacto de 100.000, ajusta el max a el siguiente múltiplo
+    let suggestedMax = maxTicks * stepSize;
     new Chart(document.getElementById('graficoIngresosEgresos'), {
       type: 'bar',
       data: {
@@ -96,10 +97,12 @@ async function cargarDashboard() {
       },
       options: {
         responsive:true,
+        maintainAspectRatio: false,
         plugins:{legend:{position:'top'}},
         scales: {
           y: {
             beginAtZero: true,
+            suggestedMax: suggestedMax,
             ticks: {
               callback: value => '$' + value.toLocaleString('es-CL'),
               stepSize: stepSize
