@@ -52,6 +52,8 @@ function handleAuthClick() {
       return;
     }
     try {
+      // Espera a que el token esté realmente activo antes de llamar a Gmail
+      await new Promise(resolve => setTimeout(resolve, 400));
       const email = await obtenerUserEmail();
       if (email !== 'losmollestunquen@gmail.com') {
         mostrarMensaje('Acceso restringido solo para el administrador autorizado.', 'error');
@@ -63,7 +65,7 @@ function handleAuthClick() {
       document.getElementById('app').style.display = 'flex';
       cargarDashboard();
     } catch (e) {
-      mostrarMensaje('No se pudo obtener el correo del usuario.', 'error');
+      mostrarMensaje('No se pudo obtener el correo del usuario o no tienes permisos suficientes.', 'error');
       handleSignout();
     }
   };
@@ -72,15 +74,18 @@ function handleAuthClick() {
 
 // Obtiene el correo electrónico del usuario autenticado
 async function obtenerUserEmail() {
-  const res = await gapi.client.gmail.users.getProfile({userId: 'me'});
-  return res.result.emailAddress;
+  try {
+    const res = await gapi.client.gmail.users.getProfile({userId: 'me'});
+    return res.result.emailAddress;
+  } catch (e) {
+    throw new Error("No se pudo obtener el perfil de Gmail. ¿Autorizaste el scope correcto?");
+  }
 }
 
 // Cierra sesión y vuelve a mostrar la pantalla de login
 function handleSignout() {
   googleUser = null;
   if (window.gapi && gapi.client) {
-    // Revoca el token para cerrar sesión completamente
     gapi.client.setToken('');
   }
   document.getElementById('app').style.display = 'none';
