@@ -1,12 +1,13 @@
 // js/auth.js
 
 const CLIENT_ID = '997872453031-5o8s2o6v3qt722fb3p51a2r7bo24ncee.apps.googleusercontent.com';
-const SCOPES = 'https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/gmail.send';
+const SCOPES = 'https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/gmail.send openid email profile';
 
 let googleUser = null;
 let tokenClient;
 let gapiInited = false;
 let gisInited = false;
+let accessToken = null;
 
 // Inicializa GAPI
 function gapiLoaded() {
@@ -44,15 +45,14 @@ function maybeEnableLogin() {
   }
 }
 
-// Decodifica el JWT para extraer el email
-function parseJwt (token) {
-  if (!token) return null;
-  const base64Url = token.split('.')[1];
-  const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-  const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
-    return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
-  }).join(''));
-  return JSON.parse(jsonPayload);
+// Obtiene el email desde el access_token usando la endpoint de userinfo
+async function obtenerEmailDesdeAccessToken(token) {
+  const res = await fetch('https://openidconnect.googleapis.com/v1/userinfo', {
+    headers: { Authorization: 'Bearer ' + token }
+  });
+  if (!res.ok) throw new Error('No se pudo obtener el correo del usuario');
+  const data = await res.json();
+  return data.email;
 }
 
 // Maneja el clic en "Iniciar sesión"
@@ -63,9 +63,8 @@ function handleAuthClick() {
       return;
     }
     try {
-      // Obtén el email directamente del id_token
-      const payload = parseJwt(resp.id_token);
-      const email = payload && payload.email ? payload.email : null;
+      accessToken = resp.access_token;
+      const email = await obtenerEmailDesdeAccessToken(accessToken);
       if (!email) {
         mostrarMensaje('No se pudo obtener el correo del usuario.', 'error');
         handleSignout();
@@ -91,6 +90,7 @@ function handleAuthClick() {
 // Cierra sesión y vuelve a mostrar la pantalla de login
 function handleSignout() {
   googleUser = null;
+  accessToken = null;
   if (window.gapi && gapi.client) {
     gapi.client.setToken('');
   }
