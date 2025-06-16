@@ -25,78 +25,6 @@ async function cargarResidentes() {
     </div>
     <div id="tablaResidentes"></div>
     <div id="modalResidente" style="display:none;"></div>
-    <style>
-      #tablaResidentes table {
-        table-layout: fixed !important;
-      }
-      #tablaResidentes table th, #tablaResidentes table td {
-        padding: 10px 6px;
-        border-bottom: 1px solid #e0e0e0;
-        font-size: 0.98em;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-      }
-      #tablaResidentes table th.nombre, #tablaResidentes table td.nombre {
-        min-width: 160px;
-        max-width: 240px;
-        white-space: normal !important;
-        text-overflow: unset !important;
-        overflow: visible !important;
-        font-weight: 600;
-      }
-      #tablaResidentes table th.direccion, #tablaResidentes table td.direccion {
-        min-width: 110px;
-        max-width: 180px;
-        white-space: normal !important;
-        text-overflow: unset !important;
-        overflow: visible !important;
-      }
-      #tablaResidentes table th.email, #tablaResidentes table td.email {
-        min-width: 120px;
-        max-width: 180px;
-      }
-      #tablaResidentes table th.telefono, #tablaResidentes table td.telefono {
-        min-width: 80px;
-        max-width: 120px;
-      }
-      #tablaResidentes table th.estado, #tablaResidentes table td.estado {
-        min-width: 70px;
-        max-width: 90px;
-        text-align: center;
-      }
-      #tablaResidentes table th.valorGC, #tablaResidentes table td.valorGC {
-        min-width: 80px;
-        max-width: 100px;
-        text-align: right;
-      }
-      #tablaResidentes table th.acciones, #tablaResidentes table td.acciones {
-        min-width: 80px;
-        max-width: 100px;
-        text-align: center;
-      }
-      #tablaResidentes table tr:last-child td {
-        border-bottom: none;
-      }
-      @media (max-width: 900px) {
-        #tablaResidentes table th, #tablaResidentes table td {
-          font-size: 0.93em;
-          padding: 7px 3px;
-        }
-        #tablaResidentes table th.nombre, #tablaResidentes table td.nombre {
-          max-width: 120px;
-          min-width: 90px;
-        }
-        #tablaResidentes table th.direccion, #tablaResidentes table td.direccion {
-          max-width: 100px;
-          min-width: 60px;
-        }
-        #tablaResidentes table th.email, #tablaResidentes table td.email {
-          max-width: 100px;
-          min-width: 60px;
-        }
-      }
-    </style>
   `;
 
   function renderTabla(filtro = '') {
@@ -111,13 +39,13 @@ async function cargarResidentes() {
         <thead>
           <tr>
             <th class="nombre">Nombre Completo</th>
-            <th>RUT</th>
-            <th>N° Parcela</th>
+            <th class="rut">RUT</th>
+            <th class="parcela">N° Parcela</th>
             <th class="direccion">Dirección</th>
             <th class="email">Email</th>
             <th class="telefono">Teléfono</th>
             <th class="estado">Estado</th>
-            <th class="valorGC">Valor Gasto Común</th>
+            <th class="valorGC">Valor GC</th>
             <th class="acciones">Acciones</th>
           </tr>
         </thead>
@@ -128,13 +56,13 @@ async function cargarResidentes() {
       html += `
         <tr>
           <td class="nombre" title="${nombre}">${nombre}</td>
-          <td title="${rut}">${rut}</td>
-          <td title="${parcela}">${parcela}</td>
+          <td class="rut" title="${rut}">${rut}</td>
+          <td class="parcela" title="${parcela}">${parcela}</td>
           <td class="direccion" title="${direccion}">${direccion}</td>
           <td class="email" title="${email}">${email}</td>
           <td class="telefono" title="${tel}">${tel}</td>
           <td class="estado">
-            <span class="estado-tag estado-${estado.toLowerCase()}">${estado}</span>
+            <span class="estado-tag estado-${(estado||'').toLowerCase()}">${estado}</span>
           </td>
           <td class="valorGC" title="${valorGC}">${valorGC}</td>
           <td class="acciones">
