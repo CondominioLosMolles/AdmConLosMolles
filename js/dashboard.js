@@ -33,42 +33,40 @@ async function cargarDashboard() {
     .filter(p => parcelasMorosas.includes(p[2]) && p[15] === 'Moroso')
     .reduce((a,b) => a + Number(b[12]||0), 0);
 
-  // 2. Render widgets
+  // 2. Render widgets y gráfico
   const main = document.getElementById('main-content');
   main.innerHTML = `
     <h2>Dashboard</h2>
     <div style="display:flex;gap:24px;flex-wrap:wrap;margin-bottom:32px;">
-      <div class="widget" style="flex:1;">
+      <div class="widget" style="flex:1;min-width:180px;">
         <div style="font-size:2em;font-weight:700;">${activos}</div>
         <div>Residentes Activos</div>
       </div>
-      <div class="widget" style="flex:1;">
+      <div class="widget" style="flex:1;min-width:180px;">
         <div style="font-size:2em;font-weight:700;">$${ingresosMes.toLocaleString()}</div>
         <div>Ingresos del Mes</div>
       </div>
-      <div class="widget" style="flex:1;">
+      <div class="widget" style="flex:1;min-width:180px;">
         <div style="font-size:2em;font-weight:700;">$${egresosMes.toLocaleString()}</div>
         <div>Egresos del Mes</div>
       </div>
-      <div class="widget" style="flex:1;">
+      <div class="widget" style="flex:1;min-width:180px;">
         <div style="font-size:2em;font-weight:700;">$${saldoCaja.toLocaleString()}</div>
         <div>Saldo de Caja (Estimado)</div>
       </div>
-      <div class="widget" style="flex:1;">
+      <div class="widget" style="flex:1;min-width:180px;">
         <div style="font-size:2em;font-weight:700;">${mantPendientes}</div>
         <div>Mantenciones Pendientes/Urgentes</div>
       </div>
     </div>
-    <div style="display:flex;gap:24px;flex-wrap:wrap;">
-      <div class="widget" style="flex:2;">
-        <canvas id="graficoIngresosEgresos"></canvas>
-      </div>
-      <div class="widget" style="flex:1;min-width:300px;">
-        <h4>Resumen de Morosidad</h4>
-        <div><b>Morosos:</b> ${morosos.length}</div>
-        <div><b>Parcelas:</b> ${parcelasMorosas.join(', ') || '-'}</div>
-        <div><b>Deuda Total:</b> $${deudaMorosos.toLocaleString()}</div>
-      </div>
+    <div class="widget" style="margin-bottom:24px;">
+      <canvas id="graficoIngresosEgresos"></canvas>
+    </div>
+    <div class="widget" style="max-width:440px;margin:auto;">
+      <h4>Resumen de Morosidad</h4>
+      <div><b>Morosos:</b> ${morosos.length}</div>
+      <div><b>Parcelas:</b> ${parcelasMorosas.join(', ') || '-'}</div>
+      <div><b>Deuda Total:</b> $${deudaMorosos.toLocaleString()}</div>
     </div>
   `;
 
