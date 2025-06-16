@@ -133,9 +133,9 @@ async function cargarContabilidad() {
 
   function mostrarModalEgreso() {
     const modal = document.getElementById('modalEgreso');
-    modal.style.display = 'block';
+    modal.style.display = 'flex';
     modal.innerHTML = `
-      <div style="background:#fff;padding:24px;border-radius:8px;max-width:500px;margin:40px auto;box-shadow:0 2px 8px #0001;">
+      <div>
         <h3>Agregar Egreso</h3>
         <form id="formEgreso">
           <label>Fecha</label>
