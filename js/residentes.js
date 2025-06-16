@@ -25,20 +25,23 @@ async function cargarResidentes() {
     <div id="tablaResidentes"></div>
     <div id="modalResidente" style="display:none;"></div>
     <style>
-      #tablaResidentes table td,
-      #tablaResidentes table th {
+      #tablaResidentes table th,
+      #tablaResidentes table td {
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
         max-width: 180px;
       }
-      #tablaResidentes table th {
-        background: #e6f0fa;
-        font-weight: 600;
-        color: #4e91f9;
-      }
-      #tablaResidentes table td {
-        background: #f8fafc;
+      #tablaResidentes table th.nombre,
+      #tablaResidentes table td.nombre,
+      #tablaResidentes table th.direccion,
+      #tablaResidentes table td.direccion {
+        white-space: normal !important;
+        overflow: visible !important;
+        text-overflow: unset !important;
+        max-width: 320px !important;
+        min-width: 180px;
+        word-break: break-word;
       }
     </style>
   `;
@@ -54,10 +57,10 @@ async function cargarResidentes() {
       <table class="table">
         <thead>
           <tr>
-            <th>Nombre Completo</th>
+            <th class="nombre">Nombre Completo</th>
             <th>RUT</th>
             <th>N° Parcela</th>
-            <th>Dirección</th>
+            <th class="direccion">Dirección</th>
             <th>Email</th>
             <th>Teléfono</th>
             <th>Estado</th>
@@ -71,10 +74,10 @@ async function cargarResidentes() {
       const [id, nombre, rut, parcela, direccion, email, tel, estado, valorGC] = r;
       html += `
         <tr>
-          <td title="${nombre}">${nombre}</td>
+          <td class="nombre">${nombre}</td>
           <td title="${rut}">${rut}</td>
           <td title="${parcela}">${parcela}</td>
-          <td title="${direccion}">${direccion}</td>
+          <td class="direccion">${direccion}</td>
           <td title="${email}">${email}</td>
           <td title="${tel}">${tel}</td>
           <td>
