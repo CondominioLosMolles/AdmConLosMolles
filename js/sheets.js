@@ -314,10 +314,9 @@ async function agregarComunicacion(datos) {
   });
 }
 
-// -------- FUNCIÓN AGREGADA PARA GUARDAR TIMC --------
-// Esta es la función que faltaba para que el módulo de Gastos Comunes pueda guardar el TIMC.
+
+// -------- FUNCIÓN AGREGADA PARA GUARDAR TIMC (CORREGIDA) --------
 async function guardarTMCenSheet(anio, mes, tmc) {
-  // Esta función busca todas las filas del mes y año indicados
   const todosLosPagos = await obtenerPagosGC();
   const meses = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
   const nombreMes = meses[mes - 1];
@@ -325,19 +324,20 @@ async function guardarTMCenSheet(anio, mes, tmc) {
   
   const actualizaciones = [];
   todosLosPagos.forEach((fila, index) => {
-    // La columna 4 es "Periodo" en base 0, que corresponde a la columna E en la hoja.
-    if (fila[4] === periodoBuscado) {
+    // La columna 4 del array (índice 4) es "Periodo", que corresponde a la columna E en la hoja.
+    // Se compara sin importar mayúsculas/minúsculas para más robustez.
+    if (fila[4] && fila[4].toLowerCase() === periodoBuscado.toLowerCase()) {
       actualizaciones.push({
-        // La columna P es la 16. En base 0, es el índice 15.
-        range: `Pagos_GC!P${index + 2}`,
+        // **** ¡AQUÍ ESTÁ LA CORRECCIÓN! ****
+        // Se cambió la columna de 'P' a 'J' para que coincida con tu hoja.
+        range: `Pagos_GC!J${index + 2}`,
         values: [[tmc]]
       });
     }
   });
 
   if (actualizaciones.length === 0) {
-    // Si no hay filas para ese mes, no hace nada.
-    console.log(`No se encontraron registros para el período ${periodoBuscado} para actualizar el TIMC.`);
+    console.log(`No se encontraron registros para el período "${periodoBuscado}" para actualizar el TIMC.`);
     return;
   }
 
