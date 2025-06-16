@@ -10,7 +10,7 @@ const ENCABEZADOS_PAGOS = [
 
 /**
  * Carga y renderiza el módulo de Gastos Comunes.
- * Versión corregida y mejorada.
+ * Versión con ajustes visuales en los widgets.
  */
 async function cargarGastosComunes() {
   limpiarMainContent();
@@ -48,14 +48,13 @@ async function cargarGastosComunes() {
   main.innerHTML = `
     <div style="display:flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
       <h2>Gastos Comunes</h2>
-      <button id="btnAbrirModalGasto" class="btn">Agregar Gasto Común</button>
     </div>
 
-    <div style="display: flex; flex-wrap: wrap; gap: 24px;">
+    <div style="display: flex; flex-wrap: wrap; gap: 24px; align-items: flex-start;">
       
-      <section class="widget" style="flex: 1; min-width: 300px;">
+      <section class="widget" style="flex: 1; min-width: 350px;">
         <h4 style="margin-top:0;">Filtros de Búsqueda</h4>
-        <div style="display: flex; flex-wrap: wrap; gap: 20px;">
+        <div style="display: flex; flex-wrap: wrap; gap: 20px; margin-bottom: 20px;">
           <div style="flex: 1; min-width: 150px;">
             <label for="filtroParcela"><b>N° Parcela:</b></label>
             <input list="lista-parcelas" id="filtroParcela" placeholder="Todos (1-26)..." style="width:100%;">
@@ -66,27 +65,26 @@ async function cargarGastosComunes() {
             <input type="number" id="filtroAnio" value="${new Date().getFullYear()}" style="width:100%;">
           </div>
         </div>
+        <button id="btnAbrirModalGasto" class="btn">Agregar Gasto Común</button>
       </section>
 
-      <section class="widget" style="flex: 1; min-width: 400px;">
+      <section class="widget" style="flex: 2; min-width: 450px;">
          <h4 style="margin-top:0;">Configuración de TIMC</h4>
-         <div style="display: flex; flex-wrap: wrap; gap: 16px; align-items: flex-end;">
-          <div style="flex: 2; min-width: 200px; display: flex; gap: 8px; align-items: flex-end;">
-            <div style="flex: 1;"><label for="inputTMC"><b>TMC (% Anual)</b></label><input type="number" id="inputTMC" step="0.1" placeholder="Ej: 5.5"></div>
-            <div style="flex: 1;"><label for="selectMesTMC"><b>Mes</b></label><select id="selectMesTMC" style="padding: 11px 10px;">${MESES.map((m, i) => `<option value="${i + 1}">${m}</option>`).join('')}</select></div>
-          </div>
-          <button id="btnGuardarTMC" class="btn" style="height: 42px;">Guardar en Sheet</button>
-          <div id="timc-display" style="flex: 1; min-width: 180px; background: #e9f1fb; padding: 10px; border-radius: 8px;">
-            <h5 style="margin:0 0 8px 0;">TIMC Guardado</h5>
-            <div id="timc-list" style="font-size: 0.9em; columns: 1;"></div>
-          </div>
-        </div>
+         <div style="display: flex; align-items: flex-end; gap: 16px; margin-bottom: 20px;">
+            <div style="min-width: 120px;"><label for="inputTMC"><b>TMC (% Anual)</b></label><input type="number" id="inputTMC" step="0.1" placeholder="Ej: 40"></div>
+            <div><label for="selectMesTMC"><b>Mes</b></label><select id="selectMesTMC" style="padding: 11px 10px;">${MESES.map((m, i) => `<option value="${i + 1}">${m}</option>`).join('')}</select></div>
+            <button id="btnGuardarTMC" class="btn">Guardar en Sheet</button>
+         </div>
+         <div id="timc-display">
+            <h5 style="margin-top:0; margin-bottom: 10px;">TIMC Guardado para el año seleccionado:</h5>
+            <div id="timc-list-horizontal" style="display: flex; flex-wrap: wrap; gap: 15px; background: #e9f1fb; padding: 12px; border-radius: 8px;">
+              </div>
+         </div>
       </section>
-
     </div>
     
     <section id="detalle-gastos" style="margin-top: 2rem;">
-      <h3>Detalle de Gastos</h3>
+      <h3>Detalle de Pagos Registrados</h3>
       <div style="overflow-x:auto;"><table class="table"><thead><tr>
         <th>Residente</th><th>Parcela</th><th>Valor G.C.</th><th>Período</th>
         <th>Monto Pagado</th><th>Saldo</th><th>Deuda Total</th><th>Fecha Pago</th><th>Estado</th>
@@ -121,7 +119,6 @@ async function cargarGastosComunes() {
       tbodyGastos.innerHTML = `<tr><td colspan="9" style="text-align:center; padding:20px;">No hay registros para mostrar.</td></tr>`;
       return;
     }
-    // Ordenar por fecha de pago, los más recientes primero
     datos.sort((a,b) => (b.Fecha_Pago ? new Date(b.Fecha_Pago) : 0) - (a.Fecha_Pago ? new Date(a.Fecha_Pago) : 0));
     
     datos.forEach(pago => {
@@ -161,17 +158,18 @@ async function cargarGastosComunes() {
   
   function actualizarVistaTIMC() {
     const anio = filtroAnio.value || new Date().getFullYear();
-    const timcList = document.getElementById('timc-list');
-    timcList.innerHTML = '';
+    const timcList = document.getElementById('timc-list-horizontal');
+    timcList.innerHTML = ''; // Limpiar vista
     const anioData = timcData[anio] || {};
     MESES.forEach((mes, i) => {
-        const timcValor = anioData[i + 1] ? `${(anioData[i + 1] * 100).toFixed(1)}%` : 'N/A';
-        timcList.innerHTML += `<div><b>${mes}:</b> ${timcValor}</div>`;
+        const timcValor = anioData[i + 1] ? `<b>${(anioData[i + 1] * 100).toFixed(1)}%</b>` : 'N/A';
+        const itemDiv = document.createElement('div');
+        itemDiv.innerHTML = `${mes}: ${timcValor}`;
+        timcList.appendChild(itemDiv);
     });
   }
 
   document.getElementById('btnGuardarTMC').addEventListener('click', async () => {
-    // Comprobar si la función existe antes de llamarla
     if (typeof guardarTMCenSheet !== 'function') {
       return mostrarMensaje('Error: La función "guardarTMCenSheet" no se encontró. Asegúrate de agregarla a tu archivo sheets.js.', 'error');
     }
@@ -244,8 +242,9 @@ async function cargarGastosComunes() {
   filtroAnio.addEventListener('input', () => {
     actualizarVistaTIMC();
     filtrarYRenderizar();
-  });
+});
   
+  // Carga inicial de datos en la tabla y vista TIMC
   filtrarYRenderizar();
   actualizarVistaTIMC();
   ocultarSpinner();
