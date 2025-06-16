@@ -8,7 +8,6 @@ let tokenClient;
 let gapiInited = false;
 let gisInited = false;
 
-// Inicializa GAPI
 function gapiLoaded() {
   gapi.load('client', initializeGapiClient);
 }
@@ -25,7 +24,6 @@ async function initializeGapiClient() {
   maybeEnableLogin();
 }
 
-// Inicializa Google Identity Services
 function gisLoaded() {
   tokenClient = google.accounts.oauth2.initTokenClient({
     client_id: CLIENT_ID,
@@ -36,7 +34,6 @@ function gisLoaded() {
   maybeEnableLogin();
 }
 
-// Habilita el botón de login solo cuando ambas APIs están listas
 function maybeEnableLogin() {
   if (gapiInited && gisInited) {
     const loginBtn = document.getElementById('loginBtn');
@@ -44,7 +41,6 @@ function maybeEnableLogin() {
   }
 }
 
-// Maneja el clic en "Iniciar sesión"
 function handleAuthClick() {
   tokenClient.callback = async (resp) => {
     if (resp.error) {
@@ -52,12 +48,11 @@ function handleAuthClick() {
       return;
     }
     try {
-      // Espera a que el token esté realmente activo antes de llamar a Gmail
       await new Promise(resolve => setTimeout(resolve, 400));
       const email = await obtenerUserEmail();
       if (email !== 'losmollestunquen@gmail.com') {
         mostrarMensaje('Acceso restringido solo para el administrador autorizado.', 'error');
-        handleSignout(); // Cierra sesión si no es el email autorizado
+        handleSignout();
         return;
       }
       googleUser = email;
@@ -65,24 +60,29 @@ function handleAuthClick() {
       document.getElementById('app').style.display = 'flex';
       cargarDashboard();
     } catch (e) {
-      mostrarMensaje('No se pudo obtener el correo del usuario o no tienes permisos suficientes.', 'error');
+      if (e.message && e.message.includes('403')) {
+        mostrarMensaje('No tienes permisos para acceder a la API de Gmail. Debes habilitar la API de Gmail en Google Cloud Console y autorizar el acceso con una cuenta que tenga Gmail.', 'error');
+      } else {
+        mostrarMensaje('No se pudo obtener el correo del usuario o no tienes permisos suficientes.', 'error');
+      }
       handleSignout();
     }
   };
   tokenClient.requestAccessToken({prompt: 'consent'});
 }
 
-// Obtiene el correo electrónico del usuario autenticado
 async function obtenerUserEmail() {
   try {
     const res = await gapi.client.gmail.users.getProfile({userId: 'me'});
     return res.result.emailAddress;
   } catch (e) {
+    if (e.status === 403) {
+      throw new Error("403");
+    }
     throw new Error("No se pudo obtener el perfil de Gmail. ¿Autorizaste el scope correcto?");
   }
 }
 
-// Cierra sesión y vuelve a mostrar la pantalla de login
 function handleSignout() {
   googleUser = null;
   if (window.gapi && gapi.client) {
@@ -92,17 +92,13 @@ function handleSignout() {
   document.getElementById('login-screen').style.display = 'flex';
 }
 
-// Carga los scripts de Google al cargar la página
 document.addEventListener('DOMContentLoaded', () => {
-  // Oculta la app y muestra solo el login al inicio
   document.getElementById('app').style.display = 'none';
   document.getElementById('login-screen').style.display = 'flex';
 
-  // Deshabilita el botón de login hasta que las APIs estén listas
   const loginBtn = document.getElementById('loginBtn');
   if (loginBtn) loginBtn.disabled = true;
 
-  // Cargar scripts de Google
   const gapiScript = document.createElement('script');
   gapiScript.src = 'https://apis.google.com/js/api.js';
   gapiScript.onload = gapiLoaded;
@@ -113,12 +109,10 @@ document.addEventListener('DOMContentLoaded', () => {
   gisScript.onload = gisLoaded;
   document.body.appendChild(gisScript);
 
-  // Botón de login
   if (loginBtn) {
     loginBtn.addEventListener('click', handleAuthClick);
   }
 
-  // Botón de logout
   const logoutBtn = document.getElementById('logoutBtn');
   if (logoutBtn) {
     logoutBtn.addEventListener('click', handleSignout);
