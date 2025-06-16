@@ -1,54 +1,115 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Módulo de Gastos Comunes</title>
-  <!-- React y ReactDOM desde CDN -->
-  <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
-  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      margin: 20px;
-      background-color: #f9f9f9;
-    }
-    h2, h3 {
-      color: #333;
-    }
-    table {
-      border-collapse: collapse;
-      width: 100%;
-      margin-bottom: 20px;
-      background-color: #fff;
-    }
-    th, td {
-      border: 1px solid #ccc;
-      padding: 8px;
-      text-align: left;
-    }
-    input[type="number"], input[type="text"] {
-      padding: 5px;
-      border: 1px solid #ccc;
-      border-radius: 3px;
-    }
-    button {
-      background-color: #007bff;
-      color: white;
-      border: none;
-      padding: 8px 15px;
-      border-radius: 3px;
-      cursor: pointer;
-    }
-    button:hover {
-      background-color: #0056b3;
-    }
-  </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CondominioLosMolles - Administración</title>
+  <link rel="stylesheet" href="css/styles.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
 </head>
 <body>
-  <div id="root"></div>
-
-  <!-- Ruta absoluta para GitHub Pages: ajusta según tu repositorio -->
-  <script type="module" src="/AdmConLosMolles/gastos_comunes.js"></script>
+  <div id="login-screen" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;background:#f4f8fb;">
+    <div style="background:#fff;padding:48px 36px;border-radius:16px;box-shadow:0 4px 32px #4e91f950;min-width:320px;max-width:90vw;">
+      <h2 style="text-align:center;color:#4e91f9;margin-bottom:24px;">Bienvenido a<br>Condominio Los Molles</h2>
+      <p style="text-align:center;margin-bottom:32px;color:#2a7ca3;">Para acceder a la administración, por favor inicia sesión con tu cuenta autorizada.</p>
+      <div style="display:flex;justify-content:center;">
+        <button id="loginBtn" class="btn" style="font-size:1.2em;padding:14px 36px;">Iniciar sesión con Google</button>
+      </div>
+    </div>
+  </div>
+  <div id="app" style="display:none;">
+    <aside id="sidebar">
+      <div class="logo">
+        <span>Condominio</span><br>
+        <span>Los Molles</span>
+      </div>
+      <nav>
+        <ul>
+          <li data-module="dashboard" class="active">Dashboard</li>
+          <li data-module="residentes">Residentes</li>
+          <li data-module="gastos_comunes">Gastos Comunes</li>
+          <li data-module="contabilidad">Contabilidad</li>
+          <li data-module="comunicaciones">Comunicaciones</li>
+          <li data-module="mantenciones">Mantenciones</li>
+          <li data-module="multas">Multas</li>
+          <li data-module="asambleas">Asambleas</li>
+          <li data-module="informes">Informes</li>
+        </ul>
+      </nav>
+      <button id="logoutBtn">Cerrar sesión</button>
+    </aside>
+    <main id="main-content">
+      <!-- El contenido de los módulos se carga aquí dinámicamente -->
+    </main>
+  </div>
+  <script src="js/auth.js"></script>
+  <script src="js/utils.js"></script>
+  <script src="js/sheets.js"></script>
+  <script src="js/drive.js"></script>
+  <script src="js/gmail.js"></script>
+  <script src="js/dashboard.js"></script>
+  <script src="js/residentes.js"></script>
+  <script src="js/gastos_comunes.js"></script>
+  <script src="js/contabilidad.js"></script>
+  <script src="js/comunicaciones.js"></script>
+  <script src="js/mantenciones.js"></script>
+  <script src="js/multas.js"></script>
+  <script src="js/asambleas.js"></script>
+  <script src="js/informes.js"></script>
+  <script>
+    // --- Navegación activa robusta ---
+    document.addEventListener('DOMContentLoaded', function() {
+      const menuItems = document.querySelectorAll('#sidebar nav ul li[data-module]');
+      function activaMenu(modulo) {
+        menuItems.forEach(i => {
+          if (i.getAttribute('data-module') === modulo) {
+            i.classList.add('active');
+          } else {
+            i.classList.remove('active');
+          }
+        });
+      }
+      document.querySelector('[data-module="dashboard"]').addEventListener('click', () => {
+        activaMenu('dashboard');
+        cargarDashboard();
+      });
+      document.querySelector('[data-module="residentes"]').addEventListener('click', () => {
+        activaMenu('residentes');
+        cargarResidentes();
+      });
+      document.querySelector('[data-module="gastos_comunes"]').addEventListener('click', () => {
+        activaMenu('gastos_comunes');
+        cargarGastosComunes();
+      });
+      document.querySelector('[data-module="contabilidad"]').addEventListener('click', () => {
+        activaMenu('contabilidad');
+        cargarContabilidad();
+      });
+      document.querySelector('[data-module="comunicaciones"]').addEventListener('click', () => {
+        activaMenu('comunicaciones');
+        cargarComunicaciones();
+      });
+      document.querySelector('[data-module="mantenciones"]').addEventListener('click', () => {
+        activaMenu('mantenciones');
+        cargarMantenciones();
+      });
+      document.querySelector('[data-module="multas"]').addEventListener('click', () => {
+        activaMenu('multas');
+        cargarMultas();
+      });
+      document.querySelector('[data-module="asambleas"]').addEventListener('click', () => {
+        activaMenu('asambleas');
+        cargarAsambleas();
+      });
+      document.querySelector('[data-module="informes"]').addEventListener('click', () => {
+        activaMenu('informes');
+        cargarInformes();
+      });
+      window.activaMenu = activaMenu;
+    });
+  </script>
 </body>
 </html>
