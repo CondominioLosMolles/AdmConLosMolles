@@ -25,23 +25,25 @@ async function cargarResidentes() {
     <div id="tablaResidentes"></div>
     <div id="modalResidente" style="display:none;"></div>
     <style>
-      #tablaResidentes table th,
-      #tablaResidentes table td {
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        max-width: 180px;
+      #tablaResidentes table {
+        table-layout: fixed !important;
       }
-      #tablaResidentes table th.nombre,
-      #tablaResidentes table td.nombre,
-      #tablaResidentes table th.direccion,
-      #tablaResidentes table td.direccion {
-        white-space: normal !important;
-        overflow: visible !important;
-        text-overflow: unset !important;
-        max-width: 320px !important;
-        min-width: 180px;
-        word-break: break-word;
+      #tablaResidentes table th, #tablaResidentes table td {
+        white-space: nowrap !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+        max-width: 180px !important;
+        min-width: 80px;
+      }
+      #tablaResidentes table th.acciones, #tablaResidentes table td.acciones {
+        max-width: 90px !important;
+        min-width: 90px !important;
+        text-align: center !important;
+      }
+      #tablaResidentes .btn {
+        min-width: 34px;
+        padding: 6px 10px;
+        margin-right: 4px;
       }
     </style>
   `;
@@ -57,15 +59,15 @@ async function cargarResidentes() {
       <table class="table">
         <thead>
           <tr>
-            <th class="nombre">Nombre Completo</th>
+            <th>Nombre Completo</th>
             <th>RUT</th>
             <th>N° Parcela</th>
-            <th class="direccion">Dirección</th>
+            <th>Dirección</th>
             <th>Email</th>
             <th>Teléfono</th>
             <th>Estado</th>
             <th>Valor Gasto Común</th>
-            <th>Acciones</th>
+            <th class="acciones">Acciones</th>
           </tr>
         </thead>
         <tbody>
@@ -74,19 +76,19 @@ async function cargarResidentes() {
       const [id, nombre, rut, parcela, direccion, email, tel, estado, valorGC] = r;
       html += `
         <tr>
-          <td class="nombre">${nombre}</td>
+          <td title="${nombre}">${nombre}</td>
           <td title="${rut}">${rut}</td>
           <td title="${parcela}">${parcela}</td>
-          <td class="direccion">${direccion}</td>
+          <td title="${direccion}">${direccion}</td>
           <td title="${email}">${email}</td>
           <td title="${tel}">${tel}</td>
           <td>
             <span class="estado-tag estado-${estado.toLowerCase()}">${estado}</span>
           </td>
           <td title="${valorGC}">${valorGC}</td>
-          <td>
-            <button class="btn secondary btn-editar" data-id="${id}">✏️</button>
-            <button class="btn secondary btn-eliminar" data-id="${id}">🗑️</button>
+          <td class="acciones">
+            <button class="btn secondary btn-editar" data-id="${id}" title="Editar">✏️</button>
+            <button class="btn secondary btn-eliminar" data-id="${id}" title="Eliminar">🗑️</button>
           </td>
         </tr>
       `;
