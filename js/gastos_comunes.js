@@ -1,8 +1,16 @@
 // js/gastos_comunes.js
 
+// Se mueven a un alcance global dentro del módulo para evitar errores de "not defined"
+const MESES = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
+const ENCABEZADOS_PAGOS = [
+    'ID', 'Nombre_Residente', 'N_Parcela', 'Valor_Gasto_Comun', 'Periodo', 'Fecha_Vencimiento',
+    'Monto_Pagado', 'Saldo', 'Interes', 'Multa_1_4', 'Meses_Inpagos', 'Deuda_Total',
+    'Fecha_Pago', 'Metodo_Pago', 'Estado', 'TIMC', 'ComprobanteURL'
+];
+
 /**
  * Carga y renderiza el módulo de Gastos Comunes.
- * Versión corregida según feedback.
+ * Versión corregida y mejorada.
  */
 async function cargarGastosComunes() {
   limpiarMainContent();
@@ -16,15 +24,9 @@ async function cargarGastosComunes() {
     residentes = await obtenerResidentes();
     const pagosGC_raw = await obtenerPagosGC();
 
-    const encabezadosPagos = [
-        'ID', 'Nombre_Residente', 'N_Parcela', 'Valor_Gasto_Comun', 'Periodo', 'Fecha_Vencimiento',
-        'Monto_Pagado', 'Saldo', 'Interes', 'Multa_1/4', 'Meses_Inpagos', 'Deuda_Total',
-        'Fecha_Pago', 'Metodo_Pago', 'Estado', 'TIMC', 'ComprobanteURL'
-    ];
-
     pagosGC_obj = pagosGC_raw.map(fila => {
         let obj = {};
-        encabezadosPagos.forEach((encabezado, i) => {
+        ENCABEZADOS_PAGOS.forEach((encabezado, i) => {
             obj[encabezado] = fila[i];
         });
         if (obj.Periodo) {
@@ -32,7 +34,7 @@ async function cargarGastosComunes() {
             obj.anio = anioMatch ? parseInt(anioMatch[0]) : null;
         }
         return obj;
-    }).filter(p => p.N_Parcela); // Filtrar filas vacías
+    }).filter(p => p.N_Parcela);
 
     timcData = JSON.parse(localStorage.getItem('timcData')) || {};
 
@@ -41,69 +43,70 @@ async function cargarGastosComunes() {
     mostrarMensaje('Error al cargar datos desde Google Sheets: ' + e.message, 'error');
     return;
   }
-
-  const main = document.getElementById('main-content');
-  const meses = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
   
+  const main = document.getElementById('main-content');
   main.innerHTML = `
     <div style="display:flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
       <h2>Gastos Comunes</h2>
       <button id="btnAbrirModalGasto" class="btn">Agregar Gasto Común</button>
     </div>
 
-    <section class="widget">
-      <h4 style="margin-top:0;">Filtros de Búsqueda</h4>
-      <div style="display: flex; flex-wrap: wrap; gap: 20px;">
-        <div style="flex: 1; min-width: 150px;">
-          <label for="filtroParcela"><b>N° Parcela:</b></label>
-          <input list="lista-parcelas" id="filtroParcela" placeholder="Todos (1-26)..." style="width:100%;">
-          <datalist id="lista-parcelas">${Array.from({ length: 26 }, (_, i) => `<option value="${i + 1}"></option>`).join('')}</datalist>
+    <div style="display: flex; flex-wrap: wrap; gap: 24px;">
+      
+      <section class="widget" style="flex: 1; min-width: 300px;">
+        <h4 style="margin-top:0;">Filtros de Búsqueda</h4>
+        <div style="display: flex; flex-wrap: wrap; gap: 20px;">
+          <div style="flex: 1; min-width: 150px;">
+            <label for="filtroParcela"><b>N° Parcela:</b></label>
+            <input list="lista-parcelas" id="filtroParcela" placeholder="Todos (1-26)..." style="width:100%;">
+            <datalist id="lista-parcelas">${Array.from({ length: 26 }, (_, i) => `<option value="${i + 1}"></option>`).join('')}</datalist>
+          </div>
+          <div style="flex: 1; min-width: 150px;">
+            <label for="filtroAnio"><b>Año:</b></label>
+            <input type="number" id="filtroAnio" value="${new Date().getFullYear()}" style="width:100%;">
+          </div>
         </div>
-        <div style="flex: 1; min-width: 150px;">
-          <label for="filtroAnio"><b>Año:</b></label>
-          <input type="number" id="filtroAnio" value="${new Date().getFullYear()}" style="width:100%;">
-        </div>
-      </div>
-    </section>
+      </section>
 
-    <section class="widget">
-       <h4 style="margin-top:0;">Configuración de TIMC</h4>
-       <div style="display: flex; flex-wrap: wrap; gap: 20px; align-items: flex-end;">
-        <div style="flex: 2; min-width: 250px; display: flex; gap: 8px; align-items: flex-end;">
-          <div style="flex: 1;"><label for="inputTMC"><b>Ingresar TMC (% Anual)</b></label><input type="number" id="inputTMC" step="0.1" placeholder="Ej: 5.5"></div>
-          <div style="flex: 1;"><select id="selectMesTMC" style="width:100%; padding: 11px 10px;">${meses.map((m, i) => `<option value="${i + 1}">${m}</option>`).join('')}</select></div>
-          <button id="btnGuardarTMC" class="btn" style="height: 42px;">Guardar</button>
+      <section class="widget" style="flex: 1; min-width: 400px;">
+         <h4 style="margin-top:0;">Configuración de TIMC</h4>
+         <div style="display: flex; flex-wrap: wrap; gap: 16px; align-items: flex-end;">
+          <div style="flex: 2; min-width: 200px; display: flex; gap: 8px; align-items: flex-end;">
+            <div style="flex: 1;"><label for="inputTMC"><b>TMC (% Anual)</b></label><input type="number" id="inputTMC" step="0.1" placeholder="Ej: 5.5"></div>
+            <div style="flex: 1;"><label for="selectMesTMC"><b>Mes</b></label><select id="selectMesTMC" style="padding: 11px 10px;">${MESES.map((m, i) => `<option value="${i + 1}">${m}</option>`).join('')}</select></div>
+          </div>
+          <button id="btnGuardarTMC" class="btn" style="height: 42px;">Guardar en Sheet</button>
+          <div id="timc-display" style="flex: 1; min-width: 180px; background: #e9f1fb; padding: 10px; border-radius: 8px;">
+            <h5 style="margin:0 0 8px 0;">TIMC Guardado</h5>
+            <div id="timc-list" style="font-size: 0.9em; columns: 1;"></div>
+          </div>
         </div>
-        <div id="timc-display" style="flex: 1; min-width: 200px; background: #e9f1fb; padding: 10px; border-radius: 8px;">
-          <h5 style="margin:0 0 8px 0;">TIMC Mensual Guardado</h5>
-          <div id="timc-list" style="font-size: 0.9em; columns: 2;"></div>
-        </div>
-      </div>
-    </section>
+      </section>
+
+    </div>
     
     <section id="detalle-gastos" style="margin-top: 2rem;">
       <h3>Detalle de Gastos</h3>
       <div style="overflow-x:auto;"><table class="table"><thead><tr>
-        <th>Residente</th><th>Parcela</th><th>Valor G.C.</th><th>Período</th><th>Vencimiento</th>
-        <th>Monto Pagado</th><th>Saldo</th><th>Interés</th><th>Multa</th><th>Meses Impagos</th>
-        <th>Deuda Total</th><th>Fecha Pago</th><th>Método</th><th>Estado</th>
+        <th>Residente</th><th>Parcela</th><th>Valor G.C.</th><th>Período</th>
+        <th>Monto Pagado</th><th>Saldo</th><th>Deuda Total</th><th>Fecha Pago</th><th>Estado</th>
       </tr></thead><tbody id="tbody-gastos"></tbody></table></div>
     </section>
 
-    <div id="modalGasto" class="modal" style="display:none;">
-      <div style="max-width: 600px;">
+    <div id="modalGC" class="modal" style="display:none;">
+      <div>
         <h3>Agregar Gasto Común</h3>
-        <form id="formGastoComun">${main.querySelector('#modalGasto')?.querySelector('form')?.innerHTML || `
+        <form id="formGastoComun" style="display:flex; flex-wrap:wrap; gap:15px;">
           <div style="flex: 1 1 120px;"><label>N° Parcela</label><input type="number" name="N_Parcela" id="inputNParcela" min="1" max="26" required></div>
           <div style="flex: 1 1 300px;"><label>Nombre Residente</label><input type="text" name="Nombre_Residente" id="inputNombreResidente" readonly style="background:#eee;"></div>
           <div style="flex: 1 1 180px;"><label>Valor Gasto Común</label><input type="text" name="Valor_Gasto_Comun" id="inputValorGastoComun" readonly style="background:#eee;"></div>
           <div style="flex: 1 1 180px;"><label>Fecha de Pago</label><input type="date" name="Fecha_Pago" required></div>
-          <div style="flex: 1 1 180px;"><label>Mes que Paga (Período)</label><select name="Periodo" required>${meses.map(m => `<option value="${m}">${m}</option>`).join('')}</select></div>
+          <div style="flex: 1 1 180px;"><label>Mes que Paga (Período)</label><select name="Periodo" required>${MESES.map(m => `<option value="${m}">${m}</option>`).join('')}</select></div>
           <div style="flex: 1 1 180px;"><label>Monto Pagado</label><input type="number" name="Monto_Pagado" min="0" step="1" required placeholder="CLP"></div>
           <div style="flex: 1 1 180px;"><label>Método de Pago</label><select name="Metodo_Pago" required><option value="Transferencia">Transferencia</option><option value="Efectivo">Efectivo</option></select></div>
           <div style="flex: 1 1 100%;"><label>Comprobante de Pago</label><input type="file" name="Comprobante"></div>
           <div style="flex: 1 1 100%; text-align: right; margin-top: 20px;"><button class="btn secondary" type="button" id="btnCerrarModal">Cancelar</button><button class="btn" type="submit">Guardar Gasto</button></div>
-        `}</form>
+        </form>
       </div>
     </div>
   `;
@@ -115,27 +118,28 @@ async function cargarGastosComunes() {
   function renderizarTabla(datos) {
     tbodyGastos.innerHTML = '';
     if (!datos || datos.length === 0) {
-      tbodyGastos.innerHTML = `<tr><td colspan="14" style="text-align:center; padding:20px;">No hay registros para mostrar.</td></tr>`;
+      tbodyGastos.innerHTML = `<tr><td colspan="9" style="text-align:center; padding:20px;">No hay registros para mostrar.</td></tr>`;
       return;
     }
-    datos.sort((a,b) => new Date(b.Fecha_Vencimiento) - new Date(a.Fecha_Vencimiento));
+    // Ordenar por fecha de pago, los más recientes primero
+    datos.sort((a,b) => (b.Fecha_Pago ? new Date(b.Fecha_Pago) : 0) - (a.Fecha_Pago ? new Date(a.Fecha_Pago) : 0));
+    
     datos.forEach(pago => {
       const residente = residentes.find(r => r[3] == pago.N_Parcela);
-      const valorGC = residente ? parseFloat(residente[8]) : parseFloat(pago.Valor_Gasto_Comun);
-      const estadoClass = (pago.Estado || 'pendiente').toLowerCase();
+      const valorGC = residente ? parseFloat(residente[8]) : parseFloat(pago.Valor_Gasto_Comun || 0);
+      const estadoClass = (pago.Estado || 'pendiente').toLowerCase().trim();
       const saldo = parseFloat(pago.Saldo || 0);
+      
       const tr = document.createElement('tr');
       tr.innerHTML = `
-        <td>${pago.Nombre_Residente}</td><td>${pago.N_Parcela}</td><td>$${valorGC.toLocaleString('es-CL')}</td>
-        <td>${pago.Periodo}</td><td>${new Date(pago.Fecha_Vencimiento).toLocaleDateString('es-CL')}</td>
+        <td>${pago.Nombre_Residente || 'N/A'}</td>
+        <td>${pago.N_Parcela}</td>
+        <td>$${valorGC.toLocaleString('es-CL')}</td>
+        <td>${pago.Periodo || 'N/A'}</td>
         <td>$${parseFloat(pago.Monto_Pagado || 0).toLocaleString('es-CL')}</td>
         <td style="color:${saldo < 0 ? 'red':'green'};">$${saldo.toLocaleString('es-CL')}</td>
-        <td>$${parseFloat(pago.Interes || 0).toLocaleString('es-CL')}</td>
-        <td>$${parseFloat(pago.Multa_1_4 || 0).toLocaleString('es-CL')}</td>
-        <td>${pago.Meses_Inpagos || 0}</td>
         <td style="font-weight:bold;">$${parseFloat(pago.Deuda_Total || 0).toLocaleString('es-CL')}</td>
         <td>${pago.Fecha_Pago ? new Date(pago.Fecha_Pago).toLocaleDateString('es-CL') : '---'}</td>
-        <td>${pago.Metodo_Pago || '---'}</td>
         <td><span class="estado-tag estado-${estadoClass}">${pago.Estado || 'Pendiente'}</span></td>
       `;
       tbodyGastos.appendChild(tr);
@@ -146,23 +150,32 @@ async function cargarGastosComunes() {
     const parcela = filtroParcela.value;
     const anio = filtroAnio.value;
     let datosAMostrar = pagosGC_obj;
-    if (parcela) datosAMostrar = datosAMostrar.filter(p => p.N_Parcela == parcela);
-    if (anio) datosAMostrar = datosAMostrar.filter(p => p.anio == anio);
+    if (parcela) {
+        datosAMostrar = datosAMostrar.filter(p => p.N_Parcela == parcela);
+    }
+    if (anio) {
+        datosAMostrar = datosAMostrar.filter(p => p.anio == anio);
+    }
     renderizarTabla(datosAMostrar);
   }
-
+  
   function actualizarVistaTIMC() {
     const anio = filtroAnio.value || new Date().getFullYear();
     const timcList = document.getElementById('timc-list');
     timcList.innerHTML = '';
     const anioData = timcData[anio] || {};
-    meses.forEach((mes, i) => {
+    MESES.forEach((mes, i) => {
         const timcValor = anioData[i + 1] ? `${(anioData[i + 1] * 100).toFixed(1)}%` : 'N/A';
         timcList.innerHTML += `<div><b>${mes}:</b> ${timcValor}</div>`;
     });
   }
 
   document.getElementById('btnGuardarTMC').addEventListener('click', async () => {
+    // Comprobar si la función existe antes de llamarla
+    if (typeof guardarTMCenSheet !== 'function') {
+      return mostrarMensaje('Error: La función "guardarTMCenSheet" no se encontró. Asegúrate de agregarla a tu archivo sheets.js.', 'error');
+    }
+    
     const tmcAnual = parseFloat(document.getElementById('inputTMC').value);
     const mes = document.getElementById('selectMesTMC').value;
     const anio = filtroAnio.value;
@@ -183,7 +196,7 @@ async function cargarGastosComunes() {
     }
   });
 
-  const modal = document.getElementById('modalGasto');
+  const modal = document.getElementById('modalGC');
   document.getElementById('btnAbrirModalGasto').addEventListener('click', () => modal.style.display = 'flex');
   document.getElementById('btnCerrarModal').addEventListener('click', () => modal.style.display = 'none');
   
@@ -212,7 +225,7 @@ async function cargarGastosComunes() {
       await agregarPagoGC(datosParaSheet);
       
       const nuevoPagoObj = {};
-      encabezadosPagos.forEach((encabezado, i) => nuevoPagoObj[encabezado] = datosParaSheet[i]);
+      ENCABEZADOS_PAGOS.forEach((encabezado, i) => nuevoPagoObj[encabezado] = datosParaSheet[i]);
       nuevoPagoObj.anio = anioPago;
       pagosGC_obj.push(nuevoPagoObj);
       
