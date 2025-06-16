@@ -1,27 +1,33 @@
 body {
-  font-family: 'Poppins', sans-serif;
-  background: #f6f9fb;
+  font-family: 'Poppins', 'Lato', 'Roboto', Arial, sans-serif;
+  background: #f4f8fb;
   margin: 0;
-  color: #222;
+  color: #232a34;
 }
 #app {
   display: flex;
   min-height: 100vh;
 }
 #sidebar {
-  width: 240px;
-  background: #eaf5fa;
-  padding: 24px 0 0 0;
+  width: 270px;
+  background: #f0f4f8;
+  padding: 32px 0 0 0;
   box-shadow: 2px 0 8px rgba(0,0,0,0.06);
   display: flex;
   flex-direction: column;
   align-items: center;
 }
 .logo {
-  font-weight: 600;
-  font-size: 1.6em;
-  color: #2a7ca3;
+  font-weight: 700;
+  font-size: 1.7em;
+  color: #4e91f9;
   margin-bottom: 36px;
+  letter-spacing: 1px;
+  word-break: break-word;
+  white-space: normal;
+  text-align: center;
+  width: 90%;
+  line-height: 1.2;
 }
 #sidebar nav ul {
   list-style: none;
@@ -29,73 +35,111 @@ body {
   width: 100%;
 }
 #sidebar nav ul li {
-  padding: 14px 32px;
+  padding: 16px 32px;
   cursor: pointer;
-  transition: background 0.2s;
+  transition: background 0.2s, color 0.2s;
   border-left: 4px solid transparent;
+  font-size: 1.08em;
+  color: #4e91f9;
+  border-radius: 0 16px 16px 0;
 }
 #sidebar nav ul li:hover, #sidebar nav ul li.active {
-  background: #d4f1f4;
-  border-left: 4px solid #2a7ca3;
+  background: #e6f0fa;
+  border-left: 4px solid #4e91f9;
+  color: #232a34;
 }
 #logoutBtn {
-  margin: 32px 0 0 0;
-  background: #2a7ca3;
+  margin: 40px 0 0 0;
+  background: linear-gradient(90deg,#4e91f9,#2a7ca3);
   color: #fff;
   border: none;
-  padding: 12px 36px;
-  border-radius: 6px;
+  padding: 14px 38px;
+  border-radius: 8px;
   cursor: pointer;
-  font-size: 1em;
+  font-size: 1.08em;
+  font-weight: 600;
+  box-shadow: 0 2px 8px #4e91f930;
+  transition: background 0.2s;
+}
+#logoutBtn:hover {
+  background: linear-gradient(90deg,#2a7ca3,#4e91f9);
 }
 #main-content {
   flex: 1;
-  padding: 40px 48px;
+  padding: 48px 56px;
   background: #fff;
   min-height: 100vh;
 }
 .widget {
-  background: #f0f8ff;
-  border-radius: 12px;
-  padding: 32px;
+  background: #fff;
+  border-radius: 14px;
+  padding: 36px 32px;
   margin-bottom: 24px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.03);
+  box-shadow: 0 2px 16px rgba(78,145,249,0.08);
+  border: 1px solid #e6f0fa;
 }
 .table {
   width: 100%;
   border-collapse: collapse;
   margin-bottom: 24px;
+  background: #f8fafc;
+  border-radius: 8px;
+  overflow: hidden;
 }
 .table th, .table td {
-  padding: 12px 8px;
+  padding: 13px 10px;
   border-bottom: 1px solid #e0e0e0;
+  font-size: 1em;
 }
 .table th {
-  background: #eaf5fa;
+  background: #e6f0fa;
   font-weight: 600;
+  color: #4e91f9;
+}
+.table tr:last-child td {
+  border-bottom: none;
 }
 .btn {
-  background: #2a7ca3;
+  background: linear-gradient(90deg,#4e91f9,#2a7ca3);
   color: #fff;
   border: none;
-  padding: 8px 20px;
+  padding: 9px 24px;
   border-radius: 6px;
   cursor: pointer;
   font-size: 1em;
+  font-weight: 600;
   margin-right: 8px;
+  box-shadow: 0 1px 4px #4e91f930;
+  transition: background 0.2s;
+}
+.btn:hover {
+  background: linear-gradient(90deg,#2a7ca3,#4e91f9);
 }
 .btn.secondary {
-  background: #7fd6c2;
-  color: #222;
+  background: #e6f0fa;
+  color: #2a7ca3;
+  border: 1px solid #4e91f9;
+  font-weight: 500;
 }
 input, select, textarea {
-  padding: 8px;
-  border-radius: 4px;
+  padding: 10px;
+  border-radius: 6px;
   border: 1px solid #b5c6ce;
-  margin-bottom: 12px;
+  margin-bottom: 14px;
   font-size: 1em;
   width: 100%;
   box-sizing: border-box;
+  background: #f8fafc;
+  transition: border 0.2s;
+}
+input:focus, select:focus, textarea:focus {
+  border: 1.5px solid #4e91f9;
+  outline: none;
+}
+h2, h3, h4 {
+  color: #2a7ca3;
+  font-weight: 700;
+  margin-top: 0;
 }
 @media (max-width: 900px) {
   #app {
@@ -109,5 +153,49 @@ input, select, textarea {
   #main-content {
     padding: 16px;
   }
+  .logo {
+    font-size: 1.2em;
+    margin-bottom: 10px;
+  }
 }
 
+/* MODAL GLOBAL */
+#modalResidente, #modalGC, #modalEgreso, #modalMantencion, #modalMulta, #modalAsamblea, #modalComunicacion {
+  position: fixed !important;
+  top: 0; left: 0; right: 0; bottom: 0;
+  z-index: 1001;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  background: rgba(36,60,89,0.22);
+  transition: opacity 0.2s;
+}
+#modalResidente[style*="display: block"], 
+#modalGC[style*="display: block"], 
+#modalEgreso[style*="display: block"],
+#modalMantencion[style*="display: block"],
+#modalMulta[style*="display: block"],
+#modalAsamblea[style*="display: block"],
+#modalComunicacion[style*="display: block"] {
+  display: flex !important;
+}
+#modalResidente > div,
+#modalGC > div,
+#modalEgreso > div,
+#modalMantencion > div,
+#modalMulta > div,
+#modalAsamblea > div,
+#modalComunicacion > div {
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 8px 32px #4e91f950;
+  padding: 36px 32px 24px 32px;
+  min-width: 320px;
+  max-width: 420px;
+  width: 100%;
+  animation: modalFadeIn 0.2s;
+}
+@keyframes modalFadeIn {
+  from { transform: translateY(-30px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
