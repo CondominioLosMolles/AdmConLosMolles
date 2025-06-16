@@ -24,7 +24,7 @@ async function cargarDashboard() {
   const ingresosMes = pagos.filter(p => p[4] === mesActual).reduce((a,b) => a + Number(b[6]||0), 0);
   const egresosMes = egresos.filter(e => (e[1]||'').startsWith(mesActual)).reduce((a,b) => a + Number(b[6]||0), 0);
   const saldoCaja = pagos.reduce((a,b) => a + Number(b[6]||0), 0) - egresos.reduce((a,b) => a + Number(b[6]||0), 0);
-  const mantPendientes = mantenciones.filter(m => m[4] === 'Pendiente' || m[4] === 'Urgente').length;
+  const mantPendientes = mantenciones.filter(m => m[5] === 'Pendiente' || m[5] === 'Urgente').length;
 
   // Morosos
   const morosos = residentes.filter(r => r[7] === 'Moroso');
@@ -90,7 +90,7 @@ async function cargarDashboard() {
       data: {
         labels,
         datasets: [
-          { label: 'Ingresos', data: ingresosPorMes, backgroundColor:'#2a7ca3' },
+          { label: 'Ingresos', data: ingresosPorMes, backgroundColor:'#4e91f9' },
           { label: 'Egresos', data: egresosPorMes, backgroundColor:'#7fd6c2' }
         ]
       },
