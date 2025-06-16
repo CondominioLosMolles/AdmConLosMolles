@@ -313,3 +313,40 @@ async function agregarComunicacion(datos) {
     resource: { values: [datos] }
   });
 }
+
+// -------- FUNCIÓN AGREGADA PARA GUARDAR TIMC --------
+// Esta es la función que faltaba para que el módulo de Gastos Comunes pueda guardar el TIMC.
+async function guardarTMCenSheet(anio, mes, tmc) {
+  // Esta función busca todas las filas del mes y año indicados
+  const todosLosPagos = await obtenerPagosGC();
+  const meses = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
+  const nombreMes = meses[mes - 1];
+  const periodoBuscado = `${nombreMes} ${anio}`;
+  
+  const actualizaciones = [];
+  todosLosPagos.forEach((fila, index) => {
+    // La columna 4 es "Periodo" en base 0, que corresponde a la columna E en la hoja.
+    if (fila[4] === periodoBuscado) {
+      actualizaciones.push({
+        // La columna P es la 16. En base 0, es el índice 15.
+        range: `Pagos_GC!P${index + 2}`,
+        values: [[tmc]]
+      });
+    }
+  });
+
+  if (actualizaciones.length === 0) {
+    // Si no hay filas para ese mes, no hace nada.
+    console.log(`No se encontraron registros para el período ${periodoBuscado} para actualizar el TIMC.`);
+    return;
+  }
+
+  // Se usa batchUpdate para actualizar todas las celdas encontradas de una sola vez
+  await gapi.client.sheets.spreadsheets.values.batchUpdate({
+    spreadsheetId: SPREADSHEET_ID,
+    resource: {
+      valueInputOption: 'USER_ENTERED',
+      data: actualizaciones
+    }
+  });
+}
