@@ -1,6 +1,17 @@
 // js/sheets.js
 const SPREADSHEET_ID = '1bFo5dBC3HM0xupginTBe-hrrUNgkiuUn4fkXXzHide8';
 
+// Sheet IDs según el orden de las hojas en tu Google Sheet.
+// Cambia estos valores si el gid de la hoja es diferente.
+// Para obtener el sheetId correcto, abre la hoja y mira la URL: ...#gid=XXXXXXXX
+const SHEET_ID_RESIDENTES = 0;    // Cambia por el gid real de la hoja "Residentes"
+const SHEET_ID_PAGOS_GC = 1330360081;
+const SHEET_ID_EGRESOS = 1288949745;
+const SHEET_ID_MANTENCIONES = 1359064608;
+const SHEET_ID_MULTAS = 1647433509;
+const SHEET_ID_ASAMBLEAS = 1350299373;
+const SHEET_ID_COMUNICACIONES = 1221698899;
+
 // -------- RESIDENTES --------
 async function obtenerResidentes() {
   const res = await gapi.client.sheets.spreadsheets.values.get({
@@ -43,7 +54,7 @@ async function eliminarResidente(id) {
       requests: [{
         deleteDimension: {
           range: {
-            sheetId: 0,
+            sheetId: SHEET_ID_RESIDENTES,
             dimension: "ROWS",
             startIndex: row - 1,
             endIndex: row
@@ -96,7 +107,7 @@ async function eliminarPagoGC(id) {
       requests: [{
         deleteDimension: {
           range: {
-            sheetId: 1,
+            sheetId: SHEET_ID_PAGOS_GC,
             dimension: "ROWS",
             startIndex: row - 1,
             endIndex: row
@@ -137,7 +148,7 @@ async function eliminarEgreso(id) {
       requests: [{
         deleteDimension: {
           range: {
-            sheetId: 2,
+            sheetId: SHEET_ID_EGRESOS,
             dimension: "ROWS",
             startIndex: row - 1,
             endIndex: row
@@ -178,7 +189,7 @@ async function eliminarMantencion(id) {
       requests: [{
         deleteDimension: {
           range: {
-            sheetId: 3,
+            sheetId: SHEET_ID_MANTENCIONES,
             dimension: "ROWS",
             startIndex: row - 1,
             endIndex: row
@@ -231,7 +242,7 @@ async function eliminarMulta(id) {
       requests: [{
         deleteDimension: {
           range: {
-            sheetId: 4,
+            sheetId: SHEET_ID_MULTAS,
             dimension: "ROWS",
             startIndex: row - 1,
             endIndex: row
@@ -272,7 +283,7 @@ async function eliminarAsamblea(id) {
       requests: [{
         deleteDimension: {
           range: {
-            sheetId: 5,
+            sheetId: SHEET_ID_ASAMBLEAS,
             dimension: "ROWS",
             startIndex: row - 1,
             endIndex: row
