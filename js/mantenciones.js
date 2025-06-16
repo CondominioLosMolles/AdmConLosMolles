@@ -81,9 +81,9 @@ async function cargarMantenciones() {
 
   function mostrarModalMantencion() {
     const modal = document.getElementById('modalMantencion');
-    modal.style.display = 'block';
+    modal.style.display = 'flex';
     modal.innerHTML = `
-      <div style="background:#fff;padding:24px;border-radius:8px;max-width:500px;margin:40px auto;box-shadow:0 2px 8px #0001;">
+      <div>
         <h3>Agregar Mantención</h3>
         <form id="formMantencion">
           <label>Fecha</label>
