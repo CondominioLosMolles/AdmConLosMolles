@@ -1,4 +1,6 @@
 // js/dashboard.js
+// Dashboard: gráfico compacto, eje Y CLP, layout original
+
 async function cargarDashboard() {
   limpiarMainContent();
   mostrarSpinner();
@@ -30,11 +32,11 @@ async function cargarDashboard() {
     .filter(p => parcelasMorosas.includes(p[2]) && p[15] === 'Moroso')
     .reduce((a,b) => a + Number(b[12]||0), 0);
 
-  // Layout: widgets arriba, gráfico compacto, resumen de morosidad debajo
+  // Layout original: widgets arriba, gráfico y resumen lado a lado
   const main = document.getElementById('main-content');
   main.innerHTML = `
     <h2>Dashboard</h2>
-    <div style="display:flex;gap:24px;flex-wrap:wrap;margin-bottom:24px;">
+    <div style="display:flex;gap:24px;flex-wrap:wrap;margin-bottom:32px;">
       <div class="widget" style="flex:1;min-width:160px;">
         <div style="font-size:2em;font-weight:700;">${activos}</div>
         <div>Residentes Activos</div>
@@ -56,18 +58,20 @@ async function cargarDashboard() {
         <div>Mantenciones Pendientes/Urgentes</div>
       </div>
     </div>
-    <div class="widget" style="margin-bottom:16px;max-width:900px;width:100%;margin:auto;padding:24px 16px;">
-      <canvas id="graficoIngresosEgresos" style="max-height:320px;height:320px;"></canvas>
-    </div>
-    <div class="widget" style="max-width:440px;margin:auto;">
-      <h4>Resumen de Morosidad</h4>
-      <div><b>Morosos:</b> ${morosos.length}</div>
-      <div><b>Parcelas:</b> ${parcelasMorosas.join(', ') || '-'}</div>
-      <div><b>Deuda Total:</b> $${deudaMorosos.toLocaleString('es-CL')}</div>
+    <div style="display:flex;gap:24px;flex-wrap:wrap;">
+      <div class="widget" style="flex:2;min-width:380px;">
+        <canvas id="graficoIngresosEgresos" style="max-width:100%;height:320px;"></canvas>
+      </div>
+      <div class="widget" style="flex:1;min-width:300px;max-width:340px;">
+        <h4>Resumen de Morosidad</h4>
+        <div><b>Morosos:</b> ${morosos.length}</div>
+        <div><b>Parcelas:</b> ${parcelasMorosas.join(', ') || '-'}</div>
+        <div><b>Deuda Total:</b> $${deudaMorosos.toLocaleString('es-CL')}</div>
+      </div>
     </div>
   `;
 
-  // Gráfico: eje Y en CLP, ticks de $100.000 hasta el valor máximo, ajustando automáticamente
+  // Gráfico: eje Y CLP, step automático, compacto
   const labels = [];
   const ingresosPorMes = [];
   const egresosPorMes = [];
@@ -80,12 +84,12 @@ async function cargarDashboard() {
     egresosPorMes.push(egresos.filter(e => (e[1]||'').startsWith(label)).reduce((a,b) => a + Number(b[6]||0), 0));
   }
   setTimeout(() => {
+    // Step automático en 100.000, ajustando al máximo valor
     const maxY = Math.max(...ingresosPorMes, ...egresosPorMes, 100000);
-    // Calcular el stepSize (siempre 100.000, pero si el máximo es > 1 millón, sigue creciendo de a 100.000)
     let stepSize = 100000;
-    let maxTicks = Math.ceil(maxY / stepSize);
-    // Si el máximo no es múltiplo exacto de 100.000, ajusta el max a el siguiente múltiplo
-    let suggestedMax = maxTicks * stepSize;
+    if (maxY <= 500000) stepSize = 50000;
+    if (maxY <= 100000) stepSize = 10000;
+    let suggestedMax = Math.ceil(maxY / stepSize) * stepSize;
     new Chart(document.getElementById('graficoIngresosEgresos'), {
       type: 'bar',
       data: {
@@ -96,9 +100,9 @@ async function cargarDashboard() {
         ]
       },
       options: {
-        responsive:true,
+        responsive: true,
         maintainAspectRatio: false,
-        plugins:{legend:{position:'top'}},
+        plugins: { legend: { position: 'top' } },
         scales: {
           y: {
             beginAtZero: true,
