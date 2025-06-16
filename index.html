@@ -14,9 +14,9 @@
   <div id="app">
     <aside id="sidebar">
       <div class="logo">
-  <span>Condominio</span><br>
-  <span>Los Molles</span>
-</div>
+        <span>Condominio</span><br>
+        <span>Los Molles</span>
+      </div>
       <nav>
         <ul>
           <li data-module="dashboard" class="active">Dashboard</li>
@@ -50,5 +50,62 @@
   <script src="js/multas.js"></script>
   <script src="js/asambleas.js"></script>
   <script src="js/informes.js"></script>
+  <script>
+    // --- Navegación activa robusta ---
+    document.addEventListener('DOMContentLoaded', function() {
+      const menuItems = document.querySelectorAll('#sidebar nav ul li[data-module]');
+
+      function activaMenu(modulo) {
+        menuItems.forEach(i => {
+          if (i.getAttribute('data-module') === modulo) {
+            i.classList.add('active');
+          } else {
+            i.classList.remove('active');
+          }
+        });
+      }
+
+      // Listeners para cada módulo principal
+      document.querySelector('[data-module="dashboard"]').addEventListener('click', () => {
+        activaMenu('dashboard');
+        cargarDashboard();
+      });
+      document.querySelector('[data-module="residentes"]').addEventListener('click', () => {
+        activaMenu('residentes');
+        cargarResidentes();
+      });
+      document.querySelector('[data-module="gastos_comunes"]').addEventListener('click', () => {
+        activaMenu('gastos_comunes');
+        cargarGastosComunes();
+      });
+      document.querySelector('[data-module="contabilidad"]').addEventListener('click', () => {
+        activaMenu('contabilidad');
+        cargarContabilidad();
+      });
+      document.querySelector('[data-module="comunicaciones"]').addEventListener('click', () => {
+        activaMenu('comunicaciones');
+        cargarComunicaciones();
+      });
+      document.querySelector('[data-module="mantenciones"]').addEventListener('click', () => {
+        activaMenu('mantenciones');
+        cargarMantenciones();
+      });
+      document.querySelector('[data-module="multas"]').addEventListener('click', () => {
+        activaMenu('multas');
+        cargarMultas();
+      });
+      document.querySelector('[data-module="asambleas"]').addEventListener('click', () => {
+        activaMenu('asambleas');
+        cargarAsambleas();
+      });
+      document.querySelector('[data-module="informes"]').addEventListener('click', () => {
+        activaMenu('informes');
+        cargarInformes();
+      });
+
+      // Si navegas por código, puedes usar: activaMenu('nombre_modulo');
+      window.activaMenu = activaMenu;
+    });
+  </script>
 </body>
 </html>
