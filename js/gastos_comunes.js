@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+const { useState } = React;
 
 const meses = [
   'Enero', 'Febrero',
@@ -9,8 +9,7 @@ const meses = [
   'Noviembre', 'Diciembre'
 ];
 
-export default function GastosComunes() {
-  // Estado para TIMC, guardado por mes
+function GastosComunes() {
   const [timc, setTimc] = useState({
     Enero: '', Febrero: '',
     Marzo: '', Abril: '',
@@ -20,32 +19,24 @@ export default function GastosComunes() {
     Noviembre: '', Diciembre: ''
   });
 
-  // Estado para gastos comunes listados
   const [gastosComunes, setGastosComunes] = useState([]);
-
-  // Estado para nuevo gasto común
   const [nuevoGasto, setNuevoGasto] = useState({ descripcion: '', monto: '' });
 
-  // Maneja cambios en TIMC inputs
   const handleTimcChange = (mes, valor) => {
     setTimc(prev => ({ ...prev, [mes]: valor }));
   };
 
-  // Guarda TIMC (simulado)
   const guardarTimc = () => {
-    // Aquí iría la lógica para guardar en backend o estado global
-    alert('TIMC guardado correctamente');
+    alert('TIMC guardado correctamente:\n' + JSON.stringify(timc, null, 2));
   };
 
-  // Maneja cambios en nuevo gasto común
   const handleNuevoGastoChange = (e) => {
     const { name, value } = e.target;
     setNuevoGasto(prev => ({ ...prev, [name]: value }));
   };
 
-  // Agrega un nuevo gasto común a la lista
   const agregarGastoComun = () => {
-    if (!nuevoGasto.descripcion || !nuevoGasto.monto) {
+    if (!nuevoGasto.descripcion.trim() || !nuevoGasto.monto.trim()) {
       alert('Por favor, completa la descripción y el monto');
       return;
     }
@@ -53,101 +44,90 @@ export default function GastosComunes() {
     setNuevoGasto({ descripcion: '', monto: '' });
   };
 
-  // Construye columnas para TIMC en dos filas
-  // Columna 1: Enero arriba, Febrero abajo
-  // Columna 2: Marzo arriba, Abril abajo, etc.
+  // Construcción de columnas TIMC con dos filas (mes arriba y mes siguiente abajo)
   const columnasTimc = [];
   for (let i = 0; i < meses.length; i += 2) {
     columnasTimc.push(
-      <td key={i} style={{ verticalAlign: 'top', padding: '10px', border: '1px solid #ccc' }}>
-        <div style={{ marginBottom: '10px' }}>
-          <label>{meses[i]}</label><br />
-          <input
-            type="number"
-            value={timc[meses[i]]}
-            onChange={e => handleTimcChange(meses[i], e.target.value)}
-            style={{ width: '80px' }}
-          />
-        </div>
-        {meses[i + 1] && (
-          <div>
-            <label>{meses[i + 1]}</label><br />
-            <input
-              type="number"
-              value={timc[meses[i + 1]]}
-              onChange={e => handleTimcChange(meses[i + 1], e.target.value)}
-              style={{ width: '80px' }}
-            />
-          </div>
-        )}
-      </td>
+      React.createElement('td', { key: i, style: { verticalAlign: 'top', padding: '10px', border: '1px solid #ccc' } },
+        React.createElement('div', { style: { marginBottom: '10px' } },
+          React.createElement('label', null, meses[i]),
+          React.createElement('br'),
+          React.createElement('input', {
+            type: 'number',
+            value: timc[meses[i]],
+            onChange: e => handleTimcChange(meses[i], e.target.value),
+            style: { width: '80px' }
+          })
+        ),
+        meses[i + 1] && React.createElement('div', null,
+          React.createElement('label', null, meses[i + 1]),
+          React.createElement('br'),
+          React.createElement('input', {
+            type: 'number',
+            value: timc[meses[i + 1]],
+            onChange: e => handleTimcChange(meses[i + 1], e.target.value),
+            style: { width: '80px' }
+          })
+        )
+      )
     );
   }
 
-  return (
-    <div style={{ maxWidth: '900px', margin: 'auto', fontFamily: 'Arial, sans-serif' }}>
-      <h2>Módulo de Gastos Comunes</h2>
+  return React.createElement('div', { style: { maxWidth: '900px', margin: 'auto' } },
+    React.createElement('h2', null, 'Módulo de Gastos Comunes'),
 
-      {/* Tabla TIMC horizontal con dos líneas */}
-      <h3>Tabla TIMC</h3>
-      <table style={{ borderCollapse: 'collapse', width: '100%', marginBottom: '20px' }}>
-        <tbody>
-          <tr>
-            {columnasTimc}
-          </tr>
-        </tbody>
-      </table>
+    React.createElement('h3', null, 'Tabla TIMC'),
+    React.createElement('table', { style: { borderCollapse: 'collapse', width: '100%', marginBottom: '20px' } },
+      React.createElement('tbody', null,
+        React.createElement('tr', null, columnasTimc)
+      )
+    ),
 
-      <button onClick={guardarTimc} style={{ padding: '10px 20px', marginBottom: '30px' }}>
-        Guardar TIMC
-      </button>
+    React.createElement('button', { onClick: guardarTimc, style: { padding: '10px 20px', marginBottom: '30px' } }, 'Guardar TIMC'),
 
-      {/* Agregar gasto común */}
-      <h3>Agregar Gasto Común</h3>
-      <div style={{ marginBottom: '20px' }}>
-        <input
-          type="text"
-          name="descripcion"
-          placeholder="Descripción"
-          value={nuevoGasto.descripcion}
-          onChange={handleNuevoGastoChange}
-          style={{ marginRight: '10px', padding: '5px', width: '300px' }}
-        />
-        <input
-          type="number"
-          name="monto"
-          placeholder="Monto"
-          value={nuevoGasto.monto}
-          onChange={handleNuevoGastoChange}
-          style={{ marginRight: '10px', padding: '5px', width: '120px' }}
-        />
-        <button onClick={agregarGastoComun} style={{ padding: '6px 15px' }}>
-          Agregar gasto común
-        </button>
-      </div>
+    React.createElement('h3', null, 'Agregar Gasto Común'),
+    React.createElement('div', { style: { marginBottom: '20px' } },
+      React.createElement('input', {
+        type: 'text',
+        name: 'descripcion',
+        placeholder: 'Descripción',
+        value: nuevoGasto.descripcion,
+        onChange: handleNuevoGastoChange,
+        style: { marginRight: '10px', padding: '5px', width: '300px' }
+      }),
+      React.createElement('input', {
+        type: 'number',
+        name: 'monto',
+        placeholder: 'Monto',
+        value: nuevoGasto.monto,
+        onChange: handleNuevoGastoChange,
+        style: { marginRight: '10px', padding: '5px', width: '120px' }
+      }),
+      React.createElement('button', { onClick: agregarGastoComun, style: { padding: '6px 15px' } }, 'Agregar gasto común')
+    ),
 
-      {/* Lista de gastos comunes */}
-      <h3>Gastos Comunes Registrados</h3>
-      {gastosComunes.length === 0 ? (
-        <p>No hay gastos comunes agregados.</p>
-      ) : (
-        <table style={{ borderCollapse: 'collapse', width: '100%' }}>
-          <thead>
-            <tr>
-              <th style={{ border: '1px solid #ccc', padding: '8px' }}>Descripción</th>
-              <th style={{ border: '1px solid #ccc', padding: '8px' }}>Monto</th>
-            </tr>
-          </thead>
-          <tbody>
-            {gastosComunes.map(gasto => (
-              <tr key={gasto.id}>
-                <td style={{ border: '1px solid #ccc', padding: '8px' }}>{gasto.descripcion}</td>
-                <td style={{ border: '1px solid #ccc', padding: '8px' }}>${parseFloat(gasto.monto).toFixed(2)}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      )}
-    </div>
+    React.createElement('h3', null, 'Gastos Comunes Registrados'),
+    gastosComunes.length === 0
+      ? React.createElement('p', null, 'No hay gastos comunes agregados.')
+      : React.createElement('table', { style: { borderCollapse: 'collapse', width: '100%' } },
+        React.createElement('thead', null,
+          React.createElement('tr', null,
+            React.createElement('th', { style: { border: '1px solid #ccc', padding: '8px' } }, 'Descripción'),
+            React.createElement('th', { style: { border: '1px solid #ccc', padding: '8px' } }, 'Monto')
+          )
+        ),
+        React.createElement('tbody', null,
+          gastosComunes.map(gasto =>
+            React.createElement('tr', { key: gasto.id },
+              React.createElement('td', { style: { border: '1px solid #ccc', padding: '8px' } }, gasto.descripcion),
+              React.createElement('td', { style: { border: '1px solid #ccc', padding: '8px' } }, `$${parseFloat(gasto.monto).toFixed(2)}`)
+            )
+          )
+        )
+      )
   );
 }
+
+// Renderizamos el componente en el div con id root
+const root = ReactDOM.createRoot(document.getElementById('root'));
+root.render(React.createElement(GastosComunes));
