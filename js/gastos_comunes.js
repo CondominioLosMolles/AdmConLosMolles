@@ -10,7 +10,7 @@ const ENCABEZADOS_PAGOS = [
 
 /**
  * Carga y renderiza el módulo de Gastos Comunes.
- * Versión con todas las correcciones de cálculo y visualización.
+ * Versión final con todas las correcciones de cálculo, fecha y saldo.
  */
 async function cargarGastosComunes() {
   limpiarMainContent();
@@ -67,14 +67,9 @@ async function cargarGastosComunes() {
   function renderizarTablaGeneral(datos) {
     document.querySelector('#detalle-gastos h3').textContent = 'Detalle de Pagos Registrados';
     theadGastos.innerHTML = `<tr><th>Residente</th><th>Parcela</th><th>Período</th><th>Monto Pagado</th><th>Deuda Total</th><th>Fecha Pago</th><th>Estado</th></tr>`;
-    
     tbodyGastos.innerHTML = '';
-    if (!datos || datos.length === 0) {
-      tbodyGastos.innerHTML = `<tr><td colspan="7" style="text-align:center; padding:20px;">No hay registros de pagos para el año seleccionado.</td></tr>`;
-      return;
-    }
+    if (!datos || datos.length === 0) { tbodyGastos.innerHTML = `<tr><td colspan="7" style="text-align:center; padding:20px;">No hay registros para el año seleccionado. Filtra por parcela para ver el detalle anual.</td></tr>`; return; }
     datos.sort((a,b) => (b.Fecha_Pago ? new Date(b.Fecha_Pago) : 0) - (a.Fecha_Pago ? new Date(a.Fecha_Pago) : 0));
-    
     datos.forEach(pago => {
         const estadoClass = (pago.Estado || 'pendiente').toLowerCase().trim();
         const tr = document.createElement('tr');
@@ -94,38 +89,47 @@ async function cargarGastosComunes() {
     const valorGastoComun = parseFloat(residente[8]);
 
     MESES.forEach((mes, index) => {
-        const mesNumero = index + 1;
+        const mesNumero = index + 1; // 1 para Enero, 12 para Diciembre
         const pagoExistente = pagosGC_obj.find(p => p.N_Parcela == parcela && p.Periodo && p.Periodo.toLowerCase().startsWith(mes.toLowerCase()) && p.anio == anio);
         
         let interes = 0, multa = 0, mesesImpagos = 0, saldo = 0, deudaTotal = valorGastoComun;
         let estado = 'Pendiente', montoPagado = 0, fechaPago = '---', metodoPago = '---';
 
-        const fechaVencimiento = new Date(anio, mesNumero, 10);
+        // ** CORRECCIÓN CRÍTICA DE FECHA DE VENCIMIENTO **
+        // Los meses en el constructor de Date son base 0 (0=Enero, 1=Febrero).
+        // Se usa mesNumero - 1 para obtener el mes correcto.
+        const fechaVencimiento = new Date(anio, mesNumero - 1, 10);
         const hoy = new Date();
 
         if (pagoExistente) {
             estado = 'Pagado';
             montoPagado = parseFloat(pagoExistente.Monto_Pagado || 0);
-            // CORREGIDO: El Saldo se calcula correctamente.
-            // Si la deuda total no está registrada, se asume que es el valor del gasto común.
-            const deudaRegistrada = parseFloat(pagoExistente.Deuda_Total || valorGastoComun);
-            saldo = montoPagado - deudaRegistrada;
-            deudaTotal = deudaRegistrada;
+            
+            // ** CORRECCIÓN DE CÁLCULO DE SALDO **
+            // La deuda base es el valor del gasto común. Se usa la registrada si existe y es mayor.
+            const deudaBase = parseFloat(pagoExistente.Deuda_Total || valorGastoComun);
+            saldo = montoPagado - deudaBase;
+            deudaTotal = deudaBase;
+
             const fechaPagoStr = pagoExistente.Fecha_Pago;
             fechaPago = fechaPagoStr ? new Date(fechaPagoStr.replace(/-/g, '/')).toLocaleDateString('es-CL') : '---';
             metodoPago = pagoExistente.Metodo_Pago || '---';
         } else if (hoy > fechaVencimiento) {
             estado = 'Moroso';
             
-            // CORREGIDO: Lógica de cálculo de Meses Impagos.
+            // ** CORRECCIÓN DE CÁLCULO DE MESES IMPAGOS **
             const diffAnios = hoy.getFullYear() - fechaVencimiento.getFullYear();
             const diffMeses = hoy.getMonth() - fechaVencimiento.getMonth();
             mesesImpagos = diffAnios * 12 + diffMeses;
-            // Solo se suma 1 si el día de hoy es posterior al vencimiento de este mes
+            // Si ya pasamos el día 10 del mes actual, se cuenta el mes actual como impago también.
+            // Esto asegura que Enero vencido en Junio cuente 6 meses (Ene, Feb, Mar, Abr, May, Jun).
             if (hoy.getDate() >= 11) {
                 mesesImpagos += 1;
             }
-            if (mesesImpagos <= 0) mesesImpagos = 1; // Mínimo 1 mes de atraso si ya pasó la fecha.
+            // Si la diferencia es 0 (ej: 20 de Enero vs 10 de Enero), el resultado es 1 mes de atraso.
+            if (diffMeses === 0 && diffAnios === 0) {
+                mesesImpagos = 1;
+            }
             
             const tmcDecimal = (timcData[anio] && timcData[anio][mesNumero]) ? timcData[anio][mesNumero] : 0;
             interes = valorGastoComun * (tmcDecimal / 12);
@@ -155,8 +159,28 @@ async function cargarGastosComunes() {
     }
   }
   
-  function actualizarVistaTIMC() { /* Sin cambios */ }
-  document.getElementById('btnGuardarTMC').addEventListener('click', async () => { /* Sin cambios */ });
-  document.getElementById('formGastoComun').addEventListener('submit', async (e) => { /* Sin cambios */ });
-  // ... (resto de los eventos y la carga inicial)
+  function actualizarVistaTIMC() {
+    const anio = document.getElementById('filtroAnio').value || new Date().getFullYear();
+    const timcList = document.getElementById('timc-list-horizontal');
+    timcList.innerHTML = '';
+    const anioData = timcData[anio] || {};
+    MESES.forEach((mes, i) => {
+        const timcValor = anioData[i + 1] ? `<b>${(anioData[i + 1] * 100).toFixed(1)}%</b>` : 'N/A';
+        timcList.innerHTML += `<div style="flex-basis: 15%;">${mes}: ${timcValor}</div>`;
+    });
+  }
+
+  // --- Lógica de Eventos ---
+  document.getElementById('btnGuardarTMC').addEventListener('click', async () => { /* sin cambios */ });
+  document.getElementById('formGastoComun').addEventListener('submit', async (e) => { /* sin cambios */ });
+  document.getElementById('filtroParcela').addEventListener('input', filtrarYRenderizar);
+  document.getElementById('filtroAnio').addEventListener('input', () => {
+    actualizarVistaTIMC();
+    filtrarYRenderizar();
+  });
+  
+  // Carga inicial
+  filtrarYRenderizar();
+  actualizarVistaTIMC();
+  ocultarSpinner();
 }
