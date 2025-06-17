@@ -1,8 +1,9 @@
 // js/auth.js
 
-// ***** PEGA AQUÍ TU ID DE CLIENTE OBTENIDO DE GOOGLE CLOUD *****
-const CLIENT_ID = '997872453031-5o8s2o6v3qt722fb3p51a2r7bo24ncee.apps.googleusercontent.com';
-// ***************************************************************
+// ===================================================================================
+// ===== IMPORTANTE: PEGA AQUÍ TU ID DE CLIENTE OBTENIDO DE GOOGLE CLOUD CONSOLE =====
+const CLIENT_ID = '​997872453031-5o8s2o6v3qt722fb3p51a2r7bo24ncee.apps.googleusercontent.com';
+// ===================================================================================
 
 const SCOPES = 'https://www.googleapis.com/auth/spreadsheets';
 
@@ -10,49 +11,54 @@ let tokenClient;
 let gapiInited = false;
 let gisInited = false;
 
-// Funciones que se llaman desde el index.html al cargar los scripts de Google
+// Esta función es llamada por el script <script src="https://apis.google.com/js/api.js" onload="gapiLoaded()">
 function gapiLoaded() {
     gapi.load('client', initializeGapiClient);
 }
 
+// Esta función es llamada por el script <script src="https://accounts.google.com/gsi/client" onload="gisLoaded()">
 function gisLoaded() {
     tokenClient = google.accounts.oauth2.initTokenClient({
         client_id: CLIENT_ID,
         scope: SCOPES,
-        callback: '', // El callback se define dinámicamente
+        callback: '', // El callback se define dinámicamente al hacer clic
     });
     gisInited = true;
     checkGapiAndGis();
 }
 
-// Inicializa el cliente de la API de Google (para Sheets)
+// Inicializa el cliente de la API de Google (para poder usar Sheets, Drive, etc.)
 async function initializeGapiClient() {
     await gapi.client.init({
-        // La API Key no es necesaria si usamos OAuth2
+        // La API Key ya no es necesaria cuando se usa OAuth 2.0 de esta manera
         discoveryDocs: ["https://sheets.googleapis.com/$discovery/rest?version=v4"],
     });
     gapiInited = true;
     checkGapiAndGis();
 }
 
-// Se asegura de que tanto la API de Google como el sistema de autenticación estén listos
+// Revisa que ambas librerías de Google (API y Autenticación) estén listas antes de mostrar el botón de login
 function checkGapiAndGis() {
     if (gapiInited && gisInited) {
         document.getElementById('loginBtn').style.visibility = 'visible';
     }
 }
 
-// Inicia el proceso de autenticación cuando se hace clic en el botón
+// Inicia el proceso de autenticación cuando el usuario hace clic en el botón
 function handleAuthClick() {
     tokenClient.callback = async (resp) => {
         if (resp.error !== undefined) {
             throw (resp);
         }
+        // Oculta la pantalla de login y muestra la aplicación principal
         document.getElementById('login-screen').style.display = 'none';
         document.getElementById('app').style.display = 'flex';
-        await cargarDashboard(); // Carga el dashboard solo después de una autenticación exitosa
+        // Llama al dashboard solo DESPUÉS de una autenticación 100% exitosa
+        await cargarDashboard();
     };
 
+    // Pide un nuevo token de acceso.
+    // Si el usuario ya ha dado su consentimiento antes, el pop-up no será tan intrusivo.
     if (gapi.client.getToken() === null) {
         tokenClient.requestAccessToken({ prompt: 'consent' });
     } else {
@@ -60,7 +66,7 @@ function handleAuthClick() {
     }
 }
 
-// Cierra la sesión
+// Cierra la sesión del usuario
 function handleSignoutClick() {
     const token = gapi.client.getToken();
     if (token !== null) {
@@ -72,9 +78,8 @@ function handleSignoutClick() {
     }
 }
 
-// Eventos de los botones de login/logout
+// Asigna los eventos a los botones una vez que la página ha cargado
 window.onload = function() {
-    // Es importante esperar a que la ventana se cargue completamente
     const loginBtn = document.getElementById('loginBtn');
     const logoutBtn = document.getElementById('logoutBtn');
     
