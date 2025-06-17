@@ -2,7 +2,7 @@
 
 // ===================================================================================
 // ===== IMPORTANTE: PEGA AQUÍ TU ID DE CLIENTE OBTENIDO DE GOOGLE CLOUD CONSOLE =====
-const CLIENT_ID = '​997872453031-5o8s2o6v3qt722fb3p51a2r7bo24ncee.apps.googleusercontent.com';
+const CLIENT_ID = '997872453031-5o8s2o6v3qt722fb3p51a2r7bo24ncee.apps.googleusercontent.com';
 // ===================================================================================
 
 const SCOPES = 'https://www.googleapis.com/auth/spreadsheets';
