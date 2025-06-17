@@ -1,16 +1,29 @@
 // js/gastos_comunes.js
 
-// Se mueven a un alcance global dentro del módulo para evitar errores de "not defined"
+// CORREGIDO: El orden de las columnas ahora coincide perfectamente con tu hoja "Pagos_GC".
 const MESES = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
 const ENCABEZADOS_PAGOS = [
-    'ID', 'Nombre_Residente', 'N_Parcela', 'Valor_Gasto_Comun', 'Periodo', 'Fecha_Vencimiento',
-    'Monto_Pagado', 'Saldo', 'Interes', 'Multa_1_4', 'Meses_Inpagos', 'Deuda_Total',
-    'Fecha_Pago', 'Metodo_Pago', 'Estado', 'TIMC', 'ComprobanteURL'
+    'ID_Pago',              // A
+    'Nombre_Residente',     // B
+    'N_Parcela',            // C
+    'Valor_Gasto_Comun',    // D
+    'Periodo',              // E
+    'Fecha_Vencimiento',    // F
+    'Monto_Pagado',         // G
+    'Saldo_Pendiente_o_a_favor', // H
+    'Interes',              // I
+    'TIMC',                 // J
+    'Multa_1/4',            // K
+    'Meses_Inpagos',        // L
+    'Deuda_Total',          // M
+    'Fecha_Pago',           // N
+    'Metodo_Pago',          // O
+    'Estado'                // P
 ];
 
 /**
  * Carga y renderiza el módulo de Gastos Comunes.
- * Versión con ajustes visuales en los widgets.
+ * Versión con corrección en el orden de las columnas de guardado.
  */
 async function cargarGastosComunes() {
   limpiarMainContent();
@@ -51,7 +64,6 @@ async function cargarGastosComunes() {
     </div>
 
     <div style="display: flex; flex-wrap: wrap; gap: 24px; align-items: flex-start;">
-      
       <section class="widget" style="flex: 1; min-width: 350px;">
         <h4 style="margin-top:0;">Filtros de Búsqueda</h4>
         <div style="display: flex; flex-wrap: wrap; gap: 20px; margin-bottom: 20px;">
@@ -71,14 +83,13 @@ async function cargarGastosComunes() {
       <section class="widget" style="flex: 2; min-width: 450px;">
          <h4 style="margin-top:0;">Configuración de TIMC</h4>
          <div style="display: flex; align-items: flex-end; gap: 16px; margin-bottom: 20px;">
-            <div style="min-width: 120px;"><label for="inputTMC"><b>TMC (% Anual)</b></label><input type="number" id="inputTMC" step="0.1" placeholder="Ej: 40"></div>
+            <div style="min-width: 120px;"><label for="inputTMC"><b>TIMC (%)</b></label><input type="number" id="inputTMC" step="0.1" placeholder="Ej: 40"></div>
             <div><label for="selectMesTMC"><b>Mes</b></label><select id="selectMesTMC" style="padding: 11px 10px;">${MESES.map((m, i) => `<option value="${i + 1}">${m}</option>`).join('')}</select></div>
             <button id="btnGuardarTMC" class="btn">Guardar en Sheet</button>
          </div>
          <div id="timc-display">
             <h5 style="margin-top:0; margin-bottom: 10px;">TIMC Guardado para el año seleccionado:</h5>
-            <div id="timc-list-horizontal" style="display: flex; flex-wrap: wrap; gap: 15px; background: #e9f1fb; padding: 12px; border-radius: 8px;">
-              </div>
+            <div id="timc-list-horizontal" style="display: flex; flex-wrap: wrap; gap: 15px; background: #e9f1fb; padding: 12px; border-radius: 8px;"></div>
          </div>
       </section>
     </div>
@@ -125,7 +136,7 @@ async function cargarGastosComunes() {
       const residente = residentes.find(r => r[3] == pago.N_Parcela);
       const valorGC = residente ? parseFloat(residente[8]) : parseFloat(pago.Valor_Gasto_Comun || 0);
       const estadoClass = (pago.Estado || 'pendiente').toLowerCase().trim();
-      const saldo = parseFloat(pago.Saldo || 0);
+      const saldo = parseFloat(pago['Saldo_Pendiente_o_a_favor'] || 0);
       
       const tr = document.createElement('tr');
       tr.innerHTML = `
@@ -147,19 +158,15 @@ async function cargarGastosComunes() {
     const parcela = filtroParcela.value;
     const anio = filtroAnio.value;
     let datosAMostrar = pagosGC_obj;
-    if (parcela) {
-        datosAMostrar = datosAMostrar.filter(p => p.N_Parcela == parcela);
-    }
-    if (anio) {
-        datosAMostrar = datosAMostrar.filter(p => p.anio == anio);
-    }
+    if (parcela) datosAMostrar = datosAMostrar.filter(p => p.N_Parcela == parcela);
+    if (anio) datosAMostrar = datosAMostrar.filter(p => p.anio == anio);
     renderizarTabla(datosAMostrar);
   }
   
   function actualizarVistaTIMC() {
     const anio = filtroAnio.value || new Date().getFullYear();
     const timcList = document.getElementById('timc-list-horizontal');
-    timcList.innerHTML = ''; // Limpiar vista
+    timcList.innerHTML = '';
     const anioData = timcData[anio] || {};
     MESES.forEach((mes, i) => {
         const timcValor = anioData[i + 1] ? `<b>${(anioData[i + 1] * 100).toFixed(1)}%</b>` : 'N/A';
@@ -177,7 +184,7 @@ async function cargarGastosComunes() {
     const tmcAnual = parseFloat(document.getElementById('inputTMC').value);
     const mes = document.getElementById('selectMesTMC').value;
     const anio = filtroAnio.value;
-    if (isNaN(tmcAnual) || !mes || !anio) return mostrarMensaje('Debe ingresar TMC, mes y año.', 'error');
+    if (isNaN(tmcAnual) || !mes || !anio) return mostrarMensaje('Debe ingresar TIMC, mes y año.', 'error');
     
     mostrarSpinner();
     try {
@@ -212,10 +219,24 @@ async function cargarGastosComunes() {
     const valorGC_raw = document.getElementById('inputValorGastoComun').value;
     const valorGC = parseFloat(valorGC_raw.replace(/[^0-9,-]+/g, "").replace(",", "."));
     
+    // CORREGIDO: Se crea el array 'datosParaSheet' en el orden exacto de tus columnas.
     const datosParaSheet = [
-        null, formData.get('Nombre_Residente'), formData.get('N_Parcela'), valorGC, periodo,
-        null, formData.get('Monto_Pagado'), null, null, null, null, null,
-        formData.get('Fecha_Pago'), formData.get('Metodo_Pago'), 'Pagado', null, null
+      null,                                         // A: ID_Pago (se genera en sheets.js)
+      formData.get('Nombre_Residente'),             // B: Nombre_Residente
+      formData.get('N_Parcela'),                    // C: N_Parcela
+      valorGC,                                      // D: Valor_Gasto_Comun
+      periodo,                                      // E: Periodo
+      null,                                         // F: Fecha_Vencimiento (calculado en sheet o vacío)
+      formData.get('Monto_Pagado'),                 // G: Monto_Pagado
+      null,                                         // H: Saldo (calculado en sheet o vacío)
+      null,                                         // I: Interes (calculado en sheet o vacío)
+      null,                                         // J: TIMC (se llena con la otra función)
+      null,                                         // K: Multa_1/4 (calculado en sheet o vacío)
+      null,                                         // L: Meses_Inpagos (calculado en sheet o vacío)
+      null,                                         // M: Deuda_Total (calculado en sheet o vacío)
+      formData.get('Fecha_Pago'),                   // N: Fecha_Pago
+      formData.get('Metodo_Pago'),                  // O: Metodo_Pago
+      'Pagado'                                      // P: Estado
     ];
     
     mostrarSpinner();
@@ -242,9 +263,8 @@ async function cargarGastosComunes() {
   filtroAnio.addEventListener('input', () => {
     actualizarVistaTIMC();
     filtrarYRenderizar();
-});
+  });
   
-  // Carga inicial de datos en la tabla y vista TIMC
   filtrarYRenderizar();
   actualizarVistaTIMC();
   ocultarSpinner();
