@@ -4,12 +4,22 @@ async function cargarDashboard() {
   limpiarMainContent();
   mostrarSpinner();
 
+  // ***** INICIO DE LA SOLUCIÓN DEFINITIVA ("Guardia de Seguridad") *****
+  // Esta sección se asegura de que la API de Google esté 100% lista antes de continuar.
+  // Si no encuentra la función `obtenerEgresos`, significa que la API aún no ha cargado.
+  if (typeof obtenerEgresos !== 'function') {
+      console.warn("La API de Google aún no está lista. Reintentando en 1 segundo...");
+      // Muestra un mensaje al usuario y vuelve a intentar cargar el dashboard tras una breve pausa.
+      mostrarMensaje("Estableciendo conexión segura con Google...", "info");
+      setTimeout(cargarDashboard, 1000); // Vuelve a llamar a esta misma función en 1 seg.
+      return; // Detiene la ejecución actual para esperar el reintento.
+  }
+  // ***** FIN DE LA SOLUCIÓN DEFINITIVA *****
+
   let residentes = [], pagos = [], egresos = [], mantenciones = [];
   
   try {
-    // ***** CORRECCIÓN DE ESTABILIDAD *****
-    // Se piden todos los datos de las hojas al mismo tiempo usando Promise.all para
-    // evitar el error de sincronización "Cross-Origin-Opener-Policy".
+    // Ahora que sabemos que las funciones existen, las llamamos de forma optimizada.
     const [
         residentesData,
         pagosData,
@@ -22,21 +32,14 @@ async function cargarDashboard() {
         obtenerMantenciones()
     ]);
 
-    // Se asignan los resultados, asegurándose de que sean arrays aunque vengan vacíos.
     residentes = residentesData || [];
     pagos = pagosData || [];
     egresos = egresosData || [];
     mantenciones = mantencionesData || [];
-    // ***** FIN DE LA CORRECCIÓN *****
 
   } catch (e) {
     ocultarSpinner();
-    // Mensaje de error mejorado para el usuario
-    if (e instanceof ReferenceError) {
-        mostrarMensaje(`Error de Carga: La función "${e.message.split(" ")[0]}" no se encontró en sheets.js. Revisa que el archivo se esté cargando correctamente.`, 'error');
-    } else {
-        mostrarMensaje('Error al cargar datos del dashboard: ' + e.message, 'error');
-    }
+    mostrarMensaje('Error al cargar datos del dashboard: ' + e.message, 'error');
     return;
   }
 
