@@ -10,7 +10,7 @@ const ENCABEZADOS_PAGOS = [
 
 /**
  * Carga y renderiza el módulo de Gastos Comunes.
- * Versión estable con guardado de TIMC local para evitar errores de autenticación.
+ * Versión con carga de datos optimizada para evitar errores de autenticación.
  */
 async function cargarGastosComunes() {
   limpiarMainContent();
@@ -21,9 +21,16 @@ async function cargarGastosComunes() {
   let timcData = {};
 
   try {
-    // Se obtienen los datos de las hojas de cálculo
-    residentes = await obtenerResidentes();
-    const pagosGC_raw = await obtenerPagosGC();
+    // ***** INICIO DE LA CORRECCIÓN *****
+    // Se piden todos los datos de las hojas al mismo tiempo para evitar conflictos.
+    const [residentes_data, pagosGC_raw, timcs_raw] = await Promise.all([
+        obtenerResidentes(),
+        obtenerPagosGC(),
+        obtenerTIMCs()
+    ]);
+    
+    residentes = residentes_data;
+    // ***** FIN DE LA CORRECCIÓN *****
 
     // Se procesan los pagos
     pagosGC_obj = pagosGC_raw.map(fila => {
@@ -36,8 +43,12 @@ async function cargarGastosComunes() {
         return obj;
     }).filter(p => p.N_Parcela);
 
-    // Se carga el TIMC desde el almacenamiento local del navegador (solución estable)
-    timcData = JSON.parse(localStorage.getItem('timcData')) || {};
+    // Se procesan los TIMC en un formato fácil de usar
+    timcs_raw.forEach(fila => {
+        const [anio, mes, valor] = fila;
+        if (!timcData[anio]) timcData[anio] = {};
+        timcData[anio][mes] = parseFloat(valor) / 100;
+    });
 
   } catch (e) {
     ocultarSpinner();
@@ -45,12 +56,13 @@ async function cargarGastosComunes() {
     return;
   }
   
+  // --- El resto del archivo (HTML y lógica) no tiene cambios ---
   const main = document.getElementById('main-content');
   main.innerHTML = `
     <div style="display:flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;"><h2>Gastos Comunes</h2></div>
     <div style="display: flex; flex-wrap: wrap; gap: 24px; align-items: flex-start;">
       <section class="widget" style="flex: 1; min-width: 350px;"><h4 style="margin-top:0;">Filtros de Búsqueda</h4><div style="display: flex; flex-wrap: wrap; gap: 20px; margin-bottom: 20px;"><div style="flex: 1; min-width: 150px;"><label for="filtroParcela"><b>N° Parcela:</b></label><input list="lista-parcelas" id="filtroParcela" placeholder="Todos (1-26)..." style="width:100%;"><datalist id="lista-parcelas">${Array.from({ length: 26 }, (_, i) => `<option value="${i + 1}"></option>`).join('')}</datalist></div><div style="flex: 1; min-width: 150px;"><label for="filtroAnio"><b>Año:</b></label><input type="number" id="filtroAnio" value="${new Date().getFullYear()}" style="width:100%;"></div></div><button id="btnAbrirModalGasto" class="btn">Agregar Gasto Común</button></section>
-      <section class="widget" style="flex: 2; min-width: 450px;"><h4 style="margin-top:0;">Configuración de TIMC</h4><div style="display: flex; align-items: flex-end; gap: 16px; margin-bottom: 20px;"><div style="min-width: 120px;"><label for="inputTMC"><b>TIMC (%)</b></label><input type="number" id="inputTMC" step="0.1" placeholder="Ej: 25"></div><div><label for="selectMesTMC"><b>Mes</b></label><select id="selectMesTMC" style="padding: 11px 10px;">${MESES.map((m, i) => `<option value="${i + 1}">${m}</option>`).join('')}</select></div><button id="btnGuardarTMC" class="btn">Guardar</button></div><div id="timc-display"><h5 style="margin-top:0; margin-bottom: 10px;">TIMC Guardado para el año seleccionado:</h5><div id="timc-list-horizontal" style="display: flex; flex-wrap: wrap; gap: 15px; background: #e9f1fb; padding: 12px; border-radius: 8px;"></div></div></section>
+      <section class="widget" style="flex: 2; min-width: 450px;"><h4 style="margin-top:0;">Configuración de TIMC</h4><div style="display: flex; align-items: flex-end; gap: 16px; margin-bottom: 20px;"><div style="min-width: 120px;"><label for="inputTMC"><b>TIMC (%)</b></label><input type="number" id="inputTMC" step="0.1" placeholder="Ej: 25"></div><div><label for="selectMesTMC"><b>Mes</b></label><select id="selectMesTMC" style="padding: 11px 10px;">${MESES.map((m, i) => `<option value="${i + 1}">${m}</option>`).join('')}</select></div><button id="btnGuardarTMC" class="btn">Guardar en Sheet</button></div><div id="timc-display"><h5 style="margin-top:0; margin-bottom: 10px;">TIMC Guardado para el año seleccionado:</h5><div id="timc-list-horizontal" style="display: flex; flex-wrap: wrap; gap: 15px; background: #e9f1fb; padding: 12px; border-radius: 8px;"></div></div></section>
     </div>
     <section id="detalle-gastos" style="margin-top: 2rem;"><h3>Detalle de Gastos</h3><div style="overflow-x:auto;"><table class="table"><thead id="thead-gastos"></thead><tbody id="tbody-gastos"></tbody></table></div></section>
     <div id="modalGC" class="modal" style="display:none;"><div><h3>Agregar Gasto Común</h3><form id="formGastoComun" style="display:flex; flex-wrap:wrap; gap:15px;"><div style="flex: 1 1 120px;"><label>N° Parcela</label><input type="number" name="N_Parcela" id="inputNParcela" min="1" max="26" required></div><div style="flex: 1 1 300px;"><label>Nombre Residente</label><input type="text" name="Nombre_Residente" id="inputNombreResidente" readonly style="background:#eee;"></div><div style="flex: 1 1 180px;"><label>Valor Gasto Común</label><input type="text" name="Valor_Gasto_Comun" id="inputValorGastoComun" readonly style="background:#eee;"></div><div style="flex: 1 1 180px;"><label>Fecha de Pago</label><input type="date" name="Fecha_Pago" required></div><div style="flex: 1 1 180px;"><label>Mes que Paga (Período)</label><select name="Periodo" required>${MESES.map(m => `<option value="${m}">${m}</option>`).join('')}</select></div><div style="flex: 1 1 180px;"><label>Monto Pagado</label><input type="number" name="Monto_Pagado" min="0" step="1" required placeholder="CLP"></div><div style="flex: 1 1 180px;"><label>Método de Pago</label><select name="Metodo_Pago" required><option value="Transferencia">Transferencia</option><option value="Efectivo">Efectivo</option></select></div><div style="flex: 1 1 100%;"><label>Comprobante</label><input type="file" name="Comprobante"></div><div style="flex: 1 1 100%; text-align: right; margin-top: 20px;"><button class="btn secondary" type="button" id="btnCerrarModal">Cancelar</button><button class="btn" type="submit">Guardar Gasto</button></div></form></div></div>
@@ -59,53 +71,53 @@ async function cargarGastosComunes() {
   const tbodyGastos = document.getElementById('tbody-gastos');
   const theadGastos = document.getElementById('thead-gastos');
 
-  function renderizarTablaGeneral(datos) { /* Esta función no cambia */ }
+  function renderizarTablaGeneral(datos) {
+    document.querySelector('#detalle-gastos h3').textContent = 'Detalle de Pagos Registrados';
+    theadGastos.innerHTML = `<tr><th>Residente</th><th>Parcela</th><th>Período</th><th>Monto Pagado</th><th>Deuda Total</th><th>Fecha Pago</th><th>Estado</th></tr>`;
+    tbodyGastos.innerHTML = '';
+    if (!datos || datos.length === 0) { tbodyGastos.innerHTML = `<tr><td colspan="7" style="text-align:center; padding:20px;">No hay registros para mostrar.</td></tr>`; return; }
+    datos.sort((a,b) => (b.Fecha_Pago ? new Date(b.Fecha_Pago) : 0) - (a.Fecha_Pago ? new Date(a.Fecha_Pago) : 0));
+    datos.forEach(pago => {
+      const estadoClass = (pago.Estado || 'pendiente').toLowerCase().trim();
+      const tr = document.createElement('tr');
+      tr.innerHTML = `<td>${pago.Nombre_Residente || 'N/A'}</td><td>${pago.N_Parcela}</td><td>${pago.Periodo || 'N/A'}</td><td>$${parseFloat(pago.Monto_Pagado || 0).toLocaleString('es-CL')}</td><td style="font-weight:bold;">$${parseFloat(pago.Deuda_Total || 0).toLocaleString('es-CL')}</td><td>${pago.Fecha_Pago ? new Date(pago.Fecha_Pago).toLocaleDateString('es-CL') : '---'}</td><td><span class="estado-tag estado-${estadoClass}">${pago.Estado || 'Pendiente'}</span></td>`;
+      tbodyGastos.appendChild(tr);
+    });
+  }
   
   function renderizarTablaResidente(parcela, anio) {
     const residente = residentes.find(r => r[3] == parcela);
     if (!residente) { tbodyGastos.innerHTML = `<tr><td colspan="14">No se encontró residente.</td></tr>`; return; }
-
     document.querySelector('#detalle-gastos h3').textContent = `Detalle Anual para ${residente[1]} (Parcela ${parcela})`;
     theadGastos.innerHTML = `<tr><th>Nombre Residente</th><th>N° Parcela</th><th>Valor G.C.</th><th>Periodo</th><th>Fecha Vencimiento</th><th>Monto Pagado</th><th>Saldo</th><th>Interés</th><th>Multa 1/4</th><th>Meses Impagos</th><th>Deuda Total</th><th>Fecha Pago</th><th>Método Pago</th><th>Estado</th></tr>`;
-
     tbodyGastos.innerHTML = '';
     const valorGastoComun = parseFloat(residente[8]);
-
     MESES.forEach((mes, index) => {
         const mesNumero = index + 1;
         const pagoExistente = pagosGC_obj.find(p => p.N_Parcela == parcela && p.Periodo.toLowerCase().startsWith(mes.toLowerCase()) && p.anio == anio);
-        
         let interes = 0, multa = 0, mesesImpagos = 0, saldo = 0, deudaTotal = valorGastoComun;
         let estado = 'Pendiente', montoPagado = 0, fechaPago = '---', metodoPago = '---';
-
         const fechaVencimiento = new Date(anio, mesNumero, 10);
         const hoy = new Date();
-
         if (pagoExistente) {
             estado = 'Pagado';
             montoPagado = parseFloat(pagoExistente.Monto_Pagado || 0);
             deudaTotal = parseFloat(pagoExistente.Deuda_Total || montoPagado);
             saldo = montoPagado - deudaTotal;
             const fechaPagoStr = pagoExistente.Fecha_Pago;
-            // Corrección de fecha para evitar desfase de un día por zona horaria
             fechaPago = fechaPagoStr ? new Date(fechaPagoStr.replace(/-/g, '/')).toLocaleDateString('es-CL') : '---';
             metodoPago = pagoExistente.Metodo_Pago || '---';
         } else if (hoy > fechaVencimiento) {
             estado = 'Moroso';
-            
-            // Lógica de cálculo corregida
             const diffAnios = hoy.getFullYear() - fechaVencimiento.getFullYear();
             const diffMeses = hoy.getMonth() - fechaVencimiento.getMonth();
             mesesImpagos = diffAnios * 12 + diffMeses + 1;
-            
-            // Usa el TIMC guardado localmente
             const tmcDecimal = (timcData[anio] && timcData[anio][mesNumero]) ? timcData[anio][mesNumero] : 0;
             interes = valorGastoComun * (tmcDecimal / 12);
             multa = (valorGastoComun / 4) * mesesImpagos;
             deudaTotal = valorGastoComun + interes + multa;
             saldo = -deudaTotal;
         }
-
         const tr = document.createElement('tr');
         const estadoClass = estado.toLowerCase();
         tr.innerHTML = `<td>${residente[1]}</td><td>${parcela}</td><td>$${valorGastoComun.toLocaleString('es-CL')}</td><td><b>${mes} ${anio}</b></td><td>${fechaVencimiento.toLocaleDateString('es-CL')}</td><td>$${montoPagado.toLocaleString('es-CL')}</td><td style="color:${saldo < 0 ? 'red' : 'green'}; font-weight:bold;">$${saldo.toLocaleString('es-CL')}</td><td>$${interes.toLocaleString('es-CL')}</td><td>$${multa.toLocaleString('es-CL')}</td><td>${mesesImpagos}</td><td style="font-weight:bold;">$${deudaTotal.toLocaleString('es-CL')}</td><td>${fechaPago}</td><td>${metodoPago}</td><td><span class="estado-tag estado-${estadoClass}">${estado}</span></td>`;
@@ -135,23 +147,25 @@ async function cargarGastosComunes() {
     });
   }
 
-  // --- Lógica de Eventos ---
-  document.getElementById('btnGuardarTMC').addEventListener('click', () => {
+  document.getElementById('btnGuardarTMC').addEventListener('click', async () => {
+    if (typeof guardarTIMC !== 'function') return mostrarMensaje('Error: La función "guardarTIMC" no se encontró en sheets.js.', 'error');
     const anio = document.getElementById('filtroAnio').value;
     const mes = document.getElementById('selectMesTMC').value;
     const valor = parseFloat(document.getElementById('inputTMC').value);
-    
     if (isNaN(valor) || !mes || !anio) return mostrarMensaje('Debe ingresar TIMC, mes y año.', 'error');
-    
-    if (!timcData[anio]) timcData[anio] = {};
-    timcData[anio][mes] = valor / 100; // Se guarda como decimal
-    
-    // Se guarda en el almacenamiento LOCAL del navegador.
-    localStorage.setItem('timcData', JSON.stringify(timcData));
-
-    actualizarVistaTIMC();
-    if (document.getElementById('filtroParcela').value) filtrarYRenderizar();
-    mostrarMensaje(`TIMC guardado localmente en tu navegador.`, 'success');
+    mostrarSpinner();
+    try {
+      await guardarTIMC(anio, mes, valor);
+      if (!timcData[anio]) timcData[anio] = {};
+      timcData[anio][mes] = valor / 100;
+      actualizarVistaTIMC();
+      if (document.getElementById('filtroParcela').value) filtrarYRenderizar();
+      mostrarMensaje(`TIMC guardado en la hoja "Config_TIMC".`, 'success');
+    } catch (err) {
+      mostrarMensaje('Error al guardar TIMC: ' + err.message, 'error');
+    } finally {
+      ocultarSpinner();
+    }
   });
   
   document.getElementById('formGastoComun').addEventListener('submit', async (e) => {
@@ -161,13 +175,11 @@ async function cargarGastosComunes() {
     const periodo = `${formData.get('Periodo')} ${anioPago}`;
     const valorGC_raw = document.getElementById('inputValorGastoComun').value;
     const valorGC = parseFloat(valorGC_raw.replace(/[^0-9,-]+/g, "").replace(",", "."));
-    
     const datosParaSheet = [
       null, formData.get('Nombre_Residente'), formData.get('N_Parcela'), valorGC, periodo,
       null, formData.get('Monto_Pagado'), null, null, null, null, null, null,
       formData.get('Fecha_Pago'), formData.get('Metodo_Pago'), 'Pagado'
     ];
-    
     mostrarSpinner();
     try {
       await agregarPagoGC(datosParaSheet);
@@ -175,7 +187,6 @@ async function cargarGastosComunes() {
       ENCABEZADOS_PAGOS.forEach((encabezado, i) => nuevoPagoObj[encabezado] = datosParaSheet[i]);
       nuevoPagoObj.anio = anioPago;
       pagosGC_obj.push(nuevoPagoObj);
-      
       filtrarYRenderizar();
       modal.style.display = 'none';
       e.target.reset();
