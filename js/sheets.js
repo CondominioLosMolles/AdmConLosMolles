@@ -1,17 +1,19 @@
 // js/sheets.js
 const SPREADSHEET_ID = '1bFo5dBC3HM0xupginTBe-hrrUNgkiuUn4fkXXzHide8';
-
 const SHEET_ID_RESIDENTES = 1835488459;
 const SHEET_ID_PAGOS_GC = 1954366455;
+// ... (el resto de tus IDs de hojas van aquí)
 const SHEET_ID_EGRESOS = 1945700474;
 const SHEET_ID_MANTENCIONES = 895242560;
 const SHEET_ID_MULTAS = 456683145;
 const SHEET_ID_ASAMBLEAS = 791789730;
 const SHEET_ID_COMUNICACIONES = 569621527;
 
-// --- El resto de tus funciones (obtenerResidentes, etc.) va aquí ---
+
+// --- FUNCIONES EXISTENTES (Residentes, Pagos, etc. sin cambios) ---
 async function obtenerResidentes() { const res = await gapi.client.sheets.spreadsheets.values.get({ spreadsheetId: SPREADSHEET_ID, range: 'Residentes!A2:I', }); return res.result.values || []; }
 async function agregarResidente(datos) { const residentes = await obtenerResidentes(); const lastId = residentes.length > 0 ? parseInt(residentes[residentes.length-1][0]) : 0; datos[0] = (lastId + 1).toString(); await gapi.client.sheets.spreadsheets.values.append({ spreadsheetId: SPREADSHEET_ID, range: 'Residentes!A:I', valueInputOption: 'USER_ENTERED', resource: { values: [datos] } }); }
+// ... (aquí van el resto de tus funciones existentes que no se modifican)
 async function actualizarResidente(datos) { const residentes = await obtenerResidentes(); const idx = residentes.findIndex(r => r[0] === datos[0]); if (idx === -1) throw new Error('No encontrado'); const row = idx + 2; await gapi.client.sheets.spreadsheets.values.update({ spreadsheetId: SPREADSHEET_ID, range: `Residentes!A${row}:I${row}`, valueInputOption: 'USER_ENTERED', resource: { values: [datos] } }); }
 async function eliminarResidente(id) { const residentes = await obtenerResidentes(); const idx = residentes.findIndex(r => r[0] === id); if (idx === -1) throw new Error('No encontrado'); const row = idx + 2; await gapi.client.sheets.spreadsheets.batchUpdate({ spreadsheetId: SPREADSHEET_ID, resource: { requests: [{ deleteDimension: { range: { sheetId: SHEET_ID_RESIDENTES, dimension: "ROWS", startIndex: row - 1, endIndex: row } } }] } }); }
 async function obtenerPagosGC() { const res = await gapi.client.sheets.spreadsheets.values.get({ spreadsheetId: SPREADSHEET_ID, range: 'Pagos_GC!A2:Q', }); return res.result.values || []; }
@@ -34,57 +36,51 @@ async function eliminarAsamblea(id) { const asambleas = await obtenerAsambleas()
 async function obtenerComunicaciones() { const res = await gapi.client.sheets.spreadsheets.values.get({ spreadsheetId: SPREADSHEET_ID, range: 'Comunicaciones!A2:H', }); return res.result.values || []; }
 async function agregarComunicacion(datos) { const comunicaciones = await obtenerComunicaciones(); const lastId = comunicaciones.length > 0 ? parseInt(comunicaciones[comunicaciones.length-1][0]) : 0; datos[0] = (lastId + 1).toString(); await gapi.client.sheets.spreadsheets.values.append({ spreadsheetId: SPREADSHEET_ID, range: 'Comunicaciones!A:H', valueInputOption: 'USER_ENTERED', resource: { values: [datos] } }); }
 
-// -------- FUNCIÓN PARA GUARDAR TIMC (VERSIÓN CON DIAGNÓSTICO) --------
-async function guardarTMCenSheet(anio, mes, tmc) {
-  const todosLosPagos = await obtenerPagosGC();
-  const meses = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
-  const nombreMes = meses[mes - 1];
-  
-  const formatoNombreMes = `${nombreMes} ${anio}`;
-  const mesFormateado = String(mes).padStart(2, '0');
-  const formatoNumeroMes = `${anio}-${mesFormateado}`;
 
-  const actualizaciones = [];
-  
-  // ***** INICIO DEL DIAGNÓSTICO *****
-  console.log(`--- INICIANDO BÚSQUEDA DE TIMC PARA ${formatoNombreMes} / ${formatoNumeroMes} ---`);
-  // ***** FIN DEL DIAGNÓSTICO *****
-  
-  todosLosPagos.forEach((fila, index) => {
-    const periodoEnSheet = fila[4]; // Columna E es "Periodo"
+// -------- NUEVAS FUNCIONES PARA LA HOJA "Config_TIMC" --------
+
+/**
+ * Obtiene todos los registros de la hoja Config_TIMC.
+ */
+async function obtenerTIMCs() {
+    const res = await gapi.client.sheets.spreadsheets.values.get({
+        spreadsheetId: SPREADSHEET_ID,
+        range: 'Config_TIMC!A2:C',
+    });
+    return res.result.values || [];
+}
+
+/**
+ * Guarda o actualiza un valor de TIMC en la hoja Config_TIMC.
+ * Si ya existe una fila para ese año y mes, la actualiza. Si no, la crea.
+ */
+async function guardarTIMC(anio, mes, valor) {
+    const todosLosTIMCs = await obtenerTIMCs();
     
-    // ***** INICIO DEL DIAGNÓSTICO *****
-    // Imprime en consola lo que está comparando en cada fila
-    console.log(`Fila ${index + 2}: Comparando...`);
-    console.log(`   - Periodo en Sheet: "${periodoEnSheet}" (tipo: ${typeof periodoEnSheet})`);
-    console.log(`   - Buscando Formato 1: "${formatoNombreMes.toLowerCase()}"`);
-    console.log(`   - Buscando Formato 2: "${formatoNumeroMes}"`);
-    // ***** FIN DEL DIAGNÓSTICO *****
+    // Busca si ya existe una fila para ese Año (columna 0) y Mes (columna 1)
+    const filaExistenteIndex = todosLosTIMCs.findIndex(fila => fila[0] == anio && fila[1] == mes);
 
-    if (periodoEnSheet) {
-      const periodoEnSheetLower = periodoEnSheet.toLowerCase().trim();
-      if (periodoEnSheetLower === formatoNombreMes.toLowerCase() || periodoEnSheetLower === formatoNumeroMes) {
-        // ***** INICIO DEL DIAGNÓSTICO *****
-        console.log(`   -> ¡COINCIDENCIA ENCONTRADA! Se actualizará la fila ${index + 2}.`);
-        // ***** FIN DEL DIAGNÓSTICO *****
-        actualizaciones.push({
-          range: `Pagos_GC!J${index + 2}`,
-          values: [[tmc]]
+    if (filaExistenteIndex !== -1) {
+        // Si la fila existe, la ACTUALIZA
+        const filaParaActualizar = filaExistenteIndex + 2; // +2 porque el índice es base 0 y la data empieza en la fila 2
+        await gapi.client.sheets.spreadsheets.values.update({
+            spreadsheetId: SPREADSHEET_ID,
+            range: `Config_TIMC!C${filaParaActualizar}`, // Actualiza solo la columna C (Valor)
+            valueInputOption: 'USER_ENTERED',
+            resource: {
+                values: [[valor]]
+            }
         });
-      }
+    } else {
+        // Si la fila NO existe, la AGREGA
+        const nuevaFila = [anio, mes, valor];
+        await gapi.client.sheets.spreadsheets.values.append({
+            spreadsheetId: SPREADSHEET_ID,
+            range: 'Config_TIMC!A:C',
+            valueInputOption: 'USER_ENTERED',
+            resource: {
+                values: [nuevaFila]
+            }
+        });
     }
-  });
-
-  if (actualizaciones.length === 0) {
-    console.warn(`ADVERTENCIA: No se encontraron registros para el período que coincida con "${formatoNombreMes}" o "${formatoNumeroMes}". No se actualizó nada en la hoja.`);
-    return;
-  }
-
-  await gapi.client.sheets.spreadsheets.values.batchUpdate({
-    spreadsheetId: SPREADSHEET_ID,
-    resource: {
-      valueInputOption: 'USER_ENTERED',
-      data: actualizaciones
-    }
-  });
 }
