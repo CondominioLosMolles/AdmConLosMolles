@@ -8,10 +8,6 @@ const ENCABEZADOS_PAGOS = [
     'Multa_1/4', 'Meses_Inpagos', 'Deuda_Total', 'Fecha_Pago', 'Metodo_Pago', 'Estado'
 ];
 
-/**
- * Carga y renderiza el módulo de Gastos Comunes.
- * Versión con el cálculo de interés activado.
- */
 async function cargarGastosComunes() {
   limpiarMainContent();
   mostrarSpinner();
@@ -42,13 +38,12 @@ async function cargarGastosComunes() {
     (timcs_raw || []).forEach(fila => {
         const [anio, mes, valor] = fila;
         if (!timcData[anio]) timcData[anio] = {};
-        // Se guarda el TIMC como número (ej: 25 para 25%)
         timcData[anio][mes] = parseFloat(valor);
     });
 
   } catch (e) {
     ocultarSpinner();
-    mostrarMensaje('Error al cargar datos: ' + e.message, 'error');
+    mostrarMensaje('Error al cargar datos de Gastos Comunes: ' + e.message, 'error');
     return;
   }
   
@@ -56,7 +51,7 @@ async function cargarGastosComunes() {
   main.innerHTML = `
     <div style="display:flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;"><h2>Gastos Comunes</h2></div>
     <div style="display: flex; flex-wrap: wrap; gap: 24px; align-items: flex-start;">
-      <section class="widget" style="flex: 1; min-width: 350px;"><h4 style="margin-top:0;">Filtros de Búsqueda</h4><div style="display: flex; flex-wrap: wrap; gap: 20px; margin-bottom: 20px;"><div style="flex: 1; min-width: 150px;"><label for="filtroParcela"><b>N° Parcela:</b></label><input list="lista-parcelas" id="filtroParcela" placeholder="Todos (1-26)..." style="width:100%;"><datalist id="lista-parcelas">${Array.from({ length: 26 }, (_, i) => `<option value="${i + 1}"></option>`).join('')}</datalist></div><div style="flex: 1; min-width: 150px;"><label for="filtroAnio"><b>Año:</b></label><input type="number" id="filtroAnio" value="${new Date().getFullYear()}" style="width:100%;"></div></div><button id="btnAbrirModalGasto" class="btn">Agregar Gasto Común</button></section>
+      <section class="widget" style="flex: 1; min-width: 350px;"><h4 style="margin-top:0;">Filtros de Búsqueda</h4><div style="display: flex; flex-wrap: wrap; gap: 20px; margin-bottom: 20px;"><div style="flex: 1; min-width: 150px;"><label for="filtroParcela"><b>N° Parcela:</b></label><input list="lista-parcelas" id="filtroParcela" placeholder="1-26..." style="width:100%;"><datalist id="lista-parcelas">${Array.from({ length: 26 }, (_, i) => `<option value="${i + 1}"></option>`).join('')}</datalist></div><div style="flex: 1; min-width: 150px;"><label for="filtroAnio"><b>Año:</b></label><input type="number" id="filtroAnio" value="${new Date().getFullYear()}" style="width:100%;"></div></div><button id="btnAbrirModalGasto" class="btn">Agregar Gasto Común</button></section>
       <section class="widget" style="flex: 2; min-width: 450px;"><h4 style="margin-top:0;">Configuración de TIMC</h4><div style="display: flex; align-items: flex-end; gap: 16px; margin-bottom: 20px;"><div style="min-width: 120px;"><label for="inputTMC"><b>TIMC (%)</b></label><input type="number" id="inputTMC" step="0.1" placeholder="Ej: 25"></div><div><label for="selectMesTMC"><b>Mes</b></label><select id="selectMesTMC" style="padding: 11px 10px;">${MESES.map((m, i) => `<option value="${i + 1}">${m}</option>`).join('')}</select></div><button id="btnGuardarTMC" class="btn">Guardar en Sheet</button></div><div id="timc-display"><h5 style="margin-top:0; margin-bottom: 10px;">TIMC Guardado para el año seleccionado:</h5><div id="timc-list-horizontal" style="display: flex; flex-wrap: wrap; gap: 15px; background: #e9f1fb; padding: 12px; border-radius: 8px;"></div></div></section>
     </div>
     <section id="detalle-gastos" style="margin-top: 2rem;"><h3>Detalle de Gastos</h3><div style="overflow-x:auto;"><table class="table"><thead id="thead-gastos"></thead><tbody id="tbody-gastos"></tbody></table></div></section>
@@ -103,9 +98,17 @@ async function cargarGastosComunes() {
         if (pagoExistente) {
             estado = 'Pagado';
             montoPagado = parseFloat(pagoExistente.Monto_Pagado || 0);
-            const deudaBase = valorGastoComun;
-            saldo = montoPagado - deudaBase;
-            deudaTotal = montoPagado;
+            
+            // ***** INICIO DE LA CORRECCIÓN DE SALDO *****
+            // Se toma la Deuda Total registrada en la hoja al momento del pago.
+            // Si no existe, se asume que la deuda era el valor del Gasto Común.
+            const deudaRegistrada = parseFloat(pagoExistente.Deuda_Total || valorGastoComun);
+            
+            // El saldo es la diferencia entre lo que se pagó y lo que se debía en total en ese momento.
+            saldo = montoPagado - deudaRegistrada;
+            deudaTotal = deudaRegistrada;
+            // ***** FIN DE LA CORRECCIÓN DE SALDO *****
+
             const fechaPagoStr = pagoExistente.Fecha_Pago;
             fechaPago = fechaPagoStr ? new Date(fechaPagoStr.replace(/-/g, '/')).toLocaleDateString('es-CL', {timeZone: 'UTC'}) : '---';
             metodoPago = pagoExistente.Metodo_Pago || '---';
@@ -115,21 +118,11 @@ async function cargarGastosComunes() {
             const diffAnios = hoy.getFullYear() - fechaVencimiento.getFullYear();
             const diffMeses = hoy.getMonth() - fechaVencimiento.getMonth();
             mesesImpagos = diffAnios * 12 + diffMeses;
-            if (hoy.getDate() >= 11) {
-                mesesImpagos++;
-            }
+            if (hoy.getDate() >= 11) mesesImpagos++;
             if (mesesImpagos <= 0) mesesImpagos = 1;
             
-            // =======================================================
-            // ***** INICIO DE LA LÓGICA DE CÁLCULO DE INTERÉS *****
-            // 1. Busca el TIMC para el mes/año actual. Si no existe en la hoja Config_TIMC, es 0.
             const timcAnual = (timcData[anio] && timcData[anio][mesNumero]) ? timcData[anio][mesNumero] : 0;
-            
-            // 2. Aplica tu fórmula exacta: Interés = Valor_Gasto_Comun * TIMC / 100 / 12
             interes = valorGastoComun * (timcAnual / 100) / 12;
-            // ***** FIN DE LA LÓGICA DE CÁLCULO DE INTERÉS *****
-            // =======================================================
-
             multa = (valorGastoComun / 4) * mesesImpagos;
             deudaTotal = valorGastoComun + interes + multa;
             saldo = -deudaTotal;
@@ -168,7 +161,6 @@ async function cargarGastosComunes() {
     });
   }
 
-  // --- Lógica de Eventos ---
   document.getElementById('btnGuardarTMC').addEventListener('click', async () => {
     if (typeof guardarTIMC !== 'function') return mostrarMensaje('Error: La función "guardarTIMC" no se encontró en sheets.js.', 'error');
     const anio = document.getElementById('filtroAnio').value;
