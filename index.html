@@ -47,11 +47,12 @@
 
   <script async defer src="https://apis.google.com/js/api.js" onload="gapiLoaded()"></script>
   <script async defer src="https://accounts.google.com/gsi/client" onload="gisLoaded()"></script>
-  <script src="js/auth.js"></script>
+  
   <script src="js/utils.js"></script>
   <script src="js/sheets.js"></script>
   <script src="js/drive.js"></script>
   <script src="js/gmail.js"></script>
+  
   <script src="js/dashboard.js"></script>
   <script src="js/residentes.js"></script>
   <script src="js/gastos_comunes.js"></script>
@@ -61,57 +62,31 @@
   <script src="js/multas.js"></script>
   <script src="js/asambleas.js"></script>
   <script src="js/informes.js"></script>
+  
+  <script src="js/auth.js"></script>
+
   <script>
-    // --- Navegación activa robusta ---
     document.addEventListener('DOMContentLoaded', function() {
       const menuItems = document.querySelectorAll('#sidebar nav ul li[data-module]');
       function activaMenu(modulo) {
         menuItems.forEach(i => {
-          if (i.getAttribute('data-module') === modulo) {
-            i.classList.add('active');
-          } else {
-            i.classList.remove('active');
-          }
+          if (i.getAttribute('data-module') === modulo) { i.classList.add('active'); } 
+          else { i.classList.remove('active'); }
         });
       }
-      document.querySelector('[data-module="dashboard"]').addEventListener('click', () => {
-        activaMenu('dashboard');
-        cargarDashboard();
-      });
-      document.querySelector('[data-module="residentes"]').addEventListener('click', () => {
-        activaMenu('residentes');
-        cargarResidentes();
-      });
-      document.querySelector('[data-module="gastos_comunes"]').addEventListener('click', () => {
-        activaMenu('gastos_comunes');
-        cargarGastosComunes();
-      });
-      document.querySelector('[data-module="contabilidad"]').addEventListener('click', () => {
-        activaMenu('contabilidad');
-        cargarContabilidad();
-      });
-      document.querySelector('[data-module="comunicaciones"]').addEventListener('click', () => {
-        activaMenu('comunicaciones');
-        cargarComunicaciones();
-      });
-      document.querySelector('[data-module="mantenciones"]').addEventListener('click', () => {
-        activaMenu('mantenciones');
-        cargarMantenciones();
-      });
-      document.querySelector('[data-module="multas"]').addEventListener('click', () => {
-        activaMenu('multas');
-        cargarMultas();
-      });
-      document.querySelector('[data-module="asambleas"]').addEventListener('click', () => {
-        activaMenu('asambleas');
-        cargarAsambleas();
-      });
-      document.querySelector('[data-module="informes"]').addEventListener('click', () => {
-        activaMenu('informes');
-        cargarInformes();
+      
+      // Se asignan los eventos a los botones del menú
+      menuItems.forEach(item => {
+        item.addEventListener('click', () => {
+          const modulo = item.getAttribute('data-module');
+          activaMenu(modulo);
+          // Llama a la función correspondiente al módulo usando una variable
+          // ej: window['cargarDashboard']()
+          window[`cargar${modulo.charAt(0).toUpperCase() + modulo.slice(1).replace('_', '')}`]();
+        });
       });
       window.activaMenu = activaMenu;
     });
   </script>
-</body>
+  </body>
 </html>
