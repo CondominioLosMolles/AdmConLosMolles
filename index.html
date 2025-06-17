@@ -46,27 +46,27 @@
   </div>
 
   <!-- Autenticación -->
-  <script src="js/auth.js?v=final-fix"></script>
+  <script src="js/auth.js"></script>
   <script async defer src="https://apis.google.com/js/api.js" onload="gapiLoaded()"></script>
   <script async defer src="https://accounts.google.com/gsi/client" onload="gisLoaded()"></script>
 
-  <!-- Utilidades y dependencias comunes -->
-  <script src="js/utils.js?v=final-fix"></script>
-  <script src="js/sheets.js?v=final-fix"></script>
-  <script src="js/drive.js?v=final-fix"></script>
-  <script src="js/gmail.js?v=final-fix"></script>
+  <!-- Utilidades comunes -->
+  <script src="js/utils.js"></script>
+  <script src="js/sheets.js"></script>
+  <script src="js/drive.js"></script>
+  <script src="js/gmail.js"></script>
 
-  <!-- 📌 Módulos base necesarios antes del dashboard -->
+  <!-- 📌 Módulos con funciones compartidas (antes de cualquier otro) -->
   <script src="js/contabilidad.js"></script>
   <script src="js/informes.js"></script>
 
-  <!-- Dashboard -->
+  <!-- Dashboard debe venir después de contabilidad/informes -->
   <script src="js/dashboard.js"></script>
 
-  <!-- Otros módulos -->
+  <!-- Otros módulos funcionales -->
   <script src="js/residentes.js"></script>
   <script src="js/gastos_comunes.js"></script>
-  <script src="js/comunicaciones.js?v=final-fix"></script>
+  <script src="js/comunicaciones.js"></script>
   <script src="js/mantenciones.js"></script>
   <script src="js/multas.js"></script>
   <script src="js/asambleas.js"></script>
@@ -89,6 +89,7 @@
             window[funcName]();
           } else {
             console.error(`La función ${funcName} no está definida.`);
+            mostrarMensaje(`Error al cargar ${modulo}: la función ${funcName} no está definida.`, 'error');
           }
         });
       });
@@ -99,7 +100,12 @@
           console.log("Señal de autenticación recibida. El sistema está listo para cargar el dashboard.");
           document.getElementById('login-screen').style.display = 'none';
           document.getElementById('app').style.display = 'flex';
-          cargarDashboard();
+          if (typeof cargarDashboard === 'function') {
+            cargarDashboard();
+          } else {
+            console.error("La función cargarDashboard no está definida.");
+            mostrarMensaje("Error: la función cargarDashboard no está definida.", 'error');
+          }
         });
       }
     });
