@@ -7,7 +7,6 @@ async function cargarDashboard() {
   let residentes = [], pagos = [], egresos = [], mantenciones = [];
   
   try {
-    // Ya no se necesita el "guardia de seguridad". Se piden los datos de forma optimizada.
     const [
         residentesData,
         pagosData,
@@ -30,8 +29,7 @@ async function cargarDashboard() {
     mostrarMensaje('Error al cargar datos del dashboard: ' + e.message, 'error');
     return;
   }
-
-  // --- El resto de la función es idéntico y no necesita cambios ---
+  
   const activos = residentes.filter(r => r && r[7] === 'Activo').length;
   const mesActual = new Date().toISOString().slice(0,7);
   const ingresosMes = pagos.filter(p => p && p[13] && p[13].startsWith(mesActual)).reduce((a,b) => a + Number(b[6]||0), 0);
@@ -50,6 +48,7 @@ async function cargarDashboard() {
   const hoy = new Date();
   for (let i = 11; i >= 0; i--) { const d = new Date(hoy.getFullYear(), hoy.getMonth() - i, 1); const mesNombre = meses[d.getMonth()]; const anio = d.getFullYear(); labels.push(mesNombre + '\n' + anio); const periodo = d.toISOString().slice(0,7); ingresosPorMes.push(pagos.filter(p => p && p[13] && p[13].startsWith(periodo)).reduce((a,b) => a + Number(b[6]||0), 0)); egresosPorMes.push(egresos.filter(e => e && e[1] && e[1].startsWith(periodo)).reduce((a,b) => a + Number(b[6]||0), 0)); }
   setTimeout(() => { const maxY = Math.max(...ingresosPorMes, ...egresosPorMes, 100000); let stepSize = 100000; if (maxY <= 500000) stepSize = 50000; if (maxY <= 100000) stepSize = 10000; let suggestedMax = Math.ceil(maxY / stepSize) * stepSize; new Chart(document.getElementById('graficoIngresosEgresos'), { type: 'bar', data: { labels, datasets: [ { label: 'Ingresos', data: ingresosPorMes, backgroundColor:'#4e91f9' }, { label: 'Egresos', data: egresosPorMes, backgroundColor:'#7fd6c2' } ] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'top' } }, scales: { x: { ticks: { autoSkip: false } }, y: { beginAtZero: true, suggestedMax: suggestedMax, ticks: { callback: value => '$' + value.toLocaleString('es-CL'), stepSize: stepSize } } } } }); }, 100);
+
   ocultarSpinner();
 }
 
