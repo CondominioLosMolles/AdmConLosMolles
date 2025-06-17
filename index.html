@@ -75,18 +75,18 @@
         });
       }
       
-      // Se asignan los eventos a los botones del menú
       menuItems.forEach(item => {
         item.addEventListener('click', () => {
           const modulo = item.getAttribute('data-module');
           activaMenu(modulo);
-          // Llama a la función correspondiente al módulo usando una variable
-          // ej: window['cargarDashboard']()
-          window[`cargar${modulo.charAt(0).toUpperCase() + modulo.slice(1).replace('_', '')}`]();
+          const funcName = `cargar${modulo.charAt(0).toUpperCase() + modulo.slice(1).replace(/_([a-z])/g, g => g[1].toUpperCase())}`;
+          if (typeof window[funcName] === 'function') {
+            window[funcName]();
+          }
         });
       });
       window.activaMenu = activaMenu;
     });
   </script>
-  </body>
+</body>
 </html>
