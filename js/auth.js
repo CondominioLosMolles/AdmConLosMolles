@@ -1,130 +1,83 @@
 // js/auth.js
 
+// ***** PEGA AQUÍ TU ID DE CLIENTE OBTENIDO DE GOOGLE CLOUD *****
 const CLIENT_ID = '997872453031-5o8s2o6v3qt722fb3p51a2r7bo24ncee.apps.googleusercontent.com';
-const SCOPES = 'https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/gmail.send openid email profile';
+// ***************************************************************
 
-let googleUser = null;
+const SCOPES = 'https://www.googleapis.com/auth/spreadsheets';
+
 let tokenClient;
 let gapiInited = false;
 let gisInited = false;
-let accessToken = null;
 
-// Inicializa GAPI
+// Funciones que se llaman desde el index.html al cargar los scripts de Google
 function gapiLoaded() {
-  gapi.load('client', initializeGapiClient);
+    gapi.load('client', initializeGapiClient);
 }
 
-async function initializeGapiClient() {
-  await gapi.client.init({
-    discoveryDocs: [
-      'https://sheets.googleapis.com/$discovery/rest?version=v4',
-      'https://www.googleapis.com/discovery/v1/apis/drive/v3/rest',
-      'https://www.googleapis.com/discovery/v1/apis/gmail/v1/rest'
-    ]
-  });
-  gapiInited = true;
-  maybeEnableLogin();
-}
-
-// Inicializa Google Identity Services
 function gisLoaded() {
-  tokenClient = google.accounts.oauth2.initTokenClient({
-    client_id: CLIENT_ID,
-    scope: SCOPES,
-    callback: '', // Se define en handleAuthClick
-  });
-  gisInited = true;
-  maybeEnableLogin();
+    tokenClient = google.accounts.oauth2.initTokenClient({
+        client_id: CLIENT_ID,
+        scope: SCOPES,
+        callback: '', // El callback se define dinámicamente
+    });
+    gisInited = true;
+    checkGapiAndGis();
 }
 
-// Habilita el botón de login solo cuando ambas APIs están listas
-function maybeEnableLogin() {
-  if (gapiInited && gisInited) {
-    const loginBtn = document.getElementById('loginBtn');
-    if (loginBtn) loginBtn.disabled = false;
-  }
+// Inicializa el cliente de la API de Google (para Sheets)
+async function initializeGapiClient() {
+    await gapi.client.init({
+        // La API Key no es necesaria si usamos OAuth2
+        discoveryDocs: ["https://sheets.googleapis.com/$discovery/rest?version=v4"],
+    });
+    gapiInited = true;
+    checkGapiAndGis();
 }
 
-// Obtiene el email desde el access_token usando la endpoint de userinfo
-async function obtenerEmailDesdeAccessToken(token) {
-  const res = await fetch('https://openidconnect.googleapis.com/v1/userinfo', {
-    headers: { Authorization: 'Bearer ' + token }
-  });
-  if (!res.ok) throw new Error('No se pudo obtener el correo del usuario');
-  const data = await res.json();
-  return data.email;
+// Se asegura de que tanto la API de Google como el sistema de autenticación estén listos
+function checkGapiAndGis() {
+    if (gapiInited && gisInited) {
+        document.getElementById('loginBtn').style.visibility = 'visible';
+    }
 }
 
-// Maneja el clic en "Iniciar sesión"
+// Inicia el proceso de autenticación cuando se hace clic en el botón
 function handleAuthClick() {
-  tokenClient.callback = async (resp) => {
-    if (resp.error) {
-      mostrarMensaje('Error de autenticación: ' + resp.error, 'error');
-      return;
+    tokenClient.callback = async (resp) => {
+        if (resp.error !== undefined) {
+            throw (resp);
+        }
+        document.getElementById('login-screen').style.display = 'none';
+        document.getElementById('app').style.display = 'flex';
+        await cargarDashboard(); // Carga el dashboard solo después de una autenticación exitosa
+    };
+
+    if (gapi.client.getToken() === null) {
+        tokenClient.requestAccessToken({ prompt: 'consent' });
+    } else {
+        tokenClient.requestAccessToken({ prompt: '' });
     }
-    try {
-      accessToken = resp.access_token;
-      const email = await obtenerEmailDesdeAccessToken(accessToken);
-      if (!email) {
-        mostrarMensaje('No se pudo obtener el correo del usuario.', 'error');
-        handleSignout();
-        return;
-      }
-      if (email !== 'losmollestunquen@gmail.com') {
-        mostrarMensaje('Acceso restringido solo para el administrador autorizado.', 'error');
-        handleSignout();
-        return;
-      }
-      googleUser = email;
-      document.getElementById('login-screen').style.display = 'none';
-      document.getElementById('app').style.display = 'flex';
-      cargarDashboard();
-    } catch (e) {
-      mostrarMensaje('No se pudo obtener el correo del usuario o no tienes permisos suficientes.', 'error');
-      handleSignout();
-    }
-  };
-  tokenClient.requestAccessToken({prompt: 'consent', include_granted_scopes: true});
 }
 
-// Cierra sesión y vuelve a mostrar la pantalla de login
-function handleSignout() {
-  googleUser = null;
-  accessToken = null;
-  if (window.gapi && gapi.client) {
-    gapi.client.setToken('');
-  }
-  document.getElementById('app').style.display = 'none';
-  document.getElementById('login-screen').style.display = 'flex';
+// Cierra la sesión
+function handleSignoutClick() {
+    const token = gapi.client.getToken();
+    if (token !== null) {
+        google.accounts.oauth2.revoke(token.access_token, () => {
+            gapi.client.setToken('');
+            document.getElementById('app').style.display = 'none';
+            document.getElementById('login-screen').style.display = 'flex';
+        });
+    }
 }
 
-// Carga los scripts de Google al cargar la página
-document.addEventListener('DOMContentLoaded', () => {
-  document.getElementById('app').style.display = 'none';
-  document.getElementById('login-screen').style.display = 'flex';
-
-  const loginBtn = document.getElementById('loginBtn');
-  if (loginBtn) loginBtn.disabled = true;
-
-  // Cargar scripts de Google
-  const gapiScript = document.createElement('script');
-  gapiScript.src = 'https://apis.google.com/js/api.js';
-  gapiScript.onload = gapiLoaded;
-  document.body.appendChild(gapiScript);
-
-  const gisScript = document.createElement('script');
-  gisScript.src = 'https://accounts.google.com/gsi/client';
-  gisScript.onload = gisLoaded;
-  document.body.appendChild(gisScript);
-
-  // Botón de login
-  if (loginBtn) {
-    loginBtn.addEventListener('click', handleAuthClick);
-  }
-
-  // Botón de logout
-  const logoutBtn = document.getElementById('logoutBtn');
-  if (logoutBtn) {
-    logoutBtn.addEventListener('click', handleSignout);
-  }
-});
+// Eventos de los botones de login/logout
+window.onload = function() {
+    // Es importante esperar a que la ventana se cargue completamente
+    const loginBtn = document.getElementById('loginBtn');
+    const logoutBtn = document.getElementById('logoutBtn');
+    
+    if (loginBtn) loginBtn.addEventListener('click', handleAuthClick);
+    if (logoutBtn) logoutBtn.addEventListener('click', handleSignoutClick);
+}
