@@ -7,8 +7,9 @@ async function cargarDashboard() {
   let residentes = [], pagos = [], egresos = [], mantenciones = [];
   
   try {
-    // ***** INICIO DE LA CORRECCIÓN *****
-    // Se piden todos los datos al mismo tiempo para evitar el error de sincronización.
+    // ***** CORRECCIÓN DE ESTABILIDAD *****
+    // Se piden todos los datos al mismo tiempo usando Promise.all para evitar
+    // el error de sincronización "Cross-Origin-Opener-Policy".
     const [
         residentesData,
         pagosData,
@@ -21,17 +22,16 @@ async function cargarDashboard() {
         obtenerMantenciones()
     ]);
 
-    residentes = residentesData;
-    pagos = pagosData;
-    egresos = egresosData;
-    mantenciones = mantencionesData;
+    residentes = residentesData || [];
+    pagos = pagosData || [];
+    egresos = egresosData || [];
+    mantenciones = mantencionesData || [];
     // ***** FIN DE LA CORRECCIÓN *****
 
   } catch (e) {
     ocultarSpinner();
-    // Se añade un mensaje de error más específico si una función no se encuentra.
     if (e instanceof ReferenceError) {
-        mostrarMensaje(`Error: Una de las funciones para obtener datos (ej: obtenerEgresos) no se encontró en sheets.js.`, 'error');
+        mostrarMensaje(`Error de Carga: Una función vital (ej: ${e.message.split(" ")[0]}) no se encontró en sheets.js. Esto puede ser un problema de autenticación. Intenta recargar la página.`, 'error');
     } else {
         mostrarMensaje('Error al cargar datos del dashboard: ' + e.message, 'error');
     }
@@ -39,16 +39,15 @@ async function cargarDashboard() {
   }
 
   // El resto de la función para calcular y mostrar los widgets no cambia.
-  const activos = residentes.filter(r => r[7] === 'Activo').length;
+  const activos = residentes.filter(r => r && r[7] === 'Activo').length;
   const mesActual = new Date().toISOString().slice(0,7);
   
-  // Se añaden verificaciones para evitar errores si los datos no vienen como se espera.
   const ingresosMes = pagos.filter(p => p && p[13] && p[13].startsWith(mesActual)).reduce((a,b) => a + Number(b[6]||0), 0);
   const egresosMes = egresos.filter(e => e && e[1] && e[1].startsWith(mesActual)).reduce((a,b) => a + Number(b[6]||0), 0);
   const saldoCaja = pagos.reduce((a,b) => a + Number(b[6]||0), 0) - egresos.reduce((a,b) => a + Number(b[6]||0), 0);
   const mantPendientes = mantenciones.filter(m => m && (m[5] === 'Pendiente' || m[5] === 'Urgente')).length;
 
-  const morosos = residentes.filter(r => r[7] === 'Moroso');
+  const morosos = residentes.filter(r => r && r[7] === 'Moroso');
   const parcelasMorosas = morosos.map(r => r[3]);
   const deudaMorosos = pagos
     .filter(p => p && parcelasMorosas.includes(p[2]) && p[15] === 'Moroso')
@@ -92,31 +91,13 @@ async function cargarDashboard() {
     if (maxY <= 100000) stepSize = 10000;
     let suggestedMax = Math.ceil(maxY / stepSize) * stepSize;
     new Chart(document.getElementById('graficoIngresosEgresos'), {
-      type: 'bar',
-      data: {
-        labels,
-        datasets: [
-          { label: 'Ingresos', data: ingresosPorMes, backgroundColor:'#4e91f9' },
-          { label: 'Egresos', data: egresosPorMes, backgroundColor:'#7fd6c2' }
-        ]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: { legend: { position: 'top' } },
-        scales: {
-          x: { ticks: { autoSkip: false } },
-          y: {
-            beginAtZero: true,
-            suggestedMax: suggestedMax,
-            ticks: { callback: value => '$' + value.toLocaleString('es-CL'), stepSize: stepSize }
-          }
-        }
-      }
+      type: 'bar', data: { labels, datasets: [ { label: 'Ingresos', data: ingresosPorMes, backgroundColor:'#4e91f9' }, { label: 'Egresos', data: egresosPorMes, backgroundColor:'#7fd6c2' } ] },
+      options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'top' } }, scales: { x: { ticks: { autoSkip: false } }, y: { beginAtZero: true, suggestedMax: suggestedMax, ticks: { callback: value => '$' + value.toLocaleString('es-CL'), stepSize: stepSize } } } }
     });
   }, 100);
 
   ocultarSpinner();
 }
 
+// Este evento ya estaba en tu archivo, asegúrate de que siga existiendo.
 document.querySelector('[data-module="dashboard"]').addEventListener('click', cargarDashboard);
