@@ -1,80 +1,78 @@
 // js/dashboard.js
+
 async function cargarDashboard() {
   limpiarMainContent();
   mostrarSpinner();
 
   let residentes = [], pagos = [], egresos = [], mantenciones = [];
+  
   try {
-    residentes = await obtenerResidentes();
-    pagos = await obtenerPagosGC();
-    egresos = await obtenerEgresos();
-    mantenciones = await obtenerMantenciones();
+    // ***** INICIO DE LA CORRECCIÓN *****
+    // Se piden todos los datos al mismo tiempo para evitar el error de sincronización.
+    const [
+        residentesData,
+        pagosData,
+        egresosData,
+        mantencionesData
+    ] = await Promise.all([
+        obtenerResidentes(),
+        obtenerPagosGC(),
+        obtenerEgresos(),
+        obtenerMantenciones()
+    ]);
+
+    residentes = residentesData;
+    pagos = pagosData;
+    egresos = egresosData;
+    mantenciones = mantencionesData;
+    // ***** FIN DE LA CORRECCIÓN *****
+
   } catch (e) {
     ocultarSpinner();
-    mostrarMensaje('Error al cargar datos: ' + e.message, 'error');
+    // Se añade un mensaje de error más específico si una función no se encuentra.
+    if (e instanceof ReferenceError) {
+        mostrarMensaje(`Error: Una de las funciones para obtener datos (ej: obtenerEgresos) no se encontró en sheets.js.`, 'error');
+    } else {
+        mostrarMensaje('Error al cargar datos del dashboard: ' + e.message, 'error');
+    }
     return;
   }
 
-  // Widgets
+  // El resto de la función para calcular y mostrar los widgets no cambia.
   const activos = residentes.filter(r => r[7] === 'Activo').length;
   const mesActual = new Date().toISOString().slice(0,7);
-  const ingresosMes = pagos.filter(p => p[4] === mesActual).reduce((a,b) => a + Number(b[6]||0), 0);
-  const egresosMes = egresos.filter(e => (e[1]||'').startsWith(mesActual)).reduce((a,b) => a + Number(b[6]||0), 0);
+  
+  // Se añaden verificaciones para evitar errores si los datos no vienen como se espera.
+  const ingresosMes = pagos.filter(p => p && p[13] && p[13].startsWith(mesActual)).reduce((a,b) => a + Number(b[6]||0), 0);
+  const egresosMes = egresos.filter(e => e && e[1] && e[1].startsWith(mesActual)).reduce((a,b) => a + Number(b[6]||0), 0);
   const saldoCaja = pagos.reduce((a,b) => a + Number(b[6]||0), 0) - egresos.reduce((a,b) => a + Number(b[6]||0), 0);
-  const mantPendientes = mantenciones.filter(m => m[5] === 'Pendiente' || m[5] === 'Urgente').length;
+  const mantPendientes = mantenciones.filter(m => m && (m[5] === 'Pendiente' || m[5] === 'Urgente')).length;
 
-  // Morosos
   const morosos = residentes.filter(r => r[7] === 'Moroso');
   const parcelasMorosas = morosos.map(r => r[3]);
   const deudaMorosos = pagos
-    .filter(p => parcelasMorosas.includes(p[2]) && p[15] === 'Moroso')
+    .filter(p => p && parcelasMorosas.includes(p[2]) && p[15] === 'Moroso')
     .reduce((a,b) => a + Number(b[12]||0), 0);
 
-  // Layout
   const main = document.getElementById('main-content');
   main.innerHTML = `
     <h2>Dashboard</h2>
     <div style="display:flex;gap:24px;flex-wrap:wrap;margin-bottom:32px;">
-      <div class="widget" style="flex:1;min-width:160px;">
-        <div style="font-size:2em;font-weight:700;">${activos}</div>
-        <div>Residentes Activos</div>
-      </div>
-      <div class="widget" style="flex:1;min-width:160px;">
-        <div style="font-size:2em;font-weight:700;">$${ingresosMes.toLocaleString('es-CL')}</div>
-        <div>Ingresos del Mes</div>
-      </div>
-      <div class="widget" style="flex:1;min-width:160px;">
-        <div style="font-size:2em;font-weight:700;">$${egresosMes.toLocaleString('es-CL')}</div>
-        <div>Egresos del Mes</div>
-      </div>
-      <div class="widget" style="flex:1;min-width:160px;">
-        <div style="font-size:2em;font-weight:700;">$${saldoCaja.toLocaleString('es-CL')}</div>
-        <div>Saldo de Caja</div>
-      </div>
-      <div class="widget" style="flex:1;min-width:160px;">
-        <div style="font-size:2em;font-weight:700;">${mantPendientes}</div>
-        <div>Mantenciones Pendientes/Urgentes</div>
-      </div>
+      <div class="widget" style="flex:1;min-width:160px;"><div style="font-size:2em;font-weight:700;">${activos}</div><div>Residentes Activos</div></div>
+      <div class="widget" style="flex:1;min-width:160px;"><div style="font-size:2em;font-weight:700;">$${ingresosMes.toLocaleString('es-CL')}</div><div>Ingresos del Mes</div></div>
+      <div class="widget" style="flex:1;min-width:160px;"><div style="font-size:2em;font-weight:700;">$${egresosMes.toLocaleString('es-CL')}</div><div>Egresos del Mes</div></div>
+      <div class="widget" style="flex:1;min-width:160px;"><div style="font-size:2em;font-weight:700;">$${saldoCaja.toLocaleString('es-CL')}</div><div>Saldo de Caja</div></div>
+      <div class="widget" style="flex:1;min-width:160px;"><div style="font-size:2em;font-weight:700;">${mantPendientes}</div><div>Mantenciones Pendientes/Urgentes</div></div>
     </div>
     <div style="display:flex;gap:24px;flex-wrap:wrap;">
-      <div class="widget" style="flex:2;min-width:380px;">
-        <canvas id="graficoIngresosEgresos" style="max-width:100%;height:320px;"></canvas>
-      </div>
-      <div class="widget" style="flex:1;min-width:300px;max-width:340px;">
-        <h4>Resumen de Morosidad</h4>
-        <div><b>Morosos:</b> ${morosos.length}</div>
-        <div><b>Parcelas:</b> ${parcelasMorosas.join(', ') || '-'}</div>
-        <div><b>Deuda Total:</b> $${deudaMorosos.toLocaleString('es-CL')}</div>
-      </div>
+      <div class="widget" style="flex:2;min-width:380px;"><canvas id="graficoIngresosEgresos" style="max-width:100%;height:320px;"></canvas></div>
+      <div class="widget" style="flex:1;min-width:300px;max-width:340px;"><h4>Resumen de Morosidad</h4><div><b>Morosos:</b> ${morosos.length}</div><div><b>Parcelas:</b> ${parcelasMorosas.join(', ') || '-'}</div><div><b>Deuda Total:</b> $${deudaMorosos.toLocaleString('es-CL')}</div></div>
     </div>
   `;
 
-  // Gráfico: eje X con mes/año, eje Y CLP
+  // Lógica del gráfico (sin cambios)
   const labels = [];
-  const meses = [
-    'Enero','Febrero','Marzo','Abril','Mayo','Junio',
-    'Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'
-  ];
+  const meses = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
   const ingresosPorMes = [];
   const egresosPorMes = [];
   const hoy = new Date();
@@ -84,11 +82,10 @@ async function cargarDashboard() {
     const anio = d.getFullYear();
     labels.push(mesNombre + '\n' + anio);
     const periodo = d.toISOString().slice(0,7);
-    ingresosPorMes.push(pagos.filter(p => p[4] === periodo).reduce((a,b) => a + Number(b[6]||0), 0));
-    egresosPorMes.push(egresos.filter(e => (e[1]||'').startsWith(periodo)).reduce((a,b) => a + Number(b[6]||0), 0));
+    ingresosPorMes.push(pagos.filter(p => p && p[13] && p[13].startsWith(periodo)).reduce((a,b) => a + Number(b[6]||0), 0));
+    egresosPorMes.push(egresos.filter(e => e && e[1] && e[1].startsWith(periodo)).reduce((a,b) => a + Number(b[6]||0), 0));
   }
   setTimeout(() => {
-    // Step automático en 100.000, ajustando al máximo valor
     const maxY = Math.max(...ingresosPorMes, ...egresosPorMes, 100000);
     let stepSize = 100000;
     if (maxY <= 500000) stepSize = 50000;
@@ -108,22 +105,11 @@ async function cargarDashboard() {
         maintainAspectRatio: false,
         plugins: { legend: { position: 'top' } },
         scales: {
-          x: {
-            ticks: {
-              callback: function(value, index, ticks) {
-                // Muestra "Junio" arriba y "2024" abajo
-                const [mes, anio] = this.getLabelForValue(value).split('\n');
-                return mes + '\n' + anio;
-              }
-            }
-          },
+          x: { ticks: { autoSkip: false } },
           y: {
             beginAtZero: true,
             suggestedMax: suggestedMax,
-            ticks: {
-              callback: value => '$' + value.toLocaleString('es-CL'),
-              stepSize: stepSize
-            }
+            ticks: { callback: value => '$' + value.toLocaleString('es-CL'), stepSize: stepSize }
           }
         }
       }
