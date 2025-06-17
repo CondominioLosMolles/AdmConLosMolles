@@ -8,8 +8,8 @@ async function cargarDashboard() {
   
   try {
     // ***** CORRECCIÓN DE ESTABILIDAD *****
-    // Se piden todos los datos al mismo tiempo usando Promise.all para evitar
-    // el error de sincronización "Cross-Origin-Opener-Policy".
+    // Se piden todos los datos de las hojas al mismo tiempo usando Promise.all para
+    // evitar el error de sincronización "Cross-Origin-Opener-Policy".
     const [
         residentesData,
         pagosData,
@@ -22,6 +22,7 @@ async function cargarDashboard() {
         obtenerMantenciones()
     ]);
 
+    // Se asignan los resultados, asegurándose de que sean arrays aunque vengan vacíos.
     residentes = residentesData || [];
     pagos = pagosData || [];
     egresos = egresosData || [];
@@ -30,15 +31,17 @@ async function cargarDashboard() {
 
   } catch (e) {
     ocultarSpinner();
+    // Mensaje de error mejorado para el usuario
     if (e instanceof ReferenceError) {
-        mostrarMensaje(`Error de Carga: Una función vital (ej: ${e.message.split(" ")[0]}) no se encontró en sheets.js. Esto puede ser un problema de autenticación. Intenta recargar la página.`, 'error');
+        mostrarMensaje(`Error de Carga: La función "${e.message.split(" ")[0]}" no se encontró en sheets.js. Revisa que el archivo se esté cargando correctamente.`, 'error');
     } else {
         mostrarMensaje('Error al cargar datos del dashboard: ' + e.message, 'error');
     }
     return;
   }
 
-  // El resto de la función para calcular y mostrar los widgets no cambia.
+  // --- El resto de la función para calcular y mostrar los widgets no cambia ---
+  
   const activos = residentes.filter(r => r && r[7] === 'Activo').length;
   const mesActual = new Date().toISOString().slice(0,7);
   
@@ -99,5 +102,4 @@ async function cargarDashboard() {
   ocultarSpinner();
 }
 
-// Este evento ya estaba en tu archivo, asegúrate de que siga existiendo.
 document.querySelector('[data-module="dashboard"]').addEventListener('click', cargarDashboard);
