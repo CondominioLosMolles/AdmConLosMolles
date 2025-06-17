@@ -2,9 +2,7 @@
 const SPREADSHEET_ID = '1bFo5dBC3HM0xupginTBe-hrrUNgkiuUn4fkXXzHide8';
 
 // Sheet IDs según el orden de las hojas en tu Google Sheet.
-// Cambia estos valores si el gid de la hoja es diferente.
-// Para obtener el sheetId correcto, abre la hoja y mira la URL: ...#gid=XXXXXXXX
-const SHEET_ID_RESIDENTES = 1835488459;    // Cambia por el gid real de la hoja "Residentes"
+const SHEET_ID_RESIDENTES = 1835488459;
 const SHEET_ID_PAGOS_GC = 1954366455;
 const SHEET_ID_EGRESOS = 1945700474;
 const SHEET_ID_MANTENCIONES = 895242560;
@@ -118,230 +116,61 @@ async function eliminarPagoGC(id) {
   });
 }
 
-// -------- EGRESOS --------
-async function obtenerEgresos() {
-  const res = await gapi.client.sheets.spreadsheets.values.get({
-    spreadsheetId: SPREADSHEET_ID,
-    range: 'Egresos!A2:H',
-  });
-  return res.result.values || [];
-}
-async function agregarEgreso(datos) {
-  const egresos = await obtenerEgresos();
-  const lastId = egresos.length > 0 ? parseInt(egresos[egresos.length-1][0]) : 0;
-  datos[0] = (lastId + 1).toString();
-  await gapi.client.sheets.spreadsheets.values.append({
-    spreadsheetId: SPREADSHEET_ID,
-    range: 'Egresos!A:H',
-    valueInputOption: 'USER_ENTERED',
-    resource: { values: [datos] }
-  });
-}
-async function eliminarEgreso(id) {
-  const egresos = await obtenerEgresos();
-  const idx = egresos.findIndex(e => e[0] === id);
-  if (idx === -1) throw new Error('No encontrado');
-  const row = idx + 2;
-  await gapi.client.sheets.spreadsheets.batchUpdate({
-    spreadsheetId: SPREADSHEET_ID,
-    resource: {
-      requests: [{
-        deleteDimension: {
-          range: {
-            sheetId: SHEET_ID_EGRESOS,
-            dimension: "ROWS",
-            startIndex: row - 1,
-            endIndex: row
-          }
-        }
-      }]
-    }
-  });
-}
-
-// -------- MANTENCIONES --------
-async function obtenerMantenciones() {
-  const res = await gapi.client.sheets.spreadsheets.values.get({
-    spreadsheetId: SPREADSHEET_ID,
-    range: 'Mantenciones!A2:H',
-  });
-  return res.result.values || [];
-}
-async function agregarMantencion(datos) {
-  const mantenciones = await obtenerMantenciones();
-  const lastId = mantenciones.length > 0 ? parseInt(mantenciones[mantenciones.length-1][0]) : 0;
-  datos[0] = (lastId + 1).toString();
-  await gapi.client.sheets.spreadsheets.values.append({
-    spreadsheetId: SPREADSHEET_ID,
-    range: 'Mantenciones!A:H',
-    valueInputOption: 'USER_ENTERED',
-    resource: { values: [datos] }
-  });
-}
-async function eliminarMantencion(id) {
-  const mantenciones = await obtenerMantenciones();
-  const idx = mantenciones.findIndex(m => m[0] === id);
-  if (idx === -1) throw new Error('No encontrado');
-  const row = idx + 2;
-  await gapi.client.sheets.spreadsheets.batchUpdate({
-    spreadsheetId: SPREADSHEET_ID,
-    resource: {
-      requests: [{
-        deleteDimension: {
-          range: {
-            sheetId: SHEET_ID_MANTENCIONES,
-            dimension: "ROWS",
-            startIndex: row - 1,
-            endIndex: row
-          }
-        }
-      }]
-    }
-  });
-}
-
-// -------- MULTAS --------
-async function obtenerMultas() {
-  const res = await gapi.client.sheets.spreadsheets.values.get({
-    spreadsheetId: SPREADSHEET_ID,
-    range: 'Multas!A2:G',
-  });
-  return res.result.values || [];
-}
-async function agregarMulta(datos) {
-  const multas = await obtenerMultas();
-  const lastId = multas.length > 0 ? parseInt(multas[multas.length-1][0]) : 0;
-  datos[0] = (lastId + 1).toString();
-  await gapi.client.sheets.spreadsheets.values.append({
-    spreadsheetId: SPREADSHEET_ID,
-    range: 'Multas!A:G',
-    valueInputOption: 'USER_ENTERED',
-    resource: { values: [datos] }
-  });
-}
-async function actualizarMulta(datos) {
-  const multas = await obtenerMultas();
-  const idx = multas.findIndex(m => m[0] === datos[0]);
-  if (idx === -1) throw new Error('No encontrada');
-  const row = idx + 2;
-  await gapi.client.sheets.spreadsheets.values.update({
-    spreadsheetId: SPREADSHEET_ID,
-    range: `Multas!A${row}:G${row}`,
-    valueInputOption: 'USER_ENTERED',
-    resource: { values: [datos] }
-  });
-}
-async function eliminarMulta(id) {
-  const multas = await obtenerMultas();
-  const idx = multas.findIndex(m => m[0] === id);
-  if (idx === -1) throw new Error('No encontrada');
-  const row = idx + 2;
-  await gapi.client.sheets.spreadsheets.batchUpdate({
-    spreadsheetId: SPREADSHEET_ID,
-    resource: {
-      requests: [{
-        deleteDimension: {
-          range: {
-            sheetId: SHEET_ID_MULTAS,
-            dimension: "ROWS",
-            startIndex: row - 1,
-            endIndex: row
-          }
-        }
-      }]
-    }
-  });
-}
-
-// -------- ASAMBLEAS --------
-async function obtenerAsambleas() {
-  const res = await gapi.client.sheets.spreadsheets.values.get({
-    spreadsheetId: SPREADSHEET_ID,
-    range: 'Asambleas!A2:F',
-  });
-  return res.result.values || [];
-}
-async function agregarAsamblea(datos) {
-  const asambleas = await obtenerAsambleas();
-  const lastId = asambleas.length > 0 ? parseInt(asambleas[asambleas.length-1][0]) : 0;
-  datos[0] = (lastId + 1).toString();
-  await gapi.client.sheets.spreadsheets.values.append({
-    spreadsheetId: SPREADSHEET_ID,
-    range: 'Asambleas!A:F',
-    valueInputOption: 'USER_ENTERED',
-    resource: { values: [datos] }
-  });
-}
-async function eliminarAsamblea(id) {
-  const asambleas = await obtenerAsambleas();
-  const idx = asambleas.findIndex(a => a[0] === id);
-  if (idx === -1) throw new Error('No encontrada');
-  const row = idx + 2;
-  await gapi.client.sheets.spreadsheets.batchUpdate({
-    spreadsheetId: SPREADSHEET_ID,
-    resource: {
-      requests: [{
-        deleteDimension: {
-          range: {
-            sheetId: SHEET_ID_ASAMBLEAS,
-            dimension: "ROWS",
-            startIndex: row - 1,
-            endIndex: row
-          }
-        }
-      }]
-    }
-  });
-}
-
-// -------- COMUNICACIONES --------
-async function obtenerComunicaciones() {
-  const res = await gapi.client.sheets.spreadsheets.values.get({
-    spreadsheetId: SPREADSHEET_ID,
-    range: 'Comunicaciones!A2:H',
-  });
-  return res.result.values || [];
-}
-async function agregarComunicacion(datos) {
-  const comunicaciones = await obtenerComunicaciones();
-  const lastId = comunicaciones.length > 0 ? parseInt(comunicaciones[comunicaciones.length-1][0]) : 0;
-  datos[0] = (lastId + 1).toString();
-  await gapi.client.sheets.spreadsheets.values.append({
-    spreadsheetId: SPREADSHEET_ID,
-    range: 'Comunicaciones!A:H',
-    valueInputOption: 'USER_ENTERED',
-    resource: { values: [datos] }
-  });
-}
+// -------- OTRAS FUNCIONES (EGRESOS, MANTENCIONES, ETC.) --------
+// ... (Aquí van el resto de tus funciones que no necesitan cambios)
+async function obtenerEgresos(){const res=await gapi.client.sheets.spreadsheets.values.get({spreadsheetId:SPREADSHEET_ID,range:'Egresos!A2:H'});return res.result.values||[]}
+async function agregarEgreso(e){const t=await obtenerEgresos();const s=t.length>0?parseInt(t[t.length-1][0]):0;e[0]=(s+1).toString(),await gapi.client.sheets.spreadsheets.values.append({spreadsheetId:SPREADSHEET_ID,range:'Egresos!A:H',valueInputOption:'USER_ENTERED',resource:{values:[e]}})}
+async function eliminarEgreso(e){const t=await obtenerEgresos();const s=t.findIndex(t=>t[0]===e);if(-1===s)throw new Error('No encontrado');const a=s+2;await gapi.client.sheets.spreadsheets.batchUpdate({spreadsheetId:SPREADSHEET_ID,resource:{requests:[{deleteDimension:{range:{sheetId:SHEET_ID_EGRESOS,dimension:"ROWS",startIndex:a-1,endIndex:a}}}]}})}
+async function obtenerMantenciones(){const res=await gapi.client.sheets.spreadsheets.values.get({spreadsheetId:SPREADSHEET_ID,range:'Mantenciones!A2:H'});return res.result.values||[]}
+async function agregarMantencion(e){const t=await obtenerMantenciones();const s=t.length>0?parseInt(t[t.length-1][0]):0;e[0]=(s+1).toString(),await gapi.client.sheets.spreadsheets.values.append({spreadsheetId:SPREADSHEET_ID,range:'Mantenciones!A:H',valueInputOption:'USER_ENTERED',resource:{values:[e]}})}
+async function eliminarMantencion(e){const t=await obtenerMantenciones();const s=t.findIndex(t=>t[0]===e);if(-1===s)throw new Error('No encontrado');const a=s+2;await gapi.client.sheets.spreadsheets.batchUpdate({spreadsheetId:SPREADSHEET_ID,resource:{requests:[{deleteDimension:{range:{sheetId:SHEET_ID_MANTENCIONES,dimension:"ROWS",startIndex:a-1,endIndex:a}}}]}})}
+async function obtenerMultas(){const res=await gapi.client.sheets.spreadsheets.values.get({spreadsheetId:SPREADSHEET_ID,range:'Multas!A2:G'});return res.result.values||[]}
+async function agregarMulta(e){const t=await obtenerMultas();const s=t.length>0?parseInt(t[t.length-1][0]):0;e[0]=(s+1).toString(),await gapi.client.sheets.spreadsheets.values.append({spreadsheetId:SPREADSHEET_ID,range:'Multas!A:G',valueInputOption:'USER_ENTERED',resource:{values:[e]}})}
+async function actualizarMulta(e){const t=await obtenerMultas();const s=t.findIndex(t=>t[0]===e[0]);if(-1===s)throw new Error('No encontrada');const a=s+2;await gapi.client.sheets.spreadsheets.values.update({spreadsheetId:SPREADSHEET_ID,range:`Multas!A${a}:G${a}`,valueInputOption:'USER_ENTERED',resource:{values:[e]}})}
+async function eliminarMulta(e){const t=await obtenerMultas();const s=t.findIndex(t=>t[0]===e);if(-1===s)throw new Error('No encontrada');const a=s+2;await gapi.client.sheets.spreadsheets.batchUpdate({spreadsheetId:SPREADSHEET_ID,resource:{requests:[{deleteDimension:{range:{sheetId:SHEET_ID_MULTAS,dimension:"ROWS",startIndex:a-1,endIndex:a}}}]}})}
+async function obtenerAsambleas(){const res=await gapi.client.sheets.spreadsheets.values.get({spreadsheetId:SPREADSHEET_ID,range:'Asambleas!A2:F'});return res.result.values||[]}
+async function agregarAsamblea(e){const t=await obtenerAsambleas();const s=t.length>0?parseInt(t[t.length-1][0]):0;e[0]=(s+1).toString(),await gapi.client.sheets.spreadsheets.values.append({spreadsheetId:SPREADSHEET_ID,range:'Asambleas!A:F',valueInputOption:'USER_ENTERED',resource:{values:[e]}})}
+async function eliminarAsamblea(e){const t=await obtenerAsambleas();const s=t.findIndex(t=>t[0]===e);if(-1===s)throw new Error('No encontrada');const a=s+2;await gapi.client.sheets.spreadsheets.batchUpdate({spreadsheetId:SPREADSHEET_ID,resource:{requests:[{deleteDimension:{range:{sheetId:SHEET_ID_ASAMBLEAS,dimension:"ROWS",startIndex:a-1,endIndex:a}}}]}})}
+async function obtenerComunicaciones(){const res=await gapi.client.sheets.spreadsheets.values.get({spreadsheetId:SPREADSHEET_ID,range:'Comunicaciones!A2:H'});return res.result.values||[]}
+async function agregarComunicacion(e){const t=await obtenerComunicaciones();const s=t.length>0?parseInt(t[t.length-1][0]):0;e[0]=(s+1).toString(),await gapi.client.sheets.spreadsheets.values.append({spreadsheetId:SPREADSHEET_ID,range:'Comunicaciones!A:H',valueInputOption:'USER_ENTERED',resource:{values:[e]}})}
 
 
-// -------- FUNCIÓN AGREGADA PARA GUARDAR TIMC (CORREGIDA) --------
+// -------- FUNCIÓN AGREGADA PARA GUARDAR TIMC (VERSIÓN FINAL Y ROBUSTA) --------
 async function guardarTMCenSheet(anio, mes, tmc) {
   const todosLosPagos = await obtenerPagosGC();
   const meses = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
   const nombreMes = meses[mes - 1];
-  const periodoBuscado = `${nombreMes} ${anio}`;
-  
+
+  // ***** INICIO DE LA CORRECCIÓN *****
+  // Se crean los DOS formatos de fecha posibles para buscar en la hoja.
+  const formatoNombreMes = `${nombreMes} ${anio}`;
+  const mesFormateado = String(mes).padStart(2, '0'); // Convierte 6 en "06"
+  const formatoNumeroMes = `${anio}-${mesFormateado}`;
+  // ***** FIN DE LA CORRECCIÓN *****
+
   const actualizaciones = [];
   todosLosPagos.forEach((fila, index) => {
-    // La columna 4 del array (índice 4) es "Periodo", que corresponde a la columna E en la hoja.
-    // Se compara sin importar mayúsculas/minúsculas para más robustez.
-    if (fila[4] && fila[4].toLowerCase() === periodoBuscado.toLowerCase()) {
-      actualizaciones.push({
-        // **** ¡AQUÍ ESTÁ LA CORRECCIÓN! ****
-        // Se cambió la columna de 'P' a 'J' para que coincida con tu hoja.
-        range: `Pagos_GC!J${index + 2}`,
-        values: [[tmc]]
-      });
+    const periodoEnSheet = fila[4]; // Columna E es "Periodo"
+    if (periodoEnSheet) {
+      const periodoEnSheetLower = periodoEnSheet.toLowerCase().trim();
+
+      // ***** INICIO DE LA CORRECCIÓN *****
+      // Ahora la función busca si el periodo coincide con CUALQUIERA de los dos formatos.
+      if (periodoEnSheetLower === formatoNombreMes.toLowerCase() || periodoEnSheetLower === formatoNumeroMes) {
+        actualizaciones.push({
+          range: `Pagos_GC!J${index + 2}`, // Escribe en la columna J
+          values: [[tmc]]
+        });
+      }
+      // ***** FIN DE LA CORRECCIÓN *****
     }
   });
 
   if (actualizaciones.length === 0) {
-    console.log(`No se encontraron registros para el período "${periodoBuscado}" para actualizar el TIMC.`);
+    console.log(`No se encontraron registros para el período que coincida con "${formatoNombreMes}" o "${formatoNumeroMes}". No se actualizó el TIMC.`);
     return;
   }
 
-  // Se usa batchUpdate para actualizar todas las celdas encontradas de una sola vez
   await gapi.client.sheets.spreadsheets.values.batchUpdate({
     spreadsheetId: SPREADSHEET_ID,
     resource: {
