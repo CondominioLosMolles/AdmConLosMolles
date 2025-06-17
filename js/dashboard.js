@@ -7,8 +7,7 @@ async function cargarDashboard() {
   let residentes = [], pagos = [], egresos = [], mantenciones = [];
   
   try {
-    // Ya no se necesita el "guardia de seguridad" porque auth.js se encarga de la espera.
-    // Se piden los datos de forma optimizada.
+    // Ya no se necesita el "guardia de seguridad". Se piden los datos de forma optimizada.
     const [
         residentesData,
         pagosData,
@@ -32,7 +31,7 @@ async function cargarDashboard() {
     return;
   }
 
-  // --- El resto de la función es idéntico al anterior ---
+  // --- El resto de la función es idéntico y no necesita cambios ---
   const activos = residentes.filter(r => r && r[7] === 'Activo').length;
   const mesActual = new Date().toISOString().slice(0,7);
   const ingresosMes = pagos.filter(p => p && p[13] && p[13].startsWith(mesActual)).reduce((a,b) => a + Number(b[6]||0), 0);
