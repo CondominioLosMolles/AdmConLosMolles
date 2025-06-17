@@ -10,7 +10,7 @@ const ENCABEZADOS_PAGOS = [
 
 /**
  * Carga y renderiza el módulo de Gastos Comunes.
- * Versión final con todas las correcciones de cálculo, fecha y saldo.
+ * Versión final con carga de datos optimizada para máxima estabilidad.
  */
 async function cargarGastosComunes() {
   limpiarMainContent();
@@ -21,13 +21,17 @@ async function cargarGastosComunes() {
   let timcData = {};
 
   try {
+    // ***** CORRECCIÓN DE ESTABILIDAD *****
+    // Se piden todos los datos al mismo tiempo con Promise.all para evitar errores de sincronización.
     const [residentes_data, pagosGC_raw, timcs_raw] = await Promise.all([
         obtenerResidentes(),
         obtenerPagosGC(),
         obtenerTIMCs()
     ]);
+    
     residentes = residentes_data;
     
+    // Se procesan los pagos
     pagosGC_obj = pagosGC_raw.map(fila => {
         let obj = {};
         ENCABEZADOS_PAGOS.forEach((encabezado, i) => { obj[encabezado] = fila[i]; });
@@ -38,6 +42,7 @@ async function cargarGastosComunes() {
         return obj;
     }).filter(p => p.N_Parcela);
 
+    // Se procesan los TIMC
     timcs_raw.forEach(fila => {
         const [anio, mes, valor] = fila;
         if (!timcData[anio]) timcData[anio] = {};
@@ -89,47 +94,31 @@ async function cargarGastosComunes() {
     const valorGastoComun = parseFloat(residente[8]);
 
     MESES.forEach((mes, index) => {
-        const mesNumero = index + 1; // 1 para Enero, 12 para Diciembre
+        const mesNumero = index + 1;
         const pagoExistente = pagosGC_obj.find(p => p.N_Parcela == parcela && p.Periodo && p.Periodo.toLowerCase().startsWith(mes.toLowerCase()) && p.anio == anio);
         
         let interes = 0, multa = 0, mesesImpagos = 0, saldo = 0, deudaTotal = valorGastoComun;
         let estado = 'Pendiente', montoPagado = 0, fechaPago = '---', metodoPago = '---';
-
-        // ** CORRECCIÓN CRÍTICA DE FECHA DE VENCIMIENTO **
-        // Los meses en el constructor de Date son base 0 (0=Enero, 1=Febrero).
-        // Se usa mesNumero - 1 para obtener el mes correcto.
         const fechaVencimiento = new Date(anio, mesNumero - 1, 10);
         const hoy = new Date();
 
         if (pagoExistente) {
             estado = 'Pagado';
             montoPagado = parseFloat(pagoExistente.Monto_Pagado || 0);
-            
-            // ** CORRECCIÓN DE CÁLCULO DE SALDO **
-            // La deuda base es el valor del gasto común. Se usa la registrada si existe y es mayor.
             const deudaBase = parseFloat(pagoExistente.Deuda_Total || valorGastoComun);
             saldo = montoPagado - deudaBase;
             deudaTotal = deudaBase;
-
             const fechaPagoStr = pagoExistente.Fecha_Pago;
             fechaPago = fechaPagoStr ? new Date(fechaPagoStr.replace(/-/g, '/')).toLocaleDateString('es-CL') : '---';
             metodoPago = pagoExistente.Metodo_Pago || '---';
         } else if (hoy > fechaVencimiento) {
             estado = 'Moroso';
             
-            // ** CORRECCIÓN DE CÁLCULO DE MESES IMPAGOS **
             const diffAnios = hoy.getFullYear() - fechaVencimiento.getFullYear();
             const diffMeses = hoy.getMonth() - fechaVencimiento.getMonth();
             mesesImpagos = diffAnios * 12 + diffMeses;
-            // Si ya pasamos el día 10 del mes actual, se cuenta el mes actual como impago también.
-            // Esto asegura que Enero vencido en Junio cuente 6 meses (Ene, Feb, Mar, Abr, May, Jun).
-            if (hoy.getDate() >= 11) {
-                mesesImpagos += 1;
-            }
-            // Si la diferencia es 0 (ej: 20 de Enero vs 10 de Enero), el resultado es 1 mes de atraso.
-            if (diffMeses === 0 && diffAnios === 0) {
-                mesesImpagos = 1;
-            }
+            if (hoy.getDate() >= 11) mesesImpagos += 1;
+            if (mesesImpagos <= 0) mesesImpagos = 1;
             
             const tmcDecimal = (timcData[anio] && timcData[anio][mesNumero]) ? timcData[anio][mesNumero] : 0;
             interes = valorGastoComun * (tmcDecimal / 12);
@@ -148,13 +137,10 @@ async function cargarGastosComunes() {
   function filtrarYRenderizar() {
     const parcela = document.getElementById('filtroParcela').value;
     const anio = document.getElementById('filtroAnio').value;
-    if (parcela && anio) {
-        renderizarTablaResidente(parcela, anio);
-    } else {
+    if (parcela && anio) { renderizarTablaResidente(parcela, anio); } 
+    else {
         let datosFiltrados = pagosGC_obj;
-        if (anio) {
-            datosFiltrados = datosFiltrados.filter(p => p.anio == anio);
-        }
+        if (anio) { datosFiltrados = datosFiltrados.filter(p => p.anio == anio); }
         renderizarTablaGeneral(datosFiltrados);
     }
   }
@@ -171,8 +157,70 @@ async function cargarGastosComunes() {
   }
 
   // --- Lógica de Eventos ---
-  document.getElementById('btnGuardarTMC').addEventListener('click', async () => { /* sin cambios */ });
-  document.getElementById('formGastoComun').addEventListener('submit', async (e) => { /* sin cambios */ });
+  document.getElementById('btnGuardarTMC').addEventListener('click', async () => {
+    if (typeof guardarTIMC !== 'function') return mostrarMensaje('Error: La función "guardarTIMC" no se encontró en sheets.js.', 'error');
+    const anio = document.getElementById('filtroAnio').value;
+    const mes = document.getElementById('selectMesTMC').value;
+    const valor = parseFloat(document.getElementById('inputTMC').value);
+    if (isNaN(valor) || !mes || !anio) return mostrarMensaje('Debe ingresar TIMC, mes y año.', 'error');
+    mostrarSpinner();
+    try {
+      await guardarTIMC(anio, mes, valor);
+      if (!timcData[anio]) timcData[anio] = {};
+      timcData[anio][mes] = valor / 100;
+      actualizarVistaTIMC();
+      if (document.getElementById('filtroParcela').value) filtrarYRenderizar();
+      mostrarMensaje(`TIMC guardado en la hoja "Config_TIMC".`, 'success');
+    } catch (err) {
+      mostrarMensaje('Error al guardar TIMC: ' + err.message, 'error');
+    } finally {
+      ocultarSpinner();
+    }
+  });
+  
+  const modal = document.getElementById('modalGC');
+  document.getElementById('btnAbrirModalGasto').addEventListener('click', () => {
+      console.log("Botón 'Agregar Gasto Común' clickeado.");
+      modal.style.display = 'flex';
+  });
+  document.getElementById('btnCerrarModal').addEventListener('click', () => modal.style.display = 'none');
+  
+  document.getElementById('inputNParcela').addEventListener('input', (e) => {
+    const res = residentes.find(r => r[3] == e.target.value);
+    document.getElementById('inputNombreResidente').value = res ? res[1] : '';
+    document.getElementById('inputValorGastoComun').value = res ? parseFloat(res[8]).toLocaleString('es-CL', {style:'currency', currency:'CLP'}) : '';
+  });
+
+  document.getElementById('formGastoComun').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const formData = new FormData(e.target);
+    const anioPago = new Date(formData.get('Fecha_Pago').replace(/-/g, '/')).getFullYear();
+    const periodo = `${formData.get('Periodo')} ${anioPago}`;
+    const valorGC_raw = document.getElementById('inputValorGastoComun').value;
+    const valorGC = parseFloat(valorGC_raw.replace(/[^0-9,-]+/g, "").replace(",", "."));
+    const datosParaSheet = [
+      null, formData.get('Nombre_Residente'), formData.get('N_Parcela'), valorGC, periodo,
+      null, formData.get('Monto_Pagado'), null, null, null, null, null, null,
+      formData.get('Fecha_Pago'), formData.get('Metodo_Pago'), 'Pagado'
+    ];
+    mostrarSpinner();
+    try {
+      await agregarPagoGC(datosParaSheet);
+      const nuevoPagoObj = {};
+      ENCABEZADOS_PAGOS.forEach((encabezado, i) => nuevoPagoObj[encabezado] = datosParaSheet[i]);
+      nuevoPagoObj.anio = anioPago;
+      pagosGC_obj.push(nuevoPagoObj);
+      filtrarYRenderizar();
+      modal.style.display = 'none';
+      e.target.reset();
+      mostrarMensaje('Gasto común registrado y actualizado.', 'success');
+    } catch (err) {
+      mostrarMensaje('Error al guardar el gasto: ' + err.message, 'error');
+    } finally {
+      ocultarSpinner();
+    }
+  });
+
   document.getElementById('filtroParcela').addEventListener('input', filtrarYRenderizar);
   document.getElementById('filtroAnio').addEventListener('input', () => {
     actualizarVistaTIMC();
