@@ -16,7 +16,7 @@
       <h2 style="text-align:center;color:#4e91f9;margin-bottom:24px;">Bienvenido a<br>Condominio Los Molles</h2>
       <p style="text-align:center;margin-bottom:32px;color:#2a7ca3;">Para acceder a la administración, por favor inicia sesión con tu cuenta autorizada.</p>
       <div style="display:flex;justify-content:center;">
-        <button id="loginBtn" class="btn" style="visibility:hidden; font-size:1.2em;padding:14px 36px;">Iniciar sesión con Google</button>
+        <button id="loginBtn" class="btn" style="font-size:1.2em;padding:14px 36px;">Iniciar sesión con Google</button>
       </div>
     </div>
   </div>
@@ -42,61 +42,74 @@
       <button id="logoutBtn">Cerrar sesión</button>
     </aside>
     <main id="main-content">
-      </main>
+      <!-- El contenido de los módulos se carga aquí dinámicamente -->
+    </main>
   </div>
-
-  <script src="js/auth.js?v=202506171400"></script>
-  
-  <script async defer src="https://apis.google.com/js/api.js" onload="gapiLoaded()"></script>
-  <script async defer src="https://accounts.google.com/gsi/client" onload="gisLoaded()"></script>
-  
-  <script src="js/utils.js?v=202506171400"></script>
-  <script src="js/sheets.js?v=202506171400"></script>
-  <script src="js/drive.js?v=202506171400"></script>
-  <script src="js/gmail.js?v=202506171400"></script>
-  
-  <script src="js/dashboard.js?v=202506171400"></script>
-  <script src="js/residentes.js?v=202506171400"></script>
-  <script src="js/gastos_comunes.js?v=202506171400"></script>
-  <script src="js/contabilidad.js?v=202506171400"></script>
-  <script src="js/comunicaciones.js?v=202506171400"></script>
-  <script src="js/mantenciones.js?v=202506171400"></script>
-  <script src="js/multas.js?v=202506171400"></script>
-  <script src="js/asambleas.js?v=202506171400"></script>
-  <script src="js/informes.js?v=202506171400"></script>
-
+  <script src="js/auth.js"></script>
+  <script src="js/utils.js"></script>
+  <script src="js/sheets.js"></script>
+  <script src="js/drive.js"></script>
+  <script src="js/gmail.js"></script>
+  <script src="js/dashboard.js"></script>
+  <script src="js/residentes.js"></script>
+  <script src="js/gastos_comunes.js"></script>
+  <script src="js/contabilidad.js"></script>
+  <script src="js/comunicaciones.js"></script>
+  <script src="js/mantenciones.js"></script>
+  <script src="js/multas.js"></script>
+  <script src="js/asambleas.js"></script>
+  <script src="js/informes.js"></script>
   <script>
+    // --- Navegación activa robusta ---
     document.addEventListener('DOMContentLoaded', function() {
       const menuItems = document.querySelectorAll('#sidebar nav ul li[data-module]');
       function activaMenu(modulo) {
         menuItems.forEach(i => {
-          i.classList.toggle('active', i.getAttribute('data-module') === modulo);
-        });
-      }
-      
-      menuItems.forEach(item => {
-        item.addEventListener('click', () => {
-          const modulo = item.getAttribute('data-module');
-          const funcName = `cargar${modulo.charAt(0).toUpperCase() + modulo.slice(1).replace(/_([a-z])/g, g => g[1].toUpperCase())}`;
-          if (typeof window[funcName] === 'function') {
-            activaMenu(modulo);
-            window[funcName]();
+          if (i.getAttribute('data-module') === modulo) {
+            i.classList.add('active');
           } else {
-            console.error(`La función ${funcName} no está definida.`);
+            i.classList.remove('active');
           }
         });
+      }
+      document.querySelector('[data-module="dashboard"]').addEventListener('click', () => {
+        activaMenu('dashboard');
+        cargarDashboard();
+      });
+      document.querySelector('[data-module="residentes"]').addEventListener('click', () => {
+        activaMenu('residentes');
+        cargarResidentes();
+      });
+      document.querySelector('[data-module="gastos_comunes"]').addEventListener('click', () => {
+        activaMenu('gastos_comunes');
+        cargarGastosComunes();
+      });
+      document.querySelector('[data-module="contabilidad"]').addEventListener('click', () => {
+        activaMenu('contabilidad');
+        cargarContabilidad();
+      });
+      document.querySelector('[data-module="comunicaciones"]').addEventListener('click', () => {
+        activaMenu('comunicaciones');
+        cargarComunicaciones();
+      });
+      document.querySelector('[data-module="mantenciones"]').addEventListener('click', () => {
+        activaMenu('mantenciones');
+        cargarMantenciones();
+      });
+      document.querySelector('[data-module="multas"]').addEventListener('click', () => {
+        activaMenu('multas');
+        cargarMultas();
+      });
+      document.querySelector('[data-module="asambleas"]').addEventListener('click', () => {
+        activaMenu('asambleas');
+        cargarAsambleas();
+      });
+      document.querySelector('[data-module="informes"]').addEventListener('click', () => {
+        activaMenu('informes');
+        cargarInformes();
       });
       window.activaMenu = activaMenu;
-
-      if (window.authReadyPromise) {
-        window.authReadyPromise.then(() => {
-          console.log("Señal de autenticación recibida. El sistema está listo para cargar el dashboard.");
-          document.getElementById('login-screen').style.display = 'none';
-          document.getElementById('app').style.display = 'flex';
-          cargarDashboard();
-        });
-      }
     });
   </script>
-  </body>
+</body>
 </html>
