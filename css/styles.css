@@ -17,32 +17,22 @@
   text-overflow: ellipsis;
 }
 .table th.nombre, .table td.nombre {
-  min-width: 160px;
+  min-width: 140px;
   max-width: 200px;
   white-space: normal !important;
   text-overflow: unset !important;
   overflow: visible !important;
   font-weight: 600;
 }
+/* ✅ Ajustes solicitados */
 .table th.rut, .table td.rut {
   min-width: 80px;
-  max-width: 90px;
+  max-width: 85px;
 }
 .table th.parcela, .table td.parcela {
   min-width: 60px;
   max-width: 60px;
   text-align: center;
-}
-.table th.direccion, .table td.direccion {
-  min-width: 100px;
-  max-width: 140px;
-  white-space: normal !important;
-  text-overflow: unset !important;
-  overflow: visible !important;
-}
-.table th.email, .table td.email {
-  min-width: 100px;
-  max-width: 130px;
 }
 .table th.telefono, .table td.telefono {
   min-width: 70px;
@@ -55,8 +45,20 @@
 }
 .table th.valorGC, .table td.valorGC {
   min-width: 70px;
-  max-width: 80px;
+  max-width: 75px;
   text-align: right;
+}
+/* 🔚 Fin de ajustes precisos */
+.table th.direccion, .table td.direccion {
+  min-width: 100px;
+  max-width: 140px;
+  white-space: normal !important;
+  text-overflow: unset !important;
+  overflow: visible !important;
+}
+.table th.email, .table td.email {
+  min-width: 100px;
+  max-width: 130px;
 }
 .table th.acciones, .table td.acciones {
   min-width: 60px;
