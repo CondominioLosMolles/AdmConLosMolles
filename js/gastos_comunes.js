@@ -8,10 +8,8 @@ const ENCABEZADOS_PAGOS = [
     'Multa_1/4', 'Meses_Inpagos', 'Deuda_Total', 'Fecha_Pago', 'Metodo_Pago', 'Estado'
 ];
 
-// INICIO CORRECCIÓN: Función para formatear el período
 function formatearPeriodo(periodo) {
   if (!periodo) return 'N/A';
-  // Revisa si es formato YYYY-MM
   const match = periodo.toString().match(/^(\d{4})-(\d{1,2})$/);
   if (match) {
     const anio = parseInt(match[1]);
@@ -20,10 +18,8 @@ function formatearPeriodo(periodo) {
       return `${MESES[mesIndex]} ${anio}`;
     }
   }
-  // Si ya está en formato "Mes Año" o es otro formato, lo devuelve tal cual.
   return periodo;
 }
-// FIN CORRECCIÓN
 
 async function cargarGastosComunes() {
   limpiarMainContent();
@@ -323,12 +319,10 @@ async function cargarGastosComunes() {
 
   function crearCuerpoCorreo(pago, residente) {
     const nombreResidente = residente[1];
-    const periodoFormateado = formatearPeriodo(pago.Periodo); // CORRECCIÓN
+    const periodoFormateado = formatearPeriodo(pago.Periodo);
     const valorGC = parseFloat(pago.Valor_Gasto_Comun).toLocaleString('es-CL');
     const interes = parseFloat(pago.Interes || 0).toLocaleString('es-CL');
-    // INICIO CORRECCIÓN: Leer la multa usando bracket notation
     const multa = parseFloat(pago['Multa_1/4'] || 0).toLocaleString('es-CL');
-    // FIN CORRECCIÓN
     const deudaTotal = parseFloat(pago.Deuda_Total).toLocaleString('es-CL');
     const montoPagado = parseFloat(pago.Monto_Pagado).toLocaleString('es-CL');
     const saldo = parseFloat(pago.Saldo_Pendiente_o_a_favor || 0);
@@ -347,7 +341,7 @@ async function cargarGastosComunes() {
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; border: 1px solid #ddd; padding: 20px; font-size: 14px; line-height: 1.6;">
         <div style="text-align: center; margin-bottom: 20px;">
           <h2 style="color: #2a7ca3; margin-top: 10px;">Comprobante de Pago de Gasto Común</h2>
-          </div>
+        </div>
         <p>Estimado(a) <strong>${nombreResidente}</strong>,</p>
         <p>Confirmamos la recepción de su pago correspondiente al Gasto Común del período <strong>${periodoFormateado}</strong>.</p>
         <hr>
@@ -367,6 +361,7 @@ async function cargarGastosComunes() {
         </table>
         <hr style="margin-top: 25px;">
         <p style="font-size: 12px; color: #777;">Si tiene alguna consulta sobre este comprobante, no dude en contactarnos.</p>
+        <p style="font-size: 12px; color: #c00; font-weight: bold;">El no pago de la totalidad de su deuda, seguirá generando intereses o multas. Favor regularizar su pago total para no quedar en estado moroso.</p>
         <p>Gracias por su compromiso con la comunidad.</p>
         <p>Se despide Atentamente,<br><strong>Alex Thiele</strong><br>Administrador Condominio Los Molles</p>
       </div>
@@ -397,8 +392,8 @@ async function cargarGastosComunes() {
       .filter(p => p.N_Parcela == parcela && p.Fecha_Pago)
       .sort((a, b) => new Date(b.Fecha_Pago) - new Date(a.Fecha_Pago));
 
-    // El email se obtiene de la columna E (índice 4) de la hoja Residentes.
-    const emailResidente = residente[4];
+    // INICIO CORRECCIÓN: Se usa el índice 5 para el email (Columna F), según solicitud.
+    const emailResidente = residente[5];
 
     if (pagosDelResidente.length === 0) {
         nombreInput.value = residente[1];
@@ -408,10 +403,12 @@ async function cargarGastosComunes() {
     }
     
     const ultimoPago = pagosDelResidente[0];
-    const periodoFormateado = formatearPeriodo(ultimoPago.Periodo); // CORRECCIÓN
+    const periodoFormateado = formatearPeriodo(ultimoPago.Periodo);
     
     nombreInput.value = ultimoPago.Nombre_Residente;
     emailInput.value = emailResidente || 'No registrado';
+    // FIN CORRECCIÓN
+    
     asuntoInput.value = `Comprobante pago gasto común ${periodoFormateado} Parcela Número ${parcela}`;
     cuerpoDiv.innerHTML = crearCuerpoCorreo(ultimoPago, residente);
   });
