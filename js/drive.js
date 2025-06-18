@@ -1,75 +1,72 @@
 // js/drive.js
 
-// Sube un archivo a una carpeta específica en Google Drive
-async function subirComprobante(file, carpetaId) {
-  const metadata = {
-    name: file.name,
-    parents: [carpetaId]
-  };
-  const form = new FormData();
-  form.append('metadata', new Blob([JSON.stringify(metadata)], {type: 'application/json'}));
-  form.append('file', file);
-
-  const res = await fetch(
-    'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart',
-    {
-      method: 'POST',
-      // CORRECCIÓN: Se ajusta cómo se obtiene el token de acceso desde gapi
-      headers: new Headers({'Authorization': 'Bearer ' + gapi.client.getToken().access_token}),
-      body: form,
-    }
-  );
-  return await res.json();
-}
-
-
-// ===================================================================
-// -------- FUNCIÓN NUEVA PARA BUSCAR O CREAR CARPETAS --------
-// ===================================================================
+// --- INICIO CAMBIO: Se define la carpeta base y se añaden funciones ---
+const CARPETA_BASE_ID = '1bfjcxMy4vlfZjwFgJoguhCxvS8Jlr9eZ';
 
 /**
- * Busca una carpeta para una parcela específica dentro de una carpeta principal.
- * Si no la encuentra, la crea.
- * Devuelve el ID de la carpeta encontrada o recién creada.
+ * Busca una carpeta por nombre dentro de la carpeta base. Si no la encuentra, la crea.
+ * @param {string} nombreCarpeta El nombre de la carpeta a buscar/crear (ej. "Parcela 14").
+ * @returns {Promise<string>} El ID de la carpeta encontrada o recién creada.
  */
-async function obtenerCarpetaResidente(numeroParcela) {
-  // ID de la carpeta principal "Parcelas Pagos" que me proporcionaste.
-  const CARPETA_PRINCIPAL_ID = '1bfjcxMy4vlfZjwFgJoguhCxvS8Jlr9eZ';
-  const nombreCarpetaBuscada = `Parcela ${numeroParcela}`;
-
+async function buscarOCrearCarpetaDeParcela(nombreCarpeta) {
   try {
-    // 1. Buscar si la carpeta ya existe
-    const busquedaResponse = await gapi.client.drive.files.list({
-      q: `name='${nombreCarpetaBuscada}' and '${CARPETA_PRINCIPAL_ID}' in parents and mimeType='application/vnd.google-apps.folder' and trashed=false`,
+    const query = `'${CARPETA_BASE_ID}' in parents and name = '${nombreCarpeta}' and mimeType = 'application/vnd.google-apps.folder' and trashed = false`;
+    const response = await gapi.client.drive.files.list({
+      q: query,
       fields: 'files(id, name)',
+      spaces: 'drive',
     });
 
-    if (busquedaResponse.result.files.length > 0) {
-      // Si se encuentra, devuelve el ID de la primera coincidencia
-      const carpetaId = busquedaResponse.result.files[0].id;
-      console.log(`Carpeta encontrada para Parcela ${numeroParcela}. ID: ${carpetaId}`);
-      return carpetaId;
+    if (response.result.files && response.result.files.length > 0) {
+      return response.result.files[0].id; // Carpeta encontrada, devuelve su ID.
     } else {
-      // 2. Si no se encuentra, se crea la carpeta
-      console.log(`No se encontró carpeta para Parcela ${numeroParcela}. Creando una nueva...`);
+      // Si no existe, la crea.
+      console.log(`Carpeta "${nombreCarpeta}" no encontrada, creándola...`);
       const fileMetadata = {
-        'name': nombreCarpetaBuscada,
+        'name': nombreCarpeta,
         'mimeType': 'application/vnd.google-apps.folder',
-        'parents': [CARPETA_PRINCIPAL_ID]
+        'parents': [CARPETA_BASE_ID]
       };
-
-      const creacionResponse = await gapi.client.drive.files.create({
+      const createResponse = await gapi.client.drive.files.create({
         resource: fileMetadata,
         fields: 'id'
       });
-      
-      const nuevaCarpetaId = creacionResponse.result.id;
-      console.log(`Carpeta creada con éxito. Nuevo ID: ${nuevaCarpetaId}`);
-      return nuevaCarpetaId;
+      return createResponse.result.id; // Devuelve el ID de la nueva carpeta.
     }
   } catch (error) {
-    console.error("Error al buscar o crear la carpeta en Drive:", error);
-    mostrarMensaje("Error al acceder a las carpetas de Drive: " + error.result.error.message, 'error');
-    throw new Error("No se pudo obtener la carpeta del residente en Drive.");
+    console.error("Error al buscar o crear la carpeta de parcela:", error);
+    throw new Error("No se pudo encontrar o crear la carpeta en Google Drive.");
   }
 }
+
+/**
+ * Sube un archivo a una carpeta específica en Google Drive.
+ * @param {File} file El objeto del archivo a subir.
+ * @param {string} carpetaId El ID de la carpeta de destino en Drive.
+ * @returns {Promise<object>} El objeto de respuesta de la API de Drive con el id y webViewLink.
+ */
+async function subirComprobante(file, carpetaId) {
+  const metadata = {
+    name: file.name,
+    parents: [carpetaId]
+  };
+  const form = new FormData();
+  form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
+  form.append('file', file);
+
+  // Se añaden los fields 'id' y 'webViewLink' para obtener la URL del archivo.
+  const res = await fetch(
+    'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,webViewLink',
+    {
+      method: 'POST',
+      headers: new Headers({ 'Authorization': 'Bearer ' + gapi.client.getToken().access_token }),
+      body: form,
+    }
+  );
+  if (!res.ok) {
+    const error = await res.json();
+    throw new Error(`Error al subir el archivo: ${error.error.message}`);
+  }
+  return await res.json();
+}
+// --- FIN CAMBIO ---
