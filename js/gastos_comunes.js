@@ -62,6 +62,9 @@ async function cargarGastosComunes() {
   
   const main = document.getElementById('main-content');
   main.innerHTML = `
+    <style>
+      .estado-abono { background-color: #ffc107; color: #333; }
+    </style>
     <div style="display:flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;"><h2>Gastos Comunes</h2></div>
     
     <div style="display: flex; flex-wrap: wrap; gap: 24px; align-items: stretch;">
@@ -141,7 +144,7 @@ async function cargarGastosComunes() {
     if (!datos || datos.length === 0) { tbodyGastos.innerHTML = `<tr><td colspan="7" style="text-align:center; padding:20px;">No hay registros para el año seleccionado. Filtra por parcela para ver el detalle anual.</td></tr>`; return; }
     datos.sort((a,b) => (b.Fecha_Pago ? new Date(b.Fecha_Pago) : 0) - (a.Fecha_Pago ? new Date(a.Fecha_Pago) : 0));
     datos.forEach(pago => {
-        const estadoClass = (pago.Estado || 'pendiente').toLowerCase().trim();
+        const estadoClass = (pago.Estado || 'pendiente').toLowerCase().trim().replace(' ', '-');
         const tr = document.createElement('tr');
         tr.innerHTML = `<td>${pago.Nombre_Residente || 'N/A'}</td><td>${pago.N_Parcela}</td><td>${formatearPeriodo(pago.Periodo) || 'N/A'}</td><td>$${parseFloat(pago.Monto_Pagado || 0).toLocaleString('es-CL')}</td><td style="font-weight:bold;">$${parseFloat(pago.Deuda_Total || 0).toLocaleString('es-CL')}</td><td>${pago.Fecha_Pago ? new Date(pago.Fecha_Pago.replace(/-/g, '/')).toLocaleDateString('es-CL', {timeZone:'UTC'}) : '---'}</td><td><span class="estado-tag estado-${estadoClass}">${pago.Estado || 'Pendiente'}</span></td>`;
         tbodyGastos.appendChild(tr);
@@ -169,10 +172,12 @@ async function cargarGastosComunes() {
         const hoy = new Date();
 
         if (pagoExistente) {
-            estado = 'Pagado';
+            // INICIO CORRECCIÓN: El estado se lee desde el registro de pago.
+            estado = pagoExistente.Estado;
+            // FIN CORRECCIÓN
             montoPagado = parseFloat(pagoExistente.Monto_Pagado || 0);
             const deudaRegistrada = parseFloat(pagoExistente.Deuda_Total || valorGastoComun);
-            saldo = montoPagado - deudaRegistrada;
+            saldo = parseFloat(pagoExistente.Saldo_Pendiente_o_a_favor || 0);
             deudaTotal = deudaRegistrada;
             const fechaPagoStr = pagoExistente.Fecha_Pago;
             fechaPago = fechaPagoStr ? new Date(fechaPagoStr.replace(/-/g, '/')).toLocaleDateString('es-CL', {timeZone: 'UTC'}) : '---';
@@ -192,7 +197,7 @@ async function cargarGastosComunes() {
         }
 
         const tr = document.createElement('tr');
-        const estadoClass = estado.toLowerCase();
+        const estadoClass = estado.toLowerCase().replace(' ', '-');
         tr.innerHTML = `<td>${residente[1]}</td><td>${parcela}</td><td>$${valorGastoComun.toLocaleString('es-CL')}</td><td><b>${mes} ${anio}</b></td><td>${fechaVencimiento.toLocaleDateString('es-CL', {timeZone: 'UTC'})}</td><td>$${montoPagado.toLocaleString('es-CL')}</td><td style="color:${saldo < 0 ? 'red' : 'green'}; font-weight:bold;">$${saldo.toLocaleString('es-CL')}</td><td>$${interes.toLocaleString('es-CL', {minimumFractionDigits:2, maximumFractionDigits:2})}</td><td>$${multa.toLocaleString('es-CL')}</td><td>${mesesImpagos}</td><td style="font-weight:bold;">$${deudaTotal.toLocaleString('es-CL')}</td><td>${fechaPago}</td><td>${metodoPago}</td><td><span class="estado-tag estado-${estadoClass}">${estado}</span></td>`;
         tbodyGastos.appendChild(tr);
     });
@@ -265,7 +270,8 @@ async function cargarGastosComunes() {
     const anioSeleccionado = new Date(formData.get('Fecha_Pago').replace(/-/g, '/')).getFullYear();
     const fechaDePago = new Date(formData.get('Fecha_Pago').replace(/-/g, '/'));
     const fechaVencimiento = new Date(anioSeleccionado, mesPagadoIndex, 10);
-    let interes = 0, multa = 0, mesesImpagos = 0, deudaTotal = valorGastoComun, saldo = 0;
+    let interes = 0, multa = 0, mesesImpagos = 0, deudaTotal = valorGastoComun;
+
     if (fechaDePago > fechaVencimiento) {
         const diffAnios = fechaDePago.getFullYear() - fechaVencimiento.getFullYear();
         const diffMeses = fechaDePago.getMonth() - fechaVencimiento.getMonth();
@@ -277,14 +283,22 @@ async function cargarGastosComunes() {
         multa = (valorGastoComun / 4) * mesesImpagos;
         deudaTotal = valorGastoComun + interes + multa;
     }
+
     const montoPagado = parseFloat(formData.get('Monto_Pagado'));
-    saldo = montoPagado - deudaTotal;
+    const saldo = montoPagado - deudaTotal;
     const periodoStr = `${MESES[mesPagadoIndex]} ${anioSeleccionado}`;
+    
+    // INICIO CORRECCIÓN: Determinar estado "Pagado" o "Abono"
+    const estadoPago = saldo >= 0 ? 'Pagado' : 'Abono';
+    // FIN CORRECCIÓN
+
     const datosParaSheet = [
       null, formData.get('Nombre_Residente'), parcela, valorGastoComun, periodoStr,
       fechaVencimiento.toISOString().split('T')[0], montoPagado, saldo, interes, null,
-      multa, mesesImpagos, deudaTotal, formData.get('Fecha_Pago'), formData.get('Metodo_Pago'), 'Pagado'
+      multa, mesesImpagos, deudaTotal, formData.get('Fecha_Pago'), formData.get('Metodo_Pago'),
+      estadoPago // Se usa la variable con el estado correcto
     ];
+    
     mostrarSpinner();
     try {
       await agregarPagoGC(datosParaSheet);
@@ -337,6 +351,13 @@ async function cargarGastosComunes() {
       saldoColor = 'red';
     }
 
+    // INICIO CORRECCIÓN: Crear mensaje de advertencia solo si hay saldo negativo
+    let mensajeAdvertencia = '';
+    if (saldo < 0) {
+        mensajeAdvertencia = `<p style="font-size: 12px; color: #c00; font-weight: bold;">El no pago de la totalidad de su deuda, seguirá generando intereses o multas. Favor regularizar su pago total para no quedar en estado moroso.</p>`;
+    }
+    // FIN CORRECCIÓN
+
     return `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; border: 1px solid #ddd; padding: 20px; font-size: 14px; line-height: 1.6;">
         <div style="text-align: center; margin-bottom: 20px;">
@@ -361,7 +382,7 @@ async function cargarGastosComunes() {
         </table>
         <hr style="margin-top: 25px;">
         <p style="font-size: 12px; color: #777;">Si tiene alguna consulta sobre este comprobante, no dude en contactarnos.</p>
-        <p style="font-size: 12px; color: #c00; font-weight: bold;">El no pago de la totalidad de su deuda, seguirá generando intereses o multas. Favor regularizar su pago total para no quedar en estado moroso.</p>
+        ${mensajeAdvertencia}
         <p>Gracias por su compromiso con la comunidad.</p>
         <p>Se despide Atentamente,<br><strong>Alex Thiele</strong><br>Administrador Condominio Los Molles</p>
       </div>
@@ -392,7 +413,6 @@ async function cargarGastosComunes() {
       .filter(p => p.N_Parcela == parcela && p.Fecha_Pago)
       .sort((a, b) => new Date(b.Fecha_Pago) - new Date(a.Fecha_Pago));
 
-    // INICIO CORRECCIÓN: Se usa el índice 5 para el email (Columna F), según solicitud.
     const emailResidente = residente[5];
 
     if (pagosDelResidente.length === 0) {
@@ -407,7 +427,6 @@ async function cargarGastosComunes() {
     
     nombreInput.value = ultimoPago.Nombre_Residente;
     emailInput.value = emailResidente || 'No registrado';
-    // FIN CORRECCIÓN
     
     asuntoInput.value = `Comprobante pago gasto común ${periodoFormateado} Parcela Número ${parcela}`;
     cuerpoDiv.innerHTML = crearCuerpoCorreo(ultimoPago, residente);
