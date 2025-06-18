@@ -38,7 +38,7 @@ async function cargarDashboard() {
 
     const mantencionesPendientes = mantenciones.filter(m => m[3] && m[3].toLowerCase() === 'pendiente').length;
 
-    // --- LÓGICA MODIFICADA PARA IDENTIFICAR RESIDENTES CON DEUDA ---
+    // Lógica para identificar residentes con deuda (Morosos + Abonos)
     const pagosMesActual = pagosGC.filter(p => {
         if (!p[4]) return false;
         const [mes, anio] = p[4].split(' ');
@@ -55,7 +55,6 @@ async function cargarDashboard() {
     });
     
     const main = document.getElementById('main-content');
-    // SE RESTAURA LA ESTRUCTURA HTML ORIGINAL EXACTA
     main.innerHTML = `
       <div style="display:flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
         <h2>Dashboard</h2>
@@ -66,7 +65,7 @@ async function cargarDashboard() {
         <div class="widget"><h4>Egresos del Mes</h4><p id="egresos-mes"></p></div>
         <div class="widget"><h4>Mantenciones Pendientes</h4><p id="mantenciones-pendientes"></p></div>
         <div class="widget large">
-          <h4>Ingresos vs. Egresos (Últimos 6 meses)</h4>
+          <h4>Ingresos vs. Egresos (Últimos 12 meses)</h4>
           <canvas id="graficoIngresosEgresos" style="max-height: 250px;"></canvas>
         </div>
         <div class="widget large">
@@ -77,7 +76,6 @@ async function cargarDashboard() {
       </div>
     `;
 
-    // SE INYECTAN LOS DATOS EN LA ESTRUCTURA HTML EXISTENTE
     document.getElementById('total-residentes').textContent = totalResidentes;
     document.getElementById('ingresos-mes').textContent = `$${totalIngresosMesActual.toLocaleString('es-CL')}`;
     document.getElementById('egresos-mes').textContent = `$${totalEgresosMesActual.toLocaleString('es-CL')}`;
@@ -89,35 +87,25 @@ async function cargarDashboard() {
         const numeroParcela = res[3];
         const pagoExistente = pagosMesActual.find(p => p[2] === numeroParcela);
         
-        let estadoTexto = 'Moroso';
-        // El estado por defecto es 'moroso', no necesita clase extra si tu CSS ya lo maneja
-        let estadoClass = 'estado-moroso'; 
-
+        let estadoTexto = '(Moroso)';
         if (pagoExistente && pagoExistente[15] && pagoExistente[15].toLowerCase() === 'abono') {
-          estadoTexto = 'Abono';
-          estadoClass = 'estado-abono';
+          estadoTexto = '(Abono)';
         }
-
-        // Se usa la estructura original del item, solo se añade la etiqueta de estado
-        const itemHTML = `
-            <div class="residente-item" style="display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid #eee;">
-                <span>${res[1]} (Parcela ${numeroParcela})</span>
-                <span class="estado-tag ${estadoClass}">${estadoTexto}</span>
-            </div>
-        `;
-        listaMorososEl.innerHTML += itemHTML;
+        
+        listaMorososEl.innerHTML += `<div class="residente-item"><span>${res[1]} (Parcela ${numeroParcela}) ${estadoTexto}</span></div>`;
       });
     } else {
       listaMorososEl.innerHTML = '<p style="text-align:center; padding-top: 20px;">¡Felicitaciones! No hay residentes con deudas este mes.</p>';
     }
 
-    // Lógica del Gráfico (sin cambios)
+    // Lógica del Gráfico
     const ctx = document.getElementById('graficoIngresosEgresos').getContext('2d');
     const labels = [];
     const dataIngresos = [];
     const dataEgresos = [];
 
-    for (let i = 5; i >= 0; i--) {
+    // --- INICIO DE LA CORRECCIÓN: Bucle cambiado de 6 a 12 meses ---
+    for (let i = 11; i >= 0; i--) {
         const d = new Date(fechaActual.getFullYear(), fechaActual.getMonth() - i, 1);
         const anioMes = d.getFullYear();
         const mesMes = d.getMonth();
@@ -142,6 +130,7 @@ async function cargarDashboard() {
             .reduce((sum, e) => sum + parseFloat(e[3] || 0), 0);
         dataEgresos.push(egresosEsteMes);
     }
+    // --- FIN DE LA CORRECCIÓN ---
     
     new Chart(ctx, {
         type: 'bar',
