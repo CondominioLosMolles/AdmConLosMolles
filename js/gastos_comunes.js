@@ -139,14 +139,15 @@ async function cargarGastosComunes() {
 
   function renderizarTablaGeneral(datos) {
     document.querySelector('#detalle-gastos h3').textContent = 'Detalle de Pagos Registrados';
-    theadGastos.innerHTML = `<tr><th>Residente</th><th>Parcela</th><th>Período</th><th>Monto Pagado</th><th>Deuda Total</th><th>Fecha Pago</th><th>Estado</th></tr>`;
+    theadGastos.innerHTML = `<tr><th>Residente</th><th>Parcela</th><th>Período</th><th>Monto Pagado</th><th>Deuda Pendiente</th><th>Fecha Pago</th><th>Estado</th></tr>`;
     tbodyGastos.innerHTML = '';
     if (!datos || datos.length === 0) { tbodyGastos.innerHTML = `<tr><td colspan="7" style="text-align:center; padding:20px;">No hay registros para el año seleccionado. Filtra por parcela para ver el detalle anual.</td></tr>`; return; }
     datos.sort((a,b) => (b.Fecha_Pago ? new Date(b.Fecha_Pago) : 0) - (a.Fecha_Pago ? new Date(a.Fecha_Pago) : 0));
     datos.forEach(pago => {
         const estadoClass = (pago.Estado || 'pendiente').toLowerCase().trim().replace(' ', '-');
         const tr = document.createElement('tr');
-        tr.innerHTML = `<td>${pago.Nombre_Residente || 'N/A'}</td><td>${pago.N_Parcela}</td><td>${formatearPeriodo(pago.Periodo) || 'N/A'}</td><td>$${parseFloat(pago.Monto_Pagado || 0).toLocaleString('es-CL')}</td><td style="font-weight:bold;">$${parseFloat(pago.Deuda_Total || 0).toLocaleString('es-CL')}</td><td>${pago.Fecha_Pago ? new Date(pago.Fecha_Pago.replace(/-/g, '/')).toLocaleDateString('es-CL', {timeZone:'UTC'}) : '---'}</td><td><span class="estado-tag estado-${estadoClass}">${pago.Estado || 'Pendiente'}</span></td>`;
+        // Se cambia el campo Deuda_Total por el saldo pendiente real.
+        tr.innerHTML = `<td>${pago.Nombre_Residente || 'N/A'}</td><td>${pago.N_Parcela}</td><td>${formatearPeriodo(pago.Periodo) || 'N/A'}</td><td>$${parseFloat(pago.Monto_Pagado || 0).toLocaleString('es-CL')}</td><td style="font-weight:bold; color: red;">$${parseFloat(pago.Deuda_Total || 0).toLocaleString('es-CL')}</td><td>${pago.Fecha_Pago ? new Date(pago.Fecha_Pago.replace(/-/g, '/')).toLocaleDateString('es-CL', {timeZone:'UTC'}) : '---'}</td><td><span class="estado-tag estado-${estadoClass}">${pago.Estado || 'Pendiente'}</span></td>`;
         tbodyGastos.appendChild(tr);
     });
   }
@@ -156,7 +157,7 @@ async function cargarGastosComunes() {
     if (!residente) { tbodyGastos.innerHTML = `<tr><td colspan="14">No se encontró residente.</td></tr>`; return; }
 
     document.querySelector('#detalle-gastos h3').textContent = `Detalle Anual para ${residente[1]} (Parcela ${parcela})`;
-    theadGastos.innerHTML = `<tr><th>Nombre Residente</th><th>N° Parcela</th><th>Valor G.C.</th><th>Periodo</th><th>Fecha Vencimiento</th><th>Monto Pagado</th><th>Saldo</th><th>Interés</th><th>Multa 1/4</th><th>Meses Impagos</th><th>Deuda Total</th><th>Fecha Pago</th><th>Método Pago</th><th>Estado</th></tr>`;
+    theadGastos.innerHTML = `<tr><th>Nombre Residente</th><th>N° Parcela</th><th>Valor G.C.</th><th>Periodo</th><th>Fecha Vencimiento</th><th>Monto Pagado</th><th>Saldo Transacción</th><th>Interés</th><th>Multa 1/4</th><th>Meses Impagos</th><th>Deuda Pendiente</th><th>Fecha Pago</th><th>Método Pago</th><th>Estado</th></tr>`;
 
     tbodyGastos.innerHTML = '';
     const valorGastoComun = parseFloat(residente[8]);
@@ -167,18 +168,17 @@ async function cargarGastosComunes() {
         
         let interes = 0, multa = 0, mesesImpagos = 0, saldo = 0, deudaTotal = valorGastoComun;
         let estado = 'Pendiente', montoPagado = 0, fechaPago = '---', metodoPago = '---';
+        let deudaPendiente = 0;
         
         const fechaVencimiento = new Date(anio, index, 10);
         const hoy = new Date();
 
         if (pagoExistente) {
-            // INICIO CORRECCIÓN: El estado se lee desde el registro de pago.
             estado = pagoExistente.Estado;
-            // FIN CORRECCIÓN
             montoPagado = parseFloat(pagoExistente.Monto_Pagado || 0);
-            const deudaRegistrada = parseFloat(pagoExistente.Deuda_Total || valorGastoComun);
             saldo = parseFloat(pagoExistente.Saldo_Pendiente_o_a_favor || 0);
-            deudaTotal = deudaRegistrada;
+            deudaPendiente = parseFloat(pagoExistente.Deuda_Total || 0);
+            
             const fechaPagoStr = pagoExistente.Fecha_Pago;
             fechaPago = fechaPagoStr ? new Date(fechaPagoStr.replace(/-/g, '/')).toLocaleDateString('es-CL', {timeZone: 'UTC'}) : '---';
             metodoPago = pagoExistente.Metodo_Pago || '---';
@@ -194,11 +194,12 @@ async function cargarGastosComunes() {
             multa = (valorGastoComun / 4) * mesesImpagos;
             deudaTotal = valorGastoComun + interes + multa;
             saldo = -deudaTotal;
+            deudaPendiente = deudaTotal;
         }
 
         const tr = document.createElement('tr');
         const estadoClass = estado.toLowerCase().replace(' ', '-');
-        tr.innerHTML = `<td>${residente[1]}</td><td>${parcela}</td><td>$${valorGastoComun.toLocaleString('es-CL')}</td><td><b>${mes} ${anio}</b></td><td>${fechaVencimiento.toLocaleDateString('es-CL', {timeZone: 'UTC'})}</td><td>$${montoPagado.toLocaleString('es-CL')}</td><td style="color:${saldo < 0 ? 'red' : 'green'}; font-weight:bold;">$${saldo.toLocaleString('es-CL')}</td><td>$${interes.toLocaleString('es-CL', {minimumFractionDigits:2, maximumFractionDigits:2})}</td><td>$${multa.toLocaleString('es-CL')}</td><td>${mesesImpagos}</td><td style="font-weight:bold;">$${deudaTotal.toLocaleString('es-CL')}</td><td>${fechaPago}</td><td>${metodoPago}</td><td><span class="estado-tag estado-${estadoClass}">${estado}</span></td>`;
+        tr.innerHTML = `<td>${residente[1]}</td><td>${parcela}</td><td>$${valorGastoComun.toLocaleString('es-CL')}</td><td><b>${mes} ${anio}</b></td><td>${fechaVencimiento.toLocaleDateString('es-CL', {timeZone: 'UTC'})}</td><td>$${montoPagado.toLocaleString('es-CL')}</td><td style="color:${saldo < 0 ? 'red' : 'green'}; font-weight:bold;">$${saldo.toLocaleString('es-CL')}</td><td>$${interes.toLocaleString('es-CL', {minimumFractionDigits:2, maximumFractionDigits:2})}</td><td>$${multa.toLocaleString('es-CL')}</td><td>${mesesImpagos}</td><td style="font-weight:bold; color: red;">$${deudaPendiente.toLocaleString('es-CL')}</td><td>${fechaPago}</td><td>${metodoPago}</td><td><span class="estado-tag estado-${estadoClass}">${estado}</span></td>`;
         tbodyGastos.appendChild(tr);
     });
   }
@@ -270,7 +271,10 @@ async function cargarGastosComunes() {
     const anioSeleccionado = new Date(formData.get('Fecha_Pago').replace(/-/g, '/')).getFullYear();
     const fechaDePago = new Date(formData.get('Fecha_Pago').replace(/-/g, '/'));
     const fechaVencimiento = new Date(anioSeleccionado, mesPagadoIndex, 10);
-    let interes = 0, multa = 0, mesesImpagos = 0, deudaTotal = valorGastoComun;
+    
+    // Representa la deuda completa del período
+    let deudaDelPeriodo = valorGastoComun;
+    let interes = 0, multa = 0, mesesImpagos = 0;
 
     if (fechaDePago > fechaVencimiento) {
         const diffAnios = fechaDePago.getFullYear() - fechaVencimiento.getFullYear();
@@ -281,22 +285,39 @@ async function cargarGastosComunes() {
         const timcAnual = (timcData[anioSeleccionado] && timcData[anioSeleccionado][mesPagadoIndex + 1]) ? timcData[anioSeleccionado][mesPagadoIndex + 1] : 0;
         interes = valorGastoComun * (timcAnual / 100) / 12;
         multa = (valorGastoComun / 4) * mesesImpagos;
-        deudaTotal = valorGastoComun + interes + multa;
+        deudaDelPeriodo = valorGastoComun + interes + multa;
     }
 
     const montoPagado = parseFloat(formData.get('Monto_Pagado'));
-    const saldo = montoPagado - deudaTotal;
-    const periodoStr = `${MESES[mesPagadoIndex]} ${anioSeleccionado}`;
     
-    // INICIO CORRECCIÓN: Determinar estado "Pagado" o "Abono"
-    const estadoPago = saldo >= 0 ? 'Pagado' : 'Abono';
+    // Este es el saldo de la transacción (positivo o negativo)
+    const saldoTransaccion = montoPagado - deudaDelPeriodo;
+    const periodoStr = `${MESES[mesPagadoIndex]} ${anioSeleccionado}`;
+    const estadoPago = saldoTransaccion >= 0 ? 'Pagado' : 'Abono';
+    
+    // INICIO CORRECCIÓN: Calcular la deuda pendiente real para guardar en la hoja
+    // Si el saldo es negativo (ej. -3706), la deuda pendiente es su valor absoluto (3706).
+    // Si el saldo es positivo (se pagó de más), la deuda pendiente es 0.
+    const deudaPendienteParaSheet = saldoTransaccion < 0 ? -saldoTransaccion : 0;
     // FIN CORRECCIÓN
 
     const datosParaSheet = [
-      null, formData.get('Nombre_Residente'), parcela, valorGastoComun, periodoStr,
-      fechaVencimiento.toISOString().split('T')[0], montoPagado, saldo, interes, null,
-      multa, mesesImpagos, deudaTotal, formData.get('Fecha_Pago'), formData.get('Metodo_Pago'),
-      estadoPago // Se usa la variable con el estado correcto
+      null, // ID_Pago
+      formData.get('Nombre_Residente'), // Nombre_Residente
+      parcela, // N_Parcela
+      valorGastoComun, // Valor_Gasto_Comun
+      periodoStr, // Periodo
+      fechaVencimiento.toISOString().split('T')[0], // Fecha_Vencimiento
+      montoPagado, // Monto_Pagado
+      saldoTransaccion, // Saldo_Pendiente_o_a_favor
+      interes, // Interes
+      null, // TIMC
+      multa, // Multa_1/4
+      mesesImpagos, // Meses_Inpagos
+      deudaPendienteParaSheet, // Deuda_Total (Ahora es la deuda pendiente)
+      formData.get('Fecha_Pago'), // Fecha_Pago
+      formData.get('Metodo_Pago'), // Metodo_Pago
+      estadoPago // Estado
     ];
     
     mostrarSpinner();
@@ -337,7 +358,10 @@ async function cargarGastosComunes() {
     const valorGC = parseFloat(pago.Valor_Gasto_Comun).toLocaleString('es-CL');
     const interes = parseFloat(pago.Interes || 0).toLocaleString('es-CL');
     const multa = parseFloat(pago['Multa_1/4'] || 0).toLocaleString('es-CL');
-    const deudaTotal = parseFloat(pago.Deuda_Total).toLocaleString('es-CL');
+    
+    // La deuda del período es la suma de todo lo que se debía antes de pagar
+    const deudaDelPeriodo = (pago.Monto_Pagado - pago.Saldo_Pendiente_o_a_favor);
+
     const montoPagado = parseFloat(pago.Monto_Pagado).toLocaleString('es-CL');
     const saldo = parseFloat(pago.Saldo_Pendiente_o_a_favor || 0);
     const fechaPago = new Date(pago.Fecha_Pago.replace(/-/g, '/')).toLocaleDateString('es-CL', { timeZone: 'UTC' });
@@ -351,12 +375,10 @@ async function cargarGastosComunes() {
       saldoColor = 'red';
     }
 
-    // INICIO CORRECCIÓN: Crear mensaje de advertencia solo si hay saldo negativo
     let mensajeAdvertencia = '';
     if (saldo < 0) {
         mensajeAdvertencia = `<p style="font-size: 12px; color: #c00; font-weight: bold;">El no pago de la totalidad de su deuda, seguirá generando intereses o multas. Favor regularizar su pago total para no quedar en estado moroso.</p>`;
     }
-    // FIN CORRECCIÓN
 
     return `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; border: 1px solid #ddd; padding: 20px; font-size: 14px; line-height: 1.6;">
@@ -376,7 +398,7 @@ async function cargarGastosComunes() {
           <tr><td style="padding: 8px; border-bottom: 1px solid #eee;">Valor Gasto Común:</td><td style="padding: 8px; border-bottom: 1px solid #eee; text-align: right;">$${valorGC}</td></tr>
           <tr><td style="padding: 8px; border-bottom: 1px solid #eee;">Intereses por mora:</td><td style="padding: 8px; border-bottom: 1px solid #eee; text-align: right;">$${interes}</td></tr>
           <tr><td style="padding: 8px; border-bottom: 1px solid #eee;">Multas:</td><td style="padding: 8px; border-bottom: 1px solid #eee; text-align: right;">$${multa}</td></tr>
-          <tr style="font-weight: bold;"><td style="padding: 8px; border-bottom: 1px solid #ddd;">Deuda Total del Período:</td><td style="padding: 8px; border-bottom: 1px solid #ddd; text-align: right;">$${deudaTotal}</td></tr>
+          <tr style="font-weight: bold;"><td style="padding: 8px; border-bottom: 1px solid #ddd;">Deuda del Período:</td><td style="padding: 8px; border-bottom: 1px solid #ddd; text-align: right;">$${deudaDelPeriodo.toLocaleString('es-CL')}</td></tr>
           <tr style="font-weight: bold;"><td style="padding: 8px; border-bottom: 1px solid #ddd;">Monto Pagado:</td><td style="padding: 8px; border-bottom: 1px solid #ddd; text-align: right;">$${montoPagado}</td></tr>
           <tr style="font-weight: bold; color: ${saldoColor};"><td style="padding: 8px;">Resultado Final:</td><td style="padding: 8px; text-align: right;">${saldoTexto}</td></tr>
         </table>
