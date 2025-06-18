@@ -64,6 +64,10 @@ async function cargarGastosComunes() {
   main.innerHTML = `
     <style>
       .estado-abono { background-color: #ffc107; color: #333; }
+      .fila-clicable:hover { background-color: #e9f1fb; cursor: pointer; }
+      #detalle-pago-grid { display: grid; grid-template-columns: auto 1fr; gap: 10px 20px; }
+      #detalle-pago-grid b { grid-column: 1; text-align: right; }
+      #detalle-pago-grid span { grid-column: 2; text-align: left; }
     </style>
     <div style="display:flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;"><h2>Gastos Comunes</h2></div>
     
@@ -98,39 +102,16 @@ async function cargarGastosComunes() {
     <div id="modalComprobante" class="modal" style="display:none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.5); align-items: center; justify-content: center;">
       <div class="widget" style="max-width: 650px; width: 90%; margin: auto; z-index: 1001;">
         <h3>Enviar Comprobante por Correo</h3>
-        <form id="formEnviarComprobante" style="display:flex; flex-direction:column; gap:15px;">
-          <div style="display:flex; gap: 15px; flex-wrap: wrap;">
-            <div style="flex: 1; min-width: 120px;">
-              <label><b>N° Parcela</b></label>
-              <input type="number" id="inputNParcelaComprobante" min="1" max="26" required style="width:100%;">
-            </div>
-            <div style="flex: 2; min-width: 200px;">
-              <label><b>Residente</b></label>
-              <input type="text" id="inputNombreResidenteComprobante" readonly style="width:100%; background:#eee;">
-            </div>
-          </div>
-          <div>
-            <label><b>Email Destinatario</b></label>
-            <input type="email" id="inputEmailComprobante" readonly style="width:100%; background:#eee;">
-          </div>
-          <div>
-            <label><b>Asunto</b></label>
-            <input type="text" id="inputAsuntoComprobante" readonly style="width:100%; background:#eee;">
-          </div>
-          
-          <div>
-            <label><b>Previsualización del Correo</b></label>
-            <div id="divCuerpoComprobante" style="width:100%; height: 250px; background:#f8f9fa; border: 1px solid #ccc; border-radius: 4px; padding: 10px; overflow-y: auto;">
-                <span style="color: #6c757d;">Ingrese un N° de Parcela para generar la previsualización.</span>
-            </div>
-          </div>
-
-          <div style="text-align: right; margin-top: 10px;">
-            <button class="btn secondary" type="button" id="btnCerrarModalComprobante">Cancelar</button>
-            <button class="btn" type="submit">Enviar Correo</button>
-          </div>
-        </form>
+        <form id="formEnviarComprobante" style="display:flex; flex-direction:column; gap:15px;"><div style="display:flex; gap: 15px; flex-wrap: wrap;"><div style="flex: 1; min-width: 120px;"><label><b>N° Parcela</b></label><input type="number" id="inputNParcelaComprobante" min="1" max="26" required style="width:100%;"></div><div style="flex: 2; min-width: 200px;"><label><b>Residente</b></label><input type="text" id="inputNombreResidenteComprobante" readonly style="width:100%; background:#eee;"></div></div><div><label><b>Email Destinatario</b></label><input type="email" id="inputEmailComprobante" readonly style="width:100%; background:#eee;"></div><div><label><b>Asunto</b></label><input type="text" id="inputAsuntoComprobante" readonly style="width:100%; background:#eee;"></div><div><label><b>Previsualización del Correo</b></label><div id="divCuerpoComprobante" style="width:100%; height: 250px; background:#f8f9fa; border: 1px solid #ccc; border-radius: 4px; padding: 10px; overflow-y: auto;"><span style="color: #6c757d;">Ingrese un N° de Parcela para generar la previsualización.</span></div></div><div style="text-align: right; margin-top: 10px;"><button class="btn secondary" type="button" id="btnCerrarModalComprobante">Cancelar</button><button class="btn" type="submit">Enviar Correo</button></div></form>
       </div>
+    </div>
+
+    <div id="modalDetallePago" class="modal" style="display:none; position: fixed; z-index: 1050; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.6); align-items: center; justify-content: center;">
+        <div class="widget" style="max-width: 550px; width: 90%; margin: auto; z-index: 1051;">
+            <h3 style="margin-top:0;">Detalle Completo del Registro</h3>
+            <div id="contenidoDetallePago" style="margin-bottom: 20px;"></div>
+            <div style="text-align: right;"><button id="btnCerrarModalDetalle" class="btn secondary">Cerrar</button></div>
+        </div>
     </div>
   `;
   
@@ -141,12 +122,13 @@ async function cargarGastosComunes() {
     document.querySelector('#detalle-gastos h3').textContent = 'Detalle de Pagos Registrados';
     theadGastos.innerHTML = `<tr><th>Residente</th><th>Parcela</th><th>Período</th><th>Monto Pagado</th><th>Deuda Pendiente</th><th>Fecha Pago</th><th>Estado</th></tr>`;
     tbodyGastos.innerHTML = '';
-    if (!datos || datos.length === 0) { tbodyGastos.innerHTML = `<tr><td colspan="7" style="text-align:center; padding:20px;">No hay registros para el año seleccionado. Filtra por parcela para ver el detalle anual.</td></tr>`; return; }
+    if (!datos || datos.length === 0) { tbodyGastos.innerHTML = `<tr><td colspan="7" style="text-align:center; padding:20px;">No hay registros para el año seleccionado.</td></tr>`; return; }
     datos.sort((a,b) => (b.Fecha_Pago ? new Date(b.Fecha_Pago) : 0) - (a.Fecha_Pago ? new Date(a.Fecha_Pago) : 0));
     datos.forEach(pago => {
         const estadoClass = (pago.Estado || 'pendiente').toLowerCase().trim().replace(' ', '-');
         const tr = document.createElement('tr');
-        // Se cambia el campo Deuda_Total por el saldo pendiente real.
+        tr.dataset.idPago = pago.ID_Pago;
+        tr.classList.add('fila-clicable');
         tr.innerHTML = `<td>${pago.Nombre_Residente || 'N/A'}</td><td>${pago.N_Parcela}</td><td>${formatearPeriodo(pago.Periodo) || 'N/A'}</td><td>$${parseFloat(pago.Monto_Pagado || 0).toLocaleString('es-CL')}</td><td style="font-weight:bold; color: red;">$${parseFloat(pago.Deuda_Total || 0).toLocaleString('es-CL')}</td><td>${pago.Fecha_Pago ? new Date(pago.Fecha_Pago.replace(/-/g, '/')).toLocaleDateString('es-CL', {timeZone:'UTC'}) : '---'}</td><td><span class="estado-tag estado-${estadoClass}">${pago.Estado || 'Pendiente'}</span></td>`;
         tbodyGastos.appendChild(tr);
     });
@@ -157,7 +139,7 @@ async function cargarGastosComunes() {
     if (!residente) { tbodyGastos.innerHTML = `<tr><td colspan="14">No se encontró residente.</td></tr>`; return; }
 
     document.querySelector('#detalle-gastos h3').textContent = `Detalle Anual para ${residente[1]} (Parcela ${parcela})`;
-    theadGastos.innerHTML = `<tr><th>Nombre Residente</th><th>N° Parcela</th><th>Valor G.C.</th><th>Periodo</th><th>Fecha Vencimiento</th><th>Monto Pagado</th><th>Saldo Transacción</th><th>Interés</th><th>Multa 1/4</th><th>Meses Impagos</th><th>Deuda Pendiente</th><th>Fecha Pago</th><th>Método Pago</th><th>Estado</th></tr>`;
+    theadGastos.innerHTML = `<tr><th>Nombre Residente</th><th>N° Parcela</th><th>Valor G.C.</th><th>Periodo</th><th>Fecha Vencimiento</th><th>Monto Pagado</th><th>Saldo Transacción</th><th>Interés</th><th>Multa</th><th>Meses Impagos</th><th>Deuda Pendiente</th><th>Fecha Pago</th><th>Método Pago</th><th>Estado</th></tr>`;
 
     tbodyGastos.innerHTML = '';
     const valorGastoComun = parseFloat(residente[8]);
@@ -166,7 +148,7 @@ async function cargarGastosComunes() {
         const mesNumero = index + 1;
         const pagoExistente = pagosGC_obj.find(p => p.N_Parcela == parcela && p.Periodo && formatearPeriodo(p.Periodo).toLowerCase().startsWith(mes.toLowerCase()) && p.anio == anio);
         
-        let interes = 0, multa = 0, mesesImpagos = 0, saldo = 0, deudaTotal = valorGastoComun;
+        let interes = 0, multa = 0, mesesImpagos = 0, saldo = 0;
         let estado = 'Pendiente', montoPagado = 0, fechaPago = '---', metodoPago = '---';
         let deudaPendiente = 0;
         
@@ -178,6 +160,8 @@ async function cargarGastosComunes() {
             montoPagado = parseFloat(pagoExistente.Monto_Pagado || 0);
             saldo = parseFloat(pagoExistente.Saldo_Pendiente_o_a_favor || 0);
             deudaPendiente = parseFloat(pagoExistente.Deuda_Total || 0);
+            interes = parseFloat(pagoExistente.Interes || 0);
+            multa = parseFloat(pagoExistente['Multa_1/4'] || 0);
             
             const fechaPagoStr = pagoExistente.Fecha_Pago;
             fechaPago = fechaPagoStr ? new Date(fechaPagoStr.replace(/-/g, '/')).toLocaleDateString('es-CL', {timeZone: 'UTC'}) : '---';
@@ -192,16 +176,57 @@ async function cargarGastosComunes() {
             const timcAnual = (timcData[anio] && timcData[anio][mesNumero]) ? timcData[anio][mesNumero] : 0;
             interes = valorGastoComun * (timcAnual / 100) / 12;
             multa = (valorGastoComun / 4) * mesesImpagos;
-            deudaTotal = valorGastoComun + interes + multa;
-            saldo = -deudaTotal;
-            deudaPendiente = deudaTotal;
+            deudaPendiente = valorGastoComun + interes + multa;
+            saldo = -deudaPendiente;
         }
 
         const tr = document.createElement('tr');
+        if (pagoExistente) {
+            tr.dataset.idPago = pagoExistente.ID_Pago;
+            tr.classList.add('fila-clicable');
+        }
         const estadoClass = estado.toLowerCase().replace(' ', '-');
         tr.innerHTML = `<td>${residente[1]}</td><td>${parcela}</td><td>$${valorGastoComun.toLocaleString('es-CL')}</td><td><b>${mes} ${anio}</b></td><td>${fechaVencimiento.toLocaleDateString('es-CL', {timeZone: 'UTC'})}</td><td>$${montoPagado.toLocaleString('es-CL')}</td><td style="color:${saldo < 0 ? 'red' : 'green'}; font-weight:bold;">$${saldo.toLocaleString('es-CL')}</td><td>$${interes.toLocaleString('es-CL', {minimumFractionDigits:2, maximumFractionDigits:2})}</td><td>$${multa.toLocaleString('es-CL')}</td><td>${mesesImpagos}</td><td style="font-weight:bold; color: red;">$${deudaPendiente.toLocaleString('es-CL')}</td><td>${fechaPago}</td><td>${metodoPago}</td><td><span class="estado-tag estado-${estadoClass}">${estado}</span></td>`;
         tbodyGastos.appendChild(tr);
     });
+  }
+
+  function abrirModalDetalle(idPago) {
+    const pago = pagosGC_obj.find(p => p.ID_Pago == idPago);
+    if (!pago) {
+        mostrarMensaje('No se encontró el registro del pago.', 'error');
+        return;
+    }
+
+    const modal = document.getElementById('modalDetallePago');
+    const contenido = document.getElementById('contenidoDetallePago');
+
+    const montoPagado = parseFloat(pago.Monto_Pagado || 0);
+    const saldoTransaccion = parseFloat(pago.Saldo_Pendiente_o_a_favor || 0);
+    const deudaDelPeriodo = montoPagado - saldoTransaccion;
+    const saldoFinalTexto = saldoTransaccion >= 0 ? `A favor: $${saldoTransaccion.toLocaleString('es-CL')}` : `Pendiente: $${Math.abs(saldoTransaccion).toLocaleString('es-CL')}`;
+
+    contenido.innerHTML = `
+        <div id="detalle-pago-grid">
+            <b>Residente:</b>       <span>${pago.Nombre_Residente}</span>
+            <b>N° Parcela:</b>      <span>${pago.N_Parcela}</span>
+            <b>Período pagado:</b>  <span>${formatearPeriodo(pago.Periodo)}</span>
+            <hr style="grid-column: 1 / -1;">
+            <b>Valor Gasto Común:</b> <span>$${parseFloat(pago.Valor_Gasto_Comun).toLocaleString('es-CL')}</span>
+            <b>Interés por mora:</b>  <span>$${parseFloat(pago.Interes || 0).toLocaleString('es-CL')}</span>
+            <b>Multa aplicada:</b>    <span>$${parseFloat(pago['Multa_1/4'] || 0).toLocaleString('es-CL')}</span>
+            <b style="color:#2a7ca3;">Deuda del Período:</b> <span style="font-weight:bold; color:#2a7ca3;">$${deudaDelPeriodo.toLocaleString('es-CL')}</span>
+            <hr style="grid-column: 1 / -1;">
+            <b>Monto Pagado:</b>      <span style="font-weight:bold; color:green;">$${montoPagado.toLocaleString('es-CL')}</span>
+            <b>Fecha de Pago:</b>     <span>${new Date(pago.Fecha_Pago.replace(/-/g, '/')).toLocaleDateString('es-CL', {timeZone:'UTC'})}</span>
+            <b>Método de Pago:</b>    <span>${pago.Metodo_Pago}</span>
+            <b>Resultado (Saldo):</b> <span style="font-weight:bold; color:${saldoTransaccion < 0 ? 'red' : 'green'};">${saldoFinalTexto}</span>
+             <hr style="grid-column: 1 / -1;">
+            <b>Estado del pago:</b>   <span>${pago.Estado}</span>
+        </div>
+    `;
+
+    modal.style.display = 'flex';
   }
 
   function filtrarYRenderizar() {
@@ -272,7 +297,6 @@ async function cargarGastosComunes() {
     const fechaDePago = new Date(formData.get('Fecha_Pago').replace(/-/g, '/'));
     const fechaVencimiento = new Date(anioSeleccionado, mesPagadoIndex, 10);
     
-    // Representa la deuda completa del período
     let deudaDelPeriodo = valorGastoComun;
     let interes = 0, multa = 0, mesesImpagos = 0;
 
@@ -289,35 +313,16 @@ async function cargarGastosComunes() {
     }
 
     const montoPagado = parseFloat(formData.get('Monto_Pagado'));
-    
-    // Este es el saldo de la transacción (positivo o negativo)
     const saldoTransaccion = montoPagado - deudaDelPeriodo;
     const periodoStr = `${MESES[mesPagadoIndex]} ${anioSeleccionado}`;
     const estadoPago = saldoTransaccion >= 0 ? 'Pagado' : 'Abono';
-    
-    // INICIO CORRECCIÓN: Calcular la deuda pendiente real para guardar en la hoja
-    // Si el saldo es negativo (ej. -3706), la deuda pendiente es su valor absoluto (3706).
-    // Si el saldo es positivo (se pagó de más), la deuda pendiente es 0.
     const deudaPendienteParaSheet = saldoTransaccion < 0 ? -saldoTransaccion : 0;
-    // FIN CORRECCIÓN
 
     const datosParaSheet = [
-      null, // ID_Pago
-      formData.get('Nombre_Residente'), // Nombre_Residente
-      parcela, // N_Parcela
-      valorGastoComun, // Valor_Gasto_Comun
-      periodoStr, // Periodo
-      fechaVencimiento.toISOString().split('T')[0], // Fecha_Vencimiento
-      montoPagado, // Monto_Pagado
-      saldoTransaccion, // Saldo_Pendiente_o_a_favor
-      interes, // Interes
-      null, // TIMC
-      multa, // Multa_1/4
-      mesesImpagos, // Meses_Inpagos
-      deudaPendienteParaSheet, // Deuda_Total (Ahora es la deuda pendiente)
-      formData.get('Fecha_Pago'), // Fecha_Pago
-      formData.get('Metodo_Pago'), // Metodo_Pago
-      estadoPago // Estado
+      null, formData.get('Nombre_Residente'), parcela, valorGastoComun, periodoStr,
+      fechaVencimiento.toISOString().split('T')[0], montoPagado, saldoTransaccion, interes, null,
+      multa, mesesImpagos, deudaPendienteParaSheet, formData.get('Fecha_Pago'), formData.get('Metodo_Pago'),
+      estadoPago
     ];
     
     mostrarSpinner();
@@ -341,7 +346,7 @@ async function cargarGastosComunes() {
   const modalComprobante = document.getElementById('modalComprobante');
   const formComprobante = document.getElementById('formEnviarComprobante');
   const inputParcelaComprobante = document.getElementById('inputNParcelaComprobante');
-
+  
   document.getElementById('btnAbrirModalComprobante').addEventListener('click', () => {
     formComprobante.reset();
     document.getElementById('divCuerpoComprobante').innerHTML = `<span style="color: #6c757d;">Ingrese un N° de Parcela para generar la previsualización.</span>`;
@@ -351,17 +356,14 @@ async function cargarGastosComunes() {
   document.getElementById('btnCerrarModalComprobante').addEventListener('click', () => {
     modalComprobante.style.display = 'none';
   });
-
+  
   function crearCuerpoCorreo(pago, residente) {
     const nombreResidente = residente[1];
     const periodoFormateado = formatearPeriodo(pago.Periodo);
     const valorGC = parseFloat(pago.Valor_Gasto_Comun).toLocaleString('es-CL');
     const interes = parseFloat(pago.Interes || 0).toLocaleString('es-CL');
     const multa = parseFloat(pago['Multa_1/4'] || 0).toLocaleString('es-CL');
-    
-    // La deuda del período es la suma de todo lo que se debía antes de pagar
-    const deudaDelPeriodo = (pago.Monto_Pagado - pago.Saldo_Pendiente_o_a_favor);
-
+    const deudaDelPeriodo = (parseFloat(pago.Monto_Pagado) - parseFloat(pago.Saldo_Pendiente_o_a_favor));
     const montoPagado = parseFloat(pago.Monto_Pagado).toLocaleString('es-CL');
     const saldo = parseFloat(pago.Saldo_Pendiente_o_a_favor || 0);
     const fechaPago = new Date(pago.Fecha_Pago.replace(/-/g, '/')).toLocaleDateString('es-CL', { timeZone: 'UTC' });
@@ -382,9 +384,7 @@ async function cargarGastosComunes() {
 
     return `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; border: 1px solid #ddd; padding: 20px; font-size: 14px; line-height: 1.6;">
-        <div style="text-align: center; margin-bottom: 20px;">
-          <h2 style="color: #2a7ca3; margin-top: 10px;">Comprobante de Pago de Gasto Común</h2>
-        </div>
+        <div style="text-align: center; margin-bottom: 20px;"><h2 style="color: #2a7ca3; margin-top: 10px;">Comprobante de Pago de Gasto Común</h2></div>
         <p>Estimado(a) <strong>${nombreResidente}</strong>,</p>
         <p>Confirmamos la recepción de su pago correspondiente al Gasto Común del período <strong>${periodoFormateado}</strong>.</p>
         <hr>
@@ -486,6 +486,20 @@ async function cargarGastosComunes() {
     filtrarYRenderizar();
   });
   
+  document.getElementById('tbody-gastos').addEventListener('click', (e) => {
+    const fila = e.target.closest('tr.fila-clicable');
+    if (fila && fila.dataset.idPago) {
+        abrirModalDetalle(fila.dataset.idPago);
+    }
+  });
+
+  document.getElementById('modalDetallePago').addEventListener('click', (e) => {
+    if(e.target === e.currentTarget) e.currentTarget.style.display = 'none';
+  });
+  document.getElementById('btnCerrarModalDetalle').addEventListener('click', () => {
+    document.getElementById('modalDetallePago').style.display = 'none';
+  });
+
   filtrarYRenderizar();
   actualizarVistaTIMC();
   ocultarSpinner();
