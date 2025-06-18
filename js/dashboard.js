@@ -38,8 +38,7 @@ async function cargarDashboard() {
 
     const mantencionesPendientes = mantenciones.filter(m => m[3] && m[3].toLowerCase() === 'pendiente').length;
 
-    // --- INICIO DE LA MODIFICACIÓN ---
-    // Lógica para identificar residentes con deuda (Morosos + Abonos).
+    // --- LÓGICA MODIFICADA PARA IDENTIFICAR RESIDENTES CON DEUDA ---
     const pagosMesActual = pagosGC.filter(p => {
         if (!p[4]) return false;
         const [mes, anio] = p[4].split(' ');
@@ -47,16 +46,16 @@ async function cargarDashboard() {
     });
 
     const parcelasPagadoCompleto = pagosMesActual
-        .filter(p => p[15] && p[15].toLowerCase() === 'pagado') // Se filtran los que tienen estado "Pagado".
+        .filter(p => p[15] && p[15].toLowerCase() === 'pagado')
         .map(p => p[2]);
 
     const residentesConDeuda = residentes.filter(r => {
         const numeroParcela = r[3];
-        return !parcelasPagadoCompleto.includes(numeroParcela); // Se incluyen todos los que no han pagado por completo.
+        return !parcelasPagadoCompleto.includes(numeroParcela);
     });
-    // --- FIN DE LA MODIFICACIÓN ---
-
+    
     const main = document.getElementById('main-content');
+    // SE RESTAURA LA ESTRUCTURA HTML ORIGINAL EXACTA
     main.innerHTML = `
       <div style="display:flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
         <h2>Dashboard</h2>
@@ -73,21 +72,17 @@ async function cargarDashboard() {
         <div class="widget large">
           <h4>Residentes con Deuda (${nombreMesActual})</h4>
           <div id="lista-morosos" class="lista-scroll">
-             </div>
+          </div>
         </div>
       </div>
-      <style>
-        .residente-item { display: flex; justify-content: space-between; align-items: center; padding: 8px 4px; border-bottom: 1px solid #eee; }
-        .estado-abono { background-color: #ffc107; color: #333; }
-      </style>
     `;
 
+    // SE INYECTAN LOS DATOS EN LA ESTRUCTURA HTML EXISTENTE
     document.getElementById('total-residentes').textContent = totalResidentes;
     document.getElementById('ingresos-mes').textContent = `$${totalIngresosMesActual.toLocaleString('es-CL')}`;
     document.getElementById('egresos-mes').textContent = `$${totalEgresosMesActual.toLocaleString('es-CL')}`;
     document.getElementById('mantenciones-pendientes').textContent = mantencionesPendientes;
     
-    // --- INICIO DE LA MODIFICACIÓN EN LA VISUALIZACIÓN ---
     const listaMorososEl = document.getElementById('lista-morosos');
     if (residentesConDeuda.length > 0) {
       residentesConDeuda.forEach(res => {
@@ -95,34 +90,35 @@ async function cargarDashboard() {
         const pagoExistente = pagosMesActual.find(p => p[2] === numeroParcela);
         
         let estadoTexto = 'Moroso';
-        let estadoClass = 'estado-moroso';
+        // El estado por defecto es 'moroso', no necesita clase extra si tu CSS ya lo maneja
+        let estadoClass = 'estado-moroso'; 
 
         if (pagoExistente && pagoExistente[15] && pagoExistente[15].toLowerCase() === 'abono') {
           estadoTexto = 'Abono';
           estadoClass = 'estado-abono';
         }
 
-        // Se construye el item de la lista con el nombre, la parcela y el estado.
-        listaMorososEl.innerHTML += `
-          <div class="residente-item">
-            <span>${res[1]} (Parcela ${numeroParcela})</span>
-            <span class="estado-tag ${estadoClass}">${estadoTexto}</span>
-          </div>
+        // Se usa la estructura original del item, solo se añade la etiqueta de estado
+        const itemHTML = `
+            <div class="residente-item" style="display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid #eee;">
+                <span>${res[1]} (Parcela ${numeroParcela})</span>
+                <span class="estado-tag ${estadoClass}">${estadoTexto}</span>
+            </div>
         `;
+        listaMorososEl.innerHTML += itemHTML;
       });
     } else {
       listaMorososEl.innerHTML = '<p style="text-align:center; padding-top: 20px;">¡Felicitaciones! No hay residentes con deudas este mes.</p>';
     }
-    // --- FIN DE LA MODIFICACIÓN EN LA VISUALIZACIÓN ---
 
-    // Lógica del Gráfico
+    // Lógica del Gráfico (sin cambios)
     const ctx = document.getElementById('graficoIngresosEgresos').getContext('2d');
     const labels = [];
     const dataIngresos = [];
     const dataEgresos = [];
 
     for (let i = 5; i >= 0; i--) {
-        const d = new Date(anioActual, mesActual - i, 1);
+        const d = new Date(fechaActual.getFullYear(), fechaActual.getMonth() - i, 1);
         const anioMes = d.getFullYear();
         const mesMes = d.getMonth();
         const nombreMes = MESES[mesMes];
