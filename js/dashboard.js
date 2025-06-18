@@ -17,7 +17,7 @@ async function cargarDashboard() {
     const mesActual = fechaActual.getMonth();
     const nombreMesActual = MESES[mesActual];
 
-    // Cálculos para los Widgets
+    // Cálculos para los Widgets (sin cambios)
     const totalResidentes = residentes.length;
 
     const totalIngresosMesActual = pagosGC
@@ -38,8 +38,8 @@ async function cargarDashboard() {
 
     const mantencionesPendientes = mantenciones.filter(m => m[3] && m[3].toLowerCase() === 'pendiente').length;
 
-    // --- INICIO DE LA ÚNICA MODIFICACIÓN ---
-    // Lógica para identificar residentes con deuda (Morosos + Abonos)
+    // --- INICIO DE LA MODIFICACIÓN PRECISA ---
+    // Lógica para identificar a todos los residentes que no tengan un pago "Pagado" en el mes actual.
     const pagosMesActual = pagosGC.filter(p => {
         if (!p[4]) return false;
         const [mes, anio] = p[4].split(' ');
@@ -54,7 +54,7 @@ async function cargarDashboard() {
         const numeroParcela = r[3];
         return !parcelasPagadoCompleto.includes(numeroParcela);
     });
-    // --- FIN DE LA ÚNICA MODIFICACIÓN ---
+    // --- FIN DE LA MODIFICACIÓN PRECISA ---
 
     const main = document.getElementById('main-content');
     // SE RESTAURA LA ESTRUCTURA HTML ORIGINAL EXACTA
@@ -77,7 +77,8 @@ async function cargarDashboard() {
              </div>
         </div>
       </div>
-       <style>
+      <style>
+        /* Estilos adicionales solo para las etiquetas de estado */
         .residente-item { display: flex; justify-content: space-between; align-items: center; padding: 8px 4px; border-bottom: 1px solid #eee; }
         .estado-abono { background-color: #ffc107; color: #333; }
       </style>
@@ -89,7 +90,7 @@ async function cargarDashboard() {
     document.getElementById('egresos-mes').textContent = `$${totalEgresosMesActual.toLocaleString('es-CL')}`;
     document.getElementById('mantenciones-pendientes').textContent = mantencionesPendientes;
     
-    // SE INYECTA LA LISTA DE RESIDENTES CON LA NUEVA LÓGICA
+    // SE INYECTA LA LISTA DE RESIDENTES CON LA NUEVA LÓGICA DE ESTADOS
     const listaMorososEl = document.getElementById('lista-morosos');
     if (residentesConDeuda.length > 0) {
       residentesConDeuda.forEach(res => {
@@ -99,6 +100,7 @@ async function cargarDashboard() {
         let estadoTexto = 'Moroso';
         let estadoClass = 'estado-moroso';
 
+        // Si existe un pago, y ese pago tiene estado "Abono", se actualiza la etiqueta
         if (pagoExistente && pagoExistente[15] && pagoExistente[15].toLowerCase() === 'abono') {
           estadoTexto = 'Abono';
           estadoClass = 'estado-abono';
