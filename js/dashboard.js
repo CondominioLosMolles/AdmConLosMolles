@@ -5,6 +5,7 @@ async function cargarDashboard() {
   mostrarSpinner();
 
   try {
+    // Se obtienen los datos de las hojas de cálculo
     const [residentes, pagosGC, egresos, mantenciones] = await Promise.all([
       obtenerResidentes(),
       obtenerPagosGC(),
@@ -17,10 +18,9 @@ async function cargarDashboard() {
     const mesActual = fechaActual.getMonth();
     const nombreMesActual = MESES[mesActual];
 
-    // 1. Total Residentes
+    // --- Cálculos para los Widgets ---
     const totalResidentes = residentes.length;
 
-    // 2. Total Ingresos del Mes Actual
     const totalIngresosMesActual = pagosGC
       .filter(p => {
         if (!p[4]) return false;
@@ -29,7 +29,6 @@ async function cargarDashboard() {
       })
       .reduce((sum, p) => sum + parseFloat(p[6] || 0), 0);
 
-    // 3. Total Egresos del Mes Actual
     const totalEgresosMesActual = egresos
       .filter(e => {
         if (!e[1]) return false;
@@ -38,10 +37,9 @@ async function cargarDashboard() {
       })
       .reduce((sum, e) => sum + parseFloat(e[3] || 0), 0);
 
-    // 4. Mantenciones Pendientes
     const mantencionesPendientes = mantenciones.filter(m => m[3] && m[3].toLowerCase() === 'pendiente').length;
 
-    // Lógica para Residentes Morosos (incluyendo Abonos)
+    // --- LÓGICA CORREGIDA PARA RESIDENTES CON DEUDA (INCLUYE "ABONO") ---
     const pagosMesActual = pagosGC.filter(p => {
         if (!p[4]) return false;
         const [mes, anio] = p[4].split(' ');
@@ -56,41 +54,11 @@ async function cargarDashboard() {
         const numeroParcela = r[3];
         return !parcelasPagadoCompleto.includes(numeroParcela);
     });
+    // --- FIN DE LA LÓGICA ---
 
     const main = document.getElementById('main-content');
+    // Se utiliza la estructura HTML original del dashboard
     main.innerHTML = `
-      <style>
-        .dashboard-grid {
-          display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-          gap: 20px;
-        }
-        .widget {
-          background: #fff;
-          padding: 20px;
-          border-radius: 8px;
-          box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
-        .widget.large {
-          grid-column: span 2;
-        }
-        .widget h4 {
-          margin-top: 0;
-          color: #2a7ca3;
-        }
-        .widget p {
-          font-size: 2em;
-          font-weight: bold;
-          margin: 0;
-          text-align: right;
-        }
-        .lista-scroll {
-          max-height: 200px;
-          overflow-y: auto;
-        }
-        .residente-item { display: flex; justify-content: space-between; align-items: center; padding: 8px 4px; border-bottom: 1px solid #eee; }
-        .estado-abono { background-color: #ffc107; color: #333; }
-      </style>
       <div style="display:flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
         <h2>Dashboard</h2>
       </div>
@@ -105,36 +73,44 @@ async function cargarDashboard() {
         </div>
         <div class="widget large">
           <h4>Residentes con Deuda (${nombreMesActual})</h4>
-          <div id="lista-morosos" class="lista-scroll"></div>
+          <div id="lista-morosos" class="lista-scroll">
+             </div>
         </div>
       </div>
+      <style>
+        .residente-item { display: flex; justify-content: space-between; align-items: center; padding: 8px 4px; border-bottom: 1px solid #eee; }
+        .estado-abono { background-color: #ffc107; color: #333; }
+      </style>
     `;
-    
+
+    // --- INSERCIÓN DINÁMICA DE DATOS SIN ALTERAR HTML ---
     const listaMorososEl = document.getElementById('lista-morosos');
     if (residentesMorosos.length > 0) {
-        residentesMorosos.forEach(res => {
-            const numeroParcela = res[3];
-            const pagoConAbono = pagosMesActual.find(p => p[2] === numeroParcela && p[15] && p[15].toLowerCase() === 'abono');
-            
-            let estadoTexto = 'Moroso';
-            let estadoClass = 'estado-moroso';
+      residentesMorosos.forEach(res => {
+        const numeroParcela = res[3];
+        const pagoConAbono = pagosMesActual.find(p => p[2] === numeroParcela && p[15] && p[15].toLowerCase() === 'abono');
+        
+        let estadoTexto = 'Moroso';
+        let estadoClass = 'estado-moroso';
 
-            if (pagoConAbono) {
-                estadoTexto = 'Abono';
-                estadoClass = 'estado-abono';
-            }
+        if (pagoConAbono) {
+          estadoTexto = 'Abono';
+          estadoClass = 'estado-abono';
+        }
 
-            listaMorososEl.innerHTML += `
-                <div class="residente-item">
-                    <span>${res[1]} (Parcela ${numeroParcela})</span>
-                    <span class="estado-tag ${estadoClass}">${estadoTexto}</span>
-                </div>
-            `;
-        });
+        listaMorososEl.innerHTML += `
+          <div class="residente-item">
+            <span>${res[1]} (Parcela ${numeroParcela})</span>
+            <span class="estado-tag ${estadoClass}">${estadoTexto}</span>
+          </div>
+        `;
+      });
     } else {
-        listaMorososEl.innerHTML = '<p style="text-align:center; margin-top: 20px;">¡Felicitaciones! No hay residentes con deudas este mes.</p>';
+      listaMorososEl.innerHTML = '<p style="text-align:center; padding-top: 20px;">¡Felicitaciones! No hay residentes con deudas este mes.</p>';
     }
+    // --- FIN DE LA INSERCIÓN ---
 
+    // Lógica del Gráfico (sin cambios)
     const ctx = document.getElementById('graficoIngresosEgresos').getContext('2d');
     const labels = [];
     const dataIngresos = [];
