@@ -38,7 +38,7 @@ async function cargarDashboard() {
 
     const mantencionesPendientes = mantenciones.filter(m => m[3] && m[3].toLowerCase() === 'pendiente').length;
 
-    // Lógica para identificar residentes con deuda (Morosos + Abonos)
+    // --- INICIO: Lógica modificada para incluir el estado "Abono" ---
     const pagosMesActual = pagosGC.filter(p => {
         if (!p[4]) return false;
         const [mes, anio] = p[4].split(' ');
@@ -53,6 +53,7 @@ async function cargarDashboard() {
         const numeroParcela = r[3];
         return !parcelasPagadoCompleto.includes(numeroParcela);
     });
+    // --- FIN: Lógica modificada ---
     
     const main = document.getElementById('main-content');
     // Se utiliza la estructura HTML original exacta de tu archivo.
@@ -70,7 +71,7 @@ async function cargarDashboard() {
           <canvas id="graficoIngresosEgresos" style="max-height: 250px;"></canvas>
         </div>
         <div class="widget large">
-          <h4>Residentes con Deuda (${nombreMesActual})</h4>
+          <h4>Residentes Morosos (${nombreMesActual})</h4>
           <div id="lista-morosos" class="lista-scroll">
           </div>
         </div>
@@ -83,26 +84,20 @@ async function cargarDashboard() {
     document.getElementById('egresos-mes').textContent = `$${totalEgresosMesActual.toLocaleString('es-CL')}`;
     document.getElementById('mantenciones-pendientes').textContent = mantencionesPendientes;
     
-    // Se inyecta la lista de residentes con la lógica solicitada.
+    // Se inyecta la lista de residentes con la lógica modificada.
     const listaMorososEl = document.getElementById('lista-morosos');
     if (residentesConDeuda.length > 0) {
       residentesConDeuda.forEach(res => {
-        const numeroParcela = res[3];
-        const pagoExistente = pagosMesActual.find(p => p[2] === numeroParcela);
-        
-        let estadoTexto = '(Moroso)';
-        if (pagoExistente && pagoExistente[15] && pagoExistente[15].toLowerCase() === 'abono') {
-          estadoTexto = '(Abono)';
-        }
-        
-        listaMorososEl.innerHTML += `<div class="residente-item"><span>${res[1]} (Parcela ${numeroParcela}) ${estadoTexto}</span></div>`;
+        // La estructura del item se mantiene como en tu archivo original.
+        listaMorososEl.innerHTML += `<div class="residente-item"><span>${res[1]} (Parcela ${res[3]})</span></div>`;
       });
     } else {
-      listaMorososEl.innerHTML = '<p style="text-align:center; padding-top: 20px;">No hay residentes con deudas este mes.</p>';
+      listaMorososEl.innerHTML = '<p style="text-align:center; padding-top: 20px;">¡Felicitaciones! No hay residentes con deudas este mes.</p>';
     }
 
-    // NO SE INCLUYE LÓGICA PARA EL GRÁFICO, RESPETANDO EL ARCHIVO ORIGINAL.
-    // El elemento <canvas> queda disponible para que tu código local lo maneje.
+    // La lógica del gráfico no se implementa, respetando tu archivo original.
+    const ctx = document.getElementById('graficoIngresosEgresos').getContext('2d');
+    // Tu código local se encargará de dibujar el gráfico aquí.
 
   } catch (error) {
     console.error("Error al cargar el dashboard:", error);
