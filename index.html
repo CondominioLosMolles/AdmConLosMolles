@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Condominio Los Molles - Sistema de Administración</title>
+    
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <!-- SheetJS -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    
+    <!-- Google APIs -->
+    <script src="https://apis.google.com/js/api.js"></script>
+    <script src="https://accounts.google.com/gsi/client"></script>
+    
+    <!-- Estilos CSS -->
+    <link rel="stylesheet" href="/AdmConLosMolles/css/styles.css">
+    <link rel="stylesheet" href="/AdmConLosMolles/css/responsive.css">
+    <link rel="stylesheet" href="/AdmConLosMolles/css/modules.css">
+</head>
+<body>
+    <!-- Pantalla de carga -->
+    <div id="loading-screen" class="loading-screen">
+        <div class="loading-content">
+            <div class="loading-spinner"></div>
+            <h2>Condominio Los Molles</h2>
+            <p>Cargando sistema de administración...</p>
+        </div>
+    </div>
+
+    <!-- Pantalla de login -->
+    <div id="login-screen" class="login-screen hidden">
+        <div class="login-container">
+            <div class="login-header">
+                <i class="fas fa-building"></i>
+                <h1>Condominio Los Molles</h1>
+                <p>Sistema de Administración</p>
+            </div>
+            <div class="login-content">
+                <p>Inicie sesión con su cuenta de Google para acceder al sistema</p>
+                <div id="g_id_onload"
+                     data-client_id="997872453031-5o8s2o6v3qt722fb3p51a2r7bo24ncee.apps.googleusercontent.com"
+                     data-callback="handleCredentialResponse"
+                     data-auto_prompt="false">
+                </div>
+                <div class="g_id_signin"
+                     data-type="standard"
+                     data-size="large"
+                     data-theme="outline"
+                     data-text="sign_in_with"
+                     data-shape="rectangular"
+                     data-logo_alignment="left">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Aplicación principal -->
+    <div id="main-app" class="main-app hidden">
+        <!-- Header -->
+        <header class="header">
+            <div class="header-left">
+                <button id="menu-toggle" class="menu-toggle">
+                    <i class="fas fa-bars"></i>
+                </button>
+                <h1>Condominio Los Molles</h1>
+            </div>
+            <div class="header-right">
+                <div class="user-info">
+                    <img id="user-avatar" src="" alt="Usuario" class="user-avatar">
+                    <span id="user-name">Usuario</span>
+                    <button id="logout-btn" class="logout-btn">
+                        <i class="fas fa-sign-out-alt"></i>
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <!-- Sidebar -->
+        <nav id="sidebar" class="sidebar">
+            <div class="sidebar-content">
+                <ul class="nav-menu">
+                    <li class="nav-item active" data-module="dashboard">
+                        <a href="#" class="nav-link">
+                            <i class="fas fa-tachometer-alt"></i>
+                            <span>Dashboard</span>
+                        </a>
+                    </li>
+                    <li class="nav-item" data-module="residentes">
+                        <a href="#" class="nav-link">
+                            <i class="fas fa-users"></i>
+                            <span>Residentes</span>
+                        </a>
+                    </li>
+                    <li class="nav-item" data-module="gastos">
+                        <a href="#" class="nav-link">
+                            <i class="fas fa-money-bill-wave"></i>
+                            <span>Gastos Comunes</span>
+                        </a>
+                    </li>
+                    <li class="nav-item" data-module="contabilidad">
+                        <a href="#" class="nav-link">
+                            <i class="fas fa-calculator"></i>
+                            <span>Contabilidad</span>
+                        </a>
+                    </li>
+                    <li class="nav-item" data-module="comunicaciones">
+                        <a href="#" class="nav-link">
+                            <i class="fas fa-envelope"></i>
+                            <span>Comunicaciones</span>
+                        </a>
+                    </li>
+                    <li class="nav-item" data-module="mantenciones">
+                        <a href="#" class="nav-link">
+                            <i class="fas fa-tools"></i>
+                            <span>Mantenciones</span>
+                        </a>
+                    </li>
+                    <li class="nav-item" data-module="multas">
+                        <a href="#" class="nav-link">
+                            <i class="fas fa-exclamation-triangle"></i>
+                            <span>Multas</span>
+                        </a>
+                    </li>
+                    <li class="nav-item" data-module="asambleas">
+                        <a href="#" class="nav-link">
+                            <i class="fas fa-users-cog"></i>
+                            <span>Asambleas</span>
+                        </a>
+                    </li>
+                    <li class="nav-item" data-module="informes">
+                        <a href="#" class="nav-link">
+                            <i class="fas fa-chart-bar"></i>
+                            <span>Informes</span>
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </nav>
+
+        <!-- Contenido principal -->
+        <main class="main-content">
+            <div id="content-area" class="content-area">
+                <!-- El contenido de cada módulo se cargará aquí dinámicamente -->
+            </div>
+        </main>
+    </div>
+
+    <!-- Modales -->
+    <div id="modal-overlay" class="modal-overlay hidden">
+        <div id="modal-content" class="modal-content">
+            <!-- Contenido del modal se cargará dinámicamente -->
+        </div>
+    </div>
+
+    <!-- Notificaciones -->
+    <div id="notifications" class="notifications"></div>
+
+    <!-- Scripts JavaScript -->
+    <script src="/AdmConLosMolles/js/utils/helpers.js"></script>
+    <script src="/AdmConLosMolles/js/utils/validators.js"></script>
+    <script src="/AdmConLosMolles/js/utils/calculations.js"></script>
+    <script src="/AdmConLosMolles/js/auth.js"></script>
+    <script src="/AdmConLosMolles/js/sheets.js"></script>
+    <script src="/AdmConLosMolles/js/drive.js"></script>
+    <script src="/AdmConLosMolles/js/gmail.js"></script>
+    
+    <!-- Scripts de módulos -->
+    <script src="/AdmConLosMolles/js/modules/dashboard.js"></script>
+    <script src="/AdmConLosMolles/js/modules/residentes.js"></script>
+    <script src="/AdmConLosMolles/js/modules/gastos.js"></script>
+    <script src="/AdmConLosMolles/js/modules/contabilidad.js"></script>
+    <script src="/AdmConLosMolles/js/modules/comunicaciones.js"></script>
+    <script src="/AdmConLosMolles/js/modules/mantenciones.js"></script>
+    <script src="/AdmConLosMolles/js/modules/multas.js"></script>
+    <script src="/AdmConLosMolles/js/modules/asambleas.js"></script>
+    <script src="/AdmConLosMolles/js/modules/informes.js"></script>
+    
+    <!-- Script principal -->
+    <script src="/AdmConLosMolles/js/app.js"></script>
