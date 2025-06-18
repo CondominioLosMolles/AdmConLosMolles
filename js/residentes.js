@@ -47,7 +47,7 @@ async function cargarResidentes() {
             <th style="width:100px;">Teléfono</th>
             <th style="width:80px;">Estado</th>
             <th style="width:90px;">Valor GC</th>
-            <th style="width:80px;">Acciones</th>
+            <th style="width:100px;">Acciones</th>
           </tr>
         </thead>
         <tbody>
@@ -66,7 +66,7 @@ async function cargarResidentes() {
             <span class="estado-tag estado-${(estado||'').toLowerCase()}">${estado}</span>
           </td>
           <td style="width:90px;" title="${valorGC}">${valorGC}</td>
-          <td style="width:80px;">
+          <td style="width:100px;">
             <button class="btn secondary btn-editar" data-id="${id}" title="Editar">✏️</button>
             <button class="btn secondary btn-eliminar" data-id="${id}" title="Eliminar">🗑️</button>
           </td>
