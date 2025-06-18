@@ -5,7 +5,8 @@ const MESES = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "
 const ENCABEZADOS_PAGOS = [
     'ID_Pago', 'Nombre_Residente', 'N_Parcela', 'Valor_Gasto_Comun', 'Periodo',
     'Fecha_Vencimiento', 'Monto_Pagado', 'Saldo_Pendiente_o_a_favor', 'Interes', 'TIMC',
-    'Multa_1/4', 'Meses_Inpagos', 'Deuda_Total', 'Fecha_Pago', 'Metodo_Pago', 'Estado'
+    'Multa_1/4', 'Meses_Inpagos', 'Deuda_Total', 'Fecha_Pago', 'Metodo_Pago', 'Estado',
+    'ID_Comprobante_Drive'
 ];
 
 function formatearPeriodo(periodo) {
@@ -65,9 +66,9 @@ async function cargarGastosComunes() {
     <style>
       .estado-abono { background-color: #ffc107; color: #333; }
       .fila-clicable:hover { background-color: #e9f1fb; cursor: pointer; }
-      #detalle-pago-grid { display: grid; grid-template-columns: auto 1fr; gap: 10px 20px; }
+      #detalle-pago-grid { display: grid; grid-template-columns: auto 1fr; gap: 10px 20px; align-items: center;}
       #detalle-pago-grid b { grid-column: 1; text-align: right; }
-      #detalle-pago-grid span { grid-column: 2; text-align: left; }
+      #detalle-pago-grid span { grid-column: 2; text-align: left; word-break: break-all; }
     </style>
     <div style="display:flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;"><h2>Gastos Comunes</h2></div>
     
@@ -206,6 +207,13 @@ async function cargarGastosComunes() {
     const deudaDelPeriodo = montoPagado - saldoTransaccion;
     const saldoFinalTexto = saldoTransaccion >= 0 ? `A favor: $${saldoTransaccion.toLocaleString('es-CL')}` : `Pendiente: $${Math.abs(saldoTransaccion).toLocaleString('es-CL')}`;
 
+    let filaComprobante = '';
+    if (pago.ID_Comprobante_Drive) {
+        filaComprobante = `<b>Comprobante:</b> <span><a href="${pago.ID_Comprobante_Drive}" target="_blank" class="btn small">Ver Documento</a></span>`;
+    } else {
+        filaComprobante = '<b>Comprobante:</b> <span>No adjunto</span>';
+    }
+
     contenido.innerHTML = `
         <div id="detalle-pago-grid">
             <b>Residente:</b>       <span>${pago.Nombre_Residente}</span>
@@ -223,6 +231,7 @@ async function cargarGastosComunes() {
             <b>Resultado (Saldo):</b> <span style="font-weight:bold; color:${saldoTransaccion < 0 ? 'red' : 'green'};">${saldoFinalTexto}</span>
              <hr style="grid-column: 1 / -1;">
             <b>Estado del pago:</b>   <span>${pago.Estado}</span>
+            ${filaComprobante}
         </div>
     `;
 
@@ -288,58 +297,77 @@ async function cargarGastosComunes() {
 
   document.getElementById('formGastoComun').addEventListener('submit', async (e) => {
     e.preventDefault();
-    const formData = new FormData(e.target);
-    const parcela = formData.get('N_Parcela');
-    const residente = residentes.find(r => r[3] == parcela);
-    const valorGastoComun = parseFloat(residente[8]);
-    const mesPagadoIndex = parseInt(formData.get('Periodo'));
-    const anioSeleccionado = new Date(formData.get('Fecha_Pago').replace(/-/g, '/')).getFullYear();
-    const fechaDePago = new Date(formData.get('Fecha_Pago').replace(/-/g, '/'));
-    const fechaVencimiento = new Date(anioSeleccionado, mesPagadoIndex, 10);
-    
-    let deudaDelPeriodo = valorGastoComun;
-    let interes = 0, multa = 0, mesesImpagos = 0;
-
-    if (fechaDePago > fechaVencimiento) {
-        const diffAnios = fechaDePago.getFullYear() - fechaVencimiento.getFullYear();
-        const diffMeses = fechaDePago.getMonth() - fechaVencimiento.getMonth();
-        mesesImpagos = diffAnios * 12 + diffMeses;
-        if (fechaDePago.getDate() >= 11) mesesImpagos++;
-        if (mesesImpagos <= 0) mesesImpagos = 1;
-        const timcAnual = (timcData[anioSeleccionado] && timcData[anioSeleccionado][mesPagadoIndex + 1]) ? timcData[anioSeleccionado][mesPagadoIndex + 1] : 0;
-        interes = valorGastoComun * (timcAnual / 100) / 12;
-        multa = (valorGastoComun / 4) * mesesImpagos;
-        deudaDelPeriodo = valorGastoComun + interes + multa;
-    }
-
-    const montoPagado = parseFloat(formData.get('Monto_Pagado'));
-    const saldoTransaccion = montoPagado - deudaDelPeriodo;
-    const periodoStr = `${MESES[mesPagadoIndex]} ${anioSeleccionado}`;
-    const estadoPago = saldoTransaccion >= 0 ? 'Pagado' : 'Abono';
-    const deudaPendienteParaSheet = saldoTransaccion < 0 ? -saldoTransaccion : 0;
-
-    const datosParaSheet = [
-      null, formData.get('Nombre_Residente'), parcela, valorGastoComun, periodoStr,
-      fechaVencimiento.toISOString().split('T')[0], montoPagado, saldoTransaccion, interes, null,
-      multa, mesesImpagos, deudaPendienteParaSheet, formData.get('Fecha_Pago'), formData.get('Metodo_Pago'),
-      estadoPago
-    ];
-    
     mostrarSpinner();
+
     try {
-      await agregarPagoGC(datosParaSheet);
-      const nuevoPagoObj = {};
-      ENCABEZADOS_PAGOS.forEach((encabezado, i) => nuevoPagoObj[encabezado] = datosParaSheet[i]);
-      nuevoPagoObj.anio = anioSeleccionado;
-      pagosGC_obj.push(nuevoPagoObj);
-      filtrarYRenderizar();
-      modal.style.display = 'none';
-      e.target.reset();
-      mostrarMensaje('Gasto común registrado con éxito en Google Sheets.', 'success');
+        const formData = new FormData(e.target);
+        const parcela = formData.get('N_Parcela');
+        const residente = residentes.find(r => r[3] == parcela);
+
+        if (!residente) throw new Error("No se encontró el residente para la parcela seleccionada.");
+
+        const valorGastoComun = parseFloat(residente[8]);
+        const mesPagadoIndex = parseInt(formData.get('Periodo'));
+        const anioSeleccionado = new Date(formData.get('Fecha_Pago').replace(/-/g, '/')).getFullYear();
+        const fechaDePago = new Date(formData.get('Fecha_Pago').replace(/-/g, '/'));
+        const fechaVencimiento = new Date(anioSeleccionado, mesPagadoIndex, 10);
+        
+        let deudaDelPeriodo = valorGastoComun;
+        let interes = 0, multa = 0, mesesImpagos = 0;
+
+        if (fechaDePago > fechaVencimiento) {
+            const diffAnios = fechaDePago.getFullYear() - fechaVencimiento.getFullYear();
+            const diffMeses = fechaDePago.getMonth() - fechaVencimiento.getMonth();
+            mesesImpagos = diffAnios * 12 + diffMeses;
+            if (fechaDePago.getDate() >= 11) mesesImpagos++;
+            if (mesesImpagos <= 0) mesesImpagos = 1;
+            const timcAnual = (timcData[anioSeleccionado] && timcData[anioSeleccionado][mesPagadoIndex + 1]) ? timcData[anioSeleccionado][mesPagadoIndex + 1] : 0;
+            interes = valorGastoComun * (timcAnual / 100) / 12;
+            multa = (valorGastoComun / 4) * mesesImpagos;
+            deudaDelPeriodo = valorGastoComun + interes + multa;
+        }
+
+        let linkComprobante = null;
+        const archivo = formData.get('Comprobante');
+        if (archivo && archivo.size > 0) {
+            if (typeof buscarOCrearCarpetaDeParcela !== 'function' || typeof subirComprobante !== 'function') {
+                throw new Error("Las funciones de Google Drive no están disponibles.");
+            }
+            const nombreCarpeta = `Parcela ${parcela}`;
+            const carpetaId = await buscarOCrearCarpetaDeParcela(nombreCarpeta);
+            const resultadoSubida = await subirComprobante(archivo, carpetaId);
+            linkComprobante = resultadoSubida.webViewLink;
+        }
+
+        const montoPagado = parseFloat(formData.get('Monto_Pagado'));
+        const saldoTransaccion = montoPagado - deudaDelPeriodo;
+        const periodoStr = `${MESES[mesPagadoIndex]} ${anioSeleccionado}`;
+        const estadoPago = saldoTransaccion >= 0 ? 'Pagado' : 'Abono';
+        const deudaPendienteParaSheet = saldoTransaccion < 0 ? -saldoTransaccion : 0;
+
+        const datosParaSheet = [
+          null, formData.get('Nombre_Residente'), parcela, valorGastoComun, periodoStr,
+          fechaVencimiento.toISOString().split('T')[0], montoPagado, saldoTransaccion, interes, null,
+          multa, mesesImpagos, deudaPendienteParaSheet, formData.get('Fecha_Pago'), formData.get('Metodo_Pago'),
+          estadoPago, linkComprobante
+        ];
+        
+        await agregarPagoGC(datosParaSheet);
+        
+        const nuevoPagoObj = {};
+        ENCABEZADOS_PAGOS.forEach((encabezado, i) => nuevoPagoObj[encabezado] = datosParaSheet[i]);
+        nuevoPagoObj.anio = anioSeleccionado;
+        pagosGC_obj.push(nuevoPagoObj);
+        
+        filtrarYRenderizar();
+        modal.style.display = 'none';
+        e.target.reset();
+        mostrarMensaje('Gasto común registrado con éxito en Google Sheets.', 'success');
+
     } catch (err) {
-      mostrarMensaje('Error al guardar el gasto: ' + err.message, 'error');
+        mostrarMensaje('Error al guardar el gasto: ' + err.message, 'error');
     } finally {
-      ocultarSpinner();
+        ocultarSpinner();
     }
   });
 
