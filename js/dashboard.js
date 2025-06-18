@@ -1,42 +1,192 @@
 // js/dashboard.js
+
 async function cargarDashboard() {
   limpiarMainContent();
   mostrarSpinner();
-  let residentes = [], pagos = [], egresos = [], mantenciones = [];
+
   try {
-    const [residentesData, pagosData, egresosData, mantencionesData] = await Promise.all([
-        obtenerResidentes(),
-        obtenerPagosGC(),
-        obtenerEgresos(),
-        obtenerMantenciones()
+    const [residentes, pagosGC, egresos, mantenciones] = await Promise.all([
+      obtenerResidentes(),
+      obtenerPagosGC(),
+      obtenerEgresos(),
+      obtenerMantenciones()
     ]);
-    residentes = residentesData || [];
-    pagos = pagosData || [];
-    egresos = egresosData || [];
-    mantenciones = mantencionesData || [];
-  } catch (e) {
+
+    const fechaActual = new Date();
+    const anioActual = fechaActual.getFullYear();
+    const mesActual = fechaActual.getMonth();
+    const nombreMesActual = MESES[mesActual];
+
+    // 1. Total Residentes
+    const totalResidentes = residentes.length;
+
+    // 2. Total Ingresos del Mes Actual
+    const totalIngresosMesActual = pagosGC
+      .filter(p => {
+        // La columna del período es la 5 (índice 4)
+        if (!p[4]) return false;
+        const [mes, anio] = p[4].split(' ');
+        return anio == anioActual && mes.toLowerCase() === nombreMesActual.toLowerCase();
+      })
+      // La columna de monto pagado es la 7 (índice 6)
+      .reduce((sum, p) => sum + parseFloat(p[6] || 0), 0);
+
+    // 3. Total Egresos del Mes Actual
+    const totalEgresosMesActual = egresos
+      .filter(e => {
+        // La columna de fecha es la 2 (índice 1)
+        const fechaEgreso = new Date(e[1].replace(/-/g, '/'));
+        return fechaEgreso.getFullYear() === anioActual && fechaEgreso.getMonth() === mesActual;
+      })
+      // La columna de monto es la 4 (índice 3)
+      .reduce((sum, e) => sum + parseFloat(e[3] || 0), 0);
+
+    // 4. Mantenciones Pendientes
+    // La columna de estado es la 4 (índice 3)
+    const mantencionesPendientes = mantenciones.filter(m => m[3] && m[3].toLowerCase() === 'pendiente').length;
+
+    // --- INICIO CAMBIO: Lógica para incluir residentes con Abono ---
+    
+    // Pagos registrados en el mes actual
+    const pagosMesActual = pagosGC.filter(p => {
+        if (!p[4]) return false;
+        const [mes, anio] = p[4].split(' ');
+        return anio == anioActual && mes.toLowerCase() === nombreMesActual.toLowerCase();
+    });
+
+    // Obtenemos SOLO las parcelas que han pagado COMPLETAMENTE este mes.
+    // El estado del pago está en la columna 16 (índice 15).
+    const parcelasPagadoCompleto = pagosMesActual
+        .filter(p => p[15] && p[15].toLowerCase() === 'pagado')
+        .map(p => p[2]); // p[2] es N_Parcela
+
+    // Un residente tiene deuda si su parcela NO está en la lista de los que pagaron completo.
+    // Esto ahora incluye a los que no pagaron nada y a los que tienen estado "Abono".
+    const residentesMorosos = residentes.filter(r => {
+        const numeroParcela = r[3]; // La parcela está en la columna 4 (índice 3)
+        return !parcelasPagadoCompleto.includes(numeroParcela);
+    });
+
+    // --- FIN CAMBIO ---
+
+    const main = document.getElementById('main-content');
+    main.innerHTML = `
+      <div style="display:flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+        <h2>Dashboard</h2>
+      </div>
+      <div class="dashboard-grid">
+        <div class="widget"><h4>Total Residentes</h4><p>${totalResidentes}</p></div>
+        <div class="widget"><h4>Ingresos del Mes</h4><p>$${totalIngresosMesActual.toLocaleString('es-CL')}</p></div>
+        <div class="widget"><h4>Egresos del Mes</h4><p>$${totalEgresosMesActual.toLocaleString('es-CL')}</p></div>
+        <div class="widget"><h4>Mantenciones Pendientes</h4><p>${mantencionesPendientes}</p></div>
+        
+        <div class="widget large">
+          <h4>Ingresos vs. Egresos (Últimos 6 meses)</h4>
+          <canvas id="graficoIngresosEgresos" style="max-height: 250px;"></canvas>
+        </div>
+
+        <div class="widget large">
+          <h4>Residentes con Deuda (${nombreMesActual})</h4>
+          <div id="lista-morosos" class="lista-scroll">
+             </div>
+        </div>
+      </div>
+      <style>
+        .residente-item { display: flex; justify-content: space-between; align-items: center; padding: 8px 4px; border-bottom: 1px solid #eee; }
+        .estado-abono { background-color: #ffc107; color: #333; }
+      </style>
+      `;
+    
+    // --- INICIO CAMBIO: Lógica para mostrar estado "Moroso" o "Abono" en la lista ---
+    const listaMorososEl = document.getElementById('lista-morosos');
+    if (residentesMorosos.length > 0) {
+        residentesMorosos.forEach(res => {
+            const numeroParcela = res[3];
+            
+            // Buscar si existe un pago con abono para darle un estado más específico
+            const pagoConAbono = pagosMesActual.find(p => p[2] === numeroParcela && p[15] && p[15].toLowerCase() === 'abono');
+            
+            let estadoTexto = 'Moroso';
+            let estadoClass = 'estado-moroso';
+
+            if (pagoConAbono) {
+                estadoTexto = 'Abono';
+                estadoClass = 'estado-abono';
+            }
+
+            listaMorososEl.innerHTML += `
+                <div class="residente-item">
+                    <span>${res[1]} (Parcela ${numeroParcela})</span>
+                    <span class="estado-tag ${estadoClass}">${estadoTexto}</span>
+                </div>
+            `;
+        });
+    } else {
+        listaMorososEl.innerHTML = '<p style="text-align:center; margin-top: 20px;">¡Felicitaciones! No hay residentes con deudas este mes.</p>';
+    }
+    // --- FIN CAMBIO ---
+
+    // Gráfico
+    const ctx = document.getElementById('graficoIngresosEgresos').getContext('2d');
+    const labels = [];
+    const dataIngresos = [];
+    const dataEgresos = [];
+
+    for (let i = 5; i >= 0; i--) {
+        const d = new Date(anioActual, mesActual - i, 1);
+        const anioMes = d.getFullYear();
+        const mesMes = d.getMonth();
+        const nombreMes = MESES[mesMes];
+        labels.push(nombreMes);
+
+        const ingresosEsteMes = pagosGC
+            .filter(p => {
+                if (!p[4]) return false;
+                const [mes, anio] = p[4].split(' ');
+                return anio == anioMes && mes.toLowerCase() === nombreMes.toLowerCase();
+            })
+            .reduce((sum, p) => sum + parseFloat(p[6] || 0), 0);
+        dataIngresos.push(ingresosEsteMes);
+        
+        const egresosEsteMes = egresos
+            .filter(e => {
+                const fechaEgreso = new Date(e[1].replace(/-/g, '/'));
+                return fechaEgreso.getFullYear() === anioMes && fechaEgreso.getMonth() === mesMes;
+            })
+            .reduce((sum, e) => sum + parseFloat(e[3] || 0), 0);
+        dataEgresos.push(egresosEsteMes);
+    }
+    
+    new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Ingresos',
+                data: dataIngresos,
+                backgroundColor: 'rgba(75, 192, 192, 0.5)',
+                borderColor: 'rgba(75, 192, 192, 1)',
+                borderWidth: 1
+            }, {
+                label: 'Egresos',
+                data: dataEgresos,
+                backgroundColor: 'rgba(255, 99, 132, 0.5)',
+                borderColor: 'rgba(255, 99, 132, 1)',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            scales: {
+                y: { beginAtZero: true }
+            }
+        }
+    });
+
+
+  } catch (error) {
+    console.error("Error al cargar el dashboard:", error);
+    mostrarMensaje("No se pudo cargar la información del dashboard: " + error.message, 'error');
+  } finally {
     ocultarSpinner();
-    mostrarMensaje('Error al cargar datos del dashboard: ' + e.message, 'error');
-    return;
   }
-  const activos = residentes.filter(r => r && r[7] === 'Activo').length;
-  const mesActual = new Date().toISOString().slice(0,7);
-  const ingresosMes = pagos.filter(p => p && p[13] && p[13].startsWith(mesActual)).reduce((a,b) => a + Number(b[6]||0), 0);
-  const egresosMes = egresos.filter(e => e && e[1] && e[1].startsWith(mesActual)).reduce((a,b) => a + Number(b[6]||0), 0);
-  const saldoCaja = pagos.reduce((a,b) => a + Number(b[6]||0), 0) - egresos.reduce((a,b) => a + Number(b[6]||0), 0);
-  const mantPendientes = mantenciones.filter(m => m && (m[5] === 'Pendiente' || m[5] === 'Urgente')).length;
-  const morosos = residentes.filter(r => r && r[7] === 'Moroso');
-  const parcelasMorosas = morosos.map(r => r[3]);
-  const deudaMorosos = pagos.filter(p => p && parcelasMorosas.includes(p[2]) && p[15] === 'Moroso').reduce((a,b) => a + Number(b[12]||0), 0);
-  const main = document.getElementById('main-content');
-  main.innerHTML = `<h2>Dashboard</h2><div style="display:flex;gap:24px;flex-wrap:wrap;margin-bottom:32px;"><div class="widget" style="flex:1;min-width:160px;"><div style="font-size:2em;font-weight:700;">${activos}</div><div>Residentes Activos</div></div><div class="widget" style="flex:1;min-width:160px;"><div style="font-size:2em;font-weight:700;">$${ingresosMes.toLocaleString('es-CL')}</div><div>Ingresos del Mes</div></div><div class="widget" style="flex:1;min-width:160px;"><div style="font-size:2em;font-weight:700;">$${egresosMes.toLocaleString('es-CL')}</div><div>Egresos del Mes</div></div><div class="widget" style="flex:1;min-width:160px;"><div style="font-size:2em;font-weight:700;">$${saldoCaja.toLocaleString('es-CL')}</div><div>Saldo de Caja</div></div><div class="widget" style="flex:1;min-width:160px;"><div style="font-size:2em;font-weight:700;">${mantPendientes}</div><div>Mantenciones Pendientes/Urgentes</div></div></div><div style="display:flex;gap:24px;flex-wrap:wrap;"><div class="widget" style="flex:2;min-width:380px;"><canvas id="graficoIngresosEgresos" style="max-width:100%;height:320px;"></canvas></div><div class="widget" style="flex:1;min-width:300px;max-width:340px;"><h4>Resumen de Morosidad</h4><div><b>Morosos:</b> ${morosos.length}</div><div><b>Parcelas:</b> ${parcelasMorosas.join(', ') || '-'}</div><div><b>Deuda Total:</b> $${deudaMorosos.toLocaleString('es-CL')}</div></div></div>`;
-  const labels = [];
-  const meses = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
-  const ingresosPorMes = [];
-  const egresosPorMes = [];
-  const hoy = new Date();
-  for (let i = 11; i >= 0; i--) { const d = new Date(hoy.getFullYear(), hoy.getMonth() - i, 1); const mesNombre = meses[d.getMonth()]; const anio = d.getFullYear(); labels.push(mesNombre + '\n' + anio); const periodo = d.toISOString().slice(0,7); ingresosPorMes.push(pagos.filter(p => p && p[13] && p[13].startsWith(periodo)).reduce((a,b) => a + Number(b[6]||0), 0)); egresosPorMes.push(egresos.filter(e => e && e[1] && e[1].startsWith(periodo)).reduce((a,b) => a + Number(b[6]||0), 0)); }
-  setTimeout(() => { const maxY = Math.max(...ingresosPorMes, ...egresosPorMes, 100000); let stepSize = 100000; if (maxY <= 500000) stepSize = 50000; if (maxY <= 100000) stepSize = 10000; let suggestedMax = Math.ceil(maxY / stepSize) * stepSize; new Chart(document.getElementById('graficoIngresosEgresos'), { type: 'bar', data: { labels, datasets: [ { label: 'Ingresos', data: ingresosPorMes, backgroundColor:'#4e91f9' }, { label: 'Egresos', data: egresosPorMes, backgroundColor:'#7fd6c2' } ] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'top' } }, scales: { x: { ticks: { autoSkip: false } }, y: { beginAtZero: true, suggestedMax: suggestedMax, ticks: { callback: value => '$' + value.toLocaleString('es-CL'), stepSize: stepSize } } } } }); }, 100);
-  ocultarSpinner();
 }
-document.querySelector('[data-module="dashboard"]').addEventListener('click', cargarDashboard);
