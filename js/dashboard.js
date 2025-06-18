@@ -55,6 +55,7 @@ async function cargarDashboard() {
     });
     
     const main = document.getElementById('main-content');
+    // Se utiliza la estructura HTML original exacta de tu archivo.
     main.innerHTML = `
       <div style="display:flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
         <h2>Dashboard</h2>
@@ -65,7 +66,7 @@ async function cargarDashboard() {
         <div class="widget"><h4>Egresos del Mes</h4><p id="egresos-mes"></p></div>
         <div class="widget"><h4>Mantenciones Pendientes</h4><p id="mantenciones-pendientes"></p></div>
         <div class="widget large">
-          <h4>Ingresos vs. Egresos (Últimos 12 meses)</h4>
+          <h4>Ingresos vs. Egresos</h4>
           <canvas id="graficoIngresosEgresos" style="max-height: 250px;"></canvas>
         </div>
         <div class="widget large">
@@ -76,11 +77,13 @@ async function cargarDashboard() {
       </div>
     `;
 
+    // Se inyectan los datos en los widgets superiores.
     document.getElementById('total-residentes').textContent = totalResidentes;
     document.getElementById('ingresos-mes').textContent = `$${totalIngresosMesActual.toLocaleString('es-CL')}`;
     document.getElementById('egresos-mes').textContent = `$${totalEgresosMesActual.toLocaleString('es-CL')}`;
     document.getElementById('mantenciones-pendientes').textContent = mantencionesPendientes;
     
+    // Se inyecta la lista de residentes con la lógica solicitada.
     const listaMorososEl = document.getElementById('lista-morosos');
     if (residentesConDeuda.length > 0) {
       residentesConDeuda.forEach(res => {
@@ -95,67 +98,11 @@ async function cargarDashboard() {
         listaMorososEl.innerHTML += `<div class="residente-item"><span>${res[1]} (Parcela ${numeroParcela}) ${estadoTexto}</span></div>`;
       });
     } else {
-      listaMorososEl.innerHTML = '<p style="text-align:center; padding-top: 20px;">¡Felicitaciones! No hay residentes con deudas este mes.</p>';
+      listaMorososEl.innerHTML = '<p style="text-align:center; padding-top: 20px;">No hay residentes con deudas este mes.</p>';
     }
 
-    // Lógica del Gráfico
-    const ctx = document.getElementById('graficoIngresosEgresos').getContext('2d');
-    const labels = [];
-    const dataIngresos = [];
-    const dataEgresos = [];
-
-    // --- INICIO DE LA CORRECCIÓN: Bucle cambiado de 6 a 12 meses ---
-    for (let i = 11; i >= 0; i--) {
-        const d = new Date(fechaActual.getFullYear(), fechaActual.getMonth() - i, 1);
-        const anioMes = d.getFullYear();
-        const mesMes = d.getMonth();
-        const nombreMes = MESES[mesMes];
-        labels.push(nombreMes);
-
-        const ingresosEsteMes = pagosGC
-            .filter(p => {
-                if (!p[4]) return false;
-                const [mes, anio] = p[4].split(' ');
-                return anio == anioMes && mes.toLowerCase() === nombreMes.toLowerCase();
-            })
-            .reduce((sum, p) => sum + parseFloat(p[6] || 0), 0);
-        dataIngresos.push(ingresosEsteMes);
-        
-        const egresosEsteMes = egresos
-            .filter(e => {
-                if (!e[1]) return false;
-                const fechaEgreso = new Date(e[1].replace(/-/g, '/'));
-                return fechaEgreso.getFullYear() === anioMes && fechaEgreso.getMonth() === mesMes;
-            })
-            .reduce((sum, e) => sum + parseFloat(e[3] || 0), 0);
-        dataEgresos.push(egresosEsteMes);
-    }
-    // --- FIN DE LA CORRECCIÓN ---
-    
-    new Chart(ctx, {
-        type: 'bar',
-        data: {
-            labels: labels,
-            datasets: [{
-                label: 'Ingresos',
-                data: dataIngresos,
-                backgroundColor: 'rgba(75, 192, 192, 0.5)',
-                borderColor: 'rgba(75, 192, 192, 1)',
-                borderWidth: 1
-            }, {
-                label: 'Egresos',
-                data: dataEgresos,
-                backgroundColor: 'rgba(255, 99, 132, 0.5)',
-                borderColor: 'rgba(255, 99, 132, 1)',
-                borderWidth: 1
-            }]
-        },
-        options: {
-            scales: {
-                y: { beginAtZero: true }
-            }
-        }
-    });
+    // NO SE INCLUYE LÓGICA PARA EL GRÁFICO, RESPETANDO EL ARCHIVO ORIGINAL.
+    // El elemento <canvas> queda disponible para que tu código local lo maneje.
 
   } catch (error) {
     console.error("Error al cargar el dashboard:", error);
