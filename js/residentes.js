@@ -44,10 +44,10 @@ async function cargarResidentes() {
             <th style="width:60px;">N° Parcela</th>
             <th style="width:200px;">Dirección</th>
             <th style="width:160px;">Email</th>
-            <th style="width:100px;">Teléfono</th>
+            <th style="width:70px;">Teléfono</th>
             <th style="width:80px;">Estado</th>
-            <th style="width:90px;">Valor GC</th>
-            <th style="width:100px;">Acciones</th>
+            <th style="width:70px;">Valor GC</th>
+            <th style="width:110px;">Acciones</th>
           </tr>
         </thead>
         <tbody>
@@ -61,12 +61,12 @@ async function cargarResidentes() {
           <td style="width:60px;" title="${parcela}">${parcela}</td>
           <td style="width:200px;" title="${direccion}">${direccion}</td>
           <td style="width:160px;" title="${email}">${email}</td>
-          <td style="width:100px;" title="${tel}">${tel}</td>
+          <td style="width:70px;" title="${tel}">${tel}</td>
           <td style="width:80px;">
             <span class="estado-tag estado-${(estado||'').toLowerCase()}">${estado}</span>
           </td>
-          <td style="width:90px;" title="${valorGC}">${valorGC}</td>
-          <td style="width:100px;">
+          <td style="width:70px;" title="${valorGC}">${valorGC}</td>
+          <td style="width:110px;">
             <button class="btn secondary btn-editar" data-id="${id}" title="Editar">✏️</button>
             <button class="btn secondary btn-eliminar" data-id="${id}" title="Eliminar">🗑️</button>
           </td>
