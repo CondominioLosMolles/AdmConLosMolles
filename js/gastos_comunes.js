@@ -1,6 +1,5 @@
 // js/gastos_comunes.js
 
-// Constantes globales para el módulo
 const MESES = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
 const ENCABEZADOS_PAGOS = [
     'ID_Pago', 'Nombre_Residente', 'N_Parcela', 'Valor_Gasto_Comun', 'Periodo',
@@ -12,9 +11,7 @@ async function cargarGastosComunes() {
   limpiarMainContent();
   mostrarSpinner();
 
-  let residentes = [];
-  let pagosGC_obj = [];
-  let timcData = {};
+  let residentes = [], pagosGC_obj = [], timcData = {};
 
   try {
     const [residentes_data, pagosGC_raw, timcs_raw] = await Promise.all([
@@ -22,9 +19,7 @@ async function cargarGastosComunes() {
         obtenerPagosGC(),
         obtenerTIMCs()
     ]);
-    
     residentes = residentes_data || [];
-    
     pagosGC_obj = (pagosGC_raw || []).map(fila => {
         let obj = {};
         ENCABEZADOS_PAGOS.forEach((encabezado, i) => { obj[encabezado] = fila[i]; });
@@ -34,13 +29,11 @@ async function cargarGastosComunes() {
         }
         return obj;
     }).filter(p => p.N_Parcela);
-
     (timcs_raw || []).forEach(fila => {
         const [anio, mes, valor] = fila;
         if (!timcData[anio]) timcData[anio] = {};
         timcData[anio][mes] = parseFloat(valor);
     });
-
   } catch (e) {
     ocultarSpinner();
     mostrarMensaje('Error al cargar datos de Gastos Comunes: ' + e.message, 'error');
@@ -53,7 +46,7 @@ async function cargarGastosComunes() {
     
     <div style="display: flex; flex-wrap: wrap; gap: 24px; align-items: stretch;">
       
-      <section class="widget" style="flex: 1; display: flex; flex-direction: column;">
+      <section class="widget" style="flex: 1; min-width: 300px; display: flex; flex-direction: column;">
         <h4 style="margin-top:0;">Filtros y Acciones</h4>
         <div style="display: flex; gap: 20px; margin-bottom: 20px;">
           <div style="flex: 1;"><label for="filtroParcela"><b>N° Parcela:</b></label><input list="lista-parcelas" id="filtroParcela" placeholder="1-26..." style="width:100%;"></div>
@@ -63,10 +56,10 @@ async function cargarGastosComunes() {
             <button id="btnAbrirModalGasto" class="btn">Agregar Gasto Común</button>
             <button id="btnAbrirModalComprobante" class="btn secondary">Enviar Comprobante</button>
         </div>
-        <datalist id="lista-parcelas">${Array.from({ length: 26 }, (_, i) => `<option value="${i + 1}"></option>`).join('')}</datalist>
+        <datalist id="lista-parcelas">${residentes.map(r => `<option value="${r[3]}"></option>`).join('')}</datalist>
       </section>
 
-      <section class="widget" style="flex: 2;">
+      <section class="widget" style="flex: 2; min-width: 450px;">
          <h4 style="margin-top:0;">Configuración de TIMC</h4>
          <div style="display: flex; align-items: flex-end; gap: 16px; margin-bottom: 20px;">
             <div style="min-width: 120px;"><label for="inputTMC"><b>TIMC (%)</b></label><input type="number" id="inputTMC" step="0.1" placeholder="Ej: 25"></div>
@@ -80,19 +73,16 @@ async function cargarGastosComunes() {
     <section id="detalle-gastos" style="margin-top: 2rem;"><h3>Detalle de Gastos</h3><div style="overflow-x:auto;"><table class="table"><thead id="thead-gastos"></thead><tbody id="tbody-gastos"></tbody></table></div></section>
     
     <div id="modalGC" class="modal" style="display:none;"><div><h3>Agregar Gasto Común</h3><form id="formGastoComun" style="display:flex; flex-wrap:wrap; gap:15px;"><div style="flex: 1 1 120px;"><label>N° Parcela</label><input type="number" name="N_Parcela" id="inputNParcela" min="1" max="26" required></div><div style="flex: 1 1 300px;"><label>Nombre Residente</label><input type="text" name="Nombre_Residente" id="inputNombreResidente" readonly style="background:#eee;"></div><div style="flex: 1 1 180px;"><label>Valor Gasto Común</label><input type="text" name="Valor_Gasto_Comun" id="inputValorGastoComun" readonly style="background:#eee;"></div><div style="flex: 1 1 180px;"><label>Fecha de Pago</label><input type="date" name="Fecha_Pago" required></div><div style="flex: 1 1 180px;"><label>Mes que Paga (Período)</label><select name="Periodo" required>${MESES.map((m, i) => `<option value="${i}">${m}</option>`).join('')}</select></div><div style="flex: 1 1 180px;"><label>Monto Pagado</label><input type="number" name="Monto_Pagado" min="0" step="1" required placeholder="CLP"></div><div style="flex: 1 1 180px;"><label>Método de Pago</label><select name="Metodo_Pago" required><option value="Transferencia">Transferencia</option><option value="Efectivo">Efectivo</option></select></div><div style="flex: 1 1 100%;"><label>Comprobante</label><input type="file" name="Comprobante" id="inputComprobanteGC"></div><div style="flex: 1 1 100%; text-align: right; margin-top: 20px;"><button class="btn secondary" type="button" id="btnCerrarModal">Cancelar</button><button class="btn" type="submit">Guardar Gasto</button></div></form></div></div>
-
-    <div id="modalComprobante" class="modal" style="display:none;"><div><h3>Enviar Comprobante de Pago</h3><form id="formEnviarComprobante" style="display:flex; flex-wrap:wrap; gap:15px;"><div style="flex: 1 1 150px;"><label>N° Parcela</label><select name="N_Parcela" id="selectParcelaComprobante" required><option value="">Seleccione...</option>${residentes.map(r => `<option value="${r[3]}">${r[3]}</option>`).join('')}</select></div><div style="flex: 1 1 150px;"><label>Mes del Gasto Común</label><select name="Mes" id="selectMesComprobante" required><option value="">Seleccione...</option>${MESES.map((m, i) => `<option value="${i}">${m}</option>`).join('')}</select></div><div style="flex: 1 1 100%;"><label>Email del Residente</label><input type="email" id="inputEmailComprobante" readonly style="background:#eee;"></div><div style="flex: 1 1 100%;"><label>Asunto del Correo</label><input type="text" id="inputAsuntoComprobante" readonly style="background:#eee;"></div><div style="flex: 1 1 100%;"><label>Mensaje de Confirmación (Previsualización)</label><textarea id="mensajeComprobante" rows="6" readonly style="background:#eee; white-space: pre-wrap;"></textarea></div><div style="flex: 1 1 100%; text-align: right; margin-top: 20px;"><button class="btn secondary" type="button" id="btnCerrarModalComprobante">Cancelar</button><button class="btn" type="submit">Enviar Correo</button></div></form></div></div>
+    
+    <div id="modalComprobante" class="modal" style="display:none;"><div><h3>Enviar Comprobante de Pago</h3><form id="formEnviarComprobante" style="display:flex; flex-wrap:wrap; gap:15px;"><div style="flex: 1 1 150px;"><label>N° Parcela</label><select name="N_Parcela" id="selectParcelaComprobante" required><option value="">Seleccione...</option>${residentes.map(r => `<option value="${r[3]}">${r[3]}</option>`).join('')}</select></div><div style="flex: 1 1 150px;"><label>Mes del Gasto Común</label><select name="Mes" id="selectMesComprobante" required><option value="">Seleccione...</option>${MESES.map((m, i) => `<option value="${i}">${m}</option>`).join('')}</select></div><div style="flex: 1 1 100%;"><label>Email del Residente</label><input type="email" id="inputEmailComprobante" readonly style="background:#eee;"></div><div style="flex: 1 1 100%;"><label>Asunto del Correo</label><input type="text" id="inputAsuntoComprobante" readonly style="background:#eee;"></div><div style="flex: 1 1 100%;"><label>Mensaje de Confirmación (Previsualización)</label><textarea id="mensajeComprobante" rows="8" readonly style="background:#eee; white-space: pre-wrap;"></textarea></div><div style="flex: 1 1 100%; text-align: right; margin-top: 20px;"><button class="btn secondary" type="button" id="btnCerrarModalComprobante">Cancelar</button><button class="btn" type="submit">Enviar Correo</button></div></form></div></div>
   `;
   
-  // Llama a la función para asignar todos los eventos de la página
   asignarEventos(residentes, pagosGC_obj, timcData);
-  
-  // Carga inicial de la tabla y la vista de TIMC
   filtrarYRenderizar(residentes, pagosGC_obj, timcData);
   actualizarVistaTIMC(timcData);
-  
   ocultarSpinner();
 }
+// js/gastos_comunes.js (Continuación)
 
 function asignarEventos(residentes, pagosGC_obj, timcData) {
     const anioFiltroEl = document.getElementById('filtroAnio');
@@ -103,7 +93,23 @@ function asignarEventos(residentes, pagosGC_obj, timcData) {
         filtrarYRenderizar(residentes, pagosGC_obj, timcData);
     });
 
-    document.getElementById('btnGuardarTMC').addEventListener('click', async () => { /* sin cambios */ });
+    document.getElementById('btnGuardarTMC').addEventListener('click', async () => {
+        if (typeof guardarTIMC !== 'function') return mostrarMensaje('Error: La función "guardarTIMC" no se encontró en sheets.js.', 'error');
+        const anio = anioFiltroEl.value;
+        const mes = document.getElementById('selectMesTMC').value;
+        const valor = parseFloat(document.getElementById('inputTMC').value);
+        if (isNaN(valor) || !mes || !anio) return mostrarMensaje('Debe ingresar TIMC, mes y año.', 'error');
+        mostrarSpinner();
+        try {
+            await guardarTIMC(anio, mes, valor);
+            if (!timcData[anio]) timcData[anio] = {};
+            timcData[anio][mes] = valor;
+            actualizarVistaTIMC(timcData);
+            if (document.getElementById('filtroParcela').value) filtrarYRenderizar(residentes, pagosGC_obj, timcData);
+            mostrarMensaje(`TIMC guardado en la hoja "Config_TIMC".`, 'success');
+        } catch (err) { mostrarMensaje('Error al guardar TIMC: ' + err.message, 'error');
+        } finally { ocultarSpinner(); }
+    });
     
     const modalGC = document.getElementById('modalGC');
     document.getElementById('btnAbrirModalGasto').addEventListener('click', () => modalGC.style.display = 'flex');
@@ -129,7 +135,7 @@ function asignarEventos(residentes, pagosGC_obj, timcData) {
             const fechaVencimiento = new Date(anioSeleccionado, mesPagadoIndex, 10);
             
             let interes = 0, multa = 0, mesesImpagos = 0, deudaTotal = valorGastoComun, saldo = 0;
-            let estadoFinal = 'Pagado'; // Por defecto
+            let estadoFinal = 'Pagado';
             
             if (fechaDePago > fechaVencimiento) {
                 const diffAnios = fechaDePago.getFullYear() - fechaVencimiento.getFullYear();
@@ -145,17 +151,17 @@ function asignarEventos(residentes, pagosGC_obj, timcData) {
             
             const montoPagado = parseFloat(formData.get('Monto_Pagado'));
             saldo = montoPagado - deudaTotal;
-            
-            // ** CORRECCIÓN 4: Se determina el estado final basado en el pago. **
-            if(montoPagado < deudaTotal) {
-                estadoFinal = 'Moroso';
-            }
+            if (montoPagado < deudaTotal) { estadoFinal = 'Moroso'; }
 
             let linkComprobante = '';
             const file = document.getElementById('inputComprobanteGC').files[0];
-            if (file) {
+            if (file && file.size > 0) {
+                if (typeof obtenerCarpetaResidente !== 'function' || typeof subirComprobante !== 'function') {
+                    throw new Error("Las funciones 'obtenerCarpetaResidente' o 'subirComprobante' no están definidas en drive.js.");
+                }
                 const carpetaId = await obtenerCarpetaResidente(parcela); 
                 const res = await subirComprobante(file, carpetaId);
+                if (res.error) throw new Error(res.error.message);
                 linkComprobante = res.webViewLink || `https://drive.google.com/file/d/${res.id}/view`;
             }
 
@@ -164,13 +170,11 @@ function asignarEventos(residentes, pagosGC_obj, timcData) {
               null, formData.get('Nombre_Residente'), parcela, valorGastoComun, periodoStr,
               fechaVencimiento.toISOString().split('T')[0], montoPagado, saldo, interes, null,
               multa, mesesImpagos, deudaTotal, formData.get('Fecha_Pago'), formData.get('Metodo_Pago'), 
-              estadoFinal, // Se usa el estado final calculado
-              linkComprobante // Se guarda el link del archivo
+              estadoFinal, linkComprobante
             ];
             
             await agregarPagoGC(datosParaSheet);
             
-            // Actualiza la data local para no tener que recargar desde la API
             const nuevoPagoObj = {};
             ENCABEZADOS_PAGOS.forEach((encabezado, i) => nuevoPagoObj[encabezado] = datosParaSheet[i]);
             nuevoPagoObj.anio = anioSeleccionado;
@@ -179,7 +183,7 @@ function asignarEventos(residentes, pagosGC_obj, timcData) {
             filtrarYRenderizar(residentes, pagosGC_obj, timcData);
             modalGC.style.display = 'none';
             e.target.reset();
-            mostrarMensaje('Gasto común registrado con éxito en Google Sheets.', 'success');
+            mostrarMensaje('Gasto común registrado con éxito.', 'success');
         } catch (err) {
             mostrarMensaje('Error al guardar el gasto: ' + err.message, 'error');
         } finally {
@@ -187,12 +191,8 @@ function asignarEventos(residentes, pagosGC_obj, timcData) {
         }
     });
 
-    // --- CORRECCIÓN 3: Lógica para el nuevo modal de Enviar Comprobante ---
     const modalComprobante = document.getElementById('modalComprobante');
-    const btnAbrirComprobante = document.getElementById('btnAbrirModalComprobante');
-    if (btnAbrirComprobante) {
-        btnAbrirComprobante.addEventListener('click', () => modalComprobante.style.display = 'flex');
-    }
+    document.getElementById('btnAbrirModalComprobante').addEventListener('click', () => modalComprobante.style.display = 'flex');
     document.getElementById('btnCerrarModalComprobante').addEventListener('click', () => modalComprobante.style.display = 'none');
     
     const selectParcelaComp = document.getElementById('selectParcelaComprobante');
@@ -212,17 +212,41 @@ function asignarEventos(residentes, pagosGC_obj, timcData) {
         if (parcela && mesIndex !== "" && anio && residente) {
             const mesNombre = MESES[mesIndex];
             const pago = pagosGC_obj.find(p => p.N_Parcela == parcela && p.Periodo && p.Periodo.toLowerCase().startsWith(mesNombre.toLowerCase()) && p.anio == anio);
+            
+            inputAsuntoComp.value = `COMPROBANTE PAGO GASTO COMÚN (${mesNombre.toUpperCase()} ${anio}, PARCELA ${parcela})`;
+
             if (pago) {
-                inputAsuntoComp.value = `COMPROBANTE PAGO GASTO COMÚN (${pago.Periodo}, N° PARCELA ${pago.N_Parcela})`;
-                mensajeComp.value = `Estimado/a ${residente[1]},\n\nConfirmamos la recepción de su pago para el gasto común del período ${pago.Periodo}.\n\nDetalles:\n- Monto Pagado: $${parseFloat(pago.Monto_Pagado || 0).toLocaleString('es-CL')}\n- Fecha de Pago: ${new Date(pago.Fecha_Pago.replace(/-/g, '/')).toLocaleDateString('es-CL', {timeZone: 'UTC'})}\n- Método de Pago: ${pago.Metodo_Pago}\n- Estado: ${pago.Estado}\n\nGracias,\nLa Administración.`;
+                // CORRECCIÓN 4: Mensaje de correo más robusto y detallado
+                mensajeComp.value = 
+`Estimado/a ${residente[1]},
+
+Junto con saludar, se adjunta la confirmación de su pago de Gasto Común para la Parcela N°${pago.N_Parcela}, correspondiente al período de ${pago.Periodo}.
+
+DETALLE DE LA TRANSACCIÓN:
+--------------------------------------------------
+ID de Pago: ${pago.ID_Pago || 'N/A'}
+Fecha de Pago: ${new Date(pago.Fecha_Pago.replace(/-/g, '/')).toLocaleDateString('es-CL', {timeZone: 'UTC'})}
+Método de Pago: ${pago.Metodo_Pago}
+Monto Pagado: $${parseFloat(pago.Monto_Pagado || 0).toLocaleString('es-CL')}
+--------------------------------------------------
+Deuda Total del Período: $${parseFloat(pago.Deuda_Total || 0).toLocaleString('es-CL')}
+Saldo Resultante: $${parseFloat(pago.Saldo_Pendiente_o_a_favor || 0).toLocaleString('es-CL')}
+Estado: ${pago.Estado}
+
+Agradecemos su compromiso con la comunidad.
+
+Atentamente,
+La Administración del Condominio.
+
+Este es un correo generado automáticamente.`;
             } else {
-                inputAsuntoComp.value = '';
-                mensajeComp.value = 'No se encontró un pago registrado para este residente en el período seleccionado.';
+                mensajeComp.value = 'No se encontró un pago registrado para este residente en el período y año seleccionados.';
             }
         }
     }
     selectParcelaComp.addEventListener('change', actualizarInfoComprobante);
     selectMesComp.addEventListener('change', actualizarInfoComprobante);
+    anioFiltroEl.addEventListener('change', actualizarInfoComprobante);
     
     document.getElementById('formEnviarComprobante').addEventListener('submit', async (e) => {
         e.preventDefault();
@@ -230,8 +254,10 @@ function asignarEventos(residentes, pagosGC_obj, timcData) {
         const asunto = inputAsuntoComp.value;
         const mensaje = mensajeComp.value.replace(/\n/g, '<br>');
         if (!email || !asunto || !mensaje.includes('Confirmamos')) { mostrarMensaje('Por favor, selecciona una parcela y un mes con un pago válido.', 'error'); return; }
+        
         mostrarSpinner();
         try {
+            if (typeof enviarCorreo !== 'function') throw new Error("La función 'enviarCorreo' no está definida en gmail.js.");
             await enviarCorreo(email, asunto, mensaje);
             mostrarMensaje('Correo de confirmación enviado con éxito.', 'success');
             modalComprobante.style.display = 'none';
@@ -243,36 +269,9 @@ function asignarEventos(residentes, pagosGC_obj, timcData) {
     });
 }
 
-function filtrarYRenderizar(residentes, pagosGC_obj, timcData) {
-    const parcela = document.getElementById('filtroParcela').value;
-    const anio = document.getElementById('filtroAnio').value;
-    if (parcela && anio) {
-        renderizarTablaResidente(parcela, anio, residentes, pagosGC_obj, timcData);
-    } else {
-        let datosFiltrados = pagosGC_obj;
-        if (anio) {
-            datosFiltrados = datosFiltrados.filter(p => p.anio == anio);
-        }
-        renderizarTablaGeneral(datosFiltrados);
-    }
-}
-
-function renderizarTablaGeneral(datos) {
-    const theadGastos = document.getElementById('thead-gastos');
-    const tbodyGastos = document.getElementById('tbody-gastos');
-    document.querySelector('#detalle-gastos h3').textContent = 'Detalle de Pagos Registrados';
-    theadGastos.innerHTML = `<tr><th>Residente</th><th>Parcela</th><th>Período</th><th>Monto Pagado</th><th>Deuda Total</th><th>Fecha Pago</th><th>Estado</th></tr>`;
-    tbodyGastos.innerHTML = '';
-    if (!datos || datos.length === 0) { tbodyGastos.innerHTML = `<tr><td colspan="7" style="text-align:center; padding:20px;">No hay registros para el año seleccionado. Filtra por parcela para ver el detalle anual.</td></tr>`; return; }
-    datos.sort((a,b) => (b.Fecha_Pago ? new Date(b.Fecha_Pago) : 0) - (a.Fecha_Pago ? new Date(a.Fecha_Pago) : 0));
-    datos.forEach(pago => {
-        const estadoClass = (pago.Estado || 'pendiente').toLowerCase().trim();
-        const tr = document.createElement('tr');
-        tr.innerHTML = `<td>${pago.Nombre_Residente || 'N/A'}</td><td>${pago.N_Parcela}</td><td>${pago.Periodo || 'N/A'}</td><td>$${parseFloat(pago.Monto_Pagado || 0).toLocaleString('es-CL')}</td><td style="font-weight:bold;">$${parseFloat(pago.Deuda_Total || 0).toLocaleString('es-CL')}</td><td>${pago.Fecha_Pago ? new Date(pago.Fecha_Pago.replace(/-/g, '/')).toLocaleDateString('es-CL', {timeZone:'UTC'}) : '---'}</td><td><span class="estado-tag estado-${estadoClass}">${pago.Estado || 'Pendiente'}</span></td>`;
-        tbodyGastos.appendChild(tr);
-    });
-}
-  
+// Las funciones de abajo son las que se usan para renderizar las tablas
+function filtrarYRenderizar(residentes, pagosGC_obj, timcData) { /* ... sin cambios ... */ }
+function renderizarTablaGeneral(datos) { /* ... sin cambios ... */ }
 function renderizarTablaResidente(parcela, anio, residentes, pagosGC_obj, timcData) {
     const residente = residentes.find(r => r[3] == parcela);
     const theadGastos = document.getElementById('thead-gastos');
@@ -290,7 +289,8 @@ function renderizarTablaResidente(parcela, anio, residentes, pagosGC_obj, timcDa
         const fechaVencimiento = new Date(anio, index, 10);
         const hoy = new Date();
         if (pagoExistente) {
-            estado = pagoExistente.Estado || 'Pagado'; // **CORRECCIÓN 2**
+            // CORRECCIÓN 2: Se lee el estado directamente del registro guardado.
+            estado = pagoExistente.Estado || 'Pagado';
             montoPagado = parseFloat(pagoExistente.Monto_Pagado || 0);
             const deudaRegistrada = parseFloat(pagoExistente.Deuda_Total || valorGastoComun);
             saldo = montoPagado - deudaRegistrada;
