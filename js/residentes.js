@@ -38,15 +38,15 @@ async function cargarResidentes() {
       <table class="table">
         <thead>
           <tr>
-            <th class="nombre">Nombre Completo</th>
-            <th class="rut" style="width:85px;">RUT</th>
+            <th class="nombre" style="width:160px;">Nombre Completo</th>
+            <th class="rut" style="width:80px;">RUT</th>
             <th class="parcela" style="width:60px;">N° Parcela</th>
             <th class="direccion">Dirección</th>
-            <th class="email">Email</th>
-            <th class="telefono" style="width:80px;">Teléfono</th>
+            <th class="email" style="width:110px;">Email</th>
+            <th class="telefono" style="width:75px;">Teléfono</th>
             <th class="estado" style="width:60px;">Estado</th>
-            <th class="valorGC" style="width:75px;">Valor GC</th>
-            <th class="acciones">Acciones</th>
+            <th class="valorGC" style="width:70px;">Valor GC</th>
+            <th class="acciones" style="width:60px;">Acciones</th>
           </tr>
         </thead>
         <tbody>
@@ -55,17 +55,17 @@ async function cargarResidentes() {
       const [id, nombre, rut, parcela, direccion, email, tel, estado, valorGC] = r;
       html += `
         <tr>
-          <td class="nombre" title="${nombre}">${nombre}</td>
-          <td class="rut" style="width:85px;" title="${rut}">${rut}</td>
+          <td class="nombre" style="width:160px;" title="${nombre}">${nombre}</td>
+          <td class="rut" style="width:80px;" title="${rut}">${rut}</td>
           <td class="parcela" style="width:60px;" title="${parcela}">${parcela}</td>
           <td class="direccion" title="${direccion}">${direccion}</td>
-          <td class="email" title="${email}">${email}</td>
-          <td class="telefono" style="width:80px;" title="${tel}">${tel}</td>
+          <td class="email" style="width:110px;" title="${email}">${email}</td>
+          <td class="telefono" style="width:75px;" title="${tel}">${tel}</td>
           <td class="estado" style="width:60px;">
             <span class="estado-tag estado-${(estado||'').toLowerCase()}">${estado}</span>
           </td>
-          <td class="valorGC" style="width:75px;" title="${valorGC}">${valorGC}</td>
-          <td class="acciones">
+          <td class="valorGC" style="width:70px;" title="${valorGC}">${valorGC}</td>
+          <td class="acciones" style="width:60px;">
             <button class="btn secondary btn-editar" data-id="${id}" title="Editar">✏️</button>
             <button class="btn secondary btn-eliminar" data-id="${id}" title="Eliminar">🗑️</button>
           </td>
