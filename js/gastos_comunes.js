@@ -1,3 +1,27 @@
+// js/gastos_comunes.js
+
+// Constantes globales para el módulo
+const MESES = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
+const ENCABEZADOS_PAGOS = [
+    'ID_Pago', 'Nombre_Residente', 'N_Parcela', 'Valor_Gasto_Comun', 'Periodo',
+    'Fecha_Vencimiento', 'Monto_Pagado', 'Saldo_Pendiente_o_a_favor', 'Interes', 'TIMC',
+    'Multa_1/4', 'Meses_Inpagos', 'Deuda_Total', 'Fecha_Pago', 'Metodo_Pago', 'Estado',
+    'ID_Comprobante_Drive'
+];
+
+function formatearPeriodo(periodo) {
+  if (!periodo) return 'N/A';
+  const match = periodo.toString().match(/^(\d{4})-(\d{1,2})$/);
+  if (match) {
+    const anio = parseInt(match[1]);
+    const mesIndex = parseInt(match[2]) - 1;
+    if (mesIndex >= 0 && mesIndex < 12) {
+      return `${MESES[mesIndex]} ${anio}`;
+    }
+  }
+  return periodo;
+}
+
 async function cargarGastosComunes() {
   limpiarMainContent();
   mostrarSpinner();
@@ -266,37 +290,15 @@ async function cargarGastosComunes() {
   document.getElementById('btnCerrarModal').addEventListener('click', () => modal.style.display = 'none');
   
   document.getElementById('inputNParcela').addEventListener('input', (e) => {
-    // --- CÓDIGO DE DIAGNÓSTICO INSERTADO ---
-    console.log("--- INICIANDO PRUEBA ---");
     const parcelaBuscada = e.target.value;
-    console.log(`Buscando parcela: "${parcelaBuscada}"`);
-
-    // Busca al residente que cumpla AMBAS condiciones
-    const res = residentes.find(r => {
-        // Condición 1: Parcela coincide (comparando como texto)
-        const parcelaCoincide = String(r[3]) === parcelaBuscada;
-
-        // Condición 2: Contacto Principal es "SI" (ignorando mayúsculas/espacios)
-        const esContactoPrincipal = r[9] && r[9].trim().toUpperCase() === 'SI';
-        
-        // Informa en la consola el resultado de la evaluación para cada residente
-        if (parcelaCoincide) {
-            console.log(`- Residente: ${r[1]}, Parcela: ${r[3]} -> ¿Parcela Coincide? ${parcelaCoincide}. ¿Es Principal? ${esContactoPrincipal}`);
-        }
-        
-        return parcelaCoincide && esContactoPrincipal;
-    });
-
-    console.log("Residente encontrado:", res);
-    console.log("--- FIN DE PRUEBA ---");
-    // --- FIN DE CÓDIGO DE DIAGNÓSTICO ---
-
+    const res = residentes.find(r => String(r[3]) === parcelaBuscada && r[9] && r[9].trim().toUpperCase() === 'SI');
+    
     const nombreInput = document.getElementById('inputNombreResidente');
     const valorInput = document.getElementById('inputValorGastoComun');
 
     if (res) {
         nombreInput.value = res[1];
-        valorInput.value = parseFloat(res[8]).toLocaleString('es-CL', {style:'currency', currency:'CLP'});
+        valorInput.value = parseFloat(res[8]).toLocaleString('es-CL', { style: 'currency', currency: 'CLP' });
     } else {
         nombreInput.value = 'No se encontró contacto principal';
         valorInput.value = '';
