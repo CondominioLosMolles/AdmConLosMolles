@@ -21,11 +21,61 @@ const SHEET_ID_ASAMBLEAS = 791789730;
 const SHEET_ID_COMUNICACIONES = 569621527;
 
 
-// -------- RESIDENTES --------
-async function obtenerResidentes() { const res = await gapi.client.sheets.spreadsheets.values.get({ spreadsheetId: SPREADSHEET_ID, range: `${SHEET_RESIDENTES}!A2:I` }); return res.result.values || []; }
-async function agregarResidente(datos) { const residentes = await obtenerResidentes(); const lastId = residentes.length > 0 && residentes[residentes.length-1][0] ? parseInt(residentes[residentes.length-1][0]) : 0; datos[0] = (lastId + 1).toString(); await gapi.client.sheets.spreadsheets.values.append({ spreadsheetId: SPREADSHEET_ID, range: `${SHEET_RESIDENTES}!A:J`, valueInputOption: 'USER_ENTERED', resource: { values: [datos] } }); }
-async function actualizarResidente(datos) { const residentes = await obtenerResidentes(); const idx = residentes.findIndex(r => r[0] === datos[0]); if (idx === -1) throw new Error('No encontrado'); const row = idx + 2; await gapi.client.sheets.spreadsheets.values.update({ spreadsheetId: SPREADSHEET_ID, range: `${SHEET_RESIDENTES}!A${row}:I${row}`, valueInputOption: 'USER_ENTERED', resource: { values: [datos] } }); }
-async function eliminarResidente(id) { const residentes = await obtenerResidentes(); const idx = residentes.findIndex(r => r[0] === id); if (idx === -1) throw new Error('No encontrado'); const row = idx + 2; await gapi.client.sheets.spreadsheets.batchUpdate({ spreadsheetId: SPREADSHEET_ID, resource: { requests: [{ deleteDimension: { range: { sheetId: SHEET_ID_RESIDENTES, dimension: "ROWS", startIndex: row - 1, endIndex: row } } }] } }); }
+// -------- RESIDENTES (CORREGIDO) --------
+async function obtenerResidentes() {
+    const res = await gapi.client.sheets.spreadsheets.values.get({
+        spreadsheetId: SPREADSHEET_ID,
+        range: `${SHEET_RESIDENTES}!A2:J` // CORREGIDO: Leer hasta la columna J
+    });
+    return res.result.values || [];
+}
+
+async function agregarResidente(datos) {
+    const residentes = await obtenerResidentes();
+    const lastId = residentes.length > 0 && residentes[residentes.length-1][0] ? parseInt(residentes[residentes.length-1][0]) : 0;
+    datos[0] = (lastId + 1).toString();
+    await gapi.client.sheets.spreadsheets.values.append({
+        spreadsheetId: SPREADSHEET_ID,
+        range: `${SHEET_RESIDENTES}!A:J`,
+        valueInputOption: 'USER_ENTERED',
+        resource: { values: [datos] }
+    });
+}
+
+async function actualizarResidente(datos) {
+    const residentes = await obtenerResidentes();
+    const idx = residentes.findIndex(r => r[0] === datos[0]);
+    if (idx === -1) throw new Error('No encontrado');
+    const row = idx + 2;
+    await gapi.client.sheets.spreadsheets.values.update({
+        spreadsheetId: SPREADSHEET_ID,
+        range: `${SHEET_RESIDENTES}!A${row}:J${row}`, // CORREGIDO: Actualizar hasta la columna J
+        valueInputOption: 'USER_ENTERED',
+        resource: { values: [datos] }
+    });
+}
+
+async function eliminarResidente(id) {
+    const residentes = await obtenerResidentes();
+    const idx = residentes.findIndex(r => r[0] === id);
+    if (idx === -1) throw new Error('No encontrado');
+    const row = idx + 2;
+    await gapi.client.sheets.spreadsheets.batchUpdate({
+        spreadsheetId: SPREADSHEET_ID,
+        resource: {
+            requests: [{
+                deleteDimension: {
+                    range: {
+                        sheetId: SHEET_ID_RESIDENTES,
+                        dimension: "ROWS",
+                        startIndex: row - 1,
+                        endIndex: row
+                    }
+                }
+            }]
+        }
+    });
+}
 
 // -------- GASTOS COMUNES Y TIMC --------
 async function obtenerPagosGC() { const res = await gapi.client.sheets.spreadsheets.values.get({ spreadsheetId: SPREADSHEET_ID, range: `${SHEET_PAGOS_GC}!A2:Q` }); return res.result.values || []; }
