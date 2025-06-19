@@ -289,11 +289,40 @@ async function cargarGastosComunes() {
   document.getElementById('btnAbrirModalGasto').addEventListener('click', () => modal.style.display = 'flex');
   document.getElementById('btnCerrarModal').addEventListener('click', () => modal.style.display = 'none');
   
-  document.getElementById('inputNParcela').addEventListener('input', (e) => {
-    const res = residentes.find(r => r[3] == e.target.value && r[9] && r[9].trim().toUpperCase() === 'SI');
+document.getElementById('inputNParcela').addEventListener('input', (e) => {
+    // --- INICIO DE CÓDIGO DE DEPURACIÓN ---
+    console.log("--- Iniciando Búsqueda ---");
+    const numeroParcelaBuscada = e.target.value;
+    console.log(`Buscando residentes para la parcela: "${numeroParcelaBuscada}"`);
+
+    const residentesDeParcela = residentes.filter(r => r[3] == numeroParcelaBuscada);
+    
+    if (residentesDeParcela.length > 0) {
+        console.log("Residentes encontrados para esta parcela:", residentesDeParcela);
+        residentesDeParcela.forEach((residente, index) => {
+            const valorOriginal = residente[9];
+            console.log(`Residente #${index + 1}: ${residente[1]}`);
+            console.log(`  - Valor original en columna J: '${valorOriginal}'`);
+            console.log(`  - Tipo de dato: ${typeof valorOriginal}`);
+            if (valorOriginal && typeof valorOriginal.trim === 'function') {
+                const valorProcesado = valorOriginal.trim().toUpperCase();
+                console.log(`  - Valor procesado (.trim().toUpperCase()): '${valorProcesado}'`);
+                console.log(`  - ¿Coincide con 'SI'? ${valorProcesado === 'SI'}`);
+            } else {
+                console.log("  - El valor en la columna J está vacío o no es un texto.");
+            }
+        });
+    } else {
+        console.log("No se encontró ningún residente para la parcela en los datos cargados.");
+    }
+    console.log("--- Fin de Búsqueda ---");
+    // --- FIN DE CÓDIGO DE DEPURACIÓN ---
+
+    // La lógica original se mantiene
+    const res = residentes.find(r => r[3] == numeroParcelaBuscada && r[9] && r[9].trim().toUpperCase() === 'SI');
     document.getElementById('inputNombreResidente').value = res ? res[1] : 'No se encontró contacto principal';
-    document.getElementById('inputValorGastoComun').value = res ? parseFloat(res[8]).toLocaleString('es-CL', {style:'currency', currency:'CLP'}) : '';
-  });
+    document.getElementById('inputValorGastoComun').value = res ? parseFloat(res[8]).toLocaleString('es-CL', { style: 'currency', currency: 'CLP' }) : '';
+});
 
  document.getElementById('formGastoComun').addEventListener('submit', async (e) => {
     e.preventDefault();
