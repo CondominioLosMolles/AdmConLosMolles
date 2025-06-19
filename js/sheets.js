@@ -62,24 +62,28 @@ async function eliminarAsamblea(id) { const asambleas = await obtenerAsambleas()
 async function obtenerComunicaciones() { const res = await gapi.client.sheets.spreadsheets.values.get({ spreadsheetId: SPREADSHEET_ID, range: `${SHEET_COMUNICACIONES}!A2:H` }); return res.result.values || []; }
 async function agregarComunicacion(datos) { const comunicaciones = await obtenerComunicaciones(); const lastId = comunicaciones.length > 0 && comunicaciones[comunicaciones.length-1][0] ? parseInt(comunicaciones[comunicaciones.length-1][0]) : 0; datos[0] = (lastId + 1).toString(); await gapi.client.sheets.spreadsheets.values.append({ spreadsheetId: SPREADSHEET_ID, range: `${SHEET_COMUNICACIONES}!A:H`, valueInputOption: 'USER_ENTERED', resource: { values: [datos] } }); }
 
-// Pega esta nueva función al final de tu archivo sheets.js
+// Reemplaza la versión anterior de esta función con esta nueva.
 async function obtenerResidentesSinCache() {
     const accessToken = gapi.client.getToken().access_token;
     const sheetName = 'Residentes';
     const range = 'A2:J';
-    // Se añade un parámetro con la hora actual para evitar que la API devuelva una respuesta de caché
-    const timestamp = new Date().getTime();
-    const url = `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/${sheetName}!${range}?time=${timestamp}`;
+    const url = `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/${sheetName}!${range}`;
 
     const response = await fetch(url, {
         headers: {
-            'Authorization': `Bearer ${accessToken}`
+            'Authorization': `Bearer ${accessToken}`,
+            // CAMBIO: Se añaden estas cabeceras para evitar la caché de forma correcta
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
+            'Pragma': 'no-cache',
+            'Expires': '0'
         }
     });
+
     if (!response.ok) {
         const error = await response.json();
         throw new Error(`Error de API de Sheets: ${error.error.message}`);
     }
+    
     const data = await response.json();
     return data.values || [];
 }
