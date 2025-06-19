@@ -307,7 +307,7 @@ document.getElementById('btnAbrirModalGasto').addEventListener('click', async ()
   mostrarSpinner();
   try {
       // Vuelve a cargar los datos de residentes para tener la información más fresca.
-       const residentes_data = await obtenerResidentesSinCache();
+const residentes_data = await obtenerResidentesSinCache();
       residentes = (residentes_data || []).map(r => ({
           id: r[0], nombre: r[1], rut: r[2], parcela: r[3], email: r[4], 
           telefono: r[5], fechaIngreso: r[6], estado: r[7], valorGC: r[8],
@@ -435,7 +435,7 @@ document.getElementById('btnCerrarModal').addEventListener('click', () => modal.
   document.getElementById('btnAbrirModalComprobante').addEventListener('click', async () => {
       mostrarSpinner();
       try {
-          const residentes_data = await obtenerResidentes();
+         const residentes_data = await obtenerResidentesSinCache();
           residentes = (residentes_data || []).map(r => ({
               id: r[0], nombre: r[1], rut: r[2], parcela: r[3], email: r[4], 
               telefono: r[5], fechaIngreso: r[6], estado: r[7], valorGC: r[8],
