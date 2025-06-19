@@ -22,18 +22,14 @@ const SHEET_ID_COMUNICACIONES = 569621527;
 
 
 // -------- RESIDENTES --------
-// CAMBIO: Se amplía el rango de A2:I a A2:J para incluir la nueva columna "Contacto Principal".
-async function obtenerResidentes() { const res = await gapi.client.sheets.spreadsheets.values.get({ spreadsheetId: SPREADSHEET_ID, range: `${SHEET_RESIDENTES}!A2:J` }); return res.result.values || []; }
-// CAMBIO: Se amplía el rango de A:I a A:J.
-async function agregarResidente(datos) { const residentes = await obtenerResidentes(); const lastId = residentes.length > 0 && residentes[residentes.length-1][0] ? parseInt(residentes[residentes.length-1][0]) : 0; datos[0] = (lastId + 1).toString(); await gapi.client.sheets.spreadsheets.values.append({ spreadsheetId: SPREADSHEET_ID, range: `${SHEET_RESIDENTES}!A:J`, valueInputOption: 'USER_ENTERED', resource: { values: [datos] } }); }
-// CAMBIO: Se amplía el rango de A${row}:I${row} a A${row}:J${row}.
-async function actualizarResidente(datos) { const residentes = await obtenerResidentes(); const idx = residentes.findIndex(r => r[0] === datos[0]); if (idx === -1) throw new Error('No encontrado'); const row = idx + 2; await gapi.client.sheets.spreadsheets.values.update({ spreadsheetId: SPREADSHEET_ID, range: `${SHEET_RESIDENTES}!A${row}:J${row}`, valueInputOption: 'USER_ENTERED', resource: { values: [datos] } }); }
+async function obtenerResidentes() { const res = await gapi.client.sheets.spreadsheets.values.get({ spreadsheetId: SPREADSHEET_ID, range: `${SHEET_RESIDENTES}!A2:I` }); return res.result.values || []; }
+async function agregarResidente(datos) { const residentes = await obtenerResidentes(); const lastId = residentes.length > 0 && residentes[residentes.length-1][0] ? parseInt(residentes[residentes.length-1][0]) : 0; datos[0] = (lastId + 1).toString(); await gapi.client.sheets.spreadsheets.values.append({ spreadsheetId: SPREADSHEET_ID, range: `${SHEET_RESIDENTES}!A:I`, valueInputOption: 'USER_ENTERED', resource: { values: [datos] } }); }
+async function actualizarResidente(datos) { const residentes = await obtenerResidentes(); const idx = residentes.findIndex(r => r[0] === datos[0]); if (idx === -1) throw new Error('No encontrado'); const row = idx + 2; await gapi.client.sheets.spreadsheets.values.update({ spreadsheetId: SPREADSHEET_ID, range: `${SHEET_RESIDENTES}!A${row}:I${row}`, valueInputOption: 'USER_ENTERED', resource: { values: [datos] } }); }
 async function eliminarResidente(id) { const residentes = await obtenerResidentes(); const idx = residentes.findIndex(r => r[0] === id); if (idx === -1) throw new Error('No encontrado'); const row = idx + 2; await gapi.client.sheets.spreadsheets.batchUpdate({ spreadsheetId: SPREADSHEET_ID, resource: { requests: [{ deleteDimension: { range: { sheetId: SHEET_ID_RESIDENTES, dimension: "ROWS", startIndex: row - 1, endIndex: row } } }] } }); }
 
 // -------- GASTOS COMUNES Y TIMC --------
-// CAMBIO: Se amplía el rango para asegurar que todos los campos futuros sean leídos y escritos.
-async function obtenerPagosGC() { const res = await gapi.client.sheets.spreadsheets.values.get({ spreadsheetId: SPREADSHEET_ID, range: `${SHEET_PAGOS_GC}!A2:R` }); return res.result.values || []; }
-async function agregarPagoGC(datos) { const pagos = await obtenerPagosGC(); const lastId = pagos.length > 0 && pagos[pagos.length-1][0] ? parseInt(pagos[pagos.length-1][0]) : 0; datos[0] = (lastId + 1).toString(); await gapi.client.sheets.spreadsheets.values.append({ spreadsheetId: SPREADSHEET_ID, range: `${SHEET_PAGOS_GC}!A:R`, valueInputOption: 'USER_ENTERED', resource: { values: [datos] } }); }
+async function obtenerPagosGC() { const res = await gapi.client.sheets.spreadsheets.values.get({ spreadsheetId: SPREADSHEET_ID, range: `${SHEET_PAGOS_GC}!A2:Q` }); return res.result.values || []; }
+async function agregarPagoGC(datos) { const pagos = await obtenerPagosGC(); const lastId = pagos.length > 0 && pagos[pagos.length-1][0] ? parseInt(pagos[pagos.length-1][0]) : 0; datos[0] = (lastId + 1).toString(); await gapi.client.sheets.spreadsheets.values.append({ spreadsheetId: SPREADSHEET_ID, range: `${SHEET_PAGOS_GC}!A:Q`, valueInputOption: 'USER_ENTERED', resource: { values: [datos] } }); }
 async function obtenerTIMCs() { try { const res = await gapi.client.sheets.spreadsheets.values.get({ spreadsheetId: SPREADSHEET_ID, range: `${SHEET_CONFIG_TIMC}!A2:C` }); return res.result.values || []; } catch (err) { console.error("ERROR AL OBTENER TIMC:", err); if (err.result && err.result.error.message.includes("Unable to parse range")) { throw new Error(`No se pudo encontrar la hoja llamada '${SHEET_CONFIG_TIMC}'. Revisa que el nombre sea exacto.`); } throw err; } }
 async function guardarTIMC(anio, mes, valor) { try { const todosLosTIMCs = await obtenerTIMCs(); const filaExistenteIndex = todosLosTIMCs.findIndex(fila => fila[0] == anio && fila[1] == mes); if (filaExistenteIndex !== -1) { const filaParaActualizar = filaExistenteIndex + 2; await gapi.client.sheets.spreadsheets.values.update({ spreadsheetId: SPREADSHEET_ID, range: `${SHEET_CONFIG_TIMC}!C${filaParaActualizar}`, valueInputOption: 'USER_ENTERED', resource: { values: [[valor]] } }); } else { const nuevaFila = [anio, mes, valor]; await gapi.client.sheets.spreadsheets.values.append({ spreadsheetId: SPREADSHEET_ID, range: `${SHEET_CONFIG_TIMC}!A:C`, valueInputOption: 'USER_ENTERED', resource: { values: [nuevaFila] } }); } } catch (err) { console.error("ERROR AL GUARDAR TIMC:", err); throw err; } }
 
@@ -61,29 +57,3 @@ async function eliminarAsamblea(id) { const asambleas = await obtenerAsambleas()
 // -------- COMUNICACIONES --------
 async function obtenerComunicaciones() { const res = await gapi.client.sheets.spreadsheets.values.get({ spreadsheetId: SPREADSHEET_ID, range: `${SHEET_COMUNICACIONES}!A2:H` }); return res.result.values || []; }
 async function agregarComunicacion(datos) { const comunicaciones = await obtenerComunicaciones(); const lastId = comunicaciones.length > 0 && comunicaciones[comunicaciones.length-1][0] ? parseInt(comunicaciones[comunicaciones.length-1][0]) : 0; datos[0] = (lastId + 1).toString(); await gapi.client.sheets.spreadsheets.values.append({ spreadsheetId: SPREADSHEET_ID, range: `${SHEET_COMUNICACIONES}!A:H`, valueInputOption: 'USER_ENTERED', resource: { values: [datos] } }); }
-
-// Reemplaza la versión anterior de esta función con esta nueva.
-async function obtenerResidentesSinCache() {
-    const accessToken = gapi.client.getToken().access_token;
-    const sheetName = 'Residentes';
-    const range = 'A2:J';
-    const url = `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/${sheetName}!${range}`;
-
-    const response = await fetch(url, {
-        headers: {
-            'Authorization': `Bearer ${accessToken}`,
-            // CAMBIO: Se añaden estas cabeceras para evitar la caché de forma correcta
-            'Cache-Control': 'no-cache, no-store, must-revalidate',
-            'Pragma': 'no-cache',
-            'Expires': '0'
-        }
-    });
-
-    if (!response.ok) {
-        const error = await response.json();
-        throw new Error(`Error de API de Sheets: ${error.error.message}`);
-    }
-    
-    const data = await response.json();
-    return data.values || [];
-}
