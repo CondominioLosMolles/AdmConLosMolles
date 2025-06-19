@@ -295,17 +295,18 @@ async function cargarGastosComunes() {
     document.getElementById('inputValorGastoComun').value = res ? parseFloat(res[8]).toLocaleString('es-CL', {style:'currency', currency:'CLP'}) : '';
   });
 
-  document.getElementById('formGastoComun').addEventListener('submit', async (e) => {
+ document.getElementById('formGastoComun').addEventListener('submit', async (e) => {
     e.preventDefault();
     mostrarSpinner();
 
     try {
         const formData = new FormData(e.target);
         const parcela = formData.get('N_Parcela');
-        // MODIFICADO: Al guardar, se asegura de usar los datos del contacto principal.
-        const residente = residentes.find(r => r[3] == parcela && r[9] === 'SI');
+        const residente = residentes.find(r => r[3] == parcela && r[9] && r[9].trim().toUpperCase() === 'SI');
 
         if (!residente) throw new Error("No se encontró un residente como 'Contacto Principal' para la parcela seleccionada. Por favor, asigne uno en la hoja 'Residentes'.");
+
+        // ... el resto de la función sigue igual ...
 
         const valorGastoComun = parseFloat(residente[8]);
         const mesPagadoIndex = parseInt(formData.get('Periodo'));
