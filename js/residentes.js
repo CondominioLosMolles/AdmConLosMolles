@@ -1,5 +1,121 @@
-
 // js/residentes.js
+
+// --------------------------------------------------------------------------------
+// NUEVA FUNCIÓN: Para subir el archivo a la carpeta de Drive de la parcela
+// --------------------------------------------------------------------------------
+// Esta función busca la carpeta de la parcela, la crea si no existe,
+// sube el archivo y devuelve el enlace para visualizarlo.
+async function subirCertificadoYObtenerLink(file, numeroParcela) {
+  if (!numeroParcela) {
+    throw new Error("El N° de Parcela es requerido para subir el documento.");
+  }
+  
+  // ID de la carpeta base en Google Drive que contiene todas las carpetas de las parcelas.
+  const BASE_FOLDER_ID = '1bfjcxMy4vlfZjwFgJoguhCxvS8Jlr9eZ';
+  let carpetaParcelaId;
+
+  // 1. Buscar la carpeta de la parcela (ej: "Parcela 14")
+  const query = `name='Parcela ${numeroParcela}' and '${BASE_FOLDER_ID}' in parents and mimeType='application/vnd.google-apps.folder' and trashed=false`;
+  const listRes = await gapi.client.drive.files.list({
+    q: query,
+    fields: 'files(id)',
+    spaces: 'drive'
+  });
+
+  if (listRes.result.files && listRes.result.files.length > 0) {
+    carpetaParcelaId = listRes.result.files[0].id;
+  } else {
+    // 2. Si no existe la carpeta, la crea.
+    mostrarMensaje(`Creando carpeta para Parcela ${numeroParcela}...`);
+    const createRes = await gapi.client.drive.files.create({
+      resource: {
+        name: `Parcela ${numeroParcela}`,
+        mimeType: 'application/vnd.google-apps.folder',
+        parents: [BASE_FOLDER_ID]
+      },
+      fields: 'id'
+    });
+    carpetaParcelaId = createRes.result.id;
+  }
+
+  // 3. Subir el archivo a la carpeta encontrada o creada.
+  const metadata = {
+    name: file.name,
+    parents: [carpetaParcelaId]
+  };
+  const form = new FormData();
+  form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
+  form.append('file', file);
+
+  const uploadRes = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', {
+    method: 'POST',
+    headers: new Headers({ 'Authorization': 'Bearer ' + gapi.auth.getToken().access_token }),
+    body: form
+  });
+
+  const fileData = await uploadRes.json();
+  if (fileData.error) {
+    throw new Error(fileData.error.message);
+  }
+
+  // 4. Hacer el archivo público (visible para cualquiera con el enlace) y obtener el link.
+  const fileId = fileData.id;
+  await gapi.client.drive.permissions.create({
+    fileId: fileId,
+    resource: {
+      role: 'reader',
+      type: 'anyone'
+    }
+  });
+
+  const getFileRes = await gapi.client.drive.files.get({
+    fileId: fileId,
+    fields: 'webViewLink'
+  });
+
+  return getFileRes.result.webViewLink;
+}
+
+
+// --------------------------------------------------------------------------------
+// NUEVA FUNCIÓN: Para mostrar el modal con los detalles completos del residente
+// --------------------------------------------------------------------------------
+function mostrarModalDetalleResidente(datos) {
+  const modal = document.getElementById('modalResidente'); // Reutilizamos el contenedor del modal
+  modal.style.display = 'flex';
+  
+  // Asumimos que `datos` es el array completo de la fila del residente (columnas A a K)
+  // B:Nombre, C:RUT, D:Parcela, E:Dirección, F:Email, G:Tel, H:Estado, I:ValorGC, J:[vacío], K:Certificado
+  const [id, nombre, rut, parcela, direccion, email, tel, estado, valorGC, , linkCertificado] = datos;
+
+  let linkHtml = 'No disponible';
+  if (linkCertificado) {
+    linkHtml = `<a href="${linkCertificado}" target="_blank">Ver Certificado</a>`;
+  }
+
+  modal.innerHTML = `
+    <div style="min-width: 400px;">
+      <h3 style="margin-bottom:18px;">Detalles del Residente</h3>
+      <div id="detalleResidenteContent">
+        <p><strong>Nombre Completo:</strong> ${nombre || ''}</p>
+        <p><strong>RUT:</strong> ${rut || ''}</p>
+        <p><strong>N° Parcela:</strong> ${parcela || ''}</p>
+        <p><strong>Dirección:</strong> ${direccion || ''}</p>
+        <p><strong>Email:</strong> ${email || ''}</p>
+        <p><strong>Teléfono:</strong> ${tel || ''}</p>
+        <p><strong>Estado:</strong> ${estado || ''}</p>
+        <p><strong>Valor Gasto Común:</strong> ${valorGC || ''}</p>
+        <p><strong>Certificado Dominio Vigente:</strong> ${linkHtml}</p>
+      </div>
+      <div style="margin-top:18px;text-align:right;">
+        <button class="btn secondary" type="button" id="btnCerrarModalDetalle">Cerrar</button>
+      </div>
+    </div>
+  `;
+
+  document.getElementById('btnCerrarModalDetalle').onclick = () => modal.style.display = 'none';
+}
+
 
 async function cargarResidentes() {
   limpiarMainContent();
@@ -7,7 +123,8 @@ async function cargarResidentes() {
 
   let residentes = [];
   try {
-    residentes = await obtenerResidentes();
+    // IMPORTANTE: Asegúrate que `obtenerResidentes` ahora trae los datos hasta la columna K
+    residentes = await obtenerResidentes(); 
   } catch (e) {
     ocultarSpinner();
     mostrarMensaje('Error al cargar residentes: ' + e.message, 'error');
@@ -30,7 +147,10 @@ async function cargarResidentes() {
 
   function renderTabla(filtro = '') {
     const filtrados = residentes.filter(r => {
-      const [id, nombre, rut, parcela, direccion, email, tel, estado, valorGC] = r;
+      // Usamos índices para acceder a los datos para evitar errores si la fila tiene más columnas.
+      const nombre = r[1] || '';
+      const rut = r[2] || '';
+      const parcela = r[3] || '';
       const str = `${nombre} ${rut} ${parcela}`.toLowerCase();
       return str.includes(filtro.toLowerCase());
     });
@@ -53,9 +173,11 @@ async function cargarResidentes() {
         <tbody>
     `;
     for (const r of filtrados) {
-      const [id, nombre, rut, parcela, direccion, email, tel, estado, valorGC] = r;
+      // MODIFICACIÓN: Se añade la clase 'fila-residente' y 'data-id' para el modal de detalles.
+      // Se usan índices para asegurar que se obtienen los datos correctos.
+      const id = r[0], nombre = r[1], rut = r[2], parcela = r[3], direccion = r[4], email = r[5], tel = r[6], estado = r[7], valorGC = r[8];
       html += `
-        <tr>
+        <tr class="fila-residente" data-id="${id}" title="Ver detalles de ${nombre}">
           <td style="width:200px;" title="${nombre}">${nombre}</td>
           <td style="width:90px;" title="${rut}">${rut}</td>
           <td style="width:60px;" title="${parcela}">${parcela}</td>
@@ -83,9 +205,10 @@ async function cargarResidentes() {
   });
 
   document.getElementById('btnExportarResidentes').onclick = () => {
+    // MODIFICACIÓN: Se añade la columna "Certificado" a la exportación de Excel.
     const ws = XLSX.utils.aoa_to_sheet([
-      ["Nombre Completo", "RUT", "N° Parcela", "Dirección", "Email", "Teléfono", "Estado", "Valor Gasto Común"],
-      ...residentes.map(r => r.slice(1,9))
+      ["Nombre Completo", "RUT", "N° Parcela", "Dirección", "Email", "Teléfono", "Estado", "Valor Gasto Común", "Certificado"],
+      ...residentes.map(r => [r[1], r[2], r[3], r[4], r[5], r[6], r[7], r[8], r[10]]) // Se extraen las columnas B-I y K
     ]);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Residentes");
@@ -96,11 +219,15 @@ async function cargarResidentes() {
     const modal = document.getElementById('modalResidente');
     modal.style.display = 'flex';
     const isEdit = !!datos;
+    // MODIFICACIÓN: Se añade el campo para subir el archivo y un enlace al certificado existente.
+    const linkCertificado = datos && datos[10] ? `<a href="${datos[10]}" target="_blank">Ver Documento Actual</a>` : 'No hay documento cargado.';
+
     modal.innerHTML = `
       <div>
         <h3 style="margin-bottom:18px;">${isEdit ? 'Editar' : 'Agregar'} Residente</h3>
         <form id="formResidente">
           <input type="hidden" name="id" value="${datos ? datos[0] : ''}">
+          <input type="hidden" name="linkCertificadoActual" value="${datos ? (datos[10] || '') : ''}">
           <label>Nombre Completo</label>
           <input name="nombre" required value="${datos ? datos[1] : ''}">
           <label>RUT</label>
@@ -121,6 +248,11 @@ async function cargarResidentes() {
           </select>
           <label>Valor Gasto Común</label>
           <input name="valorGC" required type="number" value="${datos ? datos[8] : ''}">
+          
+          <label>Certificado Dominio Vigente</label>
+          <input name="certificadoFile" type="file" accept=".pdf,.jpg,.jpeg,.png">
+          <div style="font-size:12px;margin-top:4px;">${isEdit ? linkCertificado : ''}</div>
+          
           <div style="margin-top:18px;text-align:right;">
             <button class="btn" type="submit">${isEdit ? 'Guardar Cambios' : 'Agregar'}</button>
             <button class="btn secondary" type="button" id="btnCerrarModal">Cancelar</button>
@@ -132,26 +264,50 @@ async function cargarResidentes() {
     document.getElementById('formResidente').onsubmit = async (e) => {
       e.preventDefault();
       const fd = new FormData(e.target);
-      const data = [
-        fd.get('id') || '',
-        fd.get('nombre'),
-        fd.get('rut'),
-        fd.get('parcela'),
-        fd.get('direccion'),
-        fd.get('email'),
-        fd.get('tel'),
-        fd.get('estado'),
-        fd.get('valorGC')
-      ];
+      const fileInput = e.target.querySelector('[name="certificadoFile"]');
+      const file = fileInput.files[0];
+      let linkCertificado = fd.get('linkCertificadoActual'); // Mantiene el link antiguo si no se sube uno nuevo.
+      
       mostrarSpinner();
+
+      // Si se seleccionó un archivo nuevo, se sube.
+      if (file) {
+        try {
+          const nParcela = fd.get('parcela');
+          linkCertificado = await subirCertificadoYObtenerLink(file, nParcela);
+          mostrarMensaje('Documento subido con éxito.');
+        } catch (uploadError) {
+          ocultarSpinner();
+          mostrarMensaje(`Error al subir documento: ${uploadError.message}`, 'error');
+          return; // Detiene el proceso si falla la subida del archivo.
+        }
+      }
+
+      // MODIFICACIÓN: El array de datos ahora incluye un espacio para la columna J y el link en la columna K.
+      const data = [
+        fd.get('id') || '',         // A
+        fd.get('nombre'),           // B
+        fd.get('rut'),              // C
+        fd.get('parcela'),          // D
+        fd.get('direccion'),        // E
+        fd.get('email'),            // F
+        fd.get('tel'),              // G
+        fd.get('estado'),           // H
+        fd.get('valorGC'),          // I
+        '',                         // J (Columna vacía, si existe)
+        linkCertificado             // K
+      ];
+
       try {
         if (isEdit) {
-          await actualizarResidente(data);
+          // Asumimos que actualizarResidente puede manejar el array con 11 elementos.
+          await actualizarResidente(data); 
         } else {
+          // Asumimos que agregarResidente puede manejar el array con 11 elementos.
           await agregarResidente(data);
         }
         modal.style.display = 'none';
-        cargarResidentes();
+        cargarResidentes(); // Recarga la lista para mostrar los cambios.
       } catch (e) {
         mostrarMensaje('Error al guardar: ' + e.message, 'error');
       }
@@ -162,16 +318,33 @@ async function cargarResidentes() {
   document.getElementById('btnAgregarResidente').onclick = () => mostrarModalResidente();
 
   document.getElementById('tablaResidentes').onclick = async (e) => {
-    if (e.target.classList.contains('btn-editar')) {
+    // MODIFICACIÓN: Se añade un nuevo manejador de eventos para las filas.
+    // Si se hace clic en una fila (y no en un botón dentro de ella), se muestra el modal de detalles.
+    const fila = e.target.closest('.fila-residente');
+    const esBotonEditar = e.target.classList.contains('btn-editar');
+    const esBotonEliminar = e.target.classList.contains('btn-eliminar');
+
+    if (fila && !esBotonEditar && !esBotonEliminar) {
+      const id = fila.dataset.id;
+      const datosResidente = residentes.find(r => r[0] === id);
+      if (datosResidente) {
+        mostrarModalDetalleResidente(datosResidente);
+      }
+      return; // Detiene la ejecución para no interferir con los otros botones.
+    }
+    
+    // El código existente para editar y eliminar permanece igual.
+    if (esBotonEditar) {
       const id = e.target.dataset.id;
       const datos = residentes.find(r => r[0] === id);
       mostrarModalResidente(datos);
     }
-    if (e.target.classList.contains('btn-eliminar')) {
+    if (esBotonEliminar) {
       const id = e.target.dataset.id;
       if (!confirm('¿Está seguro de que desea eliminar a este residente?')) return;
       mostrarSpinner();
       try {
+        // ... (Tu lógica de eliminación no se ha modificado)
         const residentesActualizados = await obtenerResidentes();
         const idx = residentesActualizados.findIndex(r => r[0] === id);
         if (idx === -1) throw new Error('No encontrado');
