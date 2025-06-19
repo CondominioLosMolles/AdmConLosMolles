@@ -38,7 +38,7 @@ async function cargarGastosComunes() {
         obtenerTIMCs()
     ]);
     
-    // CAMBIO: Se mapean los residentes para incluir el nuevo campo de la columna J (índice 9)
+    // Se mapean los residentes para incluir el nuevo campo de la columna J (índice 9)
     residentes = (residentes_data || []).map(r => ({
         id: r[0], nombre: r[1], rut: r[2], parcela: r[3], email: r[4], 
         telefono: r[5], fechaIngreso: r[6], estado: r[7], valorGC: r[8],
@@ -334,7 +334,6 @@ async function cargarGastosComunes() {
   document.getElementById('formGastoComun').addEventListener('submit', async (e) => {
     e.preventDefault();
     mostrarSpinner();
-
     try {
         const formData = new FormData(e.target);
         const parcela = formData.get('N_Parcela');
@@ -346,7 +345,7 @@ async function cargarGastosComunes() {
         if (!nombreResidente || nombreResidente === 'No encontrado') {
             throw new Error("Debe seleccionar un residente válido.");
         }
-        
+
         const residenteSeleccionado = residentes.find(r => r.parcela == parcela && r.nombre === nombreResidente) || residentes.find(r => r.parcela == parcela);
         if (!residenteSeleccionado) throw new Error("No se pudo verificar el residente.");
         
@@ -370,15 +369,13 @@ async function cargarGastosComunes() {
             multa = (valorGastoComun / 4) * mesesImpagos;
             deudaDelPeriodo = valorGastoComun + interes + multa;
         }
-
-        let linkComprobante = null;
-        // La lógica para subir a Drive se ha omitido según tu última instrucción, pero el campo se mantiene.
-
+        
         const montoPagado = parseFloat(formData.get('Monto_Pagado'));
         const saldoTransaccion = montoPagado - deudaDelPeriodo;
         const periodoStr = `${MESES[mesPagadoIndex]} ${anioSeleccionado}`;
         const estadoPago = saldoTransaccion >= 0 ? 'Pagado' : 'Abono';
         const deudaPendienteParaSheet = saldoTransaccion < 0 ? -saldoTransaccion : 0;
+        const linkComprobante = null; 
 
         const datosParaSheet = [
           null, nombreResidente, parcela, valorGastoComun, periodoStr,
@@ -390,14 +387,14 @@ async function cargarGastosComunes() {
         await agregarPagoGC(datosParaSheet);
         
         const nuevoPagoObj = {};
-        ENCABEZADOS_PAGOS.forEach((encabezado, i) => nuevoPagoObj[encabezado] = datosParaSheet[i]);
+        ENCABEZADOS_PAGOS.forEach((key, i) => { nuevoPagoObj[key] = datosParaSheet[i]; });
         nuevoPagoObj.anio = anioSeleccionado;
         pagosGC_obj.push(nuevoPagoObj);
         
         filtrarYRenderizar();
         modal.style.display = 'none';
         e.target.reset();
-        mostrarMensaje('Gasto común registrado con éxito en Google Sheets.', 'success');
+        mostrarMensaje('Gasto común registrado con éxito.', 'success');
 
     } catch (err) {
         mostrarMensaje('Error al guardar el gasto: ' + err.message, 'error');
@@ -405,24 +402,54 @@ async function cargarGastosComunes() {
         ocultarSpinner();
     }
   });
-
+  
   const modalComprobante = document.getElementById('modalComprobante');
   const formComprobante = document.getElementById('formEnviarComprobante');
-  const inputParcelaComprobante = document.getElementById('inputNParcelaComprobante');
+  const btnCerrarComp = document.getElementById('btnCerrarModalComprobante');
+  document.getElementById('btnAbrirModalComprobante').addEventListener('click', () => modalComprobante.style.display = 'flex');
+  btnCerrarComp.addEventListener('click', () => modalComprobante.style.display = 'none');
   
-  document.getElementById('btnAbrirModalComprobante').addEventListener('click', () => {
-    formComprobante.reset();
-    document.getElementById('divCuerpoComprobante').innerHTML = `<span style="color: #6c757d;">Ingrese un N° de Parcela para generar la previsualización.</span>`;
-    modalComprobante.style.display = 'flex';
-  });
+  document.getElementById('inputNParcelaComprobante').addEventListener('input', (e) => {
+    const parcela = e.target.value;
+    const nombreInput = document.getElementById('inputNombreResidenteComprobante');
+    const emailInput = document.getElementById('inputEmailComprobante');
+    const asuntoInput = document.getElementById('inputAsuntoComprobante');
+    const cuerpoDiv = document.getElementById('divCuerpoComprobante');
+    
+    nombreInput.value = '';
+    emailInput.value = '';
+    asuntoInput.value = '';
+    cuerpoDiv.innerHTML = `<span style="color: #6c757d;">Ingrese un N° de Parcela...</span>`;
 
-  document.getElementById('btnCerrarModalComprobante').addEventListener('click', () => {
-    modalComprobante.style.display = 'none';
+    if (!parcela) return;
+    
+    const residentesDeParcela = residentes.filter(r => r.parcela == parcela);
+    if(residentesDeParcela.length === 0) {
+        cuerpoDiv.innerHTML = `<span>No se encontraron residentes para la parcela ${parcela}.</span>`;
+        return;
+    }
+    
+    const pagosDeParcela = pagosGC_obj
+      .filter(p => p.N_Parcela == parcela && p.Fecha_Pago)
+      .sort((a, b) => new Date(b.Fecha_Pago) - new Date(a.Fecha_Pago));
+
+    if (pagosDeParcela.length === 0) {
+        cuerpoDiv.innerHTML = `<span style="color: #dc3545;">No se encontraron pagos registrados para esta parcela.</span>`;
+        return;
+    }
+    
+    const ultimoPago = pagosDeParcela[0];
+    const todosLosEmails = residentesDeParcela.map(r => r.email).filter(Boolean);
+    const residentePrincipal = residentesDeParcela.find(r => r.contactoPrincipal === 'Sí') || residentesDeParcela[0];
+    
+    nombreInput.value = residentePrincipal.nombre;
+    emailInput.value = todosLosEmails.join(', ');
+    asuntoInput.value = `Comprobante pago gasto común ${formatearPeriodo(ultimoPago.Periodo)} Parcela Número ${parcela}`;
+    cuerpoDiv.innerHTML = crearCuerpoCorreo(ultimoPago, residentePrincipal);
   });
   
   function crearCuerpoCorreo(pago, residente) {
-    const todosLosResidentesDeParcela = residentes.filter(r => r.parcela === pago.N_Parcela);
-    const nombrePrincipal = (todosLosResidentesDeParcela.find(r => r.contactoPrincipal === 'Sí') || todosLosResidentesDeParcela[0]).nombre;
+    const nombrePrincipal = residente.nombre;
     const periodoFormateado = formatearPeriodo(pago.Periodo);
     const valorGC = parseFloat(pago.Valor_Gasto_Comun).toLocaleString('es-CL');
     const interes = parseFloat(pago.Interes || 0).toLocaleString('es-CL');
@@ -474,53 +501,19 @@ async function cargarGastosComunes() {
       </div>
     `;
   }
-
-  inputParcelaComprobante.addEventListener('input', (e) => {
-    const parcela = e.target.value;
-    const nombreInput = document.getElementById('inputNombreResidenteComprobante');
-    const emailInput = document.getElementById('inputEmailComprobante');
-    const asuntoInput = document.getElementById('inputAsuntoComprobante');
-    const cuerpoDiv = document.getElementById('divCuerpoComprobante');
-
-    nombreInput.value = '';
-    emailInput.value = '';
-    asuntoInput.value = '';
-    cuerpoDiv.innerHTML = `<span style="color: #6c757d;">Ingrese un N° de Parcela...</span>`;
-
-    if (!parcela) return;
-    
-    const pagosDelResidente = pagosGC_obj
-      .filter(p => p.N_Parcela == parcela && p.Fecha_Pago)
-      .sort((a, b) => new Date(b.Fecha_Pago) - new Date(a.Fecha_Pago));
-
-    if (pagosDelResidente.length === 0) {
-        cuerpoDiv.innerHTML = `<span style="color: #dc3545;">No se encontraron pagos registrados para esta parcela este mes.</span>`;
-        return;
-    }
-    
-    const ultimoPago = pagosDelResidente[0];
-    const residentesDeParcela = residentes.filter(r => r.parcela == parcela);
-    const todosLosEmails = residentesDeParcela.map(r => r.email).filter(Boolean);
-    const residentePrincipal = residentesDeParcela.find(r => r.contactoPrincipal === 'Sí') || residentesDeParcela[0];
-    
-    nombreInput.value = residentePrincipal.nombre;
-    emailInput.value = todosLosEmails.join(', ');
-    asuntoInput.value = `Comprobante pago gasto común ${formatearPeriodo(ultimoPago.Periodo)} Parcela Número ${parcela}`;
-    cuerpoDiv.innerHTML = crearCuerpoCorreo(ultimoPago, residentePrincipal);
-  });
-
+  
   formComprobante.addEventListener('submit', async (e) => {
     e.preventDefault();
-    const cuerpoPreview = document.getElementById('divCuerpoComprobante');
-    if (typeof enviarCorreo !== 'function') {
-      return mostrarMensaje('Error: La función para enviar correos no está disponible.', 'error');
+    const emailsInput = document.getElementById('emails-a-enviar');
+    if (!emailsInput || !emailsInput.value) {
+        return mostrarMensaje('No hay destinatarios.', 'error');
     }
-    const destinatarios = document.getElementById('inputEmailComprobante').value.split(',').map(e => e.trim()).filter(Boolean);
+    const destinatarios = emailsInput.value.split(',').map(email => email.trim()).filter(Boolean);
     const asunto = document.getElementById('inputAsuntoComprobante').value;
-    const cuerpo = cuerpoPreview.innerHTML;
+    const cuerpo = document.getElementById('divCuerpoComprobante').innerHTML;
 
     if (destinatarios.length === 0 || !asunto || cuerpo.includes("Ingrese un N° de Parcela")) {
-      return mostrarMensaje('Datos incompletos o inválidos. Asegúrese de seleccionar una parcela con pagos.', 'error');
+      return mostrarMensaje('Datos incompletos o inválidos.', 'error');
     }
     
     mostrarSpinner();
