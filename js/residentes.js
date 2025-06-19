@@ -175,13 +175,13 @@ async function cargarResidentes() {
       <table class="table">
         <thead>
           <tr>
-            <th>Nombre Completo</th>
-            <th>RUT</th>
-            <th>N° Parcela</th>
-            <th>Email</th>
-            <th>Estado</th>
-            <th>Valor GC</th>
-            <th>Acciones</th>
+            <th style="width: 300px;">Nombre Completo</th>
+            <th style="width: 120px;">RUT</th>
+            <th style="width: 100px;">N° Parcela</th>
+            <th style="width: 250px;">Email</th>
+            <th style="width: 100px;">Estado</th>
+            <th style="width: 100px;">Valor GC</th>
+            <th style="width: 110px;">Acciones</th>
           </tr>
         </thead>
         <tbody>
