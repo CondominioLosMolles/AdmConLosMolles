@@ -7,7 +7,7 @@ async function cargarResidentes() {
 
   let residentes = [];
   try {
-   residentes = await obtenerResidentesSinCache();
+    residentes = await obtenerResidentes();
   } catch (e) {
     ocultarSpinner();
     mostrarMensaje('Error al cargar residentes: ' + e.message, 'error');
@@ -30,8 +30,7 @@ async function cargarResidentes() {
 
   function renderTabla(filtro = '') {
     const filtrados = residentes.filter(r => {
-      // La primera parte del filtro solo necesita los campos de búsqueda
-      const [id, nombre, rut, parcela] = r;
+      const [id, nombre, rut, parcela, direccion, email, tel, estado, valorGC] = r;
       const str = `${nombre} ${rut} ${parcela}`.toLowerCase();
       return str.includes(filtro.toLowerCase());
     });
@@ -54,12 +53,10 @@ async function cargarResidentes() {
         <tbody>
     `;
     for (const r of filtrados) {
-      // AQUÍ es donde se deben definir todas las variables para usarlas en la fila de la tabla.
-      // Se incluye `contactoPrincipal` que viene en la décima posición (índice 9).
-      const [id, nombre, rut, parcela, direccion, email, tel, estado, valorGC, contactoPrincipal] = r;
+      const [id, nombre, rut, parcela, direccion, email, tel, estado, valorGC] = r;
       html += `
         <tr>
-          <td style="width:200px;" title="${nombre}">${nombre} ${contactoPrincipal === 'Sí' ? '<b>(P)</b>' : ''}</td>
+          <td style="width:200px;" title="${nombre}">${nombre}</td>
           <td style="width:90px;" title="${rut}">${rut}</td>
           <td style="width:60px;" title="${parcela}">${parcela}</td>
           <td style="width:200px;" title="${direccion}">${direccion}</td>
@@ -124,10 +121,6 @@ async function cargarResidentes() {
           </select>
           <label>Valor Gasto Común</label>
           <input name="valorGC" required type="number" value="${datos ? datos[8] : ''}">
-          <div style="margin-top:10px; display: flex; align-items: center;">
-            <input type="checkbox" name="contactoPrincipal" value="Sí" ${datos && datos[9] === 'Sí' ? 'checked' : ''} style="width:auto; margin-right:8px;">
-            <label style="margin-bottom:0;">Marcar como Contacto Principal</label>
-        </div>
           <div style="margin-top:18px;text-align:right;">
             <button class="btn" type="submit">${isEdit ? 'Guardar Cambios' : 'Agregar'}</button>
             <button class="btn secondary" type="button" id="btnCerrarModal">Cancelar</button>
@@ -140,17 +133,16 @@ async function cargarResidentes() {
       e.preventDefault();
       const fd = new FormData(e.target);
       const data = [
-        fd.get('id') || '',
-        fd.get('nombre'),
-        fd.get('rut'),
-        fd.get('parcela'),
-        fd.get('direccion'),
-        fd.get('email'),
-        fd.get('tel'),
-        fd.get('estado'),
-        fd.get('valorGC'),
-        fd.get('contactoPrincipal') ? 'Sí' : 'No'
-      ];
+        fd.get('id') || '',
+        fd.get('nombre'),
+        fd.get('rut'),
+        fd.get('parcela'),
+        fd.get('direccion'),
+        fd.get('email'),
+        fd.get('tel'),
+        fd.get('estado'),
+        fd.get('valorGC')
+      ];
       mostrarSpinner();
       try {
         if (isEdit) {
