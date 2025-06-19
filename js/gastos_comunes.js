@@ -290,8 +290,7 @@ async function cargarGastosComunes() {
   document.getElementById('btnCerrarModal').addEventListener('click', () => modal.style.display = 'none');
   
   document.getElementById('inputNParcela').addEventListener('input', (e) => {
-    // MODIFICADO: Busca al residente que es Contacto Principal ("SI" en columna J, índice 9)
-    const res = residentes.find(r => r[3] == e.target.value && r[9] === 'SI'); 
+    const res = residentes.find(r => r[3] == e.target.value && r[9] && r[9].trim().toUpperCase() === 'SI');
     document.getElementById('inputNombreResidente').value = res ? res[1] : 'No se encontró contacto principal';
     document.getElementById('inputValorGastoComun').value = res ? parseFloat(res[8]).toLocaleString('es-CL', {style:'currency', currency:'CLP'}) : '';
   });
