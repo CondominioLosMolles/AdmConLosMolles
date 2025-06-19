@@ -103,7 +103,7 @@ async function cargarGastosComunes() {
     <div id="modalComprobante" class="modal" style="display:none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.5); align-items: center; justify-content: center;">
       <div class="widget" style="max-width: 650px; width: 90%; margin: auto; z-index: 1001;">
         <h3>Enviar Comprobante por Correo</h3>
-        <form id="formEnviarComprobante" style="display:flex; flex-direction:column; gap:15px;"><div style="display:flex; gap: 15px; flex-wrap: wrap;"><div style="flex: 1; min-width: 120px;"><label><b>N° Parcela</b></label><input type="number" id="inputNParcelaComprobante" min="1" max="26" required style="width:100%;"></div><div style="flex: 2; min-width: 200px;"><label><b>Residente(s)</b></label><input type="text" id="inputNombreResidenteComprobante" readonly style="width:100%; background:#eee;"></div></div><div><label><b>Email(s) Destinatario(s)</b></label><input type="email" id="inputEmailComprobante" readonly style="width:100%; background:#eee;"></div><div><label><b>Asunto</b></label><input type="text" id="inputAsuntoComprobante" readonly style="width:100%; background:#eee;"></div><div><label><b>Previsualización del Correo</b></label><div id="divCuerpoComprobante" style="width:100%; height: 250px; background:#f8f9fa; border: 1px solid #ccc; border-radius: 4px; padding: 10px; overflow-y: auto;"><span style="color: #6c757d;">Ingrese un N° de Parcela para generar la previsualización.</span></div></div><div style="text-align: right; margin-top: 10px;"><button class="btn secondary" type="button" id="btnCerrarModalComprobante">Cancelar</button><button class="btn" type="submit">Enviar Correo</button></div></form>
+        <form id="formEnviarComprobante" style="display:flex; flex-direction:column; gap:15px;"><div style="display:flex; gap: 15px; flex-wrap: wrap;"><div style="flex: 1; min-width: 120px;"><label><b>N° Parcela</b></label><input type="number" id="inputNParcelaComprobante" min="1" max="26" required style="width:100%;"></div><div style="flex: 2; min-width: 200px;"><label><b>Residente(s)</b></label><input type="text" id="inputNombreResidenteComprobante" readonly style="width:100%; background:#eee;"></div></div><div><label><b>Email(s) Destinatario</b></label><input type="email" id="inputEmailComprobante" readonly style="width:100%; background:#eee;"></div><div><label><b>Asunto</b></label><input type="text" id="inputAsuntoComprobante" readonly style="width:100%; background:#eee;"></div><div><label><b>Previsualización del Correo</b></label><div id="divCuerpoComprobante" style="width:100%; height: 250px; background:#f8f9fa; border: 1px solid #ccc; border-radius: 4px; padding: 10px; overflow-y: auto;"><span style="color: #6c757d;">Ingrese un N° de Parcela para generar la previsualización.</span></div></div><div style="text-align: right; margin-top: 10px;"><button class="btn secondary" type="button" id="btnCerrarModalComprobante">Cancelar</button><button class="btn" type="submit">Enviar Correo</button></div></form>
       </div>
     </div>
 
@@ -136,7 +136,7 @@ async function cargarGastosComunes() {
   }
   
   function renderizarTablaResidente(parcela, anio) {
-    const residente = residentes.find(r => r[3] == parcela); // Para la vista detallada, podemos seguir mostrando al primero que encuentre o al principal.
+    const residente = residentes.find(r => String(r[3]) === String(parcela));
     if (!residente) { tbodyGastos.innerHTML = `<tr><td colspan="14">No se encontró residente.</td></tr>`; return; }
 
     document.querySelector('#detalle-gastos h3').textContent = `Detalle Anual para ${residente[1]} (Parcela ${parcela})`;
@@ -289,53 +289,42 @@ async function cargarGastosComunes() {
   document.getElementById('btnAbrirModalGasto').addEventListener('click', () => modal.style.display = 'flex');
   document.getElementById('btnCerrarModal').addEventListener('click', () => modal.style.display = 'none');
   
-document.getElementById('inputNParcela').addEventListener('input', (e) => {
-    // --- INICIO DE CÓDIGO DE DEPURACIÓN ---
-    console.log("--- Iniciando Búsqueda ---");
-    const numeroParcelaBuscada = e.target.value;
-    console.log(`Buscando residentes para la parcela: "${numeroParcelaBuscada}"`);
-
-    const residentesDeParcela = residentes.filter(r => r[3] == numeroParcelaBuscada);
+  // =================================================================================
+  // ===== INICIO DE LA MODIFICACIÓN PARA AGREGAR GASTO COMÚN ========================
+  // =================================================================================
+  document.getElementById('inputNParcela').addEventListener('input', (e) => {
+    // Se busca al residente que cumpla dos condiciones:
+    // 1. Que el N° de Parcela coincida (comparando como texto para evitar errores).
+    // 2. Que en la columna J (índice 9) tenga el valor "SI", sin importar mayúsculas o espacios.
+    const parcelaBuscada = e.target.value;
+    const res = residentes.find(r => String(r[3]) === parcelaBuscada && r[9] && r[9].trim().toUpperCase() === 'SI');
     
-    if (residentesDeParcela.length > 0) {
-        console.log("Residentes encontrados para esta parcela:", residentesDeParcela);
-        residentesDeParcela.forEach((residente, index) => {
-            const valorOriginal = residente[9];
-            console.log(`Residente #${index + 1}: ${residente[1]}`);
-            console.log(`  - Valor original en columna J: '${valorOriginal}'`);
-            console.log(`  - Tipo de dato: ${typeof valorOriginal}`);
-            if (valorOriginal && typeof valorOriginal.trim === 'function') {
-                const valorProcesado = valorOriginal.trim().toUpperCase();
-                console.log(`  - Valor procesado (.trim().toUpperCase()): '${valorProcesado}'`);
-                console.log(`  - ¿Coincide con 'SI'? ${valorProcesado === 'SI'}`);
-            } else {
-                console.log("  - El valor en la columna J está vacío o no es un texto.");
-            }
-        });
+    // Si se encuentra, se rellenan los campos. Si no, se limpian y se muestra un mensaje.
+    const nombreInput = document.getElementById('inputNombreResidente');
+    const valorInput = document.getElementById('inputValorGastoComun');
+
+    if (res) {
+        nombreInput.value = res[1]; // Columna B: Nombre_Completo
+        valorInput.value = parseFloat(res[8]).toLocaleString('es-CL', { style: 'currency', currency: 'CLP' }); // Columna I: Valor_Gasto_Comun
     } else {
-        console.log("No se encontró ningún residente para la parcela en los datos cargados.");
+        nombreInput.value = 'No se encontró contacto principal';
+        valorInput.value = '';
     }
-    console.log("--- Fin de Búsqueda ---");
-    // --- FIN DE CÓDIGO DE DEPURACIÓN ---
+  });
 
-    // La lógica original se mantiene
-    const res = residentes.find(r => r[3] == numeroParcelaBuscada && r[9] && r[9].trim().toUpperCase() === 'SI');
-    document.getElementById('inputNombreResidente').value = res ? res[1] : 'No se encontró contacto principal';
-    document.getElementById('inputValorGastoComun').value = res ? parseFloat(res[8]).toLocaleString('es-CL', { style: 'currency', currency: 'CLP' }) : '';
-});
-
- document.getElementById('formGastoComun').addEventListener('submit', async (e) => {
+  document.getElementById('formGastoComun').addEventListener('submit', async (e) => {
     e.preventDefault();
     mostrarSpinner();
 
     try {
         const formData = new FormData(e.target);
         const parcela = formData.get('N_Parcela');
-        const residente = residentes.find(r => r[3] == parcela && r[9] && r[9].trim().toUpperCase() === 'SI');
+        // Se busca al residente principal para asegurarse de que los datos correctos se guarden.
+        const residente = residentes.find(r => String(r[3]) === parcela && r[9] && r[9].trim().toUpperCase() === 'SI');
 
-        if (!residente) throw new Error("No se encontró un residente como 'Contacto Principal' para la parcela seleccionada. Por favor, asigne uno en la hoja 'Residentes'.");
-
-        // ... el resto de la función sigue igual ...
+        if (!residente) {
+            throw new Error("No se encontró un 'Contacto Principal' para la parcela seleccionada. Verifique la hoja de Residentes.");
+        }
 
         const valorGastoComun = parseFloat(residente[8]);
         const mesPagadoIndex = parseInt(formData.get('Periodo'));
@@ -372,12 +361,14 @@ document.getElementById('inputNParcela').addEventListener('input', (e) => {
 
         const montoPagado = parseFloat(formData.get('Monto_Pagado'));
         const saldoTransaccion = montoPagado - deudaDelPeriodo;
+        // Se usa el nombre del formulario que ahora corresponde al del contacto principal
+        const nombreResidente = formData.get('Nombre_Residente'); 
         const periodoStr = `${MESES[mesPagadoIndex]} ${anioSeleccionado}`;
         const estadoPago = saldoTransaccion >= 0 ? 'Pagado' : 'Abono';
         const deudaPendienteParaSheet = saldoTransaccion < 0 ? -saldoTransaccion : 0;
 
         const datosParaSheet = [
-          null, formData.get('Nombre_Residente'), parcela, valorGastoComun, periodoStr,
+          null, nombreResidente, parcela, valorGastoComun, periodoStr,
           fechaVencimiento.toISOString().split('T')[0], montoPagado, saldoTransaccion, interes, null,
           multa, mesesImpagos, deudaPendienteParaSheet, formData.get('Fecha_Pago'), formData.get('Metodo_Pago'),
           estadoPago, linkComprobante
@@ -401,6 +392,10 @@ document.getElementById('inputNParcela').addEventListener('input', (e) => {
         ocultarSpinner();
     }
   });
+  // =================================================================================
+  // ===== FIN DE LA MODIFICACIÓN PARA AGREGAR GASTO COMÚN ===========================
+  // =================================================================================
+
 
   const modalComprobante = document.getElementById('modalComprobante');
   const formComprobante = document.getElementById('formEnviarComprobante');
@@ -417,8 +412,7 @@ document.getElementById('inputNParcela').addEventListener('input', (e) => {
   });
   
   function crearCuerpoCorreo(pago, residente) {
-    // NOTA: 'residente' aquí es un array de datos. Usaremos residente[1] para el nombre.
-    const nombreResidente = residente[1]; 
+    const nombreResidente = residente[1];
     const periodoFormateado = formatearPeriodo(pago.Periodo);
     const valorGC = parseFloat(pago.Valor_Gasto_Comun).toLocaleString('es-CL');
     const interes = parseFloat(pago.Interes || 0).toLocaleString('es-CL');
@@ -451,7 +445,7 @@ document.getElementById('inputNParcela').addEventListener('input', (e) => {
         <h3 style="color: #333; margin-top: 20px; margin-bottom: 10px; font-size: 16px;">Detalle del Pago</h3>
         <table style="width: 100%; border-collapse: collapse;">
           <tr><td style="padding: 8px; border-bottom: 1px solid #eee;">Fecha de Pago:</td><td style="padding: 8px; border-bottom: 1px solid #eee; text-align: right;"><strong>${fechaPago}</strong></td></tr>
-          <tr><td style="padding: 8px; border-bottom: 1px solid #eee;">Método de Pago:</td><td style="padding: 8px; border-bottom: 1px solid #eee; text-align: right;"><strong>${pago.Metodo_Pago}</strong></td></tr>
+          <tr><td style="padding: 8px; border-bottom: 1px solid #eee;">Método de Pago:</td><td style="padding: ápx; border-bottom: 1px solid #eee; text-align: right;"><strong>${pago.Metodo_Pago}</strong></td></tr>
         </table>
         <h3 style="color: #333; margin-top: 20px; margin-bottom: 10px; font-size: 16px;">Resumen del Período Pagado</h3>
         <table style="width: 100%; border-collapse: collapse;">
@@ -465,39 +459,41 @@ document.getElementById('inputNParcela').addEventListener('input', (e) => {
         <hr style="margin-top: 25px;">
         <p style="font-size: 12px; color: #777;">Si tiene alguna consulta sobre este comprobante, no dude en contactarnos.</p>
         ${mensajeAdvertencia}
+        <p>Gracias por su compromiso con la comunidad.</p>
         <p>Se despide Atentamente,<br><strong>Alex Thiele</strong><br>Administrador Condominio Los Molles</p>
       </div>
     `;
   }
+
+  // =================================================================================
+  // ===== INICIO DE LA MODIFICACIÓN PARA ENVIAR COMPROBANTE =========================
+  // =================================================================================
   inputParcelaComprobante.addEventListener('input', (e) => {
-    // --- LÓGICA MODIFICADA PARA MANEJAR MÚLTIPLES RESIDENTES ---
     const parcela = e.target.value;
     const nombreInput = document.getElementById('inputNombreResidenteComprobante');
     const emailInput = document.getElementById('inputEmailComprobante');
     const asuntoInput = document.getElementById('inputAsuntoComprobante');
     const cuerpoDiv = document.getElementById('divCuerpoComprobante');
 
-    // Resetear campos
     nombreInput.value = '';
     emailInput.value = '';
     asuntoInput.value = '';
     cuerpoDiv.innerHTML = `<span style="color: #6c757d;">Ingrese un N° de Parcela...</span>`;
 
     if (!parcela) return;
-    
-    // 1. Filtrar TODOS los residentes de la parcela
-    const allResidentsForParcela = residentes.filter(r => r[3] == parcela);
 
+    // Se buscan a TODOS los residentes de la parcela
+    const allResidentsForParcela = residentes.filter(r => String(r[3]) === parcela);
+    
     if (allResidentsForParcela.length === 0) {
         nombreInput.value = 'Residente no encontrado.';
         return;
     }
     
-    // 2. Juntar todos los nombres y correos
+    // Se juntan los nombres y correos de todos los residentes encontrados
     const residentNames = allResidentsForParcela.map(r => r[1]).join(' y ');
-    const residentEmails = allResidentsForParcela.map(r => r[5]).filter(Boolean).join(', '); // Filtra correos vacíos
+    const residentEmails = allResidentsForParcela.map(r => r[5]).filter(Boolean).join(', ');
 
-    // 3. Buscar el último pago para esa PARCELA
     const pagosDeLaParcela = pagosGC_obj
       .filter(p => p.N_Parcela == parcela && p.Fecha_Pago)
       .sort((a, b) => new Date(b.Fecha_Pago) - new Date(a.Fecha_Pago));
@@ -512,18 +508,20 @@ document.getElementById('inputNParcela').addEventListener('input', (e) => {
     const ultimoPago = pagosDeLaParcela[0];
     const periodoFormateado = formatearPeriodo(ultimoPago.Periodo);
     
-    // 4. Poblar los campos del formulario
+    // Se rellenan los campos del formulario con los datos de todos los residentes
     nombreInput.value = residentNames;
     emailInput.value = residentEmails || 'No registrado';
     asuntoInput.value = `Comprobante pago gasto común ${periodoFormateado} Parcela Número ${parcela}`;
 
-    // 5. Crear un objeto 'residente' representativo para el saludo del correo
-    // Se usa una copia del primer residente encontrado, pero se reemplaza el nombre por el de todos.
+    // Para el saludo del correo, se crea un "residente representativo" con los nombres combinados
     const representativeResident = [...allResidentsForParcela[0]]; 
-    representativeResident[1] = residentNames; // El saludo dirá "Estimado(a) Residente1 y Residente2,"
+    representativeResident[1] = residentNames;
 
     cuerpoDiv.innerHTML = crearCuerpoCorreo(ultimoPago, representativeResident);
   });
+  // =================================================================================
+  // ===== FIN DE LA MODIFICACIÓN PARA ENVIAR COMPROBANTE ============================
+  // =================================================================================
 
   formComprobante.addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -541,7 +539,6 @@ document.getElementById('inputNParcela').addEventListener('input', (e) => {
     
     mostrarSpinner();
     try {
-      // La función 'enviarCorreo' debería poder manejar una cadena de emails separados por coma.
       await enviarCorreo(destinatario, asunto, cuerpo);
       modalComprobante.style.display = 'none';
       mostrarMensaje(`Correo enviado con éxito a ${destinatario}.`, 'success');
