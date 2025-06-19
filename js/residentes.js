@@ -30,7 +30,8 @@ async function cargarResidentes() {
 
   function renderTabla(filtro = '') {
     const filtrados = residentes.filter(r => {
-      const [id, nombre, rut, parcela, direccion, email, tel, estado, valorGC, contactoPrincipal] = r;
+      // La primera parte del filtro solo necesita los campos de búsqueda
+      const [id, nombre, rut, parcela] = r;
       const str = `${nombre} ${rut} ${parcela}`.toLowerCase();
       return str.includes(filtro.toLowerCase());
     });
@@ -53,7 +54,9 @@ async function cargarResidentes() {
         <tbody>
     `;
     for (const r of filtrados) {
-      const [id, nombre, rut, parcela, direccion, email, tel, estado, valorGC] = r;
+      // AQUÍ es donde se deben definir todas las variables para usarlas en la fila de la tabla.
+      // Se incluye `contactoPrincipal` que viene en la décima posición (índice 9).
+      const [id, nombre, rut, parcela, direccion, email, tel, estado, valorGC, contactoPrincipal] = r;
       html += `
         <tr>
           <td style="width:200px;" title="${nombre}">${nombre} ${contactoPrincipal === 'Sí' ? '<b>(P)</b>' : ''}</td>
