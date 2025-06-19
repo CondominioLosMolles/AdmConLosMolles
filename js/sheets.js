@@ -25,7 +25,7 @@ const SHEET_ID_COMUNICACIONES = 569621527;
 async function obtenerResidentes() {
     const res = await gapi.client.sheets.spreadsheets.values.get({
         spreadsheetId: SPREADSHEET_ID,
-        range: `${SHEET_RESIDENTES}!A2:J` // CORREGIDO: Leer hasta la columna J
+        range: `${SHEET_RESIDENTES}!A2:k` // CORREGIDO: Leer hasta la columna J
     });
     return res.result.values || [];
 }
@@ -36,7 +36,7 @@ async function agregarResidente(datos) {
     datos[0] = (lastId + 1).toString();
     await gapi.client.sheets.spreadsheets.values.append({
         spreadsheetId: SPREADSHEET_ID,
-        range: `${SHEET_RESIDENTES}!A:J`,
+        range: `${SHEET_RESIDENTES}!A:k`,
         valueInputOption: 'USER_ENTERED',
         resource: { values: [datos] }
     });
@@ -49,7 +49,7 @@ async function actualizarResidente(datos) {
     const row = idx + 2;
     await gapi.client.sheets.spreadsheets.values.update({
         spreadsheetId: SPREADSHEET_ID,
-        range: `${SHEET_RESIDENTES}!A${row}:J${row}`, // CORREGIDO: Actualizar hasta la columna J
+        range: `${SHEET_RESIDENTES}!A${row}:k${row}`, // CORREGIDO: Actualizar hasta la columna J
         valueInputOption: 'USER_ENTERED',
         resource: { values: [datos] }
     });
