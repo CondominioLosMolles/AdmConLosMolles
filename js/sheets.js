@@ -21,11 +21,13 @@ const SHEET_ID_ASAMBLEAS = 791789730;
 const SHEET_ID_COMUNICACIONES = 569621527;
 
 
-// -------- RESIDENTES (CORREGIDO) --------
+// -------- FUNCIONES PARA GOOGLE SHEETS DE RESIDENTES (VERSIÓN FINAL) --------
+
 async function obtenerResidentes() {
     const res = await gapi.client.sheets.spreadsheets.values.get({
         spreadsheetId: SPREADSHEET_ID,
-        range: `${SHEET_RESIDENTES}!A2:k` // CORREGIDO: Leer hasta la columna J
+        // CORREGIDO: El rango ahora lee hasta la columna K para incluir el link del certificado.
+        range: `${SHEET_RESIDENTES}!A2:K` 
     });
     return res.result.values || [];
 }
@@ -36,7 +38,7 @@ async function agregarResidente(datos) {
     datos[0] = (lastId + 1).toString();
     await gapi.client.sheets.spreadsheets.values.append({
         spreadsheetId: SPREADSHEET_ID,
-        range: `${SHEET_RESIDENTES}!A:k`,
+        range: `${SHEET_RESIDENTES}!A:K`,
         valueInputOption: 'USER_ENTERED',
         resource: { values: [datos] }
     });
@@ -45,11 +47,12 @@ async function agregarResidente(datos) {
 async function actualizarResidente(datos) {
     const residentes = await obtenerResidentes();
     const idx = residentes.findIndex(r => r[0] === datos[0]);
-    if (idx === -1) throw new Error('No encontrado');
+    if (idx === -1) throw new Error('Residente no encontrado');
     const row = idx + 2;
     await gapi.client.sheets.spreadsheets.values.update({
         spreadsheetId: SPREADSHEET_ID,
-        range: `${SHEET_RESIDENTES}!A${row}:k${row}`, // CORREGIDO: Actualizar hasta la columna J
+        // CORREGIDO: El rango de actualización cubre hasta la columna K.
+        range: `${SHEET_RESIDENTES}!A${row}:K${row}`, 
         valueInputOption: 'USER_ENTERED',
         resource: { values: [datos] }
     });
@@ -58,7 +61,7 @@ async function actualizarResidente(datos) {
 async function eliminarResidente(id) {
     const residentes = await obtenerResidentes();
     const idx = residentes.findIndex(r => r[0] === id);
-    if (idx === -1) throw new Error('No encontrado');
+    if (idx === -1) throw new Error('Residente no encontrado');
     const row = idx + 2;
     await gapi.client.sheets.spreadsheets.batchUpdate({
         spreadsheetId: SPREADSHEET_ID,
@@ -66,7 +69,7 @@ async function eliminarResidente(id) {
             requests: [{
                 deleteDimension: {
                     range: {
-                        sheetId: SHEET_ID_RESIDENTES,
+                        sheetId: SHEET_ID_RESIDENTES, // Asegúrate de que esta variable contenga el GID numérico de tu hoja
                         dimension: "ROWS",
                         startIndex: row - 1,
                         endIndex: row
