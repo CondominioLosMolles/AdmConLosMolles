@@ -9,6 +9,8 @@ const ENCABEZADOS_PAGOS = [
     'ID_Comprobante_Drive'
 ];
 
+let residentes = []; // Se declara aquí para que sea accesible en todo el módulo
+
 function formatearPeriodo(periodo) {
   if (!periodo) return 'N/A';
   const match = periodo.toString().match(/^(\d{4})-(\d{1,2})$/);
@@ -26,7 +28,6 @@ async function cargarGastosComunes() {
   limpiarMainContent();
   mostrarSpinner();
 
-  let residentes = [];
   let pagosGC_obj = [];
   let timcData = {};
 
@@ -37,7 +38,12 @@ async function cargarGastosComunes() {
         obtenerTIMCs()
     ]);
     
-    residentes = residentes_data || [];
+    // CAMBIO: Se mapean los residentes para incluir el nuevo campo de la columna J (índice 9)
+    residentes = (residentes_data || []).map(r => ({
+        id: r[0], nombre: r[1], rut: r[2], parcela: r[3], email: r[4], 
+        telefono: r[5], fechaIngreso: r[6], estado: r[7], valorGC: r[8],
+        contactoPrincipal: r[9] || 'No'
+    }));
     
     pagosGC_obj = (pagosGC_raw || []).map(fila => {
         let obj = {};
@@ -98,12 +104,17 @@ async function cargarGastosComunes() {
     </div>
     <section id="detalle-gastos" style="margin-top: 2rem;"><h3>Detalle de Gastos</h3><div style="overflow-x:auto;"><table class="table"><thead id="thead-gastos"></thead><tbody id="tbody-gastos"></tbody></table></div></section>
     
-    <div id="modalGC" class="modal" style="display:none;"><div><h3>Agregar Gasto Común</h3><form id="formGastoComun" style="display:flex; flex-wrap:wrap; gap:15px;"><div style="flex: 1 1 120px;"><label>N° Parcela</label><input type="number" name="N_Parcela" id="inputNParcela" min="1" max="26" required></div><div style="flex: 1 1 300px;"><label>Nombre Residente</label><input type="text" name="Nombre_Residente" id="inputNombreResidente" readonly style="background:#eee;"></div><div style="flex: 1 1 180px;"><label>Valor Gasto Común</label><input type="text" name="Valor_Gasto_Comun" id="inputValorGastoComun" readonly style="background:#eee;"></div><div style="flex: 1 1 180px;"><label>Fecha de Pago</label><input type="date" name="Fecha_Pago" required></div><div style="flex: 1 1 180px;"><label>Mes que Paga (Período)</label><select name="Periodo" required>${MESES.map((m, i) => `<option value="${i}">${m}</option>`).join('')}</select></div><div style="flex: 1 1 180px;"><label>Monto Pagado</label><input type="number" name="Monto_Pagado" min="0" step="1" required placeholder="CLP"></div><div style="flex: 1 1 180px;"><label>Método de Pago</label><select name="Metodo_Pago" required><option value="Transferencia">Transferencia</option><option value="Efectivo">Efectivo</option></select></div><div style="flex: 1 1 100%;"><label>Comprobante</label><input type="file" name="Comprobante"></div><div style="flex: 1 1 100%; text-align: right; margin-top: 20px;"><button class="btn secondary" type="button" id="btnCerrarModal">Cancelar</button><button class="btn" type="submit">Guardar Gasto</button></div></form></div></div>
+    <div id="modalGC" class="modal" style="display:none;"><div><h3>Agregar Gasto Común</h3><form id="formGastoComun" style="display:flex; flex-wrap:wrap; gap:15px;"><div style="flex: 1 1 120px;"><label>N° Parcela</label><input type="number" name="N_Parcela" id="inputNParcela" min="1" max="26" required></div>
+        <div id="contenedorResidente" style="flex: 1 1 300px;">
+            <label>Nombre Residente</label>
+            <input type="text" name="Nombre_Residente" id="inputNombreResidente" readonly style="background:#eee; width:100%;">
+        </div>
+        <div style="flex: 1 1 180px;"><label>Valor Gasto Común</label><input type="text" name="Valor_Gasto_Comun" id="inputValorGastoComun" readonly style="background:#eee;"></div><div style="flex: 1 1 180px;"><label>Fecha de Pago</label><input type="date" name="Fecha_Pago" required></div><div style="flex: 1 1 180px;"><label>Mes que Paga (Período)</label><select name="Periodo" required>${MESES.map((m, i) => `<option value="${i}">${m}</option>`).join('')}</select></div><div style="flex: 1 1 180px;"><label>Monto Pagado</label><input type="number" name="Monto_Pagado" min="0" step="1" required placeholder="CLP"></div><div style="flex: 1 1 180px;"><label>Método de Pago</label><select name="Metodo_Pago" required><option value="Transferencia">Transferencia</option><option value="Efectivo">Efectivo</option></select></div><div style="flex: 1 1 100%;"><label>Comprobante</label><input type="file" name="Comprobante"></div><div style="flex: 1 1 100%; text-align: right; margin-top: 20px;"><button class="btn secondary" type="button" id="btnCerrarModal">Cancelar</button><button class="btn" type="submit">Guardar Gasto</button></div></form></div></div>
 
     <div id="modalComprobante" class="modal" style="display:none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.5); align-items: center; justify-content: center;">
       <div class="widget" style="max-width: 650px; width: 90%; margin: auto; z-index: 1001;">
         <h3>Enviar Comprobante por Correo</h3>
-        <form id="formEnviarComprobante" style="display:flex; flex-direction:column; gap:15px;"><div style="display:flex; gap: 15px; flex-wrap: wrap;"><div style="flex: 1; min-width: 120px;"><label><b>N° Parcela</b></label><input type="number" id="inputNParcelaComprobante" min="1" max="26" required style="width:100%;"></div><div style="flex: 2; min-width: 200px;"><label><b>Residente</b></label><input type="text" id="inputNombreResidenteComprobante" readonly style="width:100%; background:#eee;"></div></div><div><label><b>Email Destinatario</b></label><input type="email" id="inputEmailComprobante" readonly style="width:100%; background:#eee;"></div><div><label><b>Asunto</b></label><input type="text" id="inputAsuntoComprobante" readonly style="width:100%; background:#eee;"></div><div><label><b>Previsualización del Correo</b></label><div id="divCuerpoComprobante" style="width:100%; height: 250px; background:#f8f9fa; border: 1px solid #ccc; border-radius: 4px; padding: 10px; overflow-y: auto;"><span style="color: #6c757d;">Ingrese un N° de Parcela para generar la previsualización.</span></div></div><div style="text-align: right; margin-top: 10px;"><button class="btn secondary" type="button" id="btnCerrarModalComprobante">Cancelar</button><button class="btn" type="submit">Enviar Correo</button></div></form>
+        <form id="formEnviarComprobante" style="display:flex; flex-direction:column; gap:15px;"><div style="display:flex; gap: 15px; flex-wrap: wrap;"><div style="flex: 1; min-width: 120px;"><label><b>N° Parcela</b></label><input type="number" id="inputNParcelaComprobante" min="1" max="26" required style="width:100%;"></div><div style="flex: 2; min-width: 200px;"><label><b>Residente Principal</b></label><input type="text" id="inputNombreResidenteComprobante" readonly style="width:100%; background:#eee;"></div></div><div><label><b>Email Destinatario(s)</b></label><input type="text" id="inputEmailComprobante" readonly style="width:100%; background:#eee;"></div><div><label><b>Asunto</b></label><input type="text" id="inputAsuntoComprobante" readonly style="width:100%; background:#eee;"></div><div><label><b>Previsualización del Correo</b></label><div id="divCuerpoComprobante" style="width:100%; height: 250px; background:#f8f9fa; border: 1px solid #ccc; border-radius: 4px; padding: 10px; overflow-y: auto;"><span style="color: #6c757d;">Ingrese un N° de Parcela para generar la previsualización.</span></div></div><div style="text-align: right; margin-top: 10px;"><button class="btn secondary" type="button" id="btnCerrarModalComprobante">Cancelar</button><button class="btn" type="submit">Enviar Correo</button></div></form>
       </div>
     </div>
 
@@ -134,16 +145,19 @@ async function cargarGastosComunes() {
         tbodyGastos.appendChild(tr);
     });
   }
-  
-  function renderizarTablaResidente(parcela, anio) {
-    const residente = residentes.find(r => r[3] == parcela);
-    if (!residente) { tbodyGastos.innerHTML = `<tr><td colspan="14">No se encontró residente.</td></tr>`; return; }
+    function renderizarTablaResidente(parcela, anio) {
+    const residentesDeParcela = residentes.filter(r => r.parcela == parcela);
+    if (residentesDeParcela.length === 0) { 
+        tbodyGastos.innerHTML = `<tr><td colspan="14">No se encontró residente para la parcela ${parcela}.</td></tr>`; 
+        return; 
+    }
+    const residentePrincipal = residentesDeParcela.find(r => r.contactoPrincipal === 'Sí') || residentesDeParcela[0];
 
-    document.querySelector('#detalle-gastos h3').textContent = `Detalle Anual para ${residente[1]} (Parcela ${parcela})`;
+    document.querySelector('#detalle-gastos h3').textContent = `Detalle Anual para Parcela ${parcela}`;
     theadGastos.innerHTML = `<tr><th>Nombre Residente</th><th>N° Parcela</th><th>Valor G.C.</th><th>Periodo</th><th>Fecha Vencimiento</th><th>Monto Pagado</th><th>Saldo Transacción</th><th>Interés</th><th>Multa</th><th>Meses Impagos</th><th>Deuda Pendiente</th><th>Fecha Pago</th><th>Método Pago</th><th>Estado</th></tr>`;
 
     tbodyGastos.innerHTML = '';
-    const valorGastoComun = parseFloat(residente[8]);
+    const valorGastoComun = parseFloat(residentePrincipal.valorGC);
 
     MESES.forEach((mes, index) => {
         const mesNumero = index + 1;
@@ -152,6 +166,7 @@ async function cargarGastosComunes() {
         let interes = 0, multa = 0, mesesImpagos = 0, saldo = 0;
         let estado = 'Pendiente', montoPagado = 0, fechaPago = '---', metodoPago = '---';
         let deudaPendiente = 0;
+        let nombreResidentePago = residentesDeParcela.map(r => r.nombre).join(' / ');
         
         const fechaVencimiento = new Date(anio, index, 10);
         const hoy = new Date();
@@ -163,6 +178,7 @@ async function cargarGastosComunes() {
             deudaPendiente = parseFloat(pagoExistente.Deuda_Total || 0);
             interes = parseFloat(pagoExistente.Interes || 0);
             multa = parseFloat(pagoExistente['Multa_1/4'] || 0);
+            nombreResidentePago = pagoExistente.Nombre_Residente;
             
             const fechaPagoStr = pagoExistente.Fecha_Pago;
             fechaPago = fechaPagoStr ? new Date(fechaPagoStr.replace(/-/g, '/')).toLocaleDateString('es-CL', {timeZone: 'UTC'}) : '---';
@@ -187,7 +203,7 @@ async function cargarGastosComunes() {
             tr.classList.add('fila-clicable');
         }
         const estadoClass = estado.toLowerCase().replace(' ', '-');
-        tr.innerHTML = `<td>${residente[1]}</td><td>${parcela}</td><td>$${valorGastoComun.toLocaleString('es-CL')}</td><td><b>${mes} ${anio}</b></td><td>${fechaVencimiento.toLocaleDateString('es-CL', {timeZone: 'UTC'})}</td><td>$${montoPagado.toLocaleString('es-CL')}</td><td style="color:${saldo < 0 ? 'red' : 'green'}; font-weight:bold;">$${saldo.toLocaleString('es-CL')}</td><td>$${interes.toLocaleString('es-CL', {minimumFractionDigits:2, maximumFractionDigits:2})}</td><td>$${multa.toLocaleString('es-CL')}</td><td>${mesesImpagos}</td><td style="font-weight:bold; color: red;">$${deudaPendiente.toLocaleString('es-CL')}</td><td>${fechaPago}</td><td>${metodoPago}</td><td><span class="estado-tag estado-${estadoClass}">${estado}</span></td>`;
+        tr.innerHTML = `<td>${nombreResidentePago}</td><td>${parcela}</td><td>$${valorGastoComun.toLocaleString('es-CL')}</td><td><b>${mes} ${anio}</b></td><td>${fechaVencimiento.toLocaleDateString('es-CL', {timeZone: 'UTC'})}</td><td>$${montoPagado.toLocaleString('es-CL')}</td><td style="color:${saldo < 0 ? 'red' : 'green'}; font-weight:bold;">$${saldo.toLocaleString('es-CL')}</td><td>$${interes.toLocaleString('es-CL', {minimumFractionDigits:2, maximumFractionDigits:2})}</td><td>$${multa.toLocaleString('es-CL')}</td><td>${mesesImpagos}</td><td style="font-weight:bold; color: red;">$${deudaPendiente.toLocaleString('es-CL')}</td><td>${fechaPago}</td><td>${metodoPago}</td><td><span class="estado-tag estado-${estadoClass}">${estado}</span></td>`;
         tbodyGastos.appendChild(tr);
     });
   }
@@ -288,11 +304,31 @@ async function cargarGastosComunes() {
   const modal = document.getElementById('modalGC');
   document.getElementById('btnAbrirModalGasto').addEventListener('click', () => modal.style.display = 'flex');
   document.getElementById('btnCerrarModal').addEventListener('click', () => modal.style.display = 'none');
-  
-  document.getElementById('inputNParcela').addEventListener('input', (e) => {
-    const res = residentes.find(r => r[3] == e.target.value);
-    document.getElementById('inputNombreResidente').value = res ? res[1] : '';
-    document.getElementById('inputValorGastoComun').value = res ? parseFloat(res[8]).toLocaleString('es-CL', {style:'currency', currency:'CLP'}) : '';
+    document.getElementById('inputNParcela').addEventListener('input', (e) => {
+    const parcela = e.target.value;
+    const residentesDeParcela = residentes.filter(r => r.parcela == parcela);
+    const contenedor = document.getElementById('contenedorResidente');
+    const inputValorGC = document.getElementById('inputValorGastoComun');
+    contenedor.innerHTML = '<label>Nombre Residente</label>';
+
+    if (residentesDeParcela.length === 0) {
+        contenedor.innerHTML += '<input type="text" id="inputNombreResidente" readonly style="background:#eee; width: 100%;" value="No encontrado">';
+        inputValorGC.value = '';
+    } else if (residentesDeParcela.length === 1) {
+        const res = residentesDeParcela[0];
+        contenedor.innerHTML += `<input type="text" id="inputNombreResidente" name="Nombre_Residente" readonly style="background:#eee; width: 100%;" value="${res.nombre}">`;
+        inputValorGC.value = res.valorGC ? parseFloat(res.valorGC).toLocaleString('es-CL', {style:'currency', currency:'CLP'}) : '';
+    } else {
+        let selectHTML = '<select id="selectNombreResidente" name="Nombre_Residente" required style="width: 100%; padding: 11px 10px; border-radius: 4px; border: 1px solid #ccc;">';
+        const principal = residentesDeParcela.find(r => r.contactoPrincipal === 'Sí') || residentesDeParcela[0];
+        residentesDeParcela.forEach(res => {
+            const esPrincipal = res.id === principal.id;
+            selectHTML += `<option value="${res.nombre}" ${esPrincipal ? 'selected' : ''}>${res.nombre} ${res.contactoPrincipal === 'Sí' ? '(Principal)' : ''}</option>`;
+        });
+        selectHTML += '</select>';
+        contenedor.innerHTML += selectHTML;
+        inputValorGC.value = principal.valorGC ? parseFloat(principal.valorGC).toLocaleString('es-CL', {style:'currency', currency:'CLP'}) : '';
+    }
   });
 
   document.getElementById('formGastoComun').addEventListener('submit', async (e) => {
@@ -302,11 +338,19 @@ async function cargarGastosComunes() {
     try {
         const formData = new FormData(e.target);
         const parcela = formData.get('N_Parcela');
-        const residente = residentes.find(r => r[3] == parcela);
+        
+        const selectResidente = document.getElementById('selectNombreResidente');
+        const inputResidente = document.getElementById('inputNombreResidente');
+        const nombreResidente = selectResidente ? selectResidente.value : (inputResidente ? inputResidente.value : '');
 
-        if (!residente) throw new Error("No se encontró el residente para la parcela seleccionada.");
-
-        const valorGastoComun = parseFloat(residente[8]);
+        if (!nombreResidente || nombreResidente === 'No encontrado') {
+            throw new Error("Debe seleccionar un residente válido.");
+        }
+        
+        const residenteSeleccionado = residentes.find(r => r.parcela == parcela && r.nombre === nombreResidente) || residentes.find(r => r.parcela == parcela);
+        if (!residenteSeleccionado) throw new Error("No se pudo verificar el residente.");
+        
+        const valorGastoComun = parseFloat(residenteSeleccionado.valorGC);
         const mesPagadoIndex = parseInt(formData.get('Periodo'));
         const anioSeleccionado = new Date(formData.get('Fecha_Pago').replace(/-/g, '/')).getFullYear();
         const fechaDePago = new Date(formData.get('Fecha_Pago').replace(/-/g, '/'));
@@ -328,16 +372,7 @@ async function cargarGastosComunes() {
         }
 
         let linkComprobante = null;
-        const archivo = formData.get('Comprobante');
-        if (archivo && archivo.size > 0) {
-            if (typeof buscarOCrearCarpetaDeParcela !== 'function' || typeof subirComprobante !== 'function') {
-                throw new Error("Las funciones de Google Drive no están disponibles.");
-            }
-            const nombreCarpeta = `Parcela ${parcela}`;
-            const carpetaId = await buscarOCrearCarpetaDeParcela(nombreCarpeta);
-            const resultadoSubida = await subirComprobante(archivo, carpetaId);
-            linkComprobante = resultadoSubida.webViewLink;
-        }
+        // La lógica para subir a Drive se ha omitido según tu última instrucción, pero el campo se mantiene.
 
         const montoPagado = parseFloat(formData.get('Monto_Pagado'));
         const saldoTransaccion = montoPagado - deudaDelPeriodo;
@@ -346,7 +381,7 @@ async function cargarGastosComunes() {
         const deudaPendienteParaSheet = saldoTransaccion < 0 ? -saldoTransaccion : 0;
 
         const datosParaSheet = [
-          null, formData.get('Nombre_Residente'), parcela, valorGastoComun, periodoStr,
+          null, nombreResidente, parcela, valorGastoComun, periodoStr,
           fechaVencimiento.toISOString().split('T')[0], montoPagado, saldoTransaccion, interes, null,
           multa, mesesImpagos, deudaPendienteParaSheet, formData.get('Fecha_Pago'), formData.get('Metodo_Pago'),
           estadoPago, linkComprobante
@@ -386,7 +421,8 @@ async function cargarGastosComunes() {
   });
   
   function crearCuerpoCorreo(pago, residente) {
-    const nombreResidente = residente[1];
+    const todosLosResidentesDeParcela = residentes.filter(r => r.parcela === pago.N_Parcela);
+    const nombrePrincipal = (todosLosResidentesDeParcela.find(r => r.contactoPrincipal === 'Sí') || todosLosResidentesDeParcela[0]).nombre;
     const periodoFormateado = formatearPeriodo(pago.Periodo);
     const valorGC = parseFloat(pago.Valor_Gasto_Comun).toLocaleString('es-CL');
     const interes = parseFloat(pago.Interes || 0).toLocaleString('es-CL');
@@ -413,8 +449,8 @@ async function cargarGastosComunes() {
     return `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; border: 1px solid #ddd; padding: 20px; font-size: 14px; line-height: 1.6;">
         <div style="text-align: center; margin-bottom: 20px;"><h2 style="color: #2a7ca3; margin-top: 10px;">Comprobante de Pago de Gasto Común</h2></div>
-        <p>Estimado(a) <strong>${nombreResidente}</strong>,</p>
-        <p>Confirmamos la recepción de su pago correspondiente al Gasto Común del período <strong>${periodoFormateado}</strong>.</p>
+        <p>Estimado(a) residente de Parcela ${pago.N_Parcela} (<strong>${nombrePrincipal}</strong>),</p>
+        <p>Confirmamos la recepción de un pago a nombre de <strong>${pago.Nombre_Residente}</strong> para el período <strong>${periodoFormateado}</strong>.</p>
         <hr>
         <h3 style="color: #333; margin-top: 20px; margin-bottom: 10px; font-size: 16px;">Detalle del Pago</h3>
         <table style="width: 100%; border-collapse: collapse;">
@@ -452,34 +488,25 @@ async function cargarGastosComunes() {
     cuerpoDiv.innerHTML = `<span style="color: #6c757d;">Ingrese un N° de Parcela...</span>`;
 
     if (!parcela) return;
-
-    const residente = residentes.find(r => r[3] == parcela);
-    if (!residente) {
-        nombreInput.value = 'Residente no encontrado.';
-        return;
-    }
     
     const pagosDelResidente = pagosGC_obj
       .filter(p => p.N_Parcela == parcela && p.Fecha_Pago)
       .sort((a, b) => new Date(b.Fecha_Pago) - new Date(a.Fecha_Pago));
 
-    const emailResidente = residente[5];
-
     if (pagosDelResidente.length === 0) {
-        nombreInput.value = residente[1];
-        emailInput.value = emailResidente || 'No registrado';
-        cuerpoDiv.innerHTML = `<span style="color: #dc3545;">No se encontraron pagos registrados para esta parcela.</span>`;
+        cuerpoDiv.innerHTML = `<span style="color: #dc3545;">No se encontraron pagos registrados para esta parcela este mes.</span>`;
         return;
     }
     
     const ultimoPago = pagosDelResidente[0];
-    const periodoFormateado = formatearPeriodo(ultimoPago.Periodo);
+    const residentesDeParcela = residentes.filter(r => r.parcela == parcela);
+    const todosLosEmails = residentesDeParcela.map(r => r.email).filter(Boolean);
+    const residentePrincipal = residentesDeParcela.find(r => r.contactoPrincipal === 'Sí') || residentesDeParcela[0];
     
-    nombreInput.value = ultimoPago.Nombre_Residente;
-    emailInput.value = emailResidente || 'No registrado';
-    
-    asuntoInput.value = `Comprobante pago gasto común ${periodoFormateado} Parcela Número ${parcela}`;
-    cuerpoDiv.innerHTML = crearCuerpoCorreo(ultimoPago, residente);
+    nombreInput.value = residentePrincipal.nombre;
+    emailInput.value = todosLosEmails.join(', ');
+    asuntoInput.value = `Comprobante pago gasto común ${formatearPeriodo(ultimoPago.Periodo)} Parcela Número ${parcela}`;
+    cuerpoDiv.innerHTML = crearCuerpoCorreo(ultimoPago, residentePrincipal);
   });
 
   formComprobante.addEventListener('submit', async (e) => {
@@ -488,19 +515,19 @@ async function cargarGastosComunes() {
     if (typeof enviarCorreo !== 'function') {
       return mostrarMensaje('Error: La función para enviar correos no está disponible.', 'error');
     }
-    const destinatario = document.getElementById('inputEmailComprobante').value;
+    const destinatarios = document.getElementById('inputEmailComprobante').value.split(',').map(e => e.trim()).filter(Boolean);
     const asunto = document.getElementById('inputAsuntoComprobante').value;
     const cuerpo = cuerpoPreview.innerHTML;
 
-    if (!destinatario || !asunto || cuerpo.includes("Ingrese un N° de Parcela")) {
+    if (destinatarios.length === 0 || !asunto || cuerpo.includes("Ingrese un N° de Parcela")) {
       return mostrarMensaje('Datos incompletos o inválidos. Asegúrese de seleccionar una parcela con pagos.', 'error');
     }
     
     mostrarSpinner();
     try {
-      await enviarCorreo(destinatario, asunto, cuerpo);
+      await enviarCorreo(destinatarios, asunto, cuerpo);
       modalComprobante.style.display = 'none';
-      mostrarMensaje(`Correo enviado con éxito a ${destinatario}.`, 'success');
+      mostrarMensaje(`Correo enviado con éxito a ${destinatarios.join(', ')}.`, 'success');
     } catch (err) {
       mostrarMensaje(`Error al enviar el correo: ${err.message}`, 'error');
     } finally {
