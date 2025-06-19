@@ -302,8 +302,32 @@ async function cargarGastosComunes() {
   });
   
   const modal = document.getElementById('modalGC');
-  document.getElementById('btnAbrirModalGasto').addEventListener('click', () => modal.style.display = 'flex');
-  document.getElementById('btnCerrarModal').addEventListener('click', () => modal.style.display = 'none');
+// CAMBIO: Se hace la función asíncrona para poder recargar los datos de residentes al abrir.
+document.getElementById('btnAbrirModalGasto').addEventListener('click', async () => {
+  mostrarSpinner();
+  try {
+      // Vuelve a cargar los datos de residentes para tener la información más fresca.
+      const residentes_data = await obtenerResidentes();
+      residentes = (residentes_data || []).map(r => ({
+          id: r[0], nombre: r[1], rut: r[2], parcela: r[3], email: r[4], 
+          telefono: r[5], fechaIngreso: r[6], estado: r[7], valorGC: r[8],
+          contactoPrincipal: r[9] || 'No'
+      }));
+
+      // Resetea el formulario y muestra el modal.
+      document.getElementById('formGastoComun').reset();
+      const contenedor = document.getElementById('contenedorResidente');
+      contenedor.innerHTML = '<label>Nombre Residente</label><input type="text" id="inputNombreResidente" readonly style="background:#eee; width:100%;">';
+      document.getElementById('inputValorGastoComun').value = '';
+
+      modal.style.display = 'flex';
+  } catch(e) {
+      mostrarMensaje('Error al refrescar la lista de residentes: ' + e.message, 'error');
+  } finally {
+      ocultarSpinner();
+  }
+});
+document.getElementById('btnCerrarModal').addEventListener('click', () => modal.style.display = 'none');
     document.getElementById('inputNParcela').addEventListener('input', (e) => {
     const parcela = e.target.value;
     const residentesDeParcela = residentes.filter(r => r.parcela == parcela);
@@ -403,10 +427,32 @@ async function cargarGastosComunes() {
     }
   });
   
-  const modalComprobante = document.getElementById('modalComprobante');
+ const modalComprobante = document.getElementById('modalComprobante');
   const formComprobante = document.getElementById('formEnviarComprobante');
   const btnCerrarComp = document.getElementById('btnCerrarModalComprobante');
-  document.getElementById('btnAbrirModalComprobante').addEventListener('click', () => modalComprobante.style.display = 'flex');
+
+  // CAMBIO: Se aplica la misma lógica de recarga de datos al abrir este modal.
+  document.getElementById('btnAbrirModalComprobante').addEventListener('click', async () => {
+      mostrarSpinner();
+      try {
+          const residentes_data = await obtenerResidentes();
+          residentes = (residentes_data || []).map(r => ({
+              id: r[0], nombre: r[1], rut: r[2], parcela: r[3], email: r[4], 
+              telefono: r[5], fechaIngreso: r[6], estado: r[7], valorGC: r[8],
+              contactoPrincipal: r[9] || 'No'
+          }));
+          formComprobante.reset();
+          document.getElementById('divCuerpoComprobante').innerHTML = `<span style="color: #6c757d;">Ingrese un N° de Parcela para generar la previsualización.</span>`;
+          document.getElementById('inputNombreResidenteComprobante').value = '';
+          document.getElementById('inputEmailComprobante').value = '';
+          document.getElementById('inputAsuntoComprobante').value = '';
+          modalComprobante.style.display = 'flex';
+      } catch(e) {
+          mostrarMensaje('Error al abrir el formulario: ' + e.message, 'error');
+      } finally {
+          ocultarSpinner();
+      }
+  });
   btnCerrarComp.addEventListener('click', () => modalComprobante.style.display = 'none');
   
   document.getElementById('inputNParcelaComprobante').addEventListener('input', (e) => {
