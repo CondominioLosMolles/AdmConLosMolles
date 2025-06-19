@@ -7,7 +7,7 @@ async function cargarResidentes() {
 
   let residentes = [];
   try {
-    residentes = await obtenerResidentes();
+   residentes = await obtenerResidentesSinCache();
   } catch (e) {
     ocultarSpinner();
     mostrarMensaje('Error al cargar residentes: ' + e.message, 'error');
