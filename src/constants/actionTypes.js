@@ -1,0 +1,58 @@
+/**
+ * Tipos de acciones para Reducers (especialmente para AuthContext y otros contextos futuros).
+ * Ayuda a evitar errores tipográficos y a mantener la consistencia.
+ */
+
+// Auth Actions
+export const LOGIN_REQUEST = 'LOGIN_REQUEST';
+export const LOGIN_SUCCESS = 'LOGIN_SUCCESS';
+export const LOGIN_FAILURE = 'LOGIN_FAILURE';
+export const LOGOUT = 'LOGOUT';
+export const REGISTER_REQUEST = 'REGISTER_REQUEST';
+export const REGISTER_SUCCESS = 'REGISTER_SUCCESS';
+export const REGISTER_FAILURE = 'REGISTER_FAILURE';
+export const SET_LOADING_AUTH = 'SET_LOADING_AUTH'; // Específico para el loader de AuthContext
+export const UPDATE_USER_DATA = 'UPDATE_USER_DATA';
+
+
+// Data Actions (para un posible AppDataContext o contextos específicos de módulos)
+export const FETCH_GASTOS_COMUNES_REQUEST = 'FETCH_GASTOS_COMUNES_REQUEST';
+export const FETCH_GASTOS_COMUNES_SUCCESS = 'FETCH_GASTOS_COMUNES_SUCCESS';
+export const FETCH_GASTOS_COMUNES_FAILURE = 'FETCH_GASTOS_COMUNES_FAILURE';
+export const UPDATE_GASTO_COMUN_SUCCESS = 'UPDATE_GASTO_COMUN_SUCCESS'; // Cuando se actualiza un gasto
+
+export const FETCH_REQUERIMIENTOS_REQUEST = 'FETCH_REQUERIMIENTOS_REQUEST';
+export const FETCH_REQUERIMIENTOS_SUCCESS = 'FETCH_REQUERIMIENTOS_SUCCESS';
+export const FETCH_REQUERIMIENTOS_FAILURE = 'FETCH_REQUERIMIENTOS_FAILURE';
+export const ADD_REQUERIMIENTO_SUCCESS = 'ADD_REQUERIMIENTO_SUCCESS';
+export const UPDATE_REQUERIMIENTO_SUCCESS = 'UPDATE_REQUERIMIENTO_SUCCESS';
+
+export const FETCH_ASAMBLEAS_REQUEST = 'FETCH_ASAMBLEAS_REQUEST';
+export const FETCH_ASAMBLEAS_SUCCESS = 'FETCH_ASAMBLEAS_SUCCESS';
+export const FETCH_ASAMBLEAS_FAILURE = 'FETCH_ASAMBLEAS_FAILURE';
+
+export const FETCH_RESIDENTES_REQUEST = 'FETCH_RESIDENTES_REQUEST'; // Para Admin
+export const FETCH_RESIDENTES_SUCCESS = 'FETCH_RESIDENTES_SUCCESS';
+export const FETCH_RESIDENTES_FAILURE = 'FETCH_RESIDENTES_FAILURE';
+
+// UI Actions (para un posible UIContext si la complejidad aumenta)
+export const SET_THEME = 'SET_THEME';
+export const SHOW_GLOBAL_MESSAGE = 'SHOW_GLOBAL_MESSAGE';
+export const HIDE_GLOBAL_MESSAGE = 'HIDE_GLOBAL_MESSAGE';
+export const SET_GLOBAL_LOADING = 'SET_GLOBAL_LOADING'; // Loader global para toda la app
+
+
+// Notifications
+export const ADD_NOTIFICATION_TOKEN = 'ADD_NOTIFICATION_TOKEN';
+export const NEW_NOTIFICATION_RECEIVED = 'NEW_NOTIFICATION_RECEIVED';
+
+
+// OTA Updates
+export const OTA_CHECK_REQUEST = 'OTA_CHECK_REQUEST';
+export const OTA_UPDATE_AVAILABLE = 'OTA_UPDATE_AVAILABLE';
+export const OTA_NO_UPDATE = 'OTA_NO_UPDATE';
+export const OTA_DOWNLOAD_STARTED = 'OTA_DOWNLOAD_STARTED';
+export const OTA_DOWNLOAD_PROGRESS = 'OTA_DOWNLOAD_PROGRESS';
+export const OTA_DOWNLOAD_FINISHED = 'OTA_DOWNLOAD_FINISHED';
+export const OTA_INSTALL_STARTED = 'OTA_INSTALL_STARTED';
+export const OTA_ERROR = 'OTA_ERROR';
