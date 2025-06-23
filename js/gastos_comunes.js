@@ -405,6 +405,7 @@ async function cargarGastosComunes() {
 
     modal.style.display = 'flex';
   }
+
     function filtrarYRenderizar() {
         const parcela = document.getElementById('filtroParcela').value;
         const anio = document.getElementById('filtroAnio').value;
@@ -604,15 +605,19 @@ async function cargarGastosComunes() {
             const estadoPago = saldoTransaccion >= 0 ? 'Pagado' : 'Abono';
             const deudaPendienteParaSheet = saldoTransaccion < 0 ? -saldoTransaccion : 0;
             
+            // CORRECCIÓN DEFINITIVA: Lógica robusta para calcular el nuevo saldo del convenio
             if (abonoConvenio > 0) {
                 if (typeof actualizarSaldoConvenioEnSheet !== 'function') {
                     throw new Error("La función para actualizar el saldo del convenio no está disponible en sheets.js.");
                 }
-                // CORREGIDO: Lógica robusta para calcular el nuevo saldo del convenio
-                const deudaInicialConvenio = parseFloat(residente[11] || 0);
-                let saldoPrevio = residente[12] ? parseFloat(residente[12]) : deudaInicialConvenio;
-                if (saldoPrevio === 0 && deudaInicialConvenio > 0) saldoPrevio = deudaInicialConvenio;
-
+                const deudaInicial = parseFloat(residente[11] || 0);
+                let saldoPrevio = residente[12] ? parseFloat(residente[12]) : 0;
+                
+                // Si el saldo es 0 o no es un número válido, y existe una deuda inicial, usamos la deuda inicial como base.
+                if ((!saldoPrevio || saldoPrevio <= 0) && deudaInicial > 0) {
+                    saldoPrevio = deudaInicial;
+                }
+                
                 const nuevoSaldo = saldoPrevio - abonoConvenio;
                 await actualizarSaldoConvenioEnSheet(residenteRowInSheet, nuevoSaldo);
                 residente[12] = nuevoSaldo.toString();
@@ -630,7 +635,7 @@ async function cargarGastosComunes() {
             const nuevoPagoObj = {};
             ENCABEZADOS_PAGOS.forEach((encabezado, i) => nuevoPagoObj[encabezado] = datosParaSheet[i]);
             nuevoPagoObj.anio = anioSeleccionado;
-            nuevoPagoObj.rowNum = pagosGC_obj.length + 2; // FIX: Asignar número de fila al nuevo objeto
+            nuevoPagoObj.rowNum = pagosGC_obj.length + 2;
             pagosGC_obj.push(nuevoPagoObj);
             
             filtrarYRenderizar();
