@@ -128,10 +128,9 @@ async function cargarGastosComunes() {
   const main = document.getElementById('main-content');
   main.innerHTML = `
     <style>
-      /* MODIFICADO: Nuevos colores para los estados */
       .estado-pagado { background-color: #198754; color: white; }
       .estado-moroso { background-color: #dc3545; color: white; }
-      .estado-abono { background-color: #ffc107; color: #333; } /* Se mantiene por si hay datos antiguos */
+      .estado-abono { background-color: #ffc107; color: #333; }
 
       .fila-clicable:hover { background-color: #e9f1fb; cursor: pointer; }
       #detalle-pago-grid { display: grid; grid-template-columns: auto 1fr; gap: 10px 20px; align-items: center;}
@@ -202,9 +201,6 @@ async function cargarGastosComunes() {
         </div>
     </div>
   `;
-  
-  // El resto del archivo .js sigue a continuación en la Parte 2...
-// ... continuación de la Parte 1 ...
   
   const tbodyGastos = document.getElementById('tbody-gastos');
   const theadGastos = document.getElementById('thead-gastos');
@@ -413,500 +409,509 @@ async function cargarGastosComunes() {
     modal.style.display = 'flex';
   }
 
-    function filtrarYRenderizar() {
-        const parcela = document.getElementById('filtroParcela').value;
-        const anio = document.getElementById('filtroAnio').value;
-        if (parcela && anio) {
-            renderizarTablaResidente(parcela, anio);
-        } else {
-            document.getElementById('widget-convenio').style.display = 'none';
-            renderizarTablaGeneral(pagosGC_obj.filter(p => p.anio == anio));
-        }
+  function filtrarYRenderizar() {
+    const parcela = document.getElementById('filtroParcela').value;
+    const anio = document.getElementById('filtroAnio').value;
+    if (parcela && anio) {
+        renderizarTablaResidente(parcela, anio);
+    } else {
+        document.getElementById('widget-convenio').style.display = 'none';
+        renderizarTablaGeneral(pagosGC_obj.filter(p => p.anio == anio));
     }
-    
-    function actualizarVistaTIMC() {
-        const anio = document.getElementById('filtroAnio').value || new Date().getFullYear();
-        const timcList = document.getElementById('timc-list-horizontal');
-        timcList.innerHTML = '';
-        const anioData = timcData[anio] || {};
-        MESES.forEach((mes, i) => {
-            const mesNumero = i + 1;
-            const timcValor = anioData[mesNumero] ? `<b>${anioData[mesNumero]}%</b>` : 'N/A';
-            timcList.innerHTML += `<div style="flex-basis: 15%;">${mes}: ${timcValor}</div>`;
-        });
+  }
+  
+  function actualizarVistaTIMC() {
+    const anio = document.getElementById('filtroAnio').value || new Date().getFullYear();
+    const timcList = document.getElementById('timc-list-horizontal');
+    timcList.innerHTML = '';
+    const anioData = timcData[anio] || {};
+    MESES.forEach((mes, i) => {
+        const mesNumero = i + 1;
+        const timcValor = anioData[mesNumero] ? `<b>${anioData[mesNumero]}%</b>` : 'N/A';
+        timcList.innerHTML += `<div style="flex-basis: 15%;">${mes}: ${timcValor}</div>`;
+    });
+  }
+
+  document.getElementById('btnGuardarTMC').addEventListener('click', async () => {
+    if (typeof guardarTIMC !== 'function') return mostrarMensaje('Error: La función "guardarTIMC" no se encontró en sheets.js.', 'error');
+    const anio = document.getElementById('filtroAnio').value;
+    const mes = document.getElementById('selectMesTMC').value;
+    const valor = parseFloat(document.getElementById('inputTMC').value);
+    if (isNaN(valor) || !mes || !anio) return mostrarMensaje('Debe ingresar TIMC, mes y año.', 'error');
+    mostrarSpinner();
+    try {
+      await guardarTIMC(anio, mes, valor);
+      if (!timcData[anio]) timcData[anio] = {};
+      timcData[anio][mes] = valor;
+      actualizarVistaTIMC();
+      if (document.getElementById('filtroParcela').value) filtrarYRenderizar();
+      mostrarMensaje(`TIMC guardado en la hoja "Config_TIMC".`, 'success');
+    } catch (err) {
+      mostrarMensaje('Error al guardar TIMC: ' + err.message, 'error');
+    } finally {
+      ocultarSpinner();
     }
-
-    document.getElementById('btnGuardarTMC').addEventListener('click', async () => {
-        if (typeof guardarTIMC !== 'function') return mostrarMensaje('Error: La función "guardarTIMC" no se encontró en sheets.js.', 'error');
-        const anio = document.getElementById('filtroAnio').value;
-        const mes = document.getElementById('selectMesTMC').value;
-        const valor = parseFloat(document.getElementById('inputTMC').value);
-        if (isNaN(valor) || !mes || !anio) return mostrarMensaje('Debe ingresar TIMC, mes y año.', 'error');
-        mostrarSpinner();
-        try {
-        await guardarTIMC(anio, mes, valor);
-        if (!timcData[anio]) timcData[anio] = {};
-        timcData[anio][mes] = valor;
-        actualizarVistaTIMC();
-        if (document.getElementById('filtroParcela').value) filtrarYRenderizar();
-        mostrarMensaje(`TIMC guardado en la hoja "Config_TIMC".`, 'success');
-        } catch (err) {
-        mostrarMensaje('Error al guardar TIMC: ' + err.message, 'error');
-        } finally {
-        ocultarSpinner();
-        }
-    });
-    
-    const modal = document.getElementById('modalGC');
-    document.getElementById('btnAbrirModalGasto').addEventListener('click', () => {
-        document.getElementById('formGastoComun').reset();
-        document.getElementById('saldo-convenio-info').style.display = 'none';
-        document.getElementById('inputAnioPeriodo').value = document.getElementById('filtroAnio').value;
-        modal.style.display = 'flex'
-    });
-    document.getElementById('btnCerrarModal').addEventListener('click', () => modal.style.display = 'none');
-    
-    document.getElementById('inputNParcela').addEventListener('input', (e) => {
-        const parcelaBuscada = e.target.value;
-        const nombreInput = document.getElementById('inputNombreResidente');
-        const valorInput = document.getElementById('inputValorGastoComun');
-        const saldoConvenioInfo = document.getElementById('saldo-convenio-info');
-
-        nombreInput.value = '';
-        valorInput.value = '';
-        saldoConvenioInfo.style.display = 'none';
-        saldoConvenioInfo.textContent = '';
-
-
-        if (!parcelaBuscada) return;
-        
-        const res = residentes.find(r => String(r[3]) === parcelaBuscada && r[9] && r[9].trim().toUpperCase() === 'SI');
-
-        if (res) {
-            nombreInput.value = res[1];
-            valorInput.value = parseFloat(res[8]).toLocaleString('es-CL', { style: 'currency', currency: 'CLP' });
-            
-            const saldoConvenio = res[12] ? parseFloat(res[12]) : 0;
-            if (saldoConvenio > 0) {
-                saldoConvenioInfo.textContent = `Saldo convenio: $${saldoConvenio.toLocaleString('es-CL')}`;
-                saldoConvenioInfo.style.display = 'block';
-            }
-
-        } else {
-            nombreInput.value = 'No se encontró contacto principal';
-        }
-    });
-
+  });
+  
+  const modal = document.getElementById('modalGC');
+  document.getElementById('btnAbrirModalGasto').addEventListener('click', () => {
+    document.getElementById('formGastoComun').reset();
+    document.getElementById('saldo-convenio-info').style.display = 'none';
+    document.getElementById('inputAnioPeriodo').value = document.getElementById('filtroAnio').value;
+    modal.style.display = 'flex'
+  });
+  document.getElementById('btnCerrarModal').addEventListener('click', () => modal.style.display = 'none');
+  
+  document.getElementById('inputNParcela').addEventListener('input', (e) => {
+    const parcelaBuscada = e.target.value;
     const nombreInput = document.getElementById('inputNombreResidente');
-    const parcelaInputModal = document.getElementById('inputNParcela');
-    const valorGastoComunInput = document.getElementById('inputValorGastoComun');
-    const suggestionsContainer = document.getElementById('nombre-suggestions');
+    const valorInput = document.getElementById('inputValorGastoComun');
+    const saldoConvenioInfo = document.getElementById('saldo-convenio-info');
 
-    nombreInput.addEventListener('input', () => {
-        const searchTerm = nombreInput.value.toLowerCase();
-        suggestionsContainer.innerHTML = '';
-        suggestionsContainer.style.display = 'none';
+    nombreInput.value = '';
+    valorInput.value = '';
+    saldoConvenioInfo.style.display = 'none';
+    saldoConvenioInfo.textContent = '';
 
-        if (searchTerm.length < 2) return;
+
+    if (!parcelaBuscada) return;
+    
+    const res = residentes.find(r => String(r[3]) === parcelaBuscada && r[9] && r[9].trim().toUpperCase() === 'SI');
+
+    if (res) {
+        nombreInput.value = res[1];
+        valorInput.value = parseFloat(res[8]).toLocaleString('es-CL', { style: 'currency', currency: 'CLP' });
         
-        const matches = residentes.filter(r => 
-            r[1] && r[1].toLowerCase().includes(searchTerm) && r[9] && r[9].trim().toUpperCase() === 'SI'
-        );
-
-        if (matches.length > 0) {
-            matches.forEach(res => {
-                const item = document.createElement('div');
-                item.className = 'suggestion-item';
-                item.textContent = `${res[1]} (Parcela ${res[3]})`;
-                item.addEventListener('click', () => {
-                    nombreInput.value = res[1];
-                    parcelaInputModal.value = res[3];
-                    valorGastoComunInput.value = parseFloat(res[8]).toLocaleString('es-CL', { style: 'currency', currency: 'CLP' });
-                    
-                    const saldoConvenioInfo = document.getElementById('saldo-convenio-info');
-                    const saldoConvenio = res[12] ? parseFloat(res[12]) : 0;
-                    if (saldoConvenio > 0) {
-                        saldoConvenioInfo.textContent = `Saldo convenio: $${saldoConvenio.toLocaleString('es-CL')}`;
-                        saldoConvenioInfo.style.display = 'block';
-                    } else {
-                        saldoConvenioInfo.style.display = 'none';
-                    }
-
-                    suggestionsContainer.style.display = 'none';
-                });
-                suggestionsContainer.appendChild(item);
-            });
-            suggestionsContainer.style.display = 'block';
-        }
-    });
-    
-    document.addEventListener('click', (e) => {
-        if (!nombreInput.contains(e.target)) {
-            suggestionsContainer.style.display = 'none';
-        }
-    });
-
-    document.getElementById('formGastoComun').addEventListener('submit', async (e) => {
-        e.preventDefault();
-        mostrarSpinner();
-
-        try {
-            const formData = new FormData(e.target);
-            const parcela = formData.get('N_Parcela');
-            const residenteIdx = residentes.findIndex(r => String(r[3]) === String(parcela) && r[9] && r[9].trim().toUpperCase() === 'SI');
-
-            if (residenteIdx === -1) throw new Error("No se encontró un 'Contacto Principal' para la parcela seleccionada. Verifique la hoja de Residentes.");
-            
-            const residente = residentes[residenteIdx];
-            const residenteRowInSheet = residenteIdx + 2;
-
-            const valorGastoComun = parseFloat(residente[8]);
-            const mesPagadoIndex = parseInt(formData.get('Periodo'));
-            const anioSeleccionado = parseInt(formData.get('Anio_Periodo'));
-            const fechaDePago = new Date(formData.get('Fecha_Pago').replace(/-/g, '/'));
-            const fechaVencimiento = new Date(anioSeleccionado, mesPagadoIndex, 10);
-            
-            let deudaDelPeriodo = valorGastoComun;
-            let interes = 0, multa = 0, mesesImpagos = 0;
-
-            const esPagoAtrasado = fechaDePago > fechaVencimiento;
-            if (esPagoAtrasado) {
-                const parcelaNum = parseInt(parcela);
-                const cutoffDate = new Date(2025, 6, 10);
-                const esParcelaExcepcion = (parcelaNum === 7 || parcelaNum === 11);
-                const esPeriodoPostCorte = fechaVencimiento >= cutoffDate;
-
-                if (esParcelaExcepcion || esPeriodoPostCorte) {
-                    let tempVenc = new Date(fechaVencimiento);
-                    while(tempVenc < fechaDePago) {
-                        mesesImpagos++;
-                        tempVenc.setMonth(tempVenc.getMonth() + 1);
-                    }
-
-                    if (mesesImpagos > 0) {
-                        const timcAnual = (timcData[anioSeleccionado] && timcData[anioSeleccionado][mesPagadoIndex + 1]) ? timcData[anioSeleccionado][mesPagadoIndex + 1] : 0;
-                        interes = valorGastoComun * (timcAnual / 100) / 12;
-                        multa = (valorGastoComun / 4) * mesesImpagos;
-                        deudaDelPeriodo = valorGastoComun + interes + multa;
-                    }
-                }
-            }
-
-            let linkComprobante = null;
-            const archivo = formData.get('Comprobante');
-            if (archivo && archivo.size > 0) {
-                if (typeof buscarOCrearCarpetaDeParcela !== 'function' || typeof subirComprobante !== 'function') {
-                    throw new Error("Las funciones de Google Drive no están disponibles.");
-                }
-                const nombreCarpeta = `Parcela ${parcela}`;
-                const carpetaId = await buscarOCrearCarpetaDeParcela(nombreCarpeta);
-                const resultadoSubida = await subirComprobante(archivo, carpetaId);
-                linkComprobante = resultadoSubida.webViewLink;
-            }
-
-            const montoPagadoGC = parseFloat(formData.get('Monto_Pagado') || 0);
-            const abonoConvenio = parseFloat(formData.get('Abono_Convenio') || 0);
-
-            // MODIFICADO: Lógica de estado simplificada a Pagado/Moroso
-            const saldoTransaccion = montoPagadoGC - deudaDelPeriodo;
-            const periodoStr = `${MESES[mesPagadoIndex]} ${anioSeleccionado}`;
-            const estadoPago = saldoTransaccion >= 0 ? 'Pagado' : 'Moroso';
-            const deudaPendienteParaSheet = saldoTransaccion < 0 ? -saldoTransaccion : 0;
-            
-            if (abonoConvenio > 0) {
-                if (typeof actualizarSaldoConvenioEnSheet !== 'function') {
-                    throw new Error("La función para actualizar el saldo del convenio no está disponible en sheets.js.");
-                }
-                const deudaInicial = parseFloat(residente[11] || 0);
-                let saldoPrevio = residente[12] ? parseFloat(residente[12]) : 0;
-                
-                if ((!saldoPrevio || saldoPrevio <= 0) && deudaInicial > 0) {
-                    saldoPrevio = deudaInicial;
-                }
-                
-                const nuevoSaldo = saldoPrevio - abonoConvenio;
-                await actualizarSaldoConvenioEnSheet(residenteRowInSheet, nuevoSaldo);
-                residente[12] = nuevoSaldo.toString();
-            }
-
-            const datosParaSheet = [
-            null, formData.get('Nombre_Residente'), parcela, valorGastoComun, periodoStr,
-            fechaVencimiento.toISOString().split('T')[0], montoPagadoGC, saldoTransaccion, interes, null,
-            multa, mesesImpagos, deudaPendienteParaSheet, formData.get('Fecha_Pago'), formData.get('Metodo_Pago'),
-            estadoPago, linkComprobante, abonoConvenio, null
-            ];
-            
-            await agregarPagoGC(datosParaSheet);
-            
-            const nuevoPagoObj = {};
-            ENCABEZADOS_PAGOS.forEach((encabezado, i) => nuevoPagoObj[encabezado] = datosParaSheet[i]);
-            nuevoPagoObj.anio = anioSeleccionado;
-            nuevoPagoObj.rowNum = pagosGC_obj.length + 2;
-            pagosGC_obj.push(nuevoPagoObj);
-            
-            filtrarYRenderizar();
-            modal.style.display = 'none';
-            e.target.reset();
-            mostrarMensaje('Gasto común y/o abono registrado con éxito.', 'success');
-
-        } catch (err) {
-            mostrarMensaje('Error al guardar el gasto: ' + err.message, 'error');
-        } finally {
-            ocultarSpinner();
-        }
-    });
-
-    const modalComprobante = document.getElementById('modalComprobante');
-    const formComprobante = document.getElementById('formEnviarComprobante');
-    const inputParcelaComprobante = document.getElementById('inputNParcelaComprobante');
-    let pagoSeleccionadoParaEnviar = null;
-    
-    document.getElementById('btnAbrirModalComprobante').addEventListener('click', () => {
-        formComprobante.reset();
-        pagoSeleccionadoParaEnviar = null;
-        document.getElementById('divCuerpoComprobante').innerHTML = `<span style="color: #6c757d;">Ingrese un N° de Parcela para generar la previsualización.</span>`;
-        document.getElementById('periodo-selector-container').style.display = 'none';
-        document.getElementById('selectPeriodoComprobante').innerHTML = '';
-        modalComprobante.style.display = 'flex';
-    });
-
-    document.getElementById('btnCerrarModalComprobante').addEventListener('click', () => {
-        modalComprobante.style.display = 'none';
-    });
-    
-    function crearCuerpoCorreo(pago, residente) {
-        const nombreResidente = residente[1];
-        const periodoFormateado = formatearPeriodo(pago.Periodo);
-        const valorGC = parseFloat(pago.Valor_Gasto_Comun).toLocaleString('es-CL');
-        const interes = parseFloat(pago.Interes || 0).toLocaleString('es-CL');
-        const multa = parseFloat(pago['Multa_1/4'] || 0).toLocaleString('es-CL');
-        const deudaDelPeriodo = (parseFloat(pago.Monto_Pagado) - parseFloat(pago.Saldo_Pendiente_o_a_favor));
-        const montoPagado = parseFloat(pago.Monto_Pagado).toLocaleString('es-CL');
-        const saldo = parseFloat(pago.Saldo_Pendiente_o_a_favor || 0);
-        const fechaPago = new Date(pago.Fecha_Pago.replace(/-/g, '/')).toLocaleDateString('es-CL', { timeZone: 'UTC' });
-        const abonoConvenio = parseFloat(pago.Abono_Convenio || 0);
-
-        let saldoTexto, saldoColor;
-        if (saldo >= 0) {
-        saldoTexto = `Saldo a favor: $${saldo.toLocaleString('es-CL')}`;
-        saldoColor = 'green';
-        } else {
-        saldoTexto = `Saldo pendiente: $${Math.abs(saldo).toLocaleString('es-CL')}`;
-        saldoColor = 'red';
+        const saldoConvenio = res[12] ? parseFloat(res[12]) : 0;
+        if (saldoConvenio > 0) {
+            saldoConvenioInfo.textContent = `Saldo convenio: $${saldoConvenio.toLocaleString('es-CL')}`;
+            saldoConvenioInfo.style.display = 'block';
         }
 
-        let mensajeAdvertencia = '';
-        if (saldo < 0) {
-            mensajeAdvertencia = `<p style="font-size: 12px; color: #c00; font-weight: bold;">El no pago de la totalidad de su Gasto Común seguirá generando intereses o multas. Favor regularizar su pago total para no quedar en estado moroso.</p>`;
-        }
+    } else {
+        nombreInput.value = 'No se encontró contacto principal';
+    }
+  });
+
+  const nombreInput = document.getElementById('inputNombreResidente');
+  const parcelaInputModal = document.getElementById('inputNParcela');
+  const valorGastoComunInput = document.getElementById('inputValorGastoComun');
+  const suggestionsContainer = document.getElementById('nombre-suggestions');
+
+  nombreInput.addEventListener('input', () => {
+      const searchTerm = nombreInput.value.toLowerCase();
+      suggestionsContainer.innerHTML = '';
+      suggestionsContainer.style.display = 'none';
+
+      if (searchTerm.length < 2) return;
+      
+      const matches = residentes.filter(r => 
+          r[1] && r[1].toLowerCase().includes(searchTerm) && r[9] && r[9].trim().toUpperCase() === 'SI'
+      );
+
+      if (matches.length > 0) {
+          matches.forEach(res => {
+              const item = document.createElement('div');
+              item.className = 'suggestion-item';
+              item.textContent = `${res[1]} (Parcela ${res[3]})`;
+              item.addEventListener('click', () => {
+                  nombreInput.value = res[1];
+                  parcelaInputModal.value = res[3];
+                  valorGastoComunInput.value = parseFloat(res[8]).toLocaleString('es-CL', { style: 'currency', currency: 'CLP' });
+                  
+                  const saldoConvenioInfo = document.getElementById('saldo-convenio-info');
+                  const saldoConvenio = res[12] ? parseFloat(res[12]) : 0;
+                  if (saldoConvenio > 0) {
+                      saldoConvenioInfo.textContent = `Saldo convenio: $${saldoConvenio.toLocaleString('es-CL')}`;
+                      saldoConvenioInfo.style.display = 'block';
+                  } else {
+                      saldoConvenioInfo.style.display = 'none';
+                  }
+
+                  suggestionsContainer.style.display = 'none';
+              });
+              suggestionsContainer.appendChild(item);
+          });
+          suggestionsContainer.style.display = 'block';
+      }
+  });
+  
+  document.addEventListener('click', (e) => {
+      if (!nombreInput.contains(e.target)) {
+          suggestionsContainer.style.display = 'none';
+      }
+  });
+
+  document.getElementById('formGastoComun').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    mostrarSpinner();
+
+    try {
+        const formData = new FormData(e.target);
+        const parcela = formData.get('N_Parcela');
+        const residenteIdx = residentes.findIndex(r => String(r[3]) === String(parcela) && r[9] && r[9].trim().toUpperCase() === 'SI');
+
+        if (residenteIdx === -1) throw new Error("No se encontró un 'Contacto Principal' para la parcela seleccionada. Verifique la hoja de Residentes.");
         
-        let filaAbono = '';
+        const residente = residentes[residenteIdx];
+        const residenteRowInSheet = residenteIdx + 2;
+
+        const valorGastoComun = parseFloat(residente[8]);
+        const mesPagadoIndex = parseInt(formData.get('Periodo'));
+        const anioSeleccionado = parseInt(formData.get('Anio_Periodo'));
+        const fechaDePago = new Date(formData.get('Fecha_Pago').replace(/-/g, '/'));
+        const fechaVencimiento = new Date(anioSeleccionado, mesPagadoIndex, 10);
+        
+        let deudaDelPeriodo = valorGastoComun;
+        let interes = 0, multa = 0, mesesImpagos = 0;
+
+        const esPagoAtrasado = fechaDePago > fechaVencimiento;
+        if (esPagoAtrasado) {
+            const parcelaNum = parseInt(parcela);
+            const cutoffDate = new Date(2025, 6, 10);
+            const esParcelaExcepcion = (parcelaNum === 7 || parcelaNum === 11);
+            const esPeriodoPostCorte = fechaVencimiento >= cutoffDate;
+
+            if (esParcelaExcepcion || esPeriodoPostCorte) {
+                let tempVenc = new Date(fechaVencimiento);
+                while(tempVenc < fechaDePago) {
+                    mesesImpagos++;
+                    tempVenc.setMonth(tempVenc.getMonth() + 1);
+                }
+
+                if (mesesImpagos > 0) {
+                    const timcAnual = (timcData[anioSeleccionado] && timcData[anioSeleccionado][mesPagadoIndex + 1]) ? timcData[anioSeleccionado][mesPagadoIndex + 1] : 0;
+                    interes = valorGastoComun * (timcAnual / 100) / 12;
+                    multa = (valorGastoComun / 4) * mesesImpagos;
+                    deudaDelPeriodo = valorGastoComun + interes + multa;
+                }
+            }
+        }
+
+        let linkComprobante = null;
+        const archivo = formData.get('Comprobante');
+        if (archivo && archivo.size > 0) {
+            if (typeof buscarOCrearCarpetaDeParcela !== 'function' || typeof subirComprobante !== 'function') {
+                throw new Error("Las funciones de Google Drive no están disponibles.");
+            }
+            const nombreCarpeta = `Parcela ${parcela}`;
+            const carpetaId = await buscarOCrearCarpetaDeParcela(nombreCarpeta);
+            const resultadoSubida = await subirComprobante(archivo, carpetaId);
+            linkComprobante = resultadoSubida.webViewLink;
+        }
+
+        const montoPagadoGC = parseFloat(formData.get('Monto_Pagado') || 0);
+        const abonoConvenio = parseFloat(formData.get('Abono_Convenio') || 0);
+
+        const saldoTransaccion = montoPagadoGC - deudaDelPeriodo;
+        const periodoStr = `${MESES[mesPagadoIndex]} ${anioSeleccionado}`;
+        const estadoPago = saldoTransaccion >= 0 ? 'Pagado' : 'Moroso';
+        const deudaPendienteParaSheet = saldoTransaccion < 0 ? -saldoTransaccion : 0;
+        
         if (abonoConvenio > 0) {
-            const saldoConvenioActual = residente[12] ? parseFloat(residente[12]) : 0;
-            filaAbono = `<tr style="font-weight: bold;">
-                            <td style="padding: 8px; border-bottom: 1px solid #ddd;">Abono a Convenio:</td>
-                            <td style="padding: 8px; border-bottom: 1px solid #ddd; text-align: right;">$${abonoConvenio.toLocaleString('es-CL')}</td>
-                         </tr>
-                         <tr style="font-weight: bold; color: #0d6efd;">
-                            <td style="padding: 8px;">Saldo Convenio Restante:</td>
-                            <td style="padding: 8px; text-align: right;">$${saldoConvenioActual.toLocaleString('es-CL')}</td>
-                         </tr>`;
+            if (typeof actualizarSaldoConvenioEnSheet !== 'function') {
+                throw new Error("La función para actualizar el saldo del convenio no está disponible en sheets.js.");
+            }
+            const deudaInicial = parseFloat(residente[11] || 0);
+            let saldoPrevio = residente[12] ? parseFloat(residente[12]) : 0;
+            
+            if ((!saldoPrevio || saldoPrevio <= 0) && deudaInicial > 0) {
+                saldoPrevio = deudaInicial;
+            }
+            
+            const nuevoSaldo = saldoPrevio - abonoConvenio;
+            await actualizarSaldoConvenioEnSheet(residenteRowInSheet, nuevoSaldo);
+            residente[12] = nuevoSaldo.toString();
         }
+
+        const datosParaSheet = [
+          null, formData.get('Nombre_Residente'), parcela, valorGastoComun, periodoStr,
+          fechaVencimiento.toISOString().split('T')[0], montoPagadoGC, saldoTransaccion, interes, null,
+          multa, mesesImpagos, deudaPendienteParaSheet, formData.get('Fecha_Pago'), formData.get('Metodo_Pago'),
+          estadoPago, linkComprobante, abonoConvenio, null
+        ];
         
-        let filaVerComprobante = '';
-        if (pago.ID_Comprobante_Drive) {
-            filaVerComprobante = `<p style="text-align: center; margin-top: 25px;">
-                                    <a href="${pago.ID_Comprobante_Drive}" target="_blank" style="display: inline-block; padding: 10px 15px; font-size: 14px; color: #ffffff; background-color: #007bff; text-decoration: none; border-radius: 5px;">Ver Comprobante de Pago</a>
-                                  </p>`;
-        }
+        await agregarPagoGC(datosParaSheet);
+        
+        const nuevoPagoObj = {};
+        ENCABEZADOS_PAGOS.forEach((encabezado, i) => nuevoPagoObj[encabezado] = datosParaSheet[i]);
+        nuevoPagoObj.anio = anioSeleccionado;
+        nuevoPagoObj.rowNum = pagosGC_obj.length + 2;
+        pagosGC_obj.push(nuevoPagoObj);
+        
+        filtrarYRenderizar();
+        modal.style.display = 'none';
+        e.target.reset();
+        mostrarMensaje('Gasto común y/o abono registrado con éxito.', 'success');
 
+    } catch (err) {
+        mostrarMensaje('Error al guardar el gasto: ' + err.message, 'error');
+    } finally {
+        ocultarSpinner();
+    }
+  });
 
-        return `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; border: 1px solid #ddd; padding: 20px; font-size: 14px; line-height: 1.6;">
-            <div style="text-align: center; margin-bottom: 20px;"><h2 style="color: #2a7ca3; margin-top: 10px;">Comprobante de Pago</h2></div>
-            <p>Estimado(a) <strong>${nombreResidente}</strong>,</p>
-            <p>Confirmamos la recepción de su pago, con el siguiente detalle:</p>
-            <hr>
-            <h3 style="color: #333; margin-top: 20px; margin-bottom: 10px; font-size: 16px;">Detalle del Pago</h3>
-            <table style="width: 100%; border-collapse: collapse;">
-            <tr><td style="padding: 8px; border-bottom: 1px solid #eee;">Fecha de Pago:</td><td style="padding: 8px; border-bottom: 1px solid #eee; text-align: right;"><strong>${fechaPago}</strong></td></tr>
-            <tr><td style="padding: 8px; border-bottom: 1px solid #eee;">Método de Pago:</td><td style="padding: 8px; border-bottom: 1px solid #eee; text-align: right;"><strong>${pago.Metodo_Pago}</strong></td></tr>
-            </table>
-            <h3 style="color: #333; margin-top: 20px; margin-bottom: 10px; font-size: 16px;">Resumen de la Transacción</h3>
-            <table style="width: 100%; border-collapse: collapse;">
-            <tr><td colspan="2" style="padding: 8px; border-bottom: 1px solid #eee;"><strong>Gasto Común Período ${periodoFormateado}</strong></td></tr>
-            <tr><td style="padding: 8px 8px 8px 20px; border-bottom: 1px solid #eee;">Valor Gasto Común:</td><td style="padding: 8px; border-bottom: 1px solid #eee; text-align: right;">$${valorGC}</td></tr>
-            <tr><td style="padding: 8px 8px 8px 20px; border-bottom: 1px solid #eee;">Intereses por mora:</td><td style="padding: 8px; border-bottom: 1px solid #eee; text-align: right;">$${interes}</td></tr>
-            <tr><td style="padding: 8px 8px 8px 20px; border-bottom: 1px solid #eee;">Multas:</td><td style="padding: 8px; border-bottom: 1px solid #eee; text-align: right;">$${multa}</td></tr>
-            <tr style="font-weight: bold;"><td style="padding: 8px 8px 8px 20px; border-bottom: 1px solid #ddd;">Deuda del Período:</td><td style="padding: 8px; border-bottom: 1px solid #ddd; text-align: right;">$${deudaDelPeriodo.toLocaleString('es-CL')}</td></tr>
-            <tr style="font-weight: bold;"><td style="padding: 8px 8px 8px 20px; border-bottom: 1px solid #ddd;">Monto Pagado a G.C.:</td><td style="padding: 8px; border-bottom: 1px solid #ddd; text-align: right;">$${montoPagado}</td></tr>
-            <tr style="font-weight: bold; color: ${saldoColor};"><td style="padding: 8px 8px 8px 20px;">Resultado G.C.:</td><td style="padding: 8px; text-align: right;">${saldoTexto}</td></tr>
-            ${filaAbono}
-            </table>
-            ${filaVerComprobante}
-            <hr style="margin-top: 25px;">
-            <p style="font-size: 12px; color: #777;">Si tiene alguna consulta sobre este comprobante, no dude en contactarnos.</p>
-            ${mensajeAdvertencia}
-            <p>Gracias por su compromiso con la comunidad.</p>
-            <p>Se despide Atentamente,<br><strong>Alex Thiele</strong><br>Administrador Condominio Los Molles</p>
-        </div>
+  const modalComprobante = document.getElementById('modalComprobante');
+  const formComprobante = document.getElementById('formEnviarComprobante');
+  const inputParcelaComprobante = document.getElementById('inputNParcelaComprobante');
+  let pagoSeleccionadoParaEnviar = null;
+  
+  document.getElementById('btnAbrirModalComprobante').addEventListener('click', () => {
+    formComprobante.reset();
+    pagoSeleccionadoParaEnviar = null;
+    document.getElementById('divCuerpoComprobante').innerHTML = `<span style="color: #6c757d;">Ingrese un N° de Parcela para generar la previsualización.</span>`;
+    document.getElementById('periodo-selector-container').style.display = 'none';
+    document.getElementById('selectPeriodoComprobante').innerHTML = '';
+    modalComprobante.style.display = 'flex';
+  });
+
+  document.getElementById('btnCerrarModalComprobante').addEventListener('click', () => {
+    modalComprobante.style.display = 'none';
+  });
+  
+  function crearCuerpoCorreo(pago, residente) {
+    const nombreResidente = residente[1];
+    const periodoFormateado = formatearPeriodo(pago.Periodo);
+    const valorGC = parseFloat(pago.Valor_Gasto_Comun).toLocaleString('es-CL');
+    const interes = parseFloat(pago.Interes || 0).toLocaleString('es-CL');
+    const multa = parseFloat(pago['Multa_1/4'] || 0).toLocaleString('es-CL');
+    const deudaDelPeriodo = (parseFloat(pago.Monto_Pagado) - parseFloat(pago.Saldo_Pendiente_o_a_favor));
+    const montoPagado = parseFloat(pago.Monto_Pagado).toLocaleString('es-CL');
+    const saldo = parseFloat(pago.Saldo_Pendiente_o_a_favor || 0);
+    const fechaPago = new Date(pago.Fecha_Pago.replace(/-/g, '/')).toLocaleDateString('es-CL', { timeZone: 'UTC' });
+    const abonoConvenio = parseFloat(pago.Abono_Convenio || 0);
+
+    let saldoTexto, saldoColor;
+    if (saldo >= 0) {
+      saldoTexto = `Saldo a favor: $${saldo.toLocaleString('es-CL')}`;
+      saldoColor = 'green';
+    } else {
+      saldoTexto = `Saldo pendiente: $${Math.abs(saldo).toLocaleString('es-CL')}`;
+      saldoColor = 'red';
+    }
+
+    let mensajeAdvertencia = '';
+    if (saldo < 0) {
+        mensajeAdvertencia = `<p style="font-size: 12px; color: #c00; font-weight: bold;">El no pago de la totalidad de su Gasto Común seguirá generando intereses o multas. Favor regularizar su pago total para no quedar en estado moroso.</p>`;
+    }
+    
+    let filaAbono = '';
+    if (abonoConvenio > 0) {
+        const saldoConvenioActual = residente[12] ? parseFloat(residente[12]) : 0;
+        filaAbono = `<tr style="font-weight: bold;">
+                        <td style="padding: 8px; border-bottom: 1px solid #ddd;">Abono a Convenio:</td>
+                        <td style="padding: 8px; border-bottom: 1px solid #ddd; text-align: right;">$${abonoConvenio.toLocaleString('es-CL')}</td>
+                     </tr>
+                     <tr style="font-weight: bold; color: #0d6efd;">
+                        <td style="padding: 8px;">Saldo Convenio Restante:</td>
+                        <td style="padding: 8px; text-align: right;">$${saldoConvenioActual.toLocaleString('es-CL')}</td>
+                     </tr>`;
+    }
+
+    let estadoMorosoHtml = '';
+    if (pago.Estado === 'Moroso') {
+        estadoMorosoHtml = `
+            <p style="text-align: center; color: #dc3545; font-weight: bold; font-size: 16px; margin-top: 15px; border: 1px solid #dc3545; padding: 10px; border-radius: 5px;">
+                ESTADO DEL PERÍODO: MOROSO
+            </p>
         `;
     }
     
-    inputParcelaComprobante.addEventListener('input', (e) => {
-        const parcela = e.target.value;
-        const selectorContainer = document.getElementById('periodo-selector-container');
-        const selector = document.getElementById('selectPeriodoComprobante');
-        const nombreInput = document.getElementById('inputNombreResidenteComprobante');
-        const emailInput = document.getElementById('inputEmailComprobante');
-        const asuntoInput = document.getElementById('inputAsuntoComprobante');
-        const cuerpoDiv = document.getElementById('divCuerpoComprobante');
-
-        nombreInput.value = '';
-        emailInput.value = '';
-        asuntoInput.value = '';
-        cuerpoDiv.innerHTML = `<span style="color: #6c757d;">Ingrese un N° de Parcela...</span>`;
-        selectorContainer.style.display = 'none';
-        selector.innerHTML = '';
-        pagoSeleccionadoParaEnviar = null;
-
-        if (!parcela) return;
-        
-        const allResidentsForParcela = residentes.filter(r => String(r[3]) === String(parcela));
-        if (allResidentsForParcela.length === 0) {
-            nombreInput.value = 'Residente no encontrado.';
-            return;
-        }
-        
-        const residentNames = allResidentsForParcela.map(r => r[1]).join(' y ');
-        const residentEmails = allResidentsForParcela.map(r => r[5]).filter(Boolean).join(', ');
-        nombreInput.value = residentNames;
-        emailInput.value = residentEmails || 'No registrado';
-
-        const pagosDeLaParcela = pagosGC_obj
-        .filter(p => p.N_Parcela == parcela && p.Fecha_Pago)
-        .sort((a, b) => new Date(b.Fecha_Pago) - new Date(a.Fecha_Pago));
-
-        if (pagosDeLaParcela.length === 0) {
-            cuerpoDiv.innerHTML = `<span style="color: #dc3545;">No se encontraron pagos registrados para esta parcela.</span>`;
-            return;
-        }
-        
-        const representativeResident = allResidentsForParcela.find(r => r[9] && r[9].trim().toUpperCase() === 'SI') || allResidentsForParcela[0];
-        const aEnviar = {...representativeResident};
-        aEnviar[1] = residentNames;
-
-        function generarVistaPrevia(pago) {
-            pagoSeleccionadoParaEnviar = pago;
-            const periodoFormateado = formatearPeriodo(pago.Periodo);
-            asuntoInput.value = `Comprobante pago Gasto Común ${periodoFormateado} Parcela ${parcela}`;
-            cuerpoDiv.innerHTML = crearCuerpoCorreo(pago, aEnviar);
-        }
-
-        if (pagosDeLaParcela.length === 1) {
-            generarVistaPrevia(pagosDeLaParcela[0]);
-        } else {
-            selectorContainer.style.display = 'block';
-            selector.innerHTML = '<option value="">-- Seleccione un comprobante --</option>';
-            pagosDeLaParcela.forEach(pago => {
-                const fechaPagoFmt = new Date(pago.Fecha_Pago.replace(/-/g, '/')).toLocaleDateString('es-CL', { timeZone: 'UTC' });
-                const option = document.createElement('option');
-                option.value = pago.ID_Pago;
-                option.textContent = `${formatearPeriodo(pago.Periodo)} (Pagado el ${fechaPagoFmt})`;
-                selector.appendChild(option);
-            });
-        }
-    });
-
-    document.getElementById('selectPeriodoComprobante').addEventListener('change', (e) => {
-        const pagoId = e.target.value;
-        pagoSeleccionadoParaEnviar = null;
-        const parcela = document.getElementById('inputNParcelaComprobante').value;
-        const asuntoInput = document.getElementById('inputAsuntoComprobante');
-        const cuerpoDiv = document.getElementById('divCuerpoComprobante');
-        
-        if (!pagoId) {
-            asuntoInput.value = '';
-            cuerpoDiv.innerHTML = `<span style="color: #6c757d;">Seleccione un período para generar la previsualización.</span>`;
-            return;
-        }
-        
-        const pagoSeleccionado = pagosGC_obj.find(p => p.ID_Pago == pagoId);
-        pagoSeleccionadoParaEnviar = pagoSeleccionado;
-        const allResidentsForParcela = residentes.filter(r => String(r[3]) === String(parcela));
-        const residentNames = allResidentsForParcela.map(r => r[1]).join(' y ');
-        const representativeResident = allResidentsForParcela.find(r => r[9] && r[9].trim().toUpperCase() === 'SI') || allResidentsForParcela[0];
-        const aEnviar = {...representativeResident};
-        aEnviar[1] = residentNames;
-        
-        const periodoFormateado = formatearPeriodo(pagoSeleccionado.Periodo);
-        asuntoInput.value = `Comprobante pago Gasto Común ${periodoFormateado} Parcela ${parcela}`;
-        cuerpoDiv.innerHTML = crearCuerpoCorreo(pagoSeleccionado, aEnviar);
-    });
+    let filaVerComprobante = '';
+    if (pago.ID_Comprobante_Drive) {
+        filaVerComprobante = `<p style="text-align: center; margin-top: 25px;">
+                                <a href="${pago.ID_Comprobante_Drive}" target="_blank" style="display: inline-block; padding: 10px 15px; font-size: 14px; color: #ffffff; background-color: #007bff; text-decoration: none; border-radius: 5px;">Ver Comprobante de Pago</a>
+                              </p>`;
+    }
 
 
-    formComprobante.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        if (!pagoSeleccionadoParaEnviar) {
-            return mostrarMensaje('Debe seleccionar un comprobante para enviar.', 'error');
-        }
+    return `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; border: 1px solid #ddd; padding: 20px; font-size: 14px; line-height: 1.6;">
+        <div style="text-align: center; margin-bottom: 20px;"><h2 style="color: #2a7ca3; margin-top: 10px;">Comprobante de Pago</h2></div>
+        <p>Estimado(a) <strong>${nombreResidente}</strong>,</p>
+        <p>Confirmamos la recepción de su pago, con el siguiente detalle:</p>
+        <hr>
+        <h3 style="color: #333; margin-top: 20px; margin-bottom: 10px; font-size: 16px;">Detalle del Pago</h3>
+        <table style="width: 100%; border-collapse: collapse;">
+          <tr><td style="padding: 8px; border-bottom: 1px solid #eee;">Fecha de Pago:</td><td style="padding: 8px; border-bottom: 1px solid #eee; text-align: right;"><strong>${fechaPago}</strong></td></tr>
+          <tr><td style="padding: 8px; border-bottom: 1px solid #eee;">Método de Pago:</td><td style="padding: 8px; border-bottom: 1px solid #eee; text-align: right;"><strong>${pago.Metodo_Pago}</strong></td></tr>
+        </table>
+        <h3 style="color: #333; margin-top: 20px; margin-bottom: 10px; font-size: 16px;">Resumen de la Transacción</h3>
+        <table style="width: 100%; border-collapse: collapse;">
+          <tr><td colspan="2" style="padding: 8px; border-bottom: 1px solid #eee;"><strong>Gasto Común Período ${periodoFormateado}</strong></td></tr>
+          <tr><td style="padding: 8px 8px 8px 20px; border-bottom: 1px solid #eee;">Valor Gasto Común:</td><td style="padding: 8px; border-bottom: 1px solid #eee; text-align: right;">$${valorGC}</td></tr>
+          <tr><td style="padding: 8px 8px 8px 20px; border-bottom: 1px solid #eee;">Intereses por mora:</td><td style="padding: 8px; border-bottom: 1px solid #eee; text-align: right;">$${interes}</td></tr>
+          <tr><td style="padding: 8px 8px 8px 20px; border-bottom: 1px solid #eee;">Multas:</td><td style="padding: 8px; border-bottom: 1px solid #eee; text-align: right;">$${multa}</td></tr>
+          <tr style="font-weight: bold;"><td style="padding: 8px 8px 8px 20px; border-bottom: 1px solid #ddd;">Deuda del Período:</td><td style="padding: 8px; border-bottom: 1px solid #ddd; text-align: right;">$${deudaDelPeriodo.toLocaleString('es-CL')}</td></tr>
+          <tr style="font-weight: bold;"><td style="padding: 8px 8px 8px 20px; border-bottom: 1px solid #ddd;">Monto Pagado a G.C.:</td><td style="padding: 8px; border-bottom: 1px solid #ddd; text-align: right;">$${montoPagado}</td></tr>
+          <tr style="font-weight: bold; color: ${saldoColor};"><td style="padding: 8px 8px 8px 20px;">Resultado G.C.:</td><td style="padding: 8px; text-align: right;">${saldoTexto}</td></tr>
+          ${filaAbono}
+        </table>
+        ${estadoMorosoHtml}
+        ${filaVerComprobante}
+        <hr style="margin-top: 25px;">
+        <p style="font-size: 12px; color: #777;">Si tiene alguna consulta sobre este comprobante, no dude en contactarnos.</p>
+        ${mensajeAdvertencia}
+        <p>Gracias por su compromiso con la comunidad.</p>
+        <p>Se despide Atentamente,<br><strong>Alex Thiele</strong><br>Administrador Condominio Los Molles</p>
+      </div>
+    `;
+  }
+  
+  inputParcelaComprobante.addEventListener('input', (e) => {
+    const parcela = e.target.value;
+    const selectorContainer = document.getElementById('periodo-selector-container');
+    const selector = document.getElementById('selectPeriodoComprobante');
+    const nombreInput = document.getElementById('inputNombreResidenteComprobante');
+    const emailInput = document.getElementById('inputEmailComprobante');
+    const asuntoInput = document.getElementById('inputAsuntoComprobante');
+    const cuerpoDiv = document.getElementById('divCuerpoComprobante');
 
-        const destinatario = document.getElementById('inputEmailComprobante').value;
-        if (!destinatario) {
-            return mostrarMensaje('El residente no tiene un correo electrónico registrado.', 'error');
-        }
-        
-        mostrarSpinner();
-        try {
-        const asunto = document.getElementById('inputAsuntoComprobante').value;
-        const cuerpo = document.getElementById('divCuerpoComprobante').innerHTML;
-        
-        await enviarCorreo(destinatario, asunto, cuerpo);
-        
-        await marcarComprobanteEnviado(pagoSeleccionadoParaEnviar.rowNum);
-        pagoSeleccionadoParaEnviar.Comprobante_Enviado = 'SI';
-        
-        modalComprobante.style.display = 'none';
-        mostrarMensaje(`Correo enviado con éxito a ${destinatario}.`, 'success');
-        filtrarYRenderizar();
+    nombreInput.value = '';
+    emailInput.value = '';
+    asuntoInput.value = '';
+    cuerpoDiv.innerHTML = `<span style="color: #6c757d;">Ingrese un N° de Parcela...</span>`;
+    selectorContainer.style.display = 'none';
+    selector.innerHTML = '';
+    pagoSeleccionadoParaEnviar = null;
 
-        } catch (err) {
-            console.error("Error completo en el proceso de envío:", err);
-            let errorMessage = "Ocurrió un error inesperado.";
-            if (err && err.result && err.result.error && err.result.error.message) {
-                errorMessage = err.result.error.message;
-            } else if (err && err.message) {
-                errorMessage = err.message;
-            } else if (typeof err === 'string') {
-                errorMessage = err;
-            }
-            mostrarMensaje(`Error al enviar el correo: ${errorMessage}`, 'error');
-        } finally {
-        ocultarSpinner();
-        }
-    });
-
-    document.getElementById('filtroParcela').addEventListener('input', filtrarYRenderizar);
-    document.getElementById('filtroAnio').addEventListener('input', () => {
-        actualizarVistaTIMC();
-        filtrarYRenderizar();
-    });
+    if (!parcela) return;
     
-    document.getElementById('tbody-gastos').addEventListener('click', (e) => {
-        const fila = e.target.closest('tr.fila-clicable');
-        if (fila && fila.dataset.idPago) {
-            abrirModalDetalle(fila.dataset.idPago);
+    const allResidentsForParcela = residentes.filter(r => String(r[3]) === String(parcela));
+    if (allResidentsForParcela.length === 0) {
+        nombreInput.value = 'Residente no encontrado.';
+        return;
+    }
+    
+    const residentNames = allResidentsForParcela.map(r => r[1]).join(' y ');
+    const residentEmails = allResidentsForParcela.map(r => r[5]).filter(Boolean).join(', ');
+    nombreInput.value = residentNames;
+    emailInput.value = residentEmails || 'No registrado';
+
+    const pagosDeLaParcela = pagosGC_obj
+      .filter(p => p.N_Parcela == parcela && p.Fecha_Pago)
+      .sort((a, b) => new Date(b.Fecha_Pago) - new Date(a.Fecha_Pago));
+
+    if (pagosDeLaParcela.length === 0) {
+        cuerpoDiv.innerHTML = `<span style="color: #dc3545;">No se encontraron pagos registrados para esta parcela.</span>`;
+        return;
+    }
+    
+    const representativeResident = allResidentsForParcela.find(r => r[9] && r[9].trim().toUpperCase() === 'SI') || allResidentsForParcela[0];
+    const aEnviar = {...representativeResident};
+    aEnviar[1] = residentNames;
+
+    function generarVistaPrevia(pago) {
+        pagoSeleccionadoParaEnviar = pago;
+        const periodoFormateado = formatearPeriodo(pago.Periodo);
+        asuntoInput.value = `Comprobante pago Gasto Común ${periodoFormateado} Parcela ${parcela}`;
+        cuerpoDiv.innerHTML = crearCuerpoCorreo(pago, aEnviar);
+    }
+
+    if (pagosDeLaParcela.length === 1) {
+        generarVistaPrevia(pagosDeLaParcela[0]);
+    } else {
+        selectorContainer.style.display = 'block';
+        selector.innerHTML = '<option value="">-- Seleccione un comprobante --</option>';
+        pagosDeLaParcela.forEach(pago => {
+            const fechaPagoFmt = new Date(pago.Fecha_Pago.replace(/-/g, '/')).toLocaleDateString('es-CL', { timeZone: 'UTC' });
+            const option = document.createElement('option');
+            option.value = pago.ID_Pago;
+            option.textContent = `${formatearPeriodo(pago.Periodo)} (Pagado el ${fechaPagoFmt})`;
+            selector.appendChild(option);
+        });
+    }
+  });
+
+  document.getElementById('selectPeriodoComprobante').addEventListener('change', (e) => {
+      const pagoId = e.target.value;
+      pagoSeleccionadoParaEnviar = null;
+      const parcela = document.getElementById('inputNParcelaComprobante').value;
+      const asuntoInput = document.getElementById('inputAsuntoComprobante');
+      const cuerpoDiv = document.getElementById('divCuerpoComprobante');
+      
+      if (!pagoId) {
+          asuntoInput.value = '';
+          cuerpoDiv.innerHTML = `<span style="color: #6c757d;">Seleccione un período para generar la previsualización.</span>`;
+          return;
+      }
+      
+      const pagoSeleccionado = pagosGC_obj.find(p => p.ID_Pago == pagoId);
+      pagoSeleccionadoParaEnviar = pagoSeleccionado;
+      const allResidentsForParcela = residentes.filter(r => String(r[3]) === String(parcela));
+      const residentNames = allResidentsForParcela.map(r => r[1]).join(' y ');
+      const representativeResident = allResidentsForParcela.find(r => r[9] && r[9].trim().toUpperCase() === 'SI') || allResidentsForParcela[0];
+      const aEnviar = {...representativeResident};
+      aEnviar[1] = residentNames;
+      
+      const periodoFormateado = formatearPeriodo(pagoSeleccionado.Periodo);
+      asuntoInput.value = `Comprobante pago Gasto Común ${periodoFormateado} Parcela ${parcela}`;
+      cuerpoDiv.innerHTML = crearCuerpoCorreo(pagoSeleccionado, aEnviar);
+  });
+
+
+  formComprobante.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    if (!pagoSeleccionadoParaEnviar) {
+        return mostrarMensaje('Debe seleccionar un comprobante para enviar.', 'error');
+    }
+
+    const destinatario = document.getElementById('inputEmailComprobante').value;
+    if (!destinatario) {
+        return mostrarMensaje('El residente no tiene un correo electrónico registrado.', 'error');
+    }
+    
+    mostrarSpinner();
+    try {
+      const asunto = document.getElementById('inputAsuntoComprobante').value;
+      const cuerpo = document.getElementById('divCuerpoComprobante').innerHTML;
+      
+      await enviarCorreo(destinatario, asunto, cuerpo);
+      
+      await marcarComprobanteEnviado(pagoSeleccionadoParaEnviar.rowNum);
+      pagoSeleccionadoParaEnviar.Comprobante_Enviado = 'SI';
+      
+      modalComprobante.style.display = 'none';
+      mostrarMensaje(`Correo enviado con éxito a ${destinatario}.`, 'success');
+      filtrarYRenderizar();
+
+    } catch (err) {
+        console.error("Error completo en el proceso de envío:", err);
+        let errorMessage = "Ocurrió un error inesperado.";
+        if (err && err.result && err.result.error && err.result.error.message) {
+            errorMessage = err.result.error.message;
+        } else if (err && err.message) {
+            errorMessage = err.message;
+        } else if (typeof err === 'string') {
+            errorMessage = err;
         }
-    });
+        mostrarMensaje(`Error al enviar el correo: ${errorMessage}`, 'error');
+    } finally {
+      ocultarSpinner();
+    }
+  });
 
-    document.getElementById('modalDetallePago').addEventListener('click', (e) => {
-        if(e.target === e.currentTarget) e.currentTarget.style.display = 'none';
-    });
-    document.getElementById('btnCerrarModalDetalle').addEventListener('click', () => {
-        document.getElementById('modalDetallePago').style.display = 'none';
-    });
-
-    filtrarYRenderizar();
+  document.getElementById('filtroParcela').addEventListener('input', filtrarYRenderizar);
+  document.getElementById('filtroAnio').addEventListener('input', () => {
     actualizarVistaTIMC();
-    ocultarSpinner();
+    filtrarYRenderizar();
+  });
+  
+  document.getElementById('tbody-gastos').addEventListener('click', (e) => {
+    const fila = e.target.closest('tr.fila-clicable');
+    if (fila && fila.dataset.idPago) {
+        abrirModalDetalle(fila.dataset.idPago);
+    }
+  });
+
+  document.getElementById('modalDetallePago').addEventListener('click', (e) => {
+    if(e.target === e.currentTarget) e.currentTarget.style.display = 'none';
+  });
+  document.getElementById('btnCerrarModalDetalle').addEventListener('click', () => {
+    document.getElementById('modalDetallePago').style.display = 'none';
+  });
+
+  filtrarYRenderizar();
+  actualizarVistaTIMC();
+  ocultarSpinner();
 }
