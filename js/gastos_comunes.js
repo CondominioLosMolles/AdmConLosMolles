@@ -30,7 +30,6 @@ function formatearPeriodo(periodo) {
   return periodo;
 }
 
-// NUEVO: Función que lee los anchos guardados del localStorage y los aplica a la tabla.
 function aplicarAnchosGuardados(table) {
     const savedWidthsJSON = localStorage.getItem('tablaPagosColumnWidths');
     if (savedWidthsJSON) {
@@ -49,7 +48,6 @@ function aplicarAnchosGuardados(table) {
     }
 }
 
-// MODIFICADO: La función ahora también guarda los anchos en localStorage al terminar de ajustar.
 function hacerColumnasRedimensionables(table) {
     const headers = Array.from(table.querySelectorAll('th'));
     headers.forEach(header => {
@@ -73,7 +71,6 @@ function hacerColumnasRedimensionables(table) {
                 window.removeEventListener('mousemove', onMouseMove);
                 window.removeEventListener('mouseup', onMouseUp);
                 
-                // Guardar los nuevos anchos en localStorage
                 const currentHeaders = Array.from(table.querySelectorAll('th'));
                 const widths = currentHeaders.map(h => h.style.width || '');
                 localStorage.setItem('tablaPagosColumnWidths', JSON.stringify(widths));
@@ -294,62 +291,63 @@ async function cargarGastosComunes() {
     hacerColumnasRedimensionables(tabla);
   }
 
-  // ... (El resto de la funciones como abrirModalDetalle, listeners, etc. se mantienen igual)
-  // ... (Se han omitido por brevedad, pero están en el código completo que sigue)
-
-    function abrirModalDetalle(idPago) {
-        const pago = pagosGC_obj.find(p => p.ID_Pago == idPago);
-        if (!pago) {
-            mostrarMensaje('No se encontró el registro del pago.', 'error');
-            return;
-        }
-
-        const modal = document.getElementById('modalDetallePago');
-        const contenido = document.getElementById('contenidoDetallePago');
-
-        const montoPagado = parseFloat(pago.Monto_Pagado || 0);
-        const saldoTransaccion = parseFloat(pago.Saldo_Pendiente_o_a_favor || 0);
-        const deudaDelPeriodo = montoPagado - saldoTransaccion;
-        const saldoFinalTexto = saldoTransaccion >= 0 ? `A favor: $${saldoTransaccion.toLocaleString('es-CL')}` : `Pendiente: $${Math.abs(saldoTransaccion).toLocaleString('es-CL')}`;
-        const abonoConvenio = parseFloat(pago.Abono_Convenio || 0);
-
-        let filaComprobante = '';
-        if (pago.ID_Comprobante_Drive) {
-            filaComprobante = `<b>Comprobante:</b> <span><a href="${pago.ID_Comprobante_Drive}" target="_blank" class="btn small">Ver Documento</a></span>`;
-        } else {
-            filaComprobante = '<b>Comprobante:</b> <span>No adjunto</span>';
-        }
-        
-        let filaAbono = '';
-        if (abonoConvenio > 0) {
-            filaAbono = `<b>Abono a Convenio:</b> <span style="font-weight:bold; color:darkblue;">$${abonoConvenio.toLocaleString('es-CL')}</span>`;
-        }
-
-
-        contenido.innerHTML = `
-            <div id="detalle-pago-grid">
-                <b>Residente:</b>       <span>${pago.Nombre_Residente}</span>
-                <b>N° Parcela:</b>      <span>${pago.N_Parcela}</span>
-                <b>Período pagado:</b>  <span>${formatearPeriodo(pago.Periodo)}</span>
-                <hr style="grid-column: 1 / -1;">
-                <b>Valor Gasto Común:</b> <span>$${parseFloat(pago.Valor_Gasto_Comun).toLocaleString('es-CL')}</span>
-                <b>Interés por mora:</b>  <span>$${parseFloat(pago.Interes || 0).toLocaleString('es-CL')}</span>
-                <b>Multa aplicada:</b>    <span>$${parseFloat(pago['Multa_1/4'] || 0).toLocaleString('es-CL')}</span>
-                <b style="color:#2a7ca3;">Deuda del Período G.C.:</b> <span style="font-weight:bold; color:#2a7ca3;">$${deudaDelPeriodo.toLocaleString('es-CL')}</span>
-                <hr style="grid-column: 1 / -1;">
-                <b>Monto Pagado G.C.:</b>      <span style="font-weight:bold; color:green;">$${montoPagado.toLocaleString('es-CL')}</span>
-                ${filaAbono}
-                <b>Fecha de Pago:</b>     <span>${new Date(pago.Fecha_Pago.replace(/-/g, '/')).toLocaleDateString('es-CL', {timeZone:'UTC'})}</span>
-                <b>Método de Pago:</b>    <span>${pago.Metodo_Pago}</span>
-                <b>Resultado Saldo G.C.:</b> <span style="font-weight:bold; color:${saldoTransaccion < 0 ? 'red' : 'green'};">${saldoFinalTexto}</span>
-                <hr style="grid-column: 1 / -1;">
-                <b>Estado del pago:</b>   <span>${pago.Estado}</span>
-                ${filaComprobante}
-            </div>
-        `;
-
-        modal.style.display = 'flex';
+  // MODIFICADO: La función ahora siempre muestra la línea de "Abono a Convenio".
+  function abrirModalDetalle(idPago) {
+    const pago = pagosGC_obj.find(p => p.ID_Pago == idPago);
+    if (!pago) {
+        mostrarMensaje('No se encontró el registro del pago.', 'error');
+        return;
     }
+
+    const modal = document.getElementById('modalDetallePago');
+    const contenido = document.getElementById('contenidoDetallePago');
+
+    const montoPagado = parseFloat(pago.Monto_Pagado || 0);
+    const saldoTransaccion = parseFloat(pago.Saldo_Pendiente_o_a_favor || 0);
+    const deudaDelPeriodo = montoPagado - saldoTransaccion;
+    const saldoFinalTexto = saldoTransaccion >= 0 ? `A favor: $${saldoTransaccion.toLocaleString('es-CL')}` : `Pendiente: $${Math.abs(saldoTransaccion).toLocaleString('es-CL')}`;
+    const abonoConvenio = parseFloat(pago.Abono_Convenio || 0);
+    const colorAbono = abonoConvenio > 0 ? 'darkblue' : '#555';
+
+    let filaComprobante = '';
+    if (pago.ID_Comprobante_Drive) {
+        filaComprobante = `<b>Comprobante:</b> <span><a href="${pago.ID_Comprobante_Drive}" target="_blank" class="btn small">Ver Documento</a></span>`;
+    } else {
+        filaComprobante = '<b>Comprobante:</b> <span>No adjunto</span>';
+    }
+    
+    const filaAbono = `<b>Abono a Convenio:</b> <span style="font-weight:bold; color:${colorAbono};">$${abonoConvenio.toLocaleString('es-CL')}</span>`;
+
+
+    contenido.innerHTML = `
+        <div id="detalle-pago-grid">
+            <b>Residente:</b>       <span>${pago.Nombre_Residente}</span>
+            <b>N° Parcela:</b>      <span>${pago.N_Parcela}</span>
+            <b>Período pagado:</b>  <span>${formatearPeriodo(pago.Periodo)}</span>
+            <hr style="grid-column: 1 / -1;">
+            <b>Valor Gasto Común:</b> <span>$${parseFloat(pago.Valor_Gasto_Comun).toLocaleString('es-CL')}</span>
+            <b>Interés por mora:</b>  <span>$${parseFloat(pago.Interes || 0).toLocaleString('es-CL')}</span>
+            <b>Multa aplicada:</b>    <span>$${parseFloat(pago['Multa_1/4'] || 0).toLocaleString('es-CL')}</span>
+            <b style="color:#2a7ca3;">Deuda del Período G.C.:</b> <span style="font-weight:bold; color:#2a7ca3;">$${deudaDelPeriodo.toLocaleString('es-CL')}</span>
+            <hr style="grid-column: 1 / -1;">
+            <b>Monto Pagado G.C.:</b>      <span style="font-weight:bold; color:green;">$${montoPagado.toLocaleString('es-CL')}</span>
+            ${filaAbono}
+            <b>Fecha de Pago:</b>     <span>${new Date(pago.Fecha_Pago.replace(/-/g, '/')).toLocaleDateString('es-CL', {timeZone:'UTC'})}</span>
+            <b>Método de Pago:</b>    <span>${pago.Metodo_Pago}</span>
+            <b>Resultado Saldo G.C.:</b> <span style="font-weight:bold; color:${saldoTransaccion < 0 ? 'red' : 'green'};">${saldoFinalTexto}</span>
+             <hr style="grid-column: 1 / -1;">
+            <b>Estado del pago:</b>   <span>${pago.Estado}</span>
+            ${filaComprobante}
+        </div>
+    `;
+
+    modal.style.display = 'flex';
+  }
+
+  // Se omite el resto del código por brevedad, ya que no tiene cambios.
+  // ...
+  // Todos los listeners y demás funciones permanecen iguales.
+  // ...
 
     function filtrarYRenderizar() {
         const parcela = document.getElementById('filtroParcela').value;
