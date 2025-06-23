@@ -234,18 +234,18 @@ async function cargarGastosComunes() {
     hacerColumnasRedimensionables(tabla);
   }
   
+  // MODIFICADO: Se ajusta la función para mostrar el panel de convenio y una tabla de detalle anual más limpia.
   function renderizarTablaResidente(parcela, anio) {
     const residente = residentes.find(r => String(r[3]) === String(parcela));
     if (!residente) { tbodyGastos.innerHTML = `<tr><td colspan="14">No se encontró residente.</td></tr>`; return; }
 
     const widgetConvenio = document.getElementById('widget-convenio');
     const deudaInicialConvenio = parseFloat(residente[11] || 0);
+
     if (deudaInicialConvenio > 0) {
         widgetConvenio.style.display = 'block';
         const saldoActualConvenio = parseFloat(residente[12] || 0);
-        const totalAbonado = pagosGC_obj
-            .filter(p => p.N_Parcela == parcela)
-            .reduce((sum, p) => sum + parseFloat(p.Abono_Convenio || 0), 0);
+        const totalAbonado = deudaInicialConvenio - saldoActualConvenio;
 
         document.getElementById('convenio-summary-grid').innerHTML = `
             <div>Deuda Inicial<span style="color: #dc3545;">$${deudaInicialConvenio.toLocaleString('es-CL')}</span></div>
@@ -253,7 +253,7 @@ async function cargarGastosComunes() {
             <div>Saldo Pendiente<span style="color: #ffc107;">$${saldoActualConvenio.toLocaleString('es-CL')}</span></div>
         `;
 
-        const abonosDelAnio = pagosGC_obj.filter(p => p.N_Parcela == parcela && p.anio == anio && parseFloat(p.Abono_Convenio || 0) > 0);
+        const abonosDelAnio = pagosGC_obj.filter(p => String(p.N_Parcela) === String(parcela) && p.anio == anio && parseFloat(p.Abono_Convenio || 0) > 0);
         const theadAbonos = document.getElementById('thead-abonos');
         const tbodyAbonos = document.getElementById('tbody-abonos');
         theadAbonos.innerHTML = `<tr><th>Fecha de Pago</th><th>Monto Abonado</th><th>Comprobante</th></tr>`;
@@ -270,7 +270,7 @@ async function cargarGastosComunes() {
                 `;
             });
         } else {
-            tbodyAbonos.innerHTML = `<tr><td colspan="3" style="text-align:center;">No hay abonos registrados para este año.</td></tr>`;
+            tbodyAbonos.innerHTML = `<tr><td colspan="3" style="text-align:center;">No hay abonos a convenio registrados para este año.</td></tr>`;
         }
     } else {
         widgetConvenio.style.display = 'none';
@@ -278,13 +278,12 @@ async function cargarGastosComunes() {
 
     document.querySelector('#detalle-gastos h3').textContent = `Detalle Anual de Gastos Comunes para ${residente[1]} (Parcela ${parcela})`;
     theadGastos.innerHTML = `<tr><th>Período</th><th>Fecha Vencimiento</th><th>Monto Pagado</th><th>Saldo Transacción</th><th>Interés</th><th>Multa</th><th>Deuda Pendiente</th><th>Fecha Pago</th><th>Método Pago</th><th>Estado</th></tr>`;
-
     tbodyGastos.innerHTML = '';
     const valorGastoComun = parseFloat(residente[8]);
 
     MESES.forEach((mes, index) => {
         const mesNumero = index + 1;
-        const pagoExistente = pagosGC_obj.find(p => p.N_Parcela == parcela && p.Periodo && formatearPeriodo(p.Periodo).toLowerCase().startsWith(mes.toLowerCase()) && p.anio == anio);
+        const pagoExistente = pagosGC_obj.find(p => String(p.N_Parcela) === String(parcela) && p.Periodo && formatearPeriodo(p.Periodo).toLowerCase().startsWith(mes.toLowerCase()) && p.anio == anio);
         
         let interes = 0, multa = 0, mesesImpagos = 0, saldo = 0;
         let estado = 'Pendiente', montoPagado = 0, fechaPago = '---', metodoPago = '---';
@@ -403,11 +402,6 @@ async function cargarGastosComunes() {
     modal.style.display = 'flex';
   }
 
-  // Se omite el resto del código por brevedad, ya que no tiene cambios significativos y es muy largo.
-  // Las funciones y listeners a continuación se mantienen igual que en la versión anterior.
-  // ...
-  
-    // ... (El código restante es idéntico al de la respuesta anterior)
     function filtrarYRenderizar() {
         const parcela = document.getElementById('filtroParcela').value;
         const anio = document.getElementById('filtroAnio').value;
