@@ -11,7 +11,6 @@ const ENCABEZADOS_PAGOS = [
 
 function formatearPeriodo(periodo) {
   if (!periodo) return 'N/A';
-  // CORREGIDO: La expresión regular ahora maneja un formato más flexible, como "Mes Año".
   const matchAnio = periodo.toString().match(/\d{4}/);
   const anio = matchAnio ? parseInt(matchAnio[0]) : null;
   const matchMes = MESES.findIndex(m => periodo.toLowerCase().includes(m.toLowerCase()));
@@ -20,7 +19,6 @@ function formatearPeriodo(periodo) {
     return `${MESES[matchMes]} ${anio}`;
   }
   
-  // Mantiene la lógica anterior como respaldo
   const match = periodo.toString().match(/^(\d{4})-(\d{1,2})$/);
   if (match) {
     const anio = parseInt(match[1]);
@@ -180,17 +178,25 @@ async function cargarGastosComunes() {
             fechaPago = fechaPagoStr ? new Date(fechaPagoStr.replace(/-/g, '/')).toLocaleDateString('es-CL', {timeZone: 'UTC'}) : '---';
             metodoPago = pagoExistente.Metodo_Pago || '---';
         } else if (hoy > fechaVencimiento) {
-            estado = 'Moroso';
-            const diffAnios = hoy.getFullYear() - fechaVencimiento.getFullYear();
-            const diffMeses = hoy.getMonth() - fechaVencimiento.getMonth();
-            mesesImpagos = diffAnios * 12 + diffMeses;
-            if (hoy.getDate() >= 11) mesesImpagos++;
-            if (mesesImpagos <= 0) mesesImpagos = 1;
-            const timcAnual = (timcData[anio] && timcData[anio][mesNumero]) ? timcData[anio][mesNumero] : 0;
-            interes = valorGastoComun * (timcAnual / 100) / 12;
-            multa = (valorGastoComun / 4) * mesesImpagos;
-            deudaPendiente = valorGastoComun + interes + multa;
-            saldo = -deudaPendiente;
+            // REGLA DE NEGOCIO: Se aplica la nueva condición para calcular la deuda de meses impagos.
+            const parcelaNum = parseInt(parcela);
+            const cutoffDate = new Date(2025, 6, 10); // 10 de Julio, 2025 (Mes 6 es Julio)
+            const esParcelaExcepcion = (parcelaNum === 7 || parcelaNum === 11);
+            const esPeriodoPostCorte = fechaVencimiento >= cutoffDate;
+
+            if (esParcelaExcepcion || esPeriodoPostCorte) {
+                estado = 'Moroso';
+                const diffAnios = hoy.getFullYear() - fechaVencimiento.getFullYear();
+                const diffMeses = hoy.getMonth() - fechaVencimiento.getMonth();
+                mesesImpagos = diffAnios * 12 + diffMeses;
+                if (hoy.getDate() >= 11) mesesImpagos++;
+                if (mesesImpagos <= 0) mesesImpagos = 1;
+                const timcAnual = (timcData[anio] && timcData[anio][mesNumero]) ? timcData[anio][mesNumero] : 0;
+                interes = valorGastoComun * (timcAnual / 100) / 12;
+                multa = (valorGastoComun / 4) * mesesImpagos;
+                deudaPendiente = valorGastoComun + interes + multa;
+                saldo = -deudaPendiente;
+            }
         }
 
         const tr = document.createElement('tr');
@@ -298,7 +304,6 @@ async function cargarGastosComunes() {
   });
   
   const modal = document.getElementById('modalGC');
-  // CORREGIDO: Al abrir el modal de gasto, se establece el año del filtro principal.
   document.getElementById('btnAbrirModalGasto').addEventListener('click', () => {
     document.getElementById('inputAnioPeriodo').value = document.getElementById('filtroAnio').value;
     modal.style.display = 'flex'
@@ -381,7 +386,6 @@ async function cargarGastosComunes() {
 
         const valorGastoComun = parseFloat(residente[8]);
         const mesPagadoIndex = parseInt(formData.get('Periodo'));
-        // CORREGIDO: Se toma el año del nuevo campo del formulario, no de la fecha de pago.
         const anioSeleccionado = parseInt(formData.get('Anio_Periodo'));
         const fechaDePago = new Date(formData.get('Fecha_Pago').replace(/-/g, '/'));
         const fechaVencimiento = new Date(anioSeleccionado, mesPagadoIndex, 10);
@@ -389,7 +393,14 @@ async function cargarGastosComunes() {
         let deudaDelPeriodo = valorGastoComun;
         let interes = 0, multa = 0, mesesImpagos = 0;
 
-        if (fechaDePago > fechaVencimiento) {
+        // REGLA DE NEGOCIO: Aplicar la nueva condición para el cálculo de intereses y multas al registrar un pago.
+        const parcelaNum = parseInt(parcela);
+        const cutoffDate = new Date(2025, 6, 10); // 10 de Julio, 2025 (Mes 6 es Julio)
+        const esPagoAtrasado = fechaDePago > fechaVencimiento;
+        const esParcelaExcepcion = (parcelaNum === 7 || parcelaNum === 11);
+        const esPeriodoPostCorte = fechaVencimiento >= cutoffDate;
+
+        if (esPagoAtrasado && (esParcelaExcepcion || esPeriodoPostCorte)) {
             const diffAnios = fechaDePago.getFullYear() - fechaVencimiento.getFullYear();
             const diffMeses = fechaDePago.getMonth() - fechaVencimiento.getMonth();
             mesesImpagos = diffAnios * 12 + diffMeses;
@@ -515,7 +526,6 @@ async function cargarGastosComunes() {
     `;
   }
   
-  // CORREGIDO: Lógica de envío de comprobante para manejar múltiples pagos.
   inputParcelaComprobante.addEventListener('input', (e) => {
     const parcela = e.target.value;
     const selectorContainer = document.getElementById('periodo-selector-container');
@@ -525,7 +535,6 @@ async function cargarGastosComunes() {
     const asuntoInput = document.getElementById('inputAsuntoComprobante');
     const cuerpoDiv = document.getElementById('divCuerpoComprobante');
 
-    // Resetear campos
     nombreInput.value = '';
     emailInput.value = '';
     asuntoInput.value = '';
