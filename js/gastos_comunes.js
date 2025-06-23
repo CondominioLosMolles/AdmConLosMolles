@@ -30,36 +30,37 @@ function formatearPeriodo(periodo) {
   return periodo;
 }
 
+// CORREGIDO: Versión más robusta de la función para hacer columnas redimensionables.
 function hacerColumnasRedimensionables(table) {
-    const headers = table.querySelectorAll('th');
-    let thBeingResized = null;
-
+    const headers = Array.from(table.querySelectorAll('th'));
     headers.forEach(header => {
         const resizer = document.createElement('div');
         resizer.className = 'resizer';
         header.appendChild(resizer);
-
-        resizer.addEventListener('mousedown', (e) => {
-            thBeingResized = header;
+        
+        const onMouseDown = (e) => {
             e.preventDefault();
+            const startX = e.pageX;
+            const startWidth = header.offsetWidth;
+
+            const onMouseMove = (e) => {
+                const newWidth = startWidth + (e.pageX - startX);
+                if (newWidth > 50) { // Ancho mínimo de 50px
+                    header.style.width = `${newWidth}px`;
+                }
+            };
+
+            const onMouseUp = () => {
+                window.removeEventListener('mousemove', onMouseMove);
+                window.removeEventListener('mouseup', onMouseUp);
+            };
+
             window.addEventListener('mousemove', onMouseMove);
             window.addEventListener('mouseup', onMouseUp);
-        });
+        };
+        
+        resizer.addEventListener('mousedown', onMouseDown);
     });
-
-    const onMouseMove = (e) => {
-        if (!thBeingResized) return;
-        const newWidth = e.pageX - thBeingResized.getBoundingClientRect().left;
-        if (newWidth > 50) {
-            thBeingResized.style.width = `${newWidth}px`;
-        }
-    };
-
-    const onMouseUp = () => {
-        thBeingResized = null;
-        window.removeEventListener('mousemove', onMouseMove);
-        window.removeEventListener('mouseup', onMouseUp);
-    };
 }
 
 
