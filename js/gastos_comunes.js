@@ -234,10 +234,13 @@ async function cargarGastosComunes() {
     hacerColumnasRedimensionables(tabla);
   }
   
-  // MODIFICADO: Se ajusta la función para mostrar el panel de convenio y una tabla de detalle anual más limpia.
   function renderizarTablaResidente(parcela, anio) {
     const residente = residentes.find(r => String(r[3]) === String(parcela));
-    if (!residente) { tbodyGastos.innerHTML = `<tr><td colspan="14">No se encontró residente.</td></tr>`; return; }
+    if (!residente) { 
+        document.getElementById('widget-convenio').style.display = 'none';
+        tbodyGastos.innerHTML = `<tr><td colspan="10">No se encontró residente.</td></tr>`; 
+        return; 
+    }
 
     const widgetConvenio = document.getElementById('widget-convenio');
     const deudaInicialConvenio = parseFloat(residente[11] || 0);
@@ -278,6 +281,7 @@ async function cargarGastosComunes() {
 
     document.querySelector('#detalle-gastos h3').textContent = `Detalle Anual de Gastos Comunes para ${residente[1]} (Parcela ${parcela})`;
     theadGastos.innerHTML = `<tr><th>Período</th><th>Fecha Vencimiento</th><th>Monto Pagado</th><th>Saldo Transacción</th><th>Interés</th><th>Multa</th><th>Deuda Pendiente</th><th>Fecha Pago</th><th>Método Pago</th><th>Estado</th></tr>`;
+
     tbodyGastos.innerHTML = '';
     const valorGastoComun = parseFloat(residente[8]);
 
@@ -401,7 +405,6 @@ async function cargarGastosComunes() {
 
     modal.style.display = 'flex';
   }
-
     function filtrarYRenderizar() {
         const parcela = document.getElementById('filtroParcela').value;
         const anio = document.getElementById('filtroAnio').value;
@@ -605,8 +608,12 @@ async function cargarGastosComunes() {
                 if (typeof actualizarSaldoConvenioEnSheet !== 'function') {
                     throw new Error("La función para actualizar el saldo del convenio no está disponible en sheets.js.");
                 }
-                const saldoActualConvenio = residente[12] ? parseFloat(residente[12]) : 0;
-                const nuevoSaldo = saldoActualConvenio - abonoConvenio;
+                // CORREGIDO: Lógica robusta para calcular el nuevo saldo del convenio
+                const deudaInicialConvenio = parseFloat(residente[11] || 0);
+                let saldoPrevio = residente[12] ? parseFloat(residente[12]) : deudaInicialConvenio;
+                if (saldoPrevio === 0 && deudaInicialConvenio > 0) saldoPrevio = deudaInicialConvenio;
+
+                const nuevoSaldo = saldoPrevio - abonoConvenio;
                 await actualizarSaldoConvenioEnSheet(residenteRowInSheet, nuevoSaldo);
                 residente[12] = nuevoSaldo.toString();
             }
@@ -623,7 +630,7 @@ async function cargarGastosComunes() {
             const nuevoPagoObj = {};
             ENCABEZADOS_PAGOS.forEach((encabezado, i) => nuevoPagoObj[encabezado] = datosParaSheet[i]);
             nuevoPagoObj.anio = anioSeleccionado;
-            nuevoPagoObj.rowNum = pagosGC_obj.length + 2;
+            nuevoPagoObj.rowNum = pagosGC_obj.length + 2; // FIX: Asignar número de fila al nuevo objeto
             pagosGC_obj.push(nuevoPagoObj);
             
             filtrarYRenderizar();
