@@ -31,8 +31,7 @@ async function cargarDashboard() {
   const parcelasMorosas = morosos.map(r => r[3]);
   const deudaMorosos = pagos.filter(p => p && parcelasMorosas.includes(p[2]) && p[15] === 'Moroso').reduce((a,b) => a + Number(b[12]||0), 0);
 
-  const abonos = pagos.filter(p => p && p[15] === 'Abono');
-  const parcelasAbono = [...new Set(abonos.map(p => p[2]))]; // Únicas parcelas en estado Abono
+  // ELIMINADO: Lógica para calcular abonos que ya no se muestra.
 
   const main = document.getElementById('main-content');
   main.innerHTML = `
@@ -53,10 +52,7 @@ async function cargarDashboard() {
         <div><b>Morosos:</b> ${morosos.length}</div>
         <div><b>Parcelas:</b> ${parcelasMorosas.join(', ') || '-'}</div>
         <div><b>Deuda Total:</b> $${deudaMorosos.toLocaleString('es-CL')}</div>
-        <hr>
-        <div><b>Con Abonos:</b> ${parcelasAbono.length}</div>
-        <div><b>Parcelas:</b> ${parcelasAbono.join(', ') || '-'}</div>
-      </div>
+        </div>
     </div>`;
 
   const labels = [];
