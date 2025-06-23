@@ -30,7 +30,6 @@ function formatearPeriodo(periodo) {
   return periodo;
 }
 
-// CORREGIDO: Versión más robusta de la función para hacer columnas redimensionables.
 function hacerColumnasRedimensionables(table) {
     const headers = Array.from(table.querySelectorAll('th'));
     headers.forEach(header => {
@@ -45,7 +44,7 @@ function hacerColumnasRedimensionables(table) {
 
             const onMouseMove = (e) => {
                 const newWidth = startWidth + (e.pageX - startX);
-                if (newWidth > 50) { // Ancho mínimo de 50px
+                if (newWidth > 50) {
                     header.style.width = `${newWidth}px`;
                 }
             };
@@ -234,11 +233,15 @@ async function cargarGastosComunes() {
 
             if (esParcelaExcepcion || esPeriodoPostCorte) {
                 estado = 'Moroso';
-                const diffAnios = hoy.getFullYear() - fechaVencimiento.getFullYear();
-                const diffMeses = hoy.getMonth() - fechaVencimiento.getMonth();
-                mesesImpagos = diffAnios * 12 + diffMeses;
-                if (hoy.getDate() >= 11) mesesImpagos++;
-                if (mesesImpagos <= 0) mesesImpagos = 1;
+                
+                // CÁLCULO DE MESES DE ATRASO CORREGIDO
+                let tempVenc = new Date(fechaVencimiento);
+                mesesImpagos = 0;
+                while(tempVenc < hoy) {
+                    mesesImpagos++;
+                    tempVenc.setMonth(tempVenc.getMonth() + 1);
+                }
+                
                 const timcAnual = (timcData[anio] && timcData[anio][mesNumero]) ? timcData[anio][mesNumero] : 0;
                 interes = valorGastoComun * (timcAnual / 100) / 12;
                 multa = (valorGastoComun / 4) * mesesImpagos;
@@ -389,7 +392,6 @@ async function cargarGastosComunes() {
         nombreInput.value = res[1];
         valorInput.value = parseFloat(res[8]).toLocaleString('es-CL', { style: 'currency', currency: 'CLP' });
         
-        // El índice 12 corresponde a la columna M (Saldo_Convenio_Actual)
         const saldoConvenio = res[12] ? parseFloat(res[12]) : 0;
         if (saldoConvenio > 0) {
             saldoConvenioInfo.textContent = `Saldo convenio: $${saldoConvenio.toLocaleString('es-CL')}`;
@@ -428,7 +430,7 @@ async function cargarGastosComunes() {
                   valorGastoComunInput.value = parseFloat(res[8]).toLocaleString('es-CL', { style: 'currency', currency: 'CLP' });
                   
                   const saldoConvenioInfo = document.getElementById('saldo-convenio-info');
-                  const saldoConvenio = res[12] ? parseFloat(res[12]) : 0; // Índice 12 es Columna M
+                  const saldoConvenio = res[12] ? parseFloat(res[12]) : 0;
                   if (saldoConvenio > 0) {
                       saldoConvenioInfo.textContent = `Saldo convenio: $${saldoConvenio.toLocaleString('es-CL')}`;
                       saldoConvenioInfo.style.display = 'block';
@@ -473,22 +475,28 @@ async function cargarGastosComunes() {
         let deudaDelPeriodo = valorGastoComun;
         let interes = 0, multa = 0, mesesImpagos = 0;
 
-        const parcelaNum = parseInt(parcela);
-        const cutoffDate = new Date(2025, 6, 10); 
         const esPagoAtrasado = fechaDePago > fechaVencimiento;
-        const esParcelaExcepcion = (parcelaNum === 7 || parcelaNum === 11);
-        const esPeriodoPostCorte = fechaVencimiento >= cutoffDate;
+        if (esPagoAtrasado) {
+            const parcelaNum = parseInt(parcela);
+            const cutoffDate = new Date(2025, 6, 10);
+            const esParcelaExcepcion = (parcelaNum === 7 || parcelaNum === 11);
+            const esPeriodoPostCorte = fechaVencimiento >= cutoffDate;
 
-        if (esPagoAtrasado && (esParcelaExcepcion || esPeriodoPostCorte)) {
-            const diffAnios = fechaDePago.getFullYear() - fechaVencimiento.getFullYear();
-            const diffMeses = fechaDePago.getMonth() - fechaVencimiento.getMonth();
-            mesesImpagos = diffAnios * 12 + diffMeses;
-            if (fechaDePago.getDate() >= 11) mesesImpagos++;
-            if (mesesImpagos <= 0) mesesImpagos = 1;
-            const timcAnual = (timcData[anioSeleccionado] && timcData[anioSeleccionado][mesPagadoIndex + 1]) ? timcData[anioSeleccionado][mesPagadoIndex + 1] : 0;
-            interes = valorGastoComun * (timcAnual / 100) / 12;
-            multa = (valorGastoComun / 4) * mesesImpagos;
-            deudaDelPeriodo = valorGastoComun + interes + multa;
+            if (esParcelaExcepcion || esPeriodoPostCorte) {
+                // CÁLCULO DE MESES DE ATRASO CORREGIDO
+                let tempVenc = new Date(fechaVencimiento);
+                while(tempVenc < fechaDePago) {
+                    mesesImpagos++;
+                    tempVenc.setMonth(tempVenc.getMonth() + 1);
+                }
+
+                if (mesesImpagos > 0) {
+                    const timcAnual = (timcData[anioSeleccionado] && timcData[anioSeleccionado][mesPagadoIndex + 1]) ? timcData[anioSeleccionado][mesPagadoIndex + 1] : 0;
+                    interes = valorGastoComun * (timcAnual / 100) / 12;
+                    multa = (valorGastoComun / 4) * mesesImpagos;
+                    deudaDelPeriodo = valorGastoComun + interes + multa;
+                }
+            }
         }
 
         let linkComprobante = null;
