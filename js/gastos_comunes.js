@@ -202,6 +202,9 @@ async function cargarGastosComunes() {
     </div>
   `;
   
+  // ... El resto del código continúa en la Parte 2 ...
+// ... continuación de la Parte 1 ...
+
   const tbodyGastos = document.getElementById('tbody-gastos');
   const theadGastos = document.getElementById('thead-gastos');
 
@@ -691,8 +694,8 @@ async function cargarGastosComunes() {
     }
 
     let mensajeAdvertencia = '';
-    if (saldo < 0) {
-        mensajeAdvertencia = `<p style="font-size: 12px; color: #c00; font-weight: bold;">El no pago de la totalidad de su Gasto Común seguirá generando intereses o multas. Favor regularizar su pago total para no quedar en estado moroso.</p>`;
+    if (pago.Estado === 'Moroso') {
+        mensajeAdvertencia = `<p style="font-size: 12px; color: #c00; font-weight: bold;">Le recordamos que, según el reglamento de copropiedad, el saldo pendiente de su Gasto Común continuará generando los intereses y multas correspondientes hasta su pago total.</p>`;
     }
     
     let filaAbono = '';
