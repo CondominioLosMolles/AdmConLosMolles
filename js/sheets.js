@@ -134,12 +134,11 @@ async function enviarCorreo(destinatarios, asunto, mensaje) {
   });
 }
 
-// NUEVO: Función para marcar un comprobante como enviado en la hoja Pagos_GC
 async function marcarComprobanteEnviado(rowNumber) {
     if (rowNumber < 2) throw new Error("Número de fila inválido para actualizar.");
     await gapi.client.sheets.spreadsheets.values.update({
         spreadsheetId: SPREADSHEET_ID,
-        range: `${SHEET_PAGOS_GC}!S${rowNumber}`, // Columna S
+        range: `${SHEET_PAGOS_GC}!S${rowNumber}`,
         valueInputOption: 'USER_ENTERED',
         resource: { values: [['SI']] }
     });
