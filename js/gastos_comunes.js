@@ -227,7 +227,7 @@ async function cargarGastosComunes() {
             metodoPago = pagoExistente.Metodo_Pago || '---';
         } else if (hoy > fechaVencimiento) {
             const parcelaNum = parseInt(parcela);
-            const cutoffDate = new Date(2025, 6, 10);
+            const cutoffDate = new Date(2025, 6, 10); // Mes 6 es Julio
             const esParcelaExcepcion = (parcelaNum === 7 || parcelaNum === 11);
             const esPeriodoPostCorte = fechaVencimiento >= cutoffDate;
 
@@ -382,13 +382,13 @@ async function cargarGastosComunes() {
 
     if (!parcelaBuscada) return;
     
-    // El índice 12 corresponde a la columna M (Saldo_Convenio_Actual)
     const res = residentes.find(r => String(r[3]) === parcelaBuscada && r[9] && r[9].trim().toUpperCase() === 'SI');
 
     if (res) {
         nombreInput.value = res[1];
         valorInput.value = parseFloat(res[8]).toLocaleString('es-CL', { style: 'currency', currency: 'CLP' });
         
+        // El índice 12 corresponde a la columna M (Saldo_Convenio_Actual)
         const saldoConvenio = res[12] ? parseFloat(res[12]) : 0;
         if (saldoConvenio > 0) {
             saldoConvenioInfo.textContent = `Saldo convenio: $${saldoConvenio.toLocaleString('es-CL')}`;
@@ -461,7 +461,7 @@ async function cargarGastosComunes() {
         if (residenteIdx === -1) throw new Error("No se encontró un 'Contacto Principal' para la parcela seleccionada. Verifique la hoja de Residentes.");
         
         const residente = residentes[residenteIdx];
-        const residenteRowInSheet = residenteIdx + 2; // +1 por 0-index, +1 por cabecera
+        const residenteRowInSheet = residenteIdx + 2;
 
         const valorGastoComun = parseFloat(residente[8]);
         const mesPagadoIndex = parseInt(formData.get('Periodo'));
@@ -511,10 +511,13 @@ async function cargarGastosComunes() {
         const deudaPendienteParaSheet = saldoTransaccion < 0 ? -saldoTransaccion : 0;
         
         if (abonoConvenio > 0) {
+            if (typeof actualizarSaldoConvenioEnSheet !== 'function') {
+                throw new Error("La función para actualizar el saldo del convenio no está disponible en sheets.js.");
+            }
             const saldoActualConvenio = residente[12] ? parseFloat(residente[12]) : 0;
             const nuevoSaldo = saldoActualConvenio - abonoConvenio;
             await actualizarSaldoConvenioEnSheet(residenteRowInSheet, nuevoSaldo);
-            residente[12] = nuevoSaldo.toString(); // Actualizar el dato en memoria
+            residente[12] = nuevoSaldo.toString();
         }
 
         const datosParaSheet = [
