@@ -2,15 +2,14 @@
 async function cargarDashboard() {
   limpiarMainContent();
   mostrarSpinner();
-  let residentes = [], pagos = [], egresos = [], mantenciones = [], config = {}; // Añadir config
+  let residentes = [], pagos = [], egresos = [], mantenciones = [], config = {};
   try {
-    // MODIFICADO: Ahora también obtiene la configuración global
     const [residentesData, pagosData, egresosData, mantencionesData, configData] = await Promise.all([
         obtenerResidentes(),
         obtenerPagosGC(),
         obtenerEgresos(),
         obtenerMantenciones(),
-        obtenerConfiguracion() // NUEVA LLAMADA
+        obtenerConfiguracion()
     ]);
     residentes = residentesData || [];
     pagos = pagosData || [];
@@ -25,34 +24,33 @@ async function cargarDashboard() {
 
   const activos = residentes.filter(r => r && r[7] === 'Activo').length;
   const mesActual = new Date().toISOString().slice(0,7);
-  const ingresosMes = pagos.filter(p => p && p[13] && p[13].startsWith(mesActual)).reduce((a,b) => a + Number(b[6]||0), 0);
+  const ingresosMes = pagos.filter(p => p && p[13] && p[13].startsWith(mesActual)).reduce((a,b) => a + Number(b[6]||0) + Number(b[17]||0), 0);
   const egresosMes = egresos.filter(e => e && e[1] && e[1].startsWith(mesActual)).reduce((a,b) => a + Number(b[6]||0), 0);
   
-  // MODIFICADO: El cálculo del Saldo de Caja ahora incluye el Saldo Inicial.
   const saldoInicial = parseFloat(config.Saldo_Inicial_Caja || 0);
-  const totalIngresos = pagos.reduce((a,b) => a + Number(b[6]||0) + Number(b[17]||0), 0); // Suma G.C. y Abonos a Convenio
+  const totalIngresos = pagos.reduce((a,b) => a + Number(b[6]||0) + Number(b[17]||0), 0);
   const totalEgresos = egresos.reduce((a,b) => a + Number(b[6]||0), 0);
   const saldoCaja = saldoInicial + totalIngresos - totalEgresos;
 
   const mantPendientes = mantenciones.filter(m => m && (m[5] === 'Pendiente' || m[5] === 'Urgente')).length;
 
-  // Lógica de morosidad sin cambios...
   const morososData = {};
-  const hoy = new Date();
   
   residentes.forEach(r => {
-    if(!r[3]) return; // Si no tiene parcela, se omite
+    if(!r[3]) return;
     const parcela = r[3];
     if (!morososData[parcela]) {
-      morososData[parcela] = { deudaTotal: 0, mesesAtraso: 0 };
+      morososData[parcela] = { deudaTotal: 0 };
     }
   });
 
   pagos.forEach(p => {
+    if (p[2] && morososData[p[2]]) {
       const deuda = parseFloat(p[12] || 0);
       if (deuda > 0) {
         morososData[p[2]].deudaTotal += deuda;
       }
+    }
   });
   
   const morosos = Object.entries(morososData).filter(([_, data]) => data.deudaTotal > 0);
@@ -82,11 +80,11 @@ async function cargarDashboard() {
       </div>
     </div>`;
 
-  // Lógica del gráfico sin cambios...
   const labels = [];
   const meses = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
   const ingresosPorMes = [];
   const egresosPorMes = [];
+  const hoy = new Date();
   for (let i = 11; i >= 0; i--) {
     const d = new Date(hoy.getFullYear(), hoy.getMonth() - i, 1);
     const mesNombre = meses[d.getMonth()];
@@ -97,8 +95,40 @@ async function cargarDashboard() {
     egresosPorMes.push(egresos.filter(e => e && e[1] && e[1].startsWith(periodo)).reduce((a,b) => a + Number(b[6]||0), 0));
   }
 
+  // RESTAURADO: Lógica para renderizar el gráfico
   setTimeout(() => {
-    // ... (código del gráfico se mantiene igual)
+    const maxY = Math.max(...ingresosPorMes, ...egresosPorMes, 100000);
+    let stepSize = 100000;
+    if (maxY <= 500000) stepSize = 50000;
+    if (maxY <= 100000) stepSize = 10000;
+    let suggestedMax = Math.ceil(maxY / stepSize) * stepSize;
+
+    new Chart(document.getElementById('graficoIngresosEgresos'), {
+      type: 'bar',
+      data: {
+        labels,
+        datasets: [
+          { label: 'Ingresos', data: ingresosPorMes, backgroundColor:'#4e91f9' },
+          { label: 'Egresos', data: egresosPorMes, backgroundColor:'#7fd6c2' }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { position: 'top' } },
+        scales: {
+          x: { ticks: { autoSkip: false } },
+          y: {
+            beginAtZero: true,
+            suggestedMax: suggestedMax,
+            ticks: {
+              callback: value => '$' + value.toLocaleString('es-CL'),
+              stepSize: stepSize
+            }
+          }
+        }
+      }
+    });
   }, 100);
 
   ocultarSpinner();
