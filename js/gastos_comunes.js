@@ -6,7 +6,7 @@ const ENCABEZADOS_PAGOS = [
     'ID_Pago', 'Nombre_Residente', 'N_Parcela', 'Valor_Gasto_Comun', 'Periodo',
     'Fecha_Vencimiento', 'Monto_Pagado', 'Saldo_Pendiente_o_a_favor', 'Interes', 'TIMC',
     'Multa_1/4', 'Meses_Inpagos', 'Deuda_Total', 'Fecha_Pago', 'Metodo_Pago', 'Estado',
-    'ID_Comprobante_Drive', 'Abono_Convenio'
+    'ID_Comprobante_Drive', 'Abono_Convenio', 'Comprobante_Enviado' // NUEVO CAMPO
 ];
 
 function formatearPeriodo(periodo) {
@@ -30,6 +30,7 @@ function formatearPeriodo(periodo) {
   return periodo;
 }
 
+// CORREGIDO: Versión más robusta de la función para hacer columnas redimensionables.
 function hacerColumnasRedimensionables(table) {
     const headers = Array.from(table.querySelectorAll('th'));
     headers.forEach(header => {
@@ -44,7 +45,7 @@ function hacerColumnasRedimensionables(table) {
 
             const onMouseMove = (e) => {
                 const newWidth = startWidth + (e.pageX - startX);
-                if (newWidth > 50) {
+                if (newWidth > 50) { // Ancho mínimo de 50px
                     header.style.width = `${newWidth}px`;
                 }
             };
@@ -80,13 +81,14 @@ async function cargarGastosComunes() {
     
     residentes = residentes_data || [];
     
-    pagosGC_obj = (pagosGC_raw || []).map(fila => {
+    pagosGC_obj = (pagosGC_raw || []).map((fila, index) => {
         let obj = {};
         ENCABEZADOS_PAGOS.forEach((encabezado, i) => { obj[encabezado] = fila[i]; });
         if (obj.Periodo) {
             const anioMatch = obj.Periodo.toString().match(/\d{4}/);
             obj.anio = anioMatch ? parseInt(anioMatch[0]) : null;
         }
+        obj.rowNum = index + 2; // Guardar el número de fila real de la hoja
         return obj;
     }).filter(p => p.N_Parcela);
 
@@ -117,6 +119,7 @@ async function cargarGastosComunes() {
       #table-pagos th { position: relative; }
       .resizer { position: absolute; top: 0; right: -2px; width: 5px; cursor: col-resize; user-select: none; height: 100%; z-index: 1;}
       .resizer:hover { border-right: 2px solid #007bff; }
+      .comprobante-enviado { color: green; font-size: 1.2rem; font-weight: bold; text-align: center; }
     </style>
     <div style="display:flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;"><h2>Gastos Comunes</h2></div>
     
@@ -169,9 +172,10 @@ async function cargarGastosComunes() {
 
   function renderizarTablaGeneral(datos) {
     document.querySelector('#detalle-gastos h3').textContent = 'Detalle de Pagos Registrados';
-    theadGastos.innerHTML = `<tr><th>Residente</th><th>Parcela</th><th>Período</th><th>Monto Pagado G.C.</th><th>Abono Convenio</th><th>Deuda Pendiente G.C.</th><th>Fecha Pago</th><th>Estado</th></tr>`;
+    // MODIFICADO: Se añade columna "Comprobante"
+    theadGastos.innerHTML = `<tr><th>Residente</th><th>Parcela</th><th>Período</th><th>Monto Pagado G.C.</th><th>Abono Convenio</th><th>Deuda Pendiente G.C.</th><th>Fecha Pago</th><th>Estado</th><th>Comprobante</th></tr>`;
     tbodyGastos.innerHTML = '';
-    if (!datos || datos.length === 0) { tbodyGastos.innerHTML = `<tr><td colspan="8" style="text-align:center; padding:20px;">No hay registros para el año seleccionado.</td></tr>`; return; }
+    if (!datos || datos.length === 0) { tbodyGastos.innerHTML = `<tr><td colspan="9" style="text-align:center; padding:20px;">No hay registros para el año seleccionado.</td></tr>`; return; }
     datos.sort((a,b) => (b.Fecha_Pago ? new Date(b.Fecha_Pago) : 0) - (a.Fecha_Pago ? new Date(a.Fecha_Pago) : 0));
     datos.forEach(pago => {
         const estadoClass = (pago.Estado || 'pendiente').toLowerCase().trim().replace(' ', '-');
@@ -179,6 +183,9 @@ async function cargarGastosComunes() {
         tr.dataset.idPago = pago.ID_Pago;
         tr.classList.add('fila-clicable');
         const abonoConvenio = parseFloat(pago.Abono_Convenio || 0);
+        // NUEVO: Lógica para mostrar el ticket de comprobante enviado
+        const comprobanteEnviado = pago.Comprobante_Enviado === 'SI' ? '<span class="comprobante-enviado">✓</span>' : '';
+
         tr.innerHTML = `
             <td>${pago.Nombre_Residente || 'N/A'}</td>
             <td>${pago.N_Parcela}</td>
@@ -187,7 +194,8 @@ async function cargarGastosComunes() {
             <td>$${abonoConvenio.toLocaleString('es-CL')}</td>
             <td style="font-weight:bold; color: red;">$${parseFloat(pago.Deuda_Total || 0).toLocaleString('es-CL')}</td>
             <td>${pago.Fecha_Pago ? new Date(pago.Fecha_Pago.replace(/-/g, '/')).toLocaleDateString('es-CL', {timeZone:'UTC'}) : '---'}</td>
-            <td><span class="estado-tag estado-${estadoClass}">${pago.Estado || 'Pendiente'}</span></td>`;
+            <td><span class="estado-tag estado-${estadoClass}">${pago.Estado || 'Pendiente'}</span></td>
+            <td>${comprobanteEnviado}</td>`;
         tbodyGastos.appendChild(tr);
     });
     hacerColumnasRedimensionables(document.getElementById('table-pagos'));
@@ -227,14 +235,12 @@ async function cargarGastosComunes() {
             metodoPago = pagoExistente.Metodo_Pago || '---';
         } else if (hoy > fechaVencimiento) {
             const parcelaNum = parseInt(parcela);
-            const cutoffDate = new Date(2025, 6, 10); // Mes 6 es Julio
+            const cutoffDate = new Date(2025, 6, 10);
             const esParcelaExcepcion = (parcelaNum === 7 || parcelaNum === 11);
             const esPeriodoPostCorte = fechaVencimiento >= cutoffDate;
 
             if (esParcelaExcepcion || esPeriodoPostCorte) {
                 estado = 'Moroso';
-                
-                // CÁLCULO DE MESES DE ATRASO CORREGIDO
                 let tempVenc = new Date(fechaVencimiento);
                 mesesImpagos = 0;
                 while(tempVenc < hoy) {
@@ -483,7 +489,6 @@ async function cargarGastosComunes() {
             const esPeriodoPostCorte = fechaVencimiento >= cutoffDate;
 
             if (esParcelaExcepcion || esPeriodoPostCorte) {
-                // CÁLCULO DE MESES DE ATRASO CORREGIDO
                 let tempVenc = new Date(fechaVencimiento);
                 while(tempVenc < fechaDePago) {
                     mesesImpagos++;
@@ -533,7 +538,7 @@ async function cargarGastosComunes() {
           null, formData.get('Nombre_Residente'), parcela, valorGastoComun, periodoStr,
           fechaVencimiento.toISOString().split('T')[0], montoPagadoGC, saldoTransaccion, interes, null,
           multa, mesesImpagos, deudaPendienteParaSheet, formData.get('Fecha_Pago'), formData.get('Metodo_Pago'),
-          estadoPago, linkComprobante, abonoConvenio
+          estadoPago, linkComprobante, abonoConvenio, null // null para Comprobante_Enviado
         ];
         
         await agregarPagoGC(datosParaSheet);
@@ -558,9 +563,11 @@ async function cargarGastosComunes() {
   const modalComprobante = document.getElementById('modalComprobante');
   const formComprobante = document.getElementById('formEnviarComprobante');
   const inputParcelaComprobante = document.getElementById('inputNParcelaComprobante');
+  let pagoSeleccionadoParaEnviar = null; // Guardar el pago seleccionado
   
   document.getElementById('btnAbrirModalComprobante').addEventListener('click', () => {
     formComprobante.reset();
+    pagoSeleccionadoParaEnviar = null;
     document.getElementById('divCuerpoComprobante').innerHTML = `<span style="color: #6c757d;">Ingrese un N° de Parcela para generar la previsualización.</span>`;
     document.getElementById('periodo-selector-container').style.display = 'none';
     document.getElementById('selectPeriodoComprobante').innerHTML = '';
@@ -649,6 +656,7 @@ async function cargarGastosComunes() {
     cuerpoDiv.innerHTML = `<span style="color: #6c757d;">Ingrese un N° de Parcela...</span>`;
     selectorContainer.style.display = 'none';
     selector.innerHTML = '';
+    pagoSeleccionadoParaEnviar = null;
 
     if (!parcela) return;
     
@@ -676,6 +684,7 @@ async function cargarGastosComunes() {
     representativeResident[1] = residentNames;
 
     function generarVistaPrevia(pago) {
+        pagoSeleccionadoParaEnviar = pago;
         const periodoFormateado = formatearPeriodo(pago.Periodo);
         asuntoInput.value = `Comprobante pago Gasto Común ${periodoFormateado} Parcela ${parcela}`;
         cuerpoDiv.innerHTML = crearCuerpoCorreo(pago, representativeResident);
@@ -698,6 +707,7 @@ async function cargarGastosComunes() {
 
   document.getElementById('selectPeriodoComprobante').addEventListener('change', (e) => {
       const pagoId = e.target.value;
+      pagoSeleccionadoParaEnviar = null;
       const parcela = document.getElementById('inputNParcelaComprobante').value;
       const asuntoInput = document.getElementById('inputAsuntoComprobante');
       const cuerpoDiv = document.getElementById('divCuerpoComprobante');
@@ -709,6 +719,7 @@ async function cargarGastosComunes() {
       }
       
       const pagoSeleccionado = pagosGC_obj.find(p => p.ID_Pago == pagoId);
+      pagoSeleccionadoParaEnviar = pagoSeleccionado;
       const allResidentsForParcela = residentes.filter(r => String(r[3]) === String(parcela));
       const residentNames = allResidentsForParcela.map(r => r[1]).join(' y ');
       const representativeResident = [...allResidentsForParcela[0]]; 
@@ -722,23 +733,30 @@ async function cargarGastosComunes() {
 
   formComprobante.addEventListener('submit', async (e) => {
     e.preventDefault();
-    const cuerpoPreview = document.getElementById('divCuerpoComprobante');
-    if (typeof enviarCorreo !== 'function') {
-      return mostrarMensaje('Error: La función para enviar correos no está disponible.', 'error');
+    if (!pagoSeleccionadoParaEnviar) {
+        return mostrarMensaje('Debe seleccionar un comprobante para enviar.', 'error');
     }
-    const destinatario = document.getElementById('inputEmailComprobante').value;
-    const asunto = document.getElementById('inputAsuntoComprobante').value;
-    const cuerpo = cuerpoPreview.innerHTML;
 
-    if (!destinatario || !asunto || cuerpo.includes("Ingrese un N° de Parcela") || cuerpo.includes("Seleccione un período")) {
-      return mostrarMensaje('Datos incompletos o inválidos. Asegúrese de seleccionar una parcela y un pago.', 'error');
+    const destinatario = document.getElementById('inputEmailComprobante').value;
+    if (!destinatario) {
+        return mostrarMensaje('El residente no tiene un correo electrónico registrado.', 'error');
     }
     
     mostrarSpinner();
     try {
+      const asunto = document.getElementById('inputAsuntoComprobante').value;
+      const cuerpo = document.getElementById('divCuerpoComprobante').innerHTML;
+      
       await enviarCorreo(destinatario, asunto, cuerpo);
+      
+      // Marcar como enviado
+      await marcarComprobanteEnviado(pagoSeleccionadoParaEnviar.rowNum);
+      pagoSeleccionadoParaEnviar.Comprobante_Enviado = 'SI'; // Actualizar en memoria
+      
       modalComprobante.style.display = 'none';
       mostrarMensaje(`Correo enviado con éxito a ${destinatario}.`, 'success');
+      filtrarYRenderizar(); // Re-renderizar la tabla para mostrar el ticket
+
     } catch (err) {
       mostrarMensaje(`Error al enviar el correo: ${err.message}`, 'error');
     } finally {
