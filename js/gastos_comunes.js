@@ -11,6 +11,16 @@ const ENCABEZADOS_PAGOS = [
 
 function formatearPeriodo(periodo) {
   if (!periodo) return 'N/A';
+  // CORREGIDO: La expresión regular ahora maneja un formato más flexible, como "Mes Año".
+  const matchAnio = periodo.toString().match(/\d{4}/);
+  const anio = matchAnio ? parseInt(matchAnio[0]) : null;
+  const matchMes = MESES.findIndex(m => periodo.toLowerCase().includes(m.toLowerCase()));
+
+  if (anio && matchMes !== -1) {
+    return `${MESES[matchMes]} ${anio}`;
+  }
+  
+  // Mantiene la lógica anterior como respaldo
   const match = periodo.toString().match(/^(\d{4})-(\d{1,2})$/);
   if (match) {
     const anio = parseInt(match[1]);
@@ -69,7 +79,6 @@ async function cargarGastosComunes() {
       #detalle-pago-grid { display: grid; grid-template-columns: auto 1fr; gap: 10px 20px; align-items: center;}
       #detalle-pago-grid b { grid-column: 1; text-align: right; }
       #detalle-pago-grid span { grid-column: 2; text-align: left; word-break: break-all; }
-      /* NUEVO: Estilos para la lista de sugerencias de nombres */
       .suggestion-item { padding: 8px 12px; cursor: pointer; }
       .suggestion-item:hover { background-color: #e9f1fb; }
     </style>
@@ -101,12 +110,12 @@ async function cargarGastosComunes() {
     </div>
     <section id="detalle-gastos" style="margin-top: 2rem;"><h3>Detalle de Gastos</h3><div style="overflow-x:auto;"><table class="table"><thead id="thead-gastos"></thead><tbody id="tbody-gastos"></tbody></table></div></section>
     
-    <div id="modalGC" class="modal" style="display:none;"><div><h3>Agregar Gasto Común</h3><form id="formGastoComun" style="display:flex; flex-wrap:wrap; gap:15px;"><div style="flex: 1 1 120px;"><label>N° Parcela</label><input type="number" name="N_Parcela" id="inputNParcela" min="1" max="26" required></div><div style="flex: 1 1 300px; position: relative;"><label>Nombre Residente</label><input type="text" name="Nombre_Residente" id="inputNombreResidente" autocomplete="off" required><div id="nombre-suggestions" style="display: none; position: absolute; background-color: white; border: 1px solid #ccc; max-height: 150px; overflow-y: auto; width: 100%; z-index: 10;"></div></div><div style="flex: 1 1 180px;"><label>Valor Gasto Común</label><input type="text" name="Valor_Gasto_Comun" id="inputValorGastoComun" readonly style="background:#eee;"></div><div style="flex: 1 1 180px;"><label>Fecha de Pago</label><input type="date" name="Fecha_Pago" required></div><div style="flex: 1 1 180px;"><label>Mes que Paga (Período)</label><select name="Periodo" required>${MESES.map((m, i) => `<option value="${i}">${m}</option>`).join('')}</select></div><div style="flex: 1 1 180px;"><label>Monto Pagado</label><input type="number" name="Monto_Pagado" min="0" step="1" required placeholder="CLP"></div><div style="flex: 1 1 180px;"><label>Método de Pago</label><select name="Metodo_Pago" required><option value="Transferencia">Transferencia</option><option value="Efectivo">Efectivo</option></select></div><div style="flex: 1 1 100%;"><label>Comprobante</label><input type="file" name="Comprobante"></div><div style="flex: 1 1 100%; text-align: right; margin-top: 20px;"><button class="btn secondary" type="button" id="btnCerrarModal">Cancelar</button><button class="btn" type="submit">Guardar Gasto</button></div></form></div></div>
+    <div id="modalGC" class="modal" style="display:none;"><div><h3>Agregar Gasto Común</h3><form id="formGastoComun" style="display:flex; flex-wrap:wrap; gap:15px;"><div style="flex: 1 1 120px;"><label>N° Parcela</label><input type="number" name="N_Parcela" id="inputNParcela" min="1" max="26" required></div><div style="flex: 1 1 300px; position: relative;"><label>Nombre Residente</label><input type="text" name="Nombre_Residente" id="inputNombreResidente" autocomplete="off" required><div id="nombre-suggestions" style="display: none; position: absolute; background-color: white; border: 1px solid #ccc; max-height: 150px; overflow-y: auto; width: 100%; z-index: 10;"></div></div><div style="flex: 1 1 180px;"><label>Valor Gasto Común</label><input type="text" name="Valor_Gasto_Comun" id="inputValorGastoComun" readonly style="background:#eee;"></div><div style="flex: 1 1 180px;"><label>Fecha de Pago</label><input type="date" name="Fecha_Pago" required></div><div style="flex: 1 1 180px;"><label>Mes que Paga (Período)</label><select name="Periodo" required>${MESES.map((m, i) => `<option value="${i}">${m}</option>`).join('')}</select></div><div style="flex: 1 1 180px;"><label>Año que Paga</label><input type="number" name="Anio_Periodo" id="inputAnioPeriodo" required></div><div style="flex: 1 1 180px;"><label>Monto Pagado</label><input type="number" name="Monto_Pagado" min="0" step="1" required placeholder="CLP"></div><div style="flex: 1 1 180px;"><label>Método de Pago</label><select name="Metodo_Pago" required><option value="Transferencia">Transferencia</option><option value="Efectivo">Efectivo</option></select></div><div style="flex: 1 1 100%;"><label>Comprobante</label><input type="file" name="Comprobante"></div><div style="flex: 1 1 100%; text-align: right; margin-top: 20px;"><button class="btn secondary" type="button" id="btnCerrarModal">Cancelar</button><button class="btn" type="submit">Guardar Gasto</button></div></form></div></div>
 
     <div id="modalComprobante" class="modal" style="display:none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.5); align-items: center; justify-content: center;">
       <div class="widget" style="max-width: 650px; width: 90%; margin: auto; z-index: 1001;">
         <h3>Enviar Comprobante por Correo</h3>
-        <form id="formEnviarComprobante" style="display:flex; flex-direction:column; gap:15px;"><div style="display:flex; gap: 15px; flex-wrap: wrap;"><div style="flex: 1; min-width: 120px;"><label><b>N° Parcela</b></label><input type="number" id="inputNParcelaComprobante" min="1" max="26" required style="width:100%;"></div><div style="flex: 2; min-width: 200px;"><label><b>Residente(s)</b></label><input type="text" id="inputNombreResidenteComprobante" readonly style="width:100%; background:#eee;"></div></div><div><label><b>Email(s) Destinatario</b></label><input type="email" id="inputEmailComprobante" readonly style="width:100%; background:#eee;"></div><div><label><b>Asunto</b></label><input type="text" id="inputAsuntoComprobante" readonly style="width:100%; background:#eee;"></div><div><label><b>Previsualización del Correo</b></label><div id="divCuerpoComprobante" style="width:100%; height: 250px; background:#f8f9fa; border: 1px solid #ccc; border-radius: 4px; padding: 10px; overflow-y: auto;"><span style="color: #6c757d;">Ingrese un N° de Parcela para generar la previsualización.</span></div></div><div style="text-align: right; margin-top: 10px;"><button class="btn secondary" type="button" id="btnCerrarModalComprobante">Cancelar</button><button class="btn" type="submit">Enviar Correo</button></div></form>
+        <form id="formEnviarComprobante" style="display:flex; flex-direction:column; gap:15px;"><div style="display:flex; gap: 15px; flex-wrap: wrap;"><div style="flex: 1; min-width: 120px;"><label><b>N° Parcela</b></label><input type="number" id="inputNParcelaComprobante" min="1" max="26" required style="width:100%;"></div><div style="flex: 2; min-width: 200px;"><label><b>Residente(s)</b></label><input type="text" id="inputNombreResidenteComprobante" readonly style="width:100%; background:#eee;"></div></div><div id="periodo-selector-container" style="display: none;"><label><b>Seleccione el Comprobante</b></label><select id="selectPeriodoComprobante" style="width:100%; padding: 11px 10px;"></select></div><div><label><b>Email(s) Destinatario</b></label><input type="email" id="inputEmailComprobante" readonly style="width:100%; background:#eee;"></div><div><label><b>Asunto</b></label><input type="text" id="inputAsuntoComprobante" readonly style="width:100%; background:#eee;"></div><div><label><b>Previsualización del Correo</b></label><div id="divCuerpoComprobante" style="width:100%; height: 250px; background:#f8f9fa; border: 1px solid #ccc; border-radius: 4px; padding: 10px; overflow-y: auto;"><span style="color: #6c757d;">Ingrese un N° de Parcela para generar la previsualización.</span></div></div><div style="text-align: right; margin-top: 10px;"><button class="btn secondary" type="button" id="btnCerrarModalComprobante">Cancelar</button><button class="btn" type="submit">Enviar Correo</button></div></form>
       </div>
     </div>
 
@@ -289,10 +298,13 @@ async function cargarGastosComunes() {
   });
   
   const modal = document.getElementById('modalGC');
-  document.getElementById('btnAbrirModalGasto').addEventListener('click', () => modal.style.display = 'flex');
+  // CORREGIDO: Al abrir el modal de gasto, se establece el año del filtro principal.
+  document.getElementById('btnAbrirModalGasto').addEventListener('click', () => {
+    document.getElementById('inputAnioPeriodo').value = document.getElementById('filtroAnio').value;
+    modal.style.display = 'flex'
+  });
   document.getElementById('btnCerrarModal').addEventListener('click', () => modal.style.display = 'none');
   
-  // MODIFICADO: Listener de N° Parcela ahora limpia los otros campos si se vacía.
   document.getElementById('inputNParcela').addEventListener('input', (e) => {
     const parcelaBuscada = e.target.value;
     const nombreInput = document.getElementById('inputNombreResidente');
@@ -315,7 +327,6 @@ async function cargarGastosComunes() {
     }
   });
 
-  // NUEVO: Lógica para buscar residente por nombre y mostrar sugerencias.
   const nombreInput = document.getElementById('inputNombreResidente');
   const parcelaInputModal = document.getElementById('inputNParcela');
   const valorGastoComunInput = document.getElementById('inputValorGastoComun');
@@ -326,7 +337,7 @@ async function cargarGastosComunes() {
       suggestionsContainer.innerHTML = '';
       suggestionsContainer.style.display = 'none';
 
-      if (searchTerm.length < 2) { // Empezar a buscar después de 2 caracteres
+      if (searchTerm.length < 2) {
           return;
       }
       
@@ -351,7 +362,6 @@ async function cargarGastosComunes() {
       }
   });
   
-  // NUEVO: Listener para cerrar las sugerencias si se hace clic fuera del campo de nombre.
   document.addEventListener('click', (e) => {
       if (!nombreInput.contains(e.target)) {
           suggestionsContainer.style.display = 'none';
@@ -371,7 +381,8 @@ async function cargarGastosComunes() {
 
         const valorGastoComun = parseFloat(residente[8]);
         const mesPagadoIndex = parseInt(formData.get('Periodo'));
-        const anioSeleccionado = new Date(formData.get('Fecha_Pago').replace(/-/g, '/')).getFullYear();
+        // CORREGIDO: Se toma el año del nuevo campo del formulario, no de la fecha de pago.
+        const anioSeleccionado = parseInt(formData.get('Anio_Periodo'));
         const fechaDePago = new Date(formData.get('Fecha_Pago').replace(/-/g, '/'));
         const fechaVencimiento = new Date(anioSeleccionado, mesPagadoIndex, 10);
         
@@ -441,6 +452,8 @@ async function cargarGastosComunes() {
   document.getElementById('btnAbrirModalComprobante').addEventListener('click', () => {
     formComprobante.reset();
     document.getElementById('divCuerpoComprobante').innerHTML = `<span style="color: #6c757d;">Ingrese un N° de Parcela para generar la previsualización.</span>`;
+    document.getElementById('periodo-selector-container').style.display = 'none';
+    document.getElementById('selectPeriodoComprobante').innerHTML = '';
     modalComprobante.style.display = 'flex';
   });
 
@@ -501,23 +514,28 @@ async function cargarGastosComunes() {
       </div>
     `;
   }
-
+  
+  // CORREGIDO: Lógica de envío de comprobante para manejar múltiples pagos.
   inputParcelaComprobante.addEventListener('input', (e) => {
     const parcela = e.target.value;
+    const selectorContainer = document.getElementById('periodo-selector-container');
+    const selector = document.getElementById('selectPeriodoComprobante');
     const nombreInput = document.getElementById('inputNombreResidenteComprobante');
     const emailInput = document.getElementById('inputEmailComprobante');
     const asuntoInput = document.getElementById('inputAsuntoComprobante');
     const cuerpoDiv = document.getElementById('divCuerpoComprobante');
 
+    // Resetear campos
     nombreInput.value = '';
     emailInput.value = '';
     asuntoInput.value = '';
     cuerpoDiv.innerHTML = `<span style="color: #6c757d;">Ingrese un N° de Parcela...</span>`;
+    selectorContainer.style.display = 'none';
+    selector.innerHTML = '';
 
     if (!parcela) return;
     
     const allResidentsForParcela = residentes.filter(r => String(r[3]) === String(parcela));
-    
     if (allResidentsForParcela.length === 0) {
         nombreInput.value = 'Residente no encontrado.';
         return;
@@ -525,30 +543,65 @@ async function cargarGastosComunes() {
     
     const residentNames = allResidentsForParcela.map(r => r[1]).join(' y ');
     const residentEmails = allResidentsForParcela.map(r => r[5]).filter(Boolean).join(', ');
+    nombreInput.value = residentNames;
+    emailInput.value = residentEmails || 'No registrado';
 
     const pagosDeLaParcela = pagosGC_obj
       .filter(p => p.N_Parcela == parcela && p.Fecha_Pago)
       .sort((a, b) => new Date(b.Fecha_Pago) - new Date(a.Fecha_Pago));
 
     if (pagosDeLaParcela.length === 0) {
-        nombreInput.value = residentNames;
-        emailInput.value = residentEmails || 'No registrado';
         cuerpoDiv.innerHTML = `<span style="color: #dc3545;">No se encontraron pagos registrados para esta parcela.</span>`;
         return;
     }
     
-    const ultimoPago = pagosDeLaParcela[0];
-    const periodoFormateado = formatearPeriodo(ultimoPago.Periodo);
-    
-    nombreInput.value = residentNames;
-    emailInput.value = residentEmails || 'No registrado';
-    asuntoInput.value = `Comprobante pago gasto común ${periodoFormateado} Parcela Número ${parcela}`;
-
     const representativeResident = [...allResidentsForParcela[0]]; 
     representativeResident[1] = residentNames;
 
-    cuerpoDiv.innerHTML = crearCuerpoCorreo(ultimoPago, representativeResident);
+    function generarVistaPrevia(pago) {
+        const periodoFormateado = formatearPeriodo(pago.Periodo);
+        asuntoInput.value = `Comprobante pago gasto común ${periodoFormateado} Parcela Número ${parcela}`;
+        cuerpoDiv.innerHTML = crearCuerpoCorreo(pago, representativeResident);
+    }
+
+    if (pagosDeLaParcela.length === 1) {
+        generarVistaPrevia(pagosDeLaParcela[0]);
+    } else {
+        selectorContainer.style.display = 'block';
+        selector.innerHTML = '<option value="">-- Seleccione un comprobante --</option>';
+        pagosDeLaParcela.forEach(pago => {
+            const fechaPagoFmt = new Date(pago.Fecha_Pago.replace(/-/g, '/')).toLocaleDateString('es-CL', { timeZone: 'UTC' });
+            const option = document.createElement('option');
+            option.value = pago.ID_Pago;
+            option.textContent = `${formatearPeriodo(pago.Periodo)} (Pagado el ${fechaPagoFmt})`;
+            selector.appendChild(option);
+        });
+    }
   });
+
+  document.getElementById('selectPeriodoComprobante').addEventListener('change', (e) => {
+      const pagoId = e.target.value;
+      const parcela = document.getElementById('inputNParcelaComprobante').value;
+      const asuntoInput = document.getElementById('inputAsuntoComprobante');
+      const cuerpoDiv = document.getElementById('divCuerpoComprobante');
+      
+      if (!pagoId) {
+          asuntoInput.value = '';
+          cuerpoDiv.innerHTML = `<span style="color: #6c757d;">Seleccione un período para generar la previsualización.</span>`;
+          return;
+      }
+      
+      const pagoSeleccionado = pagosGC_obj.find(p => p.ID_Pago == pagoId);
+      const allResidentsForParcela = residentes.filter(r => String(r[3]) === String(parcela));
+      const residentNames = allResidentsForParcela.map(r => r[1]).join(' y ');
+      const representativeResident = [...allResidentsForParcela[0]]; 
+      representativeResident[1] = residentNames;
+
+      const periodoFormateado = formatearPeriodo(pagoSeleccionado.Periodo);
+      asuntoInput.value = `Comprobante pago gasto común ${periodoFormateado} Parcela Número ${parcela}`;
+      cuerpoDiv.innerHTML = crearCuerpoCorreo(pagoSeleccionado, representativeResident);
+  });
+
 
   formComprobante.addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -560,8 +613,8 @@ async function cargarGastosComunes() {
     const asunto = document.getElementById('inputAsuntoComprobante').value;
     const cuerpo = cuerpoPreview.innerHTML;
 
-    if (!destinatario || !asunto || cuerpo.includes("Ingrese un N° de Parcela")) {
-      return mostrarMensaje('Datos incompletos o inválidos. Asegúrese de seleccionar una parcela con pagos.', 'error');
+    if (!destinatario || !asunto || cuerpo.includes("Ingrese un N° de Parcela") || cuerpo.includes("Seleccione un período")) {
+      return mostrarMensaje('Datos incompletos o inválidos. Asegúrese de seleccionar una parcela y un pago.', 'error');
     }
     
     mostrarSpinner();
