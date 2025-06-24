@@ -6,6 +6,7 @@ const SHEET_RESIDENTES = 'Residentes';
 const SHEET_PAGOS_GC = 'Pagos_GC';
 const SHEET_CONFIG_TIMC = 'Config_TIMC';
 const SHEET_EGRESOS = 'Egresos';
+const SHEET_CATEGORIAS_EGRESOS = 'Categorias_Egresos'; // <--- AÑADIDO
 const SHEET_MANTENCIONES = 'Mantenciones';
 const SHEET_MULTAS = 'Multas';
 const SHEET_ASAMBLEAS = 'Asambleas';
@@ -157,6 +158,15 @@ async function guardarTIMC(anio, mes, valor) { try { const todosLosTIMCs = await
 async function obtenerEgresos() { const res = await gapi.client.sheets.spreadsheets.values.get({ spreadsheetId: SPREADSHEET_ID, range: `${SHEET_EGRESOS}!A2:J` }); return res.result.values || []; }
 async function agregarEgreso(datos) { const egresos = await obtenerEgresos(); const lastId = egresos.length > 0 && egresos[egresos.length-1][0] ? parseInt(egresos[egresos.length-1][0]) : 0; datos[0] = (lastId + 1).toString(); await gapi.client.sheets.spreadsheets.values.append({ spreadsheetId: SPREADSHEET_ID, range: `${SHEET_EGRESOS}!A:J`, valueInputOption: 'USER_ENTERED', resource: { values: [datos] } }); }
 async function eliminarEgreso(id) { const egresos = await obtenerEgresos(); const idx = egresos.findIndex(e => e[0] === id); if (idx === -1) throw new Error('No encontrado'); const row = idx + 2; await gapi.client.sheets.spreadsheets.batchUpdate({ spreadsheetId: SPREADSHEET_ID, resource: { requests: [{ deleteDimension: { range: { sheetId: SHEET_ID_EGRESOS, dimension: "ROWS", startIndex: row - 1, endIndex: row } } }] } }); }
+// --- Nueva función para obtener las categorías de egresos ---
+async function obtenerCategoriasEgresos() {
+    const res = await gapi.client.sheets.spreadsheets.values.get({
+        spreadsheetId: SPREADSHEET_ID,
+        range: `${SHEET_CATEGORIAS_EGRESOS}!A2:A`,
+    });
+    const values = res.result.values || [];
+    return values.flat(); // .flat() convierte [['Cat1'], ['Cat2']] en ['Cat1', 'Cat2']
+}
 
 // -------- MANTENCIONES --------
 async function obtenerMantenciones() { const res = await gapi.client.sheets.spreadsheets.values.get({ spreadsheetId: SPREADSHEET_ID, range: `${SHEET_MANTENCIONES}!A2:H` }); return res.result.values || []; }
