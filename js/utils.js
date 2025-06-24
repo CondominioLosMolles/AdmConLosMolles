@@ -1,31 +1,61 @@
-// Utilidades generales para toda la app
+// js/utils.js - Versión Mejorada
 
-function mostrarSpinner() {
-  if (!document.getElementById('spinner')) {
-    const spinner = document.createElement('div');
-    spinner.id = 'spinner';
-    spinner.style.position = 'fixed';
-    spinner.style.top = '0';
-    spinner.style.left = '0';
-    spinner.style.width = '100vw';
-    spinner.style.height = '100vh';
-    spinner.style.background = 'rgba(255,255,255,0.5)';
-    spinner.style.display = 'flex';
-    spinner.style.alignItems = 'center';
-    spinner.style.justifyContent = 'center';
-    spinner.innerHTML = `<div style="border: 8px solid #f3f3f3;border-top: 8px solid #2a7ca3;border-radius: 50%;width: 60px;height: 60px;animation: spin 1s linear infinite;"></div>
-    <style>@keyframes spin{0%{transform:rotate(0deg);}100%{transform:rotate(360deg);}}</style>`;
-    document.body.appendChild(spinner);
-  }
-}
-function ocultarSpinner() {
-  const spinner = document.getElementById('spinner');
-  if (spinner) spinner.remove();
-}
-function mostrarMensaje(msg, tipo = 'info') {
-  // Mensaje emergente simple
-  alert(msg);
-}
+/**
+ * Limpia todo el contenido del área principal de la aplicación.
+ */
 function limpiarMainContent() {
-  document.getElementById('main-content').innerHTML = '';
+    const mainContent = document.getElementById('main-content');
+    if (mainContent) {
+        mainContent.innerHTML = '';
+    }
+}
+
+/**
+ * Muestra el spinner de carga que ya existe en index.html.
+ * Es más eficiente que crear y destruir el elemento cada vez.
+ */
+function mostrarSpinner() {
+    const spinner = document.getElementById('spinner');
+    if (spinner) {
+        spinner.style.display = 'flex';
+    }
+}
+
+/**
+ * Oculta el spinner de carga.
+ */
+function ocultarSpinner() {
+    const spinner = document.getElementById('spinner');
+    if (spinner) {
+        spinner.style.display = 'none';
+    }
+}
+
+/**
+ * Muestra un mensaje flotante temporal en la parte inferior de la pantalla.
+ * Mucho más profesional que un alert().
+ * @param {string} mensaje - El texto del mensaje a mostrar.
+ * @param {string} tipo - El tipo de mensaje ('success', 'error', 'info'). Afecta el color.
+ */
+function mostrarMensaje(mensaje, tipo = 'info') {
+    // Crear el contenedor del mensaje
+    const container = document.createElement('div');
+    container.className = `mensaje-flotante ${tipo}`;
+    container.textContent = mensaje;
+
+    document.body.appendChild(container);
+
+    // Hacer que el mensaje aparezca con una transición suave
+    setTimeout(() => {
+        container.classList.add('visible');
+    }, 10);
+
+    // Ocultar y eliminar el mensaje después de 3 segundos
+    setTimeout(() => {
+        container.classList.remove('visible');
+        // Esperar a que la transición de opacidad termine antes de eliminar el elemento del DOM
+        setTimeout(() => {
+            container.remove();
+        }, 500);
+    }, 3000);
 }
