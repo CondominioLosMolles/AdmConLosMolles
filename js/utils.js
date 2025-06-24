@@ -1,61 +1,78 @@
-// js/utils.js - Versión Mejorada
+// js/utils.js - Versión Final con Manejo de Modal Global
 
-/**
- * Limpia todo el contenido del área principal de la aplicación.
- */
 function limpiarMainContent() {
     const mainContent = document.getElementById('main-content');
-    if (mainContent) {
-        mainContent.innerHTML = '';
-    }
+    if (mainContent) mainContent.innerHTML = '';
 }
 
-/**
- * Muestra el spinner de carga que ya existe en index.html.
- * Es más eficiente que crear y destruir el elemento cada vez.
- */
 function mostrarSpinner() {
     const spinner = document.getElementById('spinner');
-    if (spinner) {
-        spinner.style.display = 'flex';
-    }
+    if (spinner) spinner.style.display = 'flex';
 }
 
-/**
- * Oculta el spinner de carga.
- */
 function ocultarSpinner() {
     const spinner = document.getElementById('spinner');
-    if (spinner) {
-        spinner.style.display = 'none';
-    }
+    if (spinner) spinner.style.display = 'none';
+}
+
+function mostrarMensaje(msg, tipo = 'info') {
+    const container = document.createElement('div');
+    container.className = `mensaje-flotante ${tipo}`;
+    container.textContent = msg;
+    document.body.appendChild(container);
+    setTimeout(() => { container.classList.add('visible'); }, 10);
+    setTimeout(() => {
+        container.classList.remove('visible');
+        setTimeout(() => { container.remove(); }, 500);
+    }, 3000);
 }
 
 /**
- * Muestra un mensaje flotante temporal en la parte inferior de la pantalla.
- * Mucho más profesional que un alert().
- * @param {string} mensaje - El texto del mensaje a mostrar.
- * @param {string} tipo - El tipo de mensaje ('success', 'error', 'info'). Afecta el color.
+ * Muestra y configura el modal global.
+ * @param {string} titulo - El título que aparecerá en el modal.
+ * @param {string} cuerpoHtml - El contenido HTML del formulario o cuerpo del modal.
+ * @param {Function} callbackGuardar - La función que se ejecutará al hacer clic en "Guardar".
+ * @param {string} tamano - Opcional. 'large' para un modal más ancho.
  */
-function mostrarMensaje(mensaje, tipo = 'info') {
-    // Crear el contenedor del mensaje
-    const container = document.createElement('div');
-    container.className = `mensaje-flotante ${tipo}`;
-    container.textContent = mensaje;
+function mostrarModalGlobal(titulo, cuerpoHtml, callbackGuardar, tamano = 'normal') {
+    const modalContainer = document.getElementById('global-modal-container');
+    const modalContent = document.getElementById('global-modal-content');
+    const modalTitle = document.getElementById('global-modal-title');
+    const modalBody = document.getElementById('global-modal-body');
+    const saveBtn = document.getElementById('global-modal-save');
+    const closeBtn = document.getElementById('global-modal-close');
 
-    document.body.appendChild(container);
+    if (!modalContainer) {
+        console.error('El contenedor de modal global no existe en index.html');
+        return;
+    }
 
-    // Hacer que el mensaje aparezca con una transición suave
-    setTimeout(() => {
-        container.classList.add('visible');
-    }, 10);
+    modalTitle.textContent = titulo;
+    modalBody.innerHTML = cuerpoHtml;
 
-    // Ocultar y eliminar el mensaje después de 3 segundos
-    setTimeout(() => {
-        container.classList.remove('visible');
-        // Esperar a que la transición de opacidad termine antes de eliminar el elemento del DOM
-        setTimeout(() => {
-            container.remove();
-        }, 500);
-    }, 3000);
+    // Asignar el evento al botón de guardar. Se clona para evitar listeners duplicados.
+    const newSaveBtn = saveBtn.cloneNode(true);
+    saveBtn.parentNode.replaceChild(newSaveBtn, saveBtn);
+    newSaveBtn.onclick = callbackGuardar;
+
+    closeBtn.onclick = ocultarModalGlobal;
+    
+    if (tamano === 'large') {
+        modalContent.classList.add('large');
+    } else {
+        modalContent.classList.remove('large');
+    }
+
+    modalContainer.style.display = 'flex';
+}
+
+/**
+ * Oculta el modal global y limpia su contenido.
+ */
+function ocultarModalGlobal() {
+    const modalContainer = document.getElementById('global-modal-container');
+    if (modalContainer) {
+        modalContainer.style.display = 'none';
+        document.getElementById('global-modal-body').innerHTML = '';
+    }
 }
