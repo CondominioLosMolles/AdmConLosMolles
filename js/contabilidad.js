@@ -1,11 +1,8 @@
 // js/contabilidad.js
 
-// --- INICIO: NUEVAS FUNCIONES PARA ANCHO DE COLUMNAS ---
+// --- Funciones para ancho de columnas persistente ---
 const ANCHOS_STORAGE_KEY = 'egresosColumnWidths';
 
-/**
- * Guarda los anchos actuales de las columnas de la tabla de egresos en localStorage.
- */
 function guardarAnchosDeColumna() {
     const headers = document.querySelectorAll('#tabla-egresos-export th');
     if (headers.length === 0) return;
@@ -13,9 +10,6 @@ function guardarAnchosDeColumna() {
     localStorage.setItem(ANCHOS_STORAGE_KEY, JSON.stringify(widths));
 }
 
-/**
- * Aplica los anchos de columna guardados desde localStorage a la tabla de egresos.
- */
 function aplicarAnchosDeColumnaGuardados() {
     const savedWidths = localStorage.getItem(ANCHOS_STORAGE_KEY);
     if (savedWidths) {
@@ -29,22 +23,17 @@ function aplicarAnchosDeColumnaGuardados() {
             }
         } catch (e) {
             console.error("Error al aplicar anchos de columna:", e);
-            localStorage.removeItem(ANCHOS_STORAGE_KEY); // Limpiar si hay datos corruptos
+            localStorage.removeItem(ANCHOS_STORAGE_KEY);
         }
     }
 }
 
-/**
- * Inicializa los listeners para que se guarden los anchos al soltar el mouse después de ajustar.
- */
 function inicializarColumnasAjustables() {
     const headers = document.querySelectorAll('#tabla-egresos-export th');
     headers.forEach(th => {
         th.addEventListener('mouseup', guardarAnchosDeColumna);
     });
 }
-// --- FIN: NUEVAS FUNCIONES PARA ANCHO DE COLUMNAS ---
-
 
 // --- Utilidad para exportar a Excel ---
 function exportarTablaAExcel(tableID, filename = ''){
@@ -78,12 +67,13 @@ async function cargarContabilidad() {
   limpiarMainContent();
   mostrarSpinner();
 
-  let allPagos = [], allEgresos = [], config = {}, categoriasEgresos = [];
+  let allPagos = [], allEgresos = [], config = {}, proveedores = [], categoriasEgresos = [];
   try {
-    [allPagos, allEgresos, config, categoriasEgresos] = await Promise.all([
+    [allPagos, allEgresos, config, proveedores, categoriasEgresos] = await Promise.all([
         obtenerPagosGC(),
         obtenerEgresos(),
         obtenerConfiguracion(),
+        obtenerProveedores(),
         obtenerCategoriasEgresos()
     ]);
   } catch (e) {
@@ -92,9 +82,9 @@ async function cargarContabilidad() {
     return;
   }
   
-  const proveedoresUnicos = allEgresos.reduce((acc, egreso) => {
-    const nombre = egreso[4];
-    const rut = egreso[5];
+  const proveedoresUnicos = proveedores.reduce((acc, p) => {
+    const nombre = p[1]; // Columna B: Nombre_Empresa
+    const rut = p[2];    // Columna C: RUT_Empresa
     if (nombre) {
       acc[nombre.toLowerCase().trim()] = { nombre: nombre.trim(), rut: rut || '' };
     }
@@ -118,28 +108,13 @@ async function cargarContabilidad() {
       .suggestion-item { padding: 8px 12px; cursor: pointer; border-bottom: 1px solid #eee; background: white; }
       .suggestion-item:hover, .suggestion-item.active { background-color: #e9f1fb; }
       .suggestion-item:last-child { border-bottom: none; }
-
-      /* --- ESTILOS PARA LA TABLA DE EGRESOS --- */
-      #tabla-egresos-export th {
-        position: relative;
-        resize: horizontal;
-        overflow: auto;
-      }
-      #tabla-egresos-export th:not(:last-child) {
-         border-right: 1px solid #ccc;
-      }
-      #tabla-egresos-export th:nth-child(1),
-      #tabla-egresos-export td:nth-child(1),
-      #tabla-egresos-export th:nth-child(2),
-      #tabla-egresos-export td:nth-child(2),
-      #tabla-egresos-export th:nth-child(4),
-      #tabla-egresos-export td:nth-child(4),
-      #tabla-egresos-export th:nth-child(6),
-      #tabla-egresos-export td:nth-child(6),
-      #tabla-egresos-export th:nth-child(7),
-      #tabla-egresos-export td:nth-child(7) {
-        text-align: center;
-      }
+      #tabla-egresos-export th { position: relative; resize: horizontal; overflow: auto; }
+      #tabla-egresos-export th:not(:last-child) { border-right: 1px solid #ccc; }
+      #tabla-egresos-export th:nth-child(1), #tabla-egresos-export td:nth-child(1),
+      #tabla-egresos-export th:nth-child(2), #tabla-egresos-export td:nth-child(2),
+      #tabla-egresos-export th:nth-child(4), #tabla-egresos-export td:nth-child(4),
+      #tabla-egresos-export th:nth-child(6), #tabla-egresos-export td:nth-child(6),
+      #tabla-egresos-export th:nth-child(7), #tabla-egresos-export td:nth-child(7) { text-align: center; }
     </style>
     <h2>Contabilidad y Flujo de Caja</h2>
 
@@ -333,14 +308,10 @@ async function cargarContabilidad() {
             egresosHTML += '</tbody></table>';
             tablaEgresosDiv.innerHTML = egresosHTML;
 
-            // --- INICIO: APLICAR Y GUARDAR ANCHOS DE COLUMNA ---
-            // Se aplican los anchos guardados y se preparan para guardar nuevos cambios.
             aplicarAnchosDeColumnaGuardados();
             inicializarColumnasAjustables();
-            // --- FIN: APLICAR Y GUARDAR ANCHOS DE COLUMNA ---
         }
         
-        // Gráfico de Ingresos
         const ingresosPorConcepto = pagos.reduce((acc, p) => {
             acc['Gastos Comunes'] = (acc['Gastos Comunes'] || 0) + parseFloat(p[6] || 0);
             if(parseFloat(p[17] || 0) > 0) acc['Abonos Convenio'] = (acc['Abonos Convenio'] || 0) + parseFloat(p[17] || 0);
@@ -349,10 +320,10 @@ async function cargarContabilidad() {
         
         const chartIngresosContainer = document.getElementById('chart-container-ingresos');
         const canvasIngresos = document.getElementById('graficoIngresos');
+        if (chartIngresosInstance) chartIngresosInstance.destroy();
         const noDataIngresos = chartIngresosContainer.querySelector('p');
         if(noDataIngresos) noDataIngresos.remove();
         
-        if (chartIngresosInstance) chartIngresosInstance.destroy();
         if(Object.values(ingresosPorConcepto).some(v => v > 0)){
             canvasIngresos.style.display = 'block';
             chartIngresosInstance = new Chart(canvasIngresos.getContext('2d'), {
@@ -363,7 +334,6 @@ async function cargarContabilidad() {
             if (!chartIngresosContainer.querySelector('p')) chartIngresosContainer.insertAdjacentHTML('beforeend', '<p>No hay datos de ingresos para graficar.</p>');
         }
 
-        // Gráfico de Egresos
         const egresosPorCategoria = egresos.reduce((acc, e) => {
             const categoria = e[2] || 'Sin Categoría';
             const monto = parseFloat(e[6] || 0);
@@ -373,7 +343,6 @@ async function cargarContabilidad() {
 
         const chartEgresosContainer = document.getElementById('chart-container-egresos');
         const canvasEgresos = document.getElementById('graficoEgresos');
-        
         if (chartEgresosInstance) chartEgresosInstance.destroy();
         const noDataMessage = chartEgresosContainer.querySelector('p');
         if (noDataMessage) noDataMessage.remove();
@@ -408,7 +377,6 @@ async function cargarContabilidad() {
         renderizarContabilidad(pagosFiltrados, egresosFiltrados, saldoInicialGlobal);
     }
     
-    // Listeners
     document.getElementById('btnFiltrar').addEventListener('click', filtrarYRenderizar);
     document.getElementById('btnGuardarSaldo').addEventListener('click', async () => {
         const saldoInput = document.getElementById('inputSaldoInicial');
@@ -579,12 +547,11 @@ async function cargarContabilidad() {
     }
 
     document.addEventListener('click', (e) => {
-        if (!proveedorInput.contains(e.target)) {
+        if (suggestionsContainer.style.display === 'block' && !proveedorInput.contains(e.target)) {
             suggestionsContainer.style.display = 'none';
         }
     });
     
-    // Carga inicial y configuración de vista por defecto
     const hoy = new Date();
     const primerDiaMes = new Date(hoy.getFullYear(), hoy.getMonth(), 1).toISOString().split('T')[0];
     const ultimoDiaMes = new Date(hoy.getFullYear(), hoy.getMonth() + 1, 0).toISOString().split('T')[0];
