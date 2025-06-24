@@ -6,7 +6,7 @@ const SHEET_RESIDENTES = 'Residentes';
 const SHEET_PAGOS_GC = 'Pagos_GC';
 const SHEET_CONFIG_TIMC = 'Config_TIMC';
 const SHEET_EGRESOS = 'Egresos';
-const SHEET_CATEGORIAS_EGRESOS = 'Categorias_Egresos'; // <--- AÑADIDO
+const SHEET_CATEGORIAS_EGRESOS = 'Categorias_Egresos';
 const SHEET_MANTENCIONES = 'Mantenciones';
 const SHEET_MULTAS = 'Multas';
 const SHEET_ASAMBLEAS = 'Asambleas';
@@ -62,18 +62,35 @@ async function createFolder(name, parentId = 'root') {
 }
 
 /**
- * Busca una carpeta y, si no existe, la crea.
- * @param {string} name - El nombre de la carpeta.
- * @param {string} parentId - El ID de la carpeta padre.
- * @returns {Promise<string>} El ID de la carpeta existente o recién creada.
+ * Busca o crea la ruta anidada para guardar comprobantes de egreso.
+ * Ruta: Los Molles > Pagos > [Mes Año]
+ * @param {string} nombreMes - El nombre del mes (ej: "Junio").
+ * @param {string} anio - El año (ej: "2025").
+ * @returns {Promise<string>} El ID de la carpeta de destino final.
  */
-async function buscarOCrearCarpetaDeParcela(name, parentId = 'root') {
-    let folderId = await findFolderId(name, parentId);
-    if (!folderId) {
-        folderId = await createFolder(name, parentId);
+async function buscarOCrearRutaDeEgreso(nombreMes, anio) {
+    // 1. Encontrar la carpeta principal "Los Molles"
+    const carpetaPrincipalId = await findFolderId(MAIN_DRIVE_FOLDER_NAME);
+    if (!carpetaPrincipalId) {
+        throw new Error(`No se encontró la carpeta principal de Drive: "${MAIN_DRIVE_FOLDER_NAME}"`);
     }
-    return folderId;
+
+    // 2. Encontrar o crear la carpeta "Pagos" dentro de "Los Molles"
+    let carpetaPagosId = await findFolderId('Pagos', carpetaPrincipalId);
+    if (!carpetaPagosId) {
+        // Si no existe "Pagos", la crea para mantener la estructura deseada.
+        carpetaPagosId = await createFolder('Pagos', carpetaPrincipalId);
+    }
+
+    // 3. Buscar o crear la carpeta del mes/año (ej: "Junio 2025")
+    const nombreCarpetaMes = `${nombreMes} ${anio}`;
+    let carpetaMesId = await findFolderId(nombreCarpetaMes, carpetaPagosId);
+    if (!carpetaMesId) {
+        carpetaMesId = await createFolder(nombreCarpetaMes, carpetaPagosId);
+    }
+    return carpetaMesId;
 }
+
 
 /**
  * Sube un archivo a una carpeta específica en Google Drive.
@@ -158,14 +175,14 @@ async function guardarTIMC(anio, mes, valor) { try { const todosLosTIMCs = await
 async function obtenerEgresos() { const res = await gapi.client.sheets.spreadsheets.values.get({ spreadsheetId: SPREADSHEET_ID, range: `${SHEET_EGRESOS}!A2:J` }); return res.result.values || []; }
 async function agregarEgreso(datos) { const egresos = await obtenerEgresos(); const lastId = egresos.length > 0 && egresos[egresos.length-1][0] ? parseInt(egresos[egresos.length-1][0]) : 0; datos[0] = (lastId + 1).toString(); await gapi.client.sheets.spreadsheets.values.append({ spreadsheetId: SPREADSHEET_ID, range: `${SHEET_EGRESOS}!A:J`, valueInputOption: 'USER_ENTERED', resource: { values: [datos] } }); }
 async function eliminarEgreso(id) { const egresos = await obtenerEgresos(); const idx = egresos.findIndex(e => e[0] === id); if (idx === -1) throw new Error('No encontrado'); const row = idx + 2; await gapi.client.sheets.spreadsheets.batchUpdate({ spreadsheetId: SPREADSHEET_ID, resource: { requests: [{ deleteDimension: { range: { sheetId: SHEET_ID_EGRESOS, dimension: "ROWS", startIndex: row - 1, endIndex: row } } }] } }); }
-// --- Nueva función para obtener las categorías de egresos ---
+// --- Función para obtener las categorías de egresos ---
 async function obtenerCategoriasEgresos() {
     const res = await gapi.client.sheets.spreadsheets.values.get({
         spreadsheetId: SPREADSHEET_ID,
         range: `${SHEET_CATEGORIAS_EGRESOS}!A2:A`,
     });
     const values = res.result.values || [];
-    return values.flat(); // .flat() convierte [['Cat1'], ['Cat2']] en ['Cat1', 'Cat2']
+    return values.flat();
 }
 
 // -------- MANTENCIONES --------
