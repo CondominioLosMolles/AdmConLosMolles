@@ -44,8 +44,20 @@ async function cargarContabilidad() {
     mostrarMensaje('Error al cargar datos: ' + e.message, 'error');
     return;
   }
+  
+  // NUEVO: Procesar lista única de proveedores para autocompletar
+  const proveedoresUnicos = allEgresos.reduce((acc, egreso) => {
+    const nombre = egreso[4]; // Columna E: Proveedor
+    const rut = egreso[5];    // Columna F: Rut_Proveedor
+    if (nombre) {
+      acc[nombre.toLowerCase()] = { nombre, rut: rut || '' };
+    }
+    return acc;
+  }, {});
 
   const main = document.getElementById('main-content');
+  const fechaSaldoInicial = config.Fecha_Saldo_Inicial ? new Date(config.Fecha_Saldo_Inicial.replace(/-/g, '/')).toLocaleDateString('es-CL') : 'No establecida';
+
   main.innerHTML = `
     <style>
       .summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 2rem; }
@@ -57,38 +69,56 @@ async function cargarContabilidad() {
       .view-toggle label { background: #eee; padding: 8px 15px; border-radius: 20px; cursor: pointer; transition: all 0.2s; }
       .view-toggle input { display: none; }
       .view-toggle input:checked + label { background: #007bff; color: white; font-weight: bold; }
+      .suggestion-item { padding: 8px 12px; cursor: pointer; border-bottom: 1px solid #eee; background: white; }
+      .suggestion-item:hover { background-color: #f0f0f0; }
+      .suggestion-item:last-child { border-bottom: none; }
     </style>
     <h2>Contabilidad y Flujo de Caja</h2>
 
-    <div class="widget">
-        <h4 style="margin-top:0;">Filtros</h4>
-        <div style="display:flex; flex-wrap:wrap; gap:20px; align-items:flex-end;">
-            <div><label>Fecha de Inicio</label><input type="date" id="fechaInicio"></div>
-            <div><label>Fecha de Fin</label><input type="date" id="fechaFin"></div>
-            <button class="btn" id="btnFiltrar">Filtrar</button>
+    <div style="display: flex; flex-wrap: wrap; gap: 24px; margin-bottom: 2rem;">
+        <div class="widget" style="flex: 1; min-width: 320px;">
+            <h4 style="margin-top:0;">Filtros</h4>
+            <div style="display:flex; flex-wrap:wrap; gap:20px; align-items:flex-end;">
+                <div><label>Fecha de Inicio</label><input type="date" id="fechaInicio"></div>
+                <div><label>Fecha de Fin</label><input type="date" id="fechaFin"></div>
+                <button class="btn" id="btnFiltrar">Filtrar</button>
+            </div>
+        </div>
+        <div class="widget" style="flex: 2; min-width: 400px;">
+            <h4 style="margin-top:0;">Configuración Contable</h4>
+            <div style="display:flex; flex-wrap:wrap; gap:20px; align-items:flex-end;">
+                <div>
+                    <label><b>Saldo Inicial de Caja</b></label>
+                    <input type="number" id="inputSaldoInicial" value="${parseFloat(config.Saldo_Inicial_Caja || 0)}" disabled>
+                </div>
+                <div>
+                    <label><b>Fecha de Saldo</b></label>
+                    <span id="fecha-saldo-display" style="display: inline-block; padding: 8px; border: 1px solid #ccc; border-radius: 4px; background: #eee;">${fechaSaldoInicial}</span>
+                    <input type="date" id="inputFechaSaldo" value="${config.Fecha_Saldo_Inicial || ''}" style="display:none;">
+                </div>
+                <div>
+                    <button class="btn secondary" id="btnEditarSaldo">Editar</button>
+                    <button class="btn" id="btnGuardarSaldo" style="display:none;">Guardar</button>
+                </div>
+            </div>
         </div>
     </div>
 
-    <div class="summary-grid" style="margin-top:2rem;">
+    <div class="summary-grid">
         <div class="summary-card"><h4 >Saldo Inicial Período</h4><div id="saldo-inicial-periodo" class="amount text-info">$0</div></div>
         <div class="summary-card"><h4>Ingresos del Período</h4><div id="ingresos-periodo" class="amount text-success">$0</div></div>
         <div class="summary-card"><h4>Egresos del Período</h4><div id="egresos-periodo" class="amount text-danger">$0</div></div>
         <div class="summary-card"><h4>Saldo Final Período</h4><div id="saldo-final-periodo" class="amount text-primary">$0</div></div>
     </div>
     
-    <div style="display:flex; flex-wrap:wrap; gap: 24px;">
-        <div id="chart-container" style="flex:1; min-width: 300px;">
+    <div style="display:flex; flex-wrap:wrap; gap: 24px; margin-top:2rem;">
+        <div id="chart-container-ingresos" class="widget" style="flex:1; min-width: 300px;">
+            <h4 style="margin-top:0;">Ingresos por Concepto</h4>
+            <canvas id="graficoIngresos" style="max-height: 300px;"></canvas>
+        </div>
+        <div id="chart-container-egresos" class="widget" style="flex:1; min-width: 300px;">
             <h4 style="margin-top:0;">Egresos por Categoría</h4>
             <canvas id="graficoEgresos" style="max-height: 300px;"></canvas>
-        </div>
-        <div class="widget" style="flex:1; min-width: 300px;">
-            <h4 style="margin-top:0;">Configuración Contable</h4>
-            <div><label><b>Saldo Inicial de Caja</b></label></div>
-            <div style="display:flex; gap:10px;">
-                <input type="number" id="inputSaldoInicial" value="${parseFloat(config.Saldo_Inicial_Caja || 0)}">
-                <button class="btn" id="btnGuardarSaldo">Guardar</button>
-            </div>
-            <small>Este es el punto de partida para todo el flujo de caja.</small>
         </div>
     </div>
 
@@ -100,7 +130,6 @@ async function cargarContabilidad() {
                 <input type="radio" id="verEgresos" name="vistaDetalle" value="egresos"><label for="verEgresos">Egresos</label>
             </div>
         </div>
-
         <div id="tablaIngresosContainer">
             <div style="display:flex; justify-content: space-between; align-items: center;">
                 <h4>Ingresos</h4>
@@ -139,8 +168,10 @@ async function cargarContabilidad() {
                 </select>
             </div>
             <div style="flex: 1 1 100%;"><label>Descripción</label><input type="text" name="descripcion" required></div>
-            <div style="display:flex; gap: 15px; flex-basis: 100%; flex-wrap: wrap;">
-                <div style="flex: 2 1 300px;"><label>Proveedor / Beneficiario</label><input type="text" name="proveedor" required></div>
+            <div style="display:flex; gap: 15px; flex-basis: 100%; flex-wrap: wrap; position: relative;">
+                <div style="flex: 2 1 300px;"><label>Proveedor / Beneficiario</label><input type="text" name="proveedor" autocomplete="off" required>
+                    <div id="proveedor-suggestions" style="display: none; position: absolute; background-color: white; border: 1px solid #ccc; max-height: 150px; overflow-y: auto; width: calc(100% - 170px); z-index: 10;"></div>
+                </div>
                 <div style="flex: 1 1 150px;"><label>RUT Proveedor</label><input type="text" name="rut_proveedor"></div>
             </div>
             <div style="flex: 1 1 180px;"><label>Monto</label><input type="number" name="monto" min="0" step="1" required></div>
@@ -162,8 +193,8 @@ async function cargarContabilidad() {
       </div>
     </div>
   `;
-
-    let chartInstance = null;
+    let chartIngresosInstance = null;
+  let chartEgresosInstance = null;
 
     function renderizarContabilidad(pagos, egresos, saldoInicialGlobal) {
         const fechaInicioFiltro = document.getElementById('fechaInicio').valueAsDate;
@@ -205,56 +236,56 @@ async function cargarContabilidad() {
             let egresosHTML = '<table id="tabla-egresos-export" class="table"><thead><tr><th>Fecha</th><th>Proveedor</th><th>RUT</th><th>Categoría</th><th>Monto</th><th>Método Pago</th><th>Comprobante</th></tr></thead><tbody>';
             egresos.sort((a,b) => new Date(a[1]) - new Date(b[1])).forEach(e => {
                 let linksHtml = "N/A";
-                // Column H is index 7
                 if (e[7]) {
                     const links = e[7].split(',');
                     linksHtml = links.map((link, index) => `<a href="${link.trim()}" target="_blank" class="btn small">Ver ${index + 1}</a>`).join(' ');
                 }
-                // e[2]=Cat, e[3]=Desc, e[4]=Prov, e[5]=RUT, e[6]=Monto, e[7]=Link, e[8]=Metodo
                 egresosHTML += `<tr><td>${new Date(e[1].replace(/-/g, '/')).toLocaleDateString('es-CL')}</td><td>${e[4]}</td><td>${e[5] || ''}</td><td>${e[2]}</td><td>$${parseFloat(e[6] || 0).toLocaleString('es-CL')}</td><td>${e[8] || 'N/A'}</td><td>${linksHtml}</td></tr>`;
             });
             egresosHTML += '</tbody></table>';
             tablaEgresosDiv.innerHTML = egresosHTML;
         }
         
+        // Gráfico de Ingresos
+        const ingresosPorConcepto = pagos.reduce((acc, p) => {
+            acc['Gastos Comunes'] = (acc['Gastos Comunes'] || 0) + parseFloat(p[6] || 0);
+            acc['Abonos Convenio'] = (acc['Abonos Convenio'] || 0) + parseFloat(p[17] || 0);
+            return acc;
+        }, { 'Gastos Comunes': 0, 'Abonos Convenio': 0 });
+        
+        if(chartIngresosInstance) chartIngresosInstance.destroy();
+        if(ingresosPorConcepto['Gastos Comunes'] > 0 || ingresosPorConcepto['Abonos Convenio'] > 0){
+            document.getElementById('graficoIngresos').style.display = 'block';
+            chartIngresosInstance = new Chart(document.getElementById('graficoIngresos').getContext('2d'), {
+                type: 'pie', data: { labels: Object.keys(ingresosPorConcepto), datasets: [{ data: Object.values(ingresosPorConcepto), backgroundColor: ['#4e91f9', '#f6d743'] }] }, options: { responsive: true, plugins: { legend: { position: 'right' } } }
+            });
+        } else {
+            document.getElementById('graficoIngresos').style.display = 'none';
+        }
+
+        // Gráfico de Egresos
         const egresosPorCategoria = egresos.reduce((acc, e) => {
-            const categoria = e[2] || 'Sin Categoría'; // Categoria is in column C (index 2)
+            const categoria = e[2] || 'Sin Categoría';
             const monto = parseFloat(e[6] || 0);
             acc[categoria] = (acc[categoria] || 0) + monto;
             return acc;
         }, {});
 
-        const chartContainer = document.getElementById('chart-container');
-        const canvas = document.getElementById('graficoEgresos');
+        const chartEgresosContainer = document.getElementById('chart-container-egresos');
+        const canvasEgresos = document.getElementById('graficoEgresos');
         
-        if (chartInstance) {
-            chartInstance.destroy();
-            chartInstance = null;
-        }
-        
-        const noDataMessage = chartContainer.querySelector('p');
-        if (noDataMessage) {
-            noDataMessage.remove();
-        }
+        if (chartEgresosInstance) chartEgresosInstance.destroy();
+        const noDataMessage = chartEgresosContainer.querySelector('p');
+        if (noDataMessage) noDataMessage.remove();
         
         if (Object.keys(egresosPorCategoria).length > 0) {
-            canvas.style.display = 'block';
-            chartInstance = new Chart(canvas.getContext('2d'), {
-                type: 'pie',
-                data: {
-                    labels: Object.keys(egresosPorCategoria),
-                    datasets: [{
-                        data: Object.values(egresosPorCategoria),
-                        backgroundColor: ['#4e91f9', '#7fd6c2', '#f6d743', '#f9a38b', '#a3a1fb', '#8bcf9e', '#f17979', '#a2d2ff'],
-                    }]
-                },
-                options: { responsive: true, plugins: { legend: { position: 'right' } } }
+            canvasEgresos.style.display = 'block';
+            chartEgresosInstance = new Chart(canvasEgresos.getContext('2d'), {
+                type: 'pie', data: { labels: Object.keys(egresosPorCategoria), datasets: [{ data: Object.values(egresosPorCategoria), backgroundColor: ['#dc3545', '#fd7e14', '#ffc107', '#20c997', '#0dcaf0', '#6f42c1'] }] }, options: { responsive: true, plugins: { legend: { position: 'right' } } }
             });
         } else {
-             canvas.style.display = 'none';
-             if (!chartContainer.querySelector('p')) {
-                chartContainer.insertAdjacentHTML('beforeend', '<p>No hay datos de egresos para graficar en este período.</p>');
-             }
+             canvasEgresos.style.display = 'none';
+             if (!chartEgresosContainer.querySelector('p')) chartEgresosContainer.insertAdjacentHTML('beforeend', '<p>No hay datos de egresos para graficar en este período.</p>');
         }
     }
 
@@ -263,16 +294,8 @@ async function cargarContabilidad() {
         let fechaFin = document.getElementById('fechaFin').value;
         const saldoInicialGlobal = parseFloat(config.Saldo_Inicial_Caja || 0);
 
-        const pagosFiltrados = allPagos.filter(p => {
-            const fechaPago = p[13];
-            if (!fechaPago) return false;
-            return (!fechaInicio || fechaPago >= fechaInicio) && (!fechaFin || fechaPago <= fechaFin);
-        });
-        const egresosFiltrados = allEgresos.filter(e => {
-            const fechaEgreso = e[1];
-            if (!fechaEgreso) return false;
-            return (!fechaInicio || fechaEgreso >= fechaEgreso) && (!fechaFin || fechaEgreso <= fechaFin);
-        });
+        const pagosFiltrados = allPagos.filter(p => { const fechaPago = p[13]; if (!fechaPago) return false; return (!fechaInicio || fechaPago >= fechaInicio) && (!fechaFin || fechaPago <= fechaFin); });
+        const egresosFiltrados = allEgresos.filter(e => { const fechaEgreso = e[1]; if (!fechaEgreso) return false; return (!fechaInicio || fechaEgreso >= fechaEgreso) && (!fechaFin || fechaEgreso <= fechaFin); });
 
         renderizarContabilidad(pagosFiltrados, egresosFiltrados, saldoInicialGlobal);
     }
@@ -280,14 +303,29 @@ async function cargarContabilidad() {
     // Listeners
     document.getElementById('btnFiltrar').addEventListener('click', filtrarYRenderizar);
     document.getElementById('btnGuardarSaldo').addEventListener('click', async () => {
-        const nuevoSaldo = document.getElementById('inputSaldoInicial').value;
-        if (isNaN(parseFloat(nuevoSaldo))) {
-            return mostrarMensaje("Por favor, ingrese un valor numérico para el saldo.", "error");
+        const saldoInput = document.getElementById('inputSaldoInicial');
+        const fechaInput = document.getElementById('inputFechaSaldo');
+        const nuevoSaldo = saldoInput.value;
+        const nuevaFecha = fechaInput.value;
+        if (isNaN(parseFloat(nuevoSaldo)) || !nuevaFecha) {
+            return mostrarMensaje("Debe ingresar un monto y una fecha para el saldo inicial.", "error");
         }
         mostrarSpinner();
         try {
-            await actualizarConfiguracion('Saldo_Inicial_Caja', nuevoSaldo);
+            await Promise.all([
+                actualizarConfiguracion('Saldo_Inicial_Caja', nuevoSaldo),
+                actualizarConfiguracion('Fecha_Saldo_Inicial', nuevaFecha)
+            ]);
             config.Saldo_Inicial_Caja = nuevoSaldo;
+            config.Fecha_Saldo_Inicial = nuevaFecha;
+            
+            saldoInput.disabled = true;
+            fechaInput.style.display = 'none';
+            document.getElementById('fecha-saldo-display').textContent = new Date(nuevaFecha.replace(/-/g, '/')).toLocaleDateString('es-CL');
+            document.getElementById('fecha-saldo-display').style.display = 'inline-block';
+            document.getElementById('btnGuardarSaldo').style.display = 'none';
+            document.getElementById('btnEditarSaldo').style.display = 'inline-block';
+            
             filtrarYRenderizar();
             mostrarMensaje("Saldo inicial actualizado con éxito.", "success");
         } catch(e) {
@@ -295,6 +333,14 @@ async function cargarContabilidad() {
         } finally {
             ocultarSpinner();
         }
+    });
+
+    document.getElementById('btnEditarSaldo').addEventListener('click', (e) => {
+        e.target.style.display = 'none';
+        document.getElementById('btnGuardarSaldo').style.display = 'inline-block';
+        document.getElementById('inputSaldoInicial').disabled = false;
+        document.getElementById('fecha-saldo-display').style.display = 'none';
+        document.getElementById('inputFechaSaldo').style.display = 'inline-block';
     });
 
     document.getElementById('btnExportarIngresos').addEventListener('click', () => exportarTablaAExcel('tabla-ingresos-export', 'Ingresos'));
@@ -305,23 +351,16 @@ async function cargarContabilidad() {
     document.getElementById('btnAgregarEgreso').addEventListener('click', () => modalEgreso.style.display = 'flex');
     document.getElementById('btnCerrarModalEgreso').addEventListener('click', () => {
         modalEgreso.style.display = 'none';
-        formEgreso.reset(); // Limpiar el formulario al cerrar
+        formEgreso.reset();
     });
     
     document.getElementById('detalle-view-toggle').addEventListener('change', (e) => {
         const vista = e.target.value;
         const ingresosContainer = document.getElementById('tablaIngresosContainer');
         const egresosContainer = document.getElementById('tablaEgresosContainer');
-        if (vista === 'ingresos') {
-            ingresosContainer.style.display = 'block';
-            egresosContainer.style.display = 'none';
-        } else if (vista === 'egresos') {
-            ingresosContainer.style.display = 'none';
-            egresosContainer.style.display = 'block';
-        } else {
-            ingresosContainer.style.display = 'block';
-            egresosContainer.style.display = 'block';
-        }
+        if (vista === 'ingresos') { ingresosContainer.style.display = 'block'; egresosContainer.style.display = 'none'; } 
+        else if (vista === 'egresos') { ingresosContainer.style.display = 'none'; egresosContainer.style.display = 'block'; } 
+        else { ingresosContainer.style.display = 'block'; egresosContainer.style.display = 'block'; }
     });
 
     formEgreso.addEventListener('submit', async (e) => {
@@ -344,27 +383,65 @@ async function cargarContabilidad() {
             }
             
             const datosEgreso = [
-                null, // A: ID_Egreso
-                formData.get('fecha'), // B: Fecha
-                formData.get('categoria'), // C: Categoria
-                formData.get('descripcion'), // D: Descripcion
-                formData.get('proveedor'), // E: Proveedor
-                formData.get('rut_proveedor'), // F: Rut_Proveedor
-                formData.get('monto'), // G: Monto
-                linksComprobantes.join(','), // H: ID_Factura_Drive
-                formData.get('metodo_pago') // I: Metodo_Pago
+                null, 
+                formData.get('fecha'),
+                formData.get('categoria'),
+                formData.get('descripcion'),
+                formData.get('proveedor'),
+                formData.get('rut_proveedor'),
+                formData.get('monto'),
+                linksComprobantes.join(','),
+                formData.get('metodo_pago')
             ];
             
             await agregarEgreso(datosEgreso);
             mostrarMensaje("Egreso agregado con éxito.", "success");
             modalEgreso.style.display = 'none';
-            formEgreso.reset(); // Limpiar el formulario al guardar
+            formEgreso.reset();
             cargarContabilidad();
 
         } catch (err) {
             mostrarMensaje("Error al guardar el egreso: " + err.message, "error");
         } finally {
             ocultarSpinner();
+        }
+    });
+    
+    const proveedorInput = document.querySelector('#formEgreso input[name="proveedor"]');
+    const rutInput = document.querySelector('#formEgreso input[name="rut_proveedor"]');
+    const suggestionsContainer = document.getElementById('proveedor-suggestions');
+
+    proveedorInput.addEventListener('input', () => {
+        const searchTerm = proveedorInput.value.toLowerCase();
+        suggestionsContainer.innerHTML = '';
+        if (searchTerm.length < 2) {
+            suggestionsContainer.style.display = 'none';
+            return;
+        }
+
+        const matches = Object.values(proveedoresUnicos).filter(p => p.nombre.toLowerCase().includes(searchTerm));
+
+        if (matches.length > 0) {
+            matches.forEach(p => {
+                const item = document.createElement('div');
+                item.className = 'suggestion-item';
+                item.textContent = p.nombre;
+                item.addEventListener('click', () => {
+                    proveedorInput.value = p.nombre;
+                    rutInput.value = p.rut;
+                    suggestionsContainer.style.display = 'none';
+                });
+                suggestionsContainer.appendChild(item);
+            });
+            suggestionsContainer.style.display = 'block';
+        } else {
+            suggestionsContainer.style.display = 'none';
+        }
+    });
+
+    document.addEventListener('click', (e) => {
+        if (!proveedorInput.contains(e.target)) {
+            suggestionsContainer.style.display = 'none';
         }
     });
     
