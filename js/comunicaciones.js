@@ -1,4 +1,5 @@
 // js/comunicaciones.js
+// --- VERSIÓN CORREGIDA: Se eliminó la plantilla redundante ---
 
 async function cargarComunicaciones() {
     limpiarMainContent();
@@ -35,7 +36,6 @@ async function cargarComunicaciones() {
           <label for="selectPlantilla"><b>Usar Plantilla (Opcional)</b></label>
           <select id="selectPlantilla" class="form-control mb-3">
             <option value="">-- Redacción Manual --</option>
-            <option value="recordatorio_pago">Recordatorio de Pago Gasto Común</option>
             <option value="citacion_asamblea">Citación a Asamblea</option>
             <option value="aviso_corte_mantencion">Aviso de Corte de Suministro por Mantención</option>
             <option value="comunicado_general">Comunicado General</option>
@@ -81,6 +81,7 @@ async function cargarComunicaciones() {
     </div>
   `;
 
+    // ... (El resto del código de comunicaciones.js sigue igual y no necesita cambios)
     const tablaComunicacionesDiv = document.getElementById('tablaComunicaciones');
     const selectDestinatarioTipo = document.getElementById('selectDestinatarioTipo');
     const destinatariosContainer = document.getElementById('destinatariosContainer');
@@ -115,15 +116,7 @@ async function cargarComunicaciones() {
     });
     
     selectPlantilla.addEventListener('change', (e) => {
-        const hoy = new Date();
-        const proximoMes = new Date(hoy.getFullYear(), hoy.getMonth() + 1, 1);
-        const nombreProximoMes = proximoMes.toLocaleString('es-CL', { month: 'long' });
-
         switch(e.target.value) {
-            case 'recordatorio_pago':
-                inputAsunto.value = `Recordatorio de Pago de Gasto Común - ${nombreProximoMes.charAt(0).toUpperCase() + nombreProximoMes.slice(1)}`;
-                textareaMensaje.value = `Estimado(a) residente de la parcela {n_parcela},\n\nJunto con saludar, le recordamos que el vencimiento para el pago del gasto común correspondiente al mes de ${nombreProximoMes} es el día 10.\n\nEl pago oportuno de los gastos comunes es una obligación de todos los copropietarios, según lo estipulado en la Ley 21.442, y es fundamental para el correcto mantenimiento y funcionamiento de nuestra comunidad.\n\nPuede consultar el detalle de su boleta y realizar el pago a través de los canales habituales.\n\nAtentamente,\nLa Administración.`;
-                break;
             case 'citacion_asamblea':
                 inputAsunto.value = "Citación a Asamblea de Copropietarios";
                 textareaMensaje.value = "Estimados residentes,\n\nSe les cita a participar de la Asamblea [Ordinaria/Extraordinaria] de Copropietarios, que se realizará el día [FECHA] a las [HORA] en [LUGAR].\n\nTabla a tratar:\n1. ...\n2. ...\n\nSu participación es de suma importancia para la toma de decisiones de nuestra comunidad, en conformidad con la Ley 21.442.\n\nSaludos cordiales,\nEl Comité de Administración.";
@@ -142,12 +135,9 @@ async function cargarComunicaciones() {
     formComunicacion.addEventListener('submit', async (e) => {
         e.preventDefault();
         mostrarSpinner();
-
         const formData = new FormData(e.target);
         const asunto = formData.get('asunto');
         let mensajeBase = formData.get('mensaje');
-        const archivos = document.getElementById('inputAdjuntos').files;
-        
         let destinatarios = [];
         if (selectDestinatarioTipo.value === 'todos') {
             destinatarios = residentes;
@@ -155,40 +145,27 @@ async function cargarComunicaciones() {
             const idsSeleccionados = Array.from(document.querySelectorAll('.residente-checkbox:checked')).map(cb => cb.value);
             destinatarios = residentes.filter(r => idsSeleccionados.includes(r[0]));
         }
-
         if (destinatarios.length === 0) {
             ocultarSpinner();
             return mostrarMensaje('Debe seleccionar al menos un destinatario.', 'error');
         }
-
         try {
             for (const res of destinatarios) {
                 const email = res[5];
                 let mensajePersonalizado = mensajeBase.replace(/{nombre_residente}/g, res[1]).replace(/{n_parcela}/g, res[3]);
-                
                 await enviarCorreo(email, asunto, mensajePersonalizado);
-                
-                await agregarComunicacion([
-                    null, res[0], res[3], res[1], email,
-                    new Date().toISOString(), asunto, mensajePersonalizado
-                ]);
+                await agregarComunicacion([ null, res[0], res[3], res[1], email, new Date().toISOString(), asunto, mensajePersonalizado ]);
             }
-            
             if (selectDestinatarioTipo.value === 'todos') {
                  await agregarComunicacion([ null, 'TODOS', 'N/A', 'Comunidad', 'N/A', new Date().toISOString(), asunto, mensajeBase ]);
             }
-
             comunicaciones = await obtenerComunicaciones();
             renderTablaComunicaciones();
             mostrarMensaje(`Comunicación enviada a ${destinatarios.length} residente(s) con éxito.`);
-            
-            // --- CÓDIGO CORREGIDO PARA LIMPIAR EL FORMULARIO ---
             formComunicacion.reset();
             document.querySelectorAll('.residente-checkbox:checked').forEach(cb => cb.checked = false);
             destinatariosContainer.style.display = 'none';
             selectDestinatarioTipo.value = 'todos';
-            // --- FIN DE LA CORRECCIÓN ---
-
         } catch (error) {
             mostrarMensaje('Error al enviar la comunicación: ' + error.message, 'error');
         } finally {
@@ -201,3 +178,5 @@ async function cargarComunicaciones() {
 }
 
 document.querySelector('[data-module="comunicaciones"]').addEventListener('click', cargarComunicaciones);
+
+}
