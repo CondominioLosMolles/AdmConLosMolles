@@ -32,12 +32,13 @@ async function cargarContabilidad() {
   limpiarMainContent();
   mostrarSpinner();
 
-  let allPagos = [], allEgresos = [], config = {};
+  let allPagos = [], allEgresos = [], config = {}, categorias = [];
   try {
-    [allPagos, allEgresos, config] = await Promise.all([
+    [allPagos, allEgresos, config, categorias] = await Promise.all([
         obtenerPagosGC(),
         obtenerEgresos(),
-        obtenerConfiguracion()
+        obtenerConfiguracion(),
+        obtenerCategoriasEgresos()
     ]);
   } catch (e) {
     ocultarSpinner();
@@ -56,6 +57,7 @@ async function cargarContabilidad() {
 
   const main = document.getElementById('main-content');
   const fechaSaldoInicial = config.Fecha_Saldo_Inicial ? new Date(config.Fecha_Saldo_Inicial.replace(/-/g, '/')).toLocaleDateString('es-CL') : 'No establecida';
+  const categoriasOptions = categorias.map(cat => `<option value="${cat}">${cat}</option>`).join('');
 
   main.innerHTML = `
     <style>
@@ -74,43 +76,23 @@ async function cargarContabilidad() {
     </style>
     <h2>Contabilidad y Flujo de Caja</h2>
 
-    <div style="display: flex; flex-wrap: wrap; gap: 24px; margin-bottom: 2rem;">
-        <div class="widget" style="flex: 1; min-width: 320px;">
-            <h4 style="margin-top:0;">Filtros</h4>
-            <div style="display:flex; flex-wrap:wrap; gap:20px; align-items:flex-end;">
-                <div><label>Fecha de Inicio</label><input type="date" id="fechaInicio"></div>
-                <div><label>Fecha de Fin</label><input type="date" id="fechaFin"></div>
-                <button class="btn" id="btnFiltrar">Filtrar</button>
-            </div>
-        </div>
-        <div class="widget" style="flex: 2; min-width: 400px;">
-            <h4 style="margin-top:0;">Configuración Contable</h4>
-            <div style="display:flex; flex-wrap:wrap; gap:20px; align-items:flex-end;">
-                <div>
-                    <label><b>Saldo Inicial de Caja</b></label>
-                    <input type="number" id="inputSaldoInicial" value="${parseFloat(config.Saldo_Inicial_Caja || 0)}" disabled>
-                </div>
-                <div>
-                    <label><b>Fecha de Saldo</b></label>
-                    <span id="fecha-saldo-display" style="display: inline-block; padding: 8px; border: 1px solid #ccc; border-radius: 4px; background: #eee;">${fechaSaldoInicial}</span>
-                    <input type="date" id="inputFechaSaldo" value="${config.Fecha_Saldo_Inicial || ''}" style="display:none;">
-                </div>
-                <div>
-                    <button class="btn secondary" id="btnEditarSaldo">Editar</button>
-                    <button class="btn" id="btnGuardarSaldo" style="display:none;">Guardar</button>
-                </div>
-            </div>
+    <div class="widget">
+        <h4 style="margin-top:0;">Filtros</h4>
+        <div style="display:flex; flex-wrap:wrap; gap:20px; align-items:flex-end;">
+            <div><label>Fecha de Inicio</label><input type="date" id="fechaInicio"></div>
+            <div><label>Fecha de Fin</label><input type="date" id="fechaFin"></div>
+            <button class="btn" id="btnFiltrar">Filtrar</button>
         </div>
     </div>
 
-    <div class="summary-grid">
+    <div class="summary-grid" style="margin-top:2rem;">
         <div class="summary-card"><h4 >Saldo Inicial Período</h4><div id="saldo-inicial-periodo" class="amount text-info">$0</div></div>
         <div class="summary-card"><h4>Ingresos del Período</h4><div id="ingresos-periodo" class="amount text-success">$0</div></div>
         <div class="summary-card"><h4>Egresos del Período</h4><div id="egresos-periodo" class="amount text-danger">$0</div></div>
         <div class="summary-card"><h4>Saldo Final Período</h4><div id="saldo-final-periodo" class="amount text-primary">$0</div></div>
     </div>
     
-    <div style="display:flex; flex-wrap:wrap; gap: 24px; margin-top:2rem;">
+    <div style="display:flex; flex-wrap:wrap; gap: 24px;">
         <div id="chart-container-ingresos" class="widget" style="flex:1; min-width: 300px;">
             <h4 style="margin-top:0;">Ingresos por Concepto</h4>
             <canvas id="graficoIngresos" style="max-height: 300px;"></canvas>
@@ -156,14 +138,7 @@ async function cargarContabilidad() {
             <div style="flex: 1 1 180px;"><label>Categoría</label>
                 <select name="categoria" required>
                     <option value="" disabled selected>-- Seleccione --</option>
-                    <option value="Remuneraciones">Remuneraciones</option>
-                    <option value="Reparaciones y Mantención">Reparaciones y Mantención</option>
-                    <option value="Cuentas Básicas">Cuentas Básicas (Luz, Agua)</option>
-                    <option value="Administración">Administración</option>
-                    <option value="Insumos">Insumos (Limpieza, oficina)</option>
-                    <option value="Jardinería">Jardinería</option>
-                    <option value="Imprevistos">Imprevistos</option>
-                    <option value="Otros">Otros</option>
+                    ${categoriasOptions}
                 </select>
             </div>
             <div style="flex: 1 1 100%;"><label>Descripción</label><input type="text" name="descripcion" required></div>
@@ -246,7 +221,6 @@ async function cargarContabilidad() {
             tablaEgresosDiv.innerHTML = egresosHTML;
         }
         
-        // Gráfico de Ingresos
         const ingresosPorConcepto = pagos.reduce((acc, p) => {
             acc['Gastos Comunes'] = (acc['Gastos Comunes'] || 0) + parseFloat(p[6] || 0);
             if(parseFloat(p[17] || 0) > 0) acc['Abonos Convenio'] = (acc['Abonos Convenio'] || 0) + parseFloat(p[17] || 0);
@@ -269,7 +243,6 @@ async function cargarContabilidad() {
             if (!chartIngresosContainer.querySelector('p')) chartIngresosContainer.insertAdjacentHTML('beforeend', '<p>No hay datos de ingresos para graficar.</p>');
         }
 
-        // Gráfico de Egresos
         const egresosPorCategoria = egresos.reduce((acc, e) => {
             const categoria = e[2] || 'Sin Categoría';
             const monto = parseFloat(e[6] || 0);
