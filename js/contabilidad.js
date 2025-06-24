@@ -53,16 +53,46 @@ async function cargarContabilidad() {
       .summary-card h4 { margin-top: 0; font-size: 1rem; color: #6c757d; }
       .summary-card .amount { font-size: 1.75rem; font-weight: 700; }
       #chart-container { background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+      .contabilidad-header { display: flex; flex-wrap: wrap; gap: 24px; align-items: flex-start; }
     </style>
     <h2>Contabilidad y Flujo de Caja</h2>
 
-    <div class="widget">
-      <h4 style="margin-top:0;">Filtros</h4>
-      <div style="display:flex; flex-wrap:wrap; gap:20px; align-items:flex-end;">
-        <div><label>Fecha de Inicio</label><input type="date" id="fechaInicio"></div>
-        <div><label>Fecha de Fin</label><input type="date" id="fechaFin"></div>
-        <button class="btn" id="btnFiltrar">Filtrar</button>
-      </div>
+    <div class="contabilidad-header">
+        <div class="widget" style="flex: 1; min-width: 320px;">
+            <h4 style="margin-top:0;">Filtros</h4>
+            <div style="display:flex; flex-wrap:wrap; gap:20px; align-items:flex-end;">
+                <div><label>Fecha de Inicio</label><input type="date" id="fechaInicio"></div>
+                <div><label>Fecha de Fin</label><input type="date" id="fechaFin"></div>
+                <button class="btn" id="btnFiltrar">Filtrar</button>
+            </div>
+        </div>
+
+        <div class="widget" style="flex: 2; min-width: 450px;">
+            <h4 style="margin-top:0;">Registrar Egreso</h4>
+            <form id="formEgreso" style="display:flex; flex-wrap:wrap; gap:15px;">
+                <div style="flex: 1 1 150px;"><label>Fecha</label><input type="date" name="fecha" required></div>
+                <div style="flex: 1 1 150px;"><label>Monto</label><input type="number" name="monto" min="0" step="1" required></div>
+                <div style="flex: 1 1 150px;"><label>Categoría</label>
+                    <select name="categoria" required>
+                        <option value="Remuneraciones">Remuneraciones</option>
+                        <option value="Reparaciones y Mantención">Reparaciones y Mantención</option>
+                        <option value="Cuentas Básicas">Cuentas Básicas (Luz, Agua)</option>
+                        <option value="Administración">Administración</option>
+                        <option value="Insumos">Insumos (Limpieza, oficina)</option>
+                        <option value="Jardinería">Jardinería</option>
+                        <option value="Imprevistos">Imprevistos</option>
+                        <option value="Otros">Otros</option>
+                    </select>
+                </div>
+                <div style="flex: 1 1 100%;"><label>Proveedor / Beneficiario</label><input type="text" name="proveedor" required></div>
+                <div style="flex: 1 1 100%;"><label>Descripción</label><input type="text" name="descripcion" required></div>
+                <div style="flex: 1 1 180px;"><label>N° Documento</label><input type="text" name="n_doc"></div>
+                <div style="flex: 1 1 220px;"><label>Comprobante</label><input type="file" name="comprobante"></div>
+                <div style="flex: 1 1 100%; text-align: right;">
+                    <button class="btn" type="submit">Agregar Gasto</button>
+                </div>
+            </form>
+        </div>
     </div>
 
     <div class="summary-grid" style="margin-top:2rem;">
@@ -98,44 +128,12 @@ async function cargarContabilidad() {
     <div class="widget" style="margin-top: 2rem;">
         <div style="display:flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
             <h3 style="margin-top:0; margin-bottom:0;">Detalle de Egresos</h3>
-            <div>
-              <button class="btn" id="btnAgregarEgreso">Agregar Egreso</button>
-              <button class="btn secondary btn-sm" id="btnExportarEgresos">Exportar a Excel</button>
-            </div>
+            <button class="btn secondary btn-sm" id="btnExportarEgresos">Exportar a Excel</button>
         </div>
         <div id="tablaEgresos" style="overflow-x:auto;"></div>
     </div>
-
-    <div id="modalEgreso" class="modal" style="display:none;">
-      <div>
-        <h3>Agregar Nuevo Egreso</h3>
-        <form id="formEgreso" style="display:flex; flex-wrap:wrap; gap:15px;">
-            <div style="flex: 1 1 180px;"><label>Fecha</label><input type="date" name="fecha" required></div>
-            <div style="flex: 1 1 180px;"><label>N° Documento</label><input type="text" name="n_doc"></div>
-            <div style="flex: 1 1 100%;"><label>Proveedor / Beneficiario</label><input type="text" name="proveedor" required></div>
-            <div style="flex: 1 1 180px;"><label>Categoría</label>
-                <select name="categoria" required>
-                    <option value="Remuneraciones">Remuneraciones</option>
-                    <option value="Reparaciones y Mantención">Reparaciones y Mantención</option>
-                    <option value="Cuentas Básicas">Cuentas Básicas (Luz, Agua)</option>
-                    <option value="Administración">Administración</option>
-                    <option value="Insumos">Insumos (Limpieza, oficina)</option>
-                    <option value="Jardinería">Jardinería</option>
-                    <option value="Imprevistos">Imprevistos</option>
-                    <option value="Otros">Otros</option>
-                </select>
-            </div>
-            <div style="flex: 1 1 180px;"><label>Monto</label><input type="number" name="monto" min="0" step="1" required></div>
-            <div style="flex: 1 1 100%;"><label>Descripción</label><textarea name="descripcion" rows="3" required></textarea></div>
-            <div style="flex: 1 1 100%;"><label>Comprobante (Factura, Boleta)</label><input type="file" name="comprobante"></div>
-            <div style="flex: 1 1 100%; text-align: right; margin-top: 20px;">
-                <button class="btn secondary" type="button" id="btnCerrarModalEgreso">Cancelar</button>
-                <button class="btn" type="submit">Guardar Egreso</button>
-            </div>
-        </form>
-      </div>
-    </div>
   `;
+
     let chartInstance = null;
 
     function renderizarContabilidad(pagos, egresos, saldoInicialGlobal) {
@@ -191,12 +189,23 @@ async function cargarContabilidad() {
             return acc;
         }, {});
 
+        const chartContainer = document.getElementById('chart-container');
+        const canvas = document.getElementById('graficoEgresos');
+        
         if (chartInstance) {
             chartInstance.destroy();
+            chartInstance = null;
         }
+        
+        // Limpiar mensajes anteriores si existieran
+        const noDataMessage = chartContainer.querySelector('p');
+        if (noDataMessage) {
+            noDataMessage.remove();
+        }
+        
         if (Object.keys(egresosPorCategoria).length > 0) {
-            const ctx = document.getElementById('graficoEgresos').getContext('2d');
-            chartInstance = new Chart(ctx, {
+            canvas.style.display = 'block';
+            chartInstance = new Chart(canvas.getContext('2d'), {
                 type: 'pie',
                 data: {
                     labels: Object.keys(egresosPorCategoria),
@@ -207,6 +216,9 @@ async function cargarContabilidad() {
                 },
                 options: { responsive: true, plugins: { legend: { position: 'right' } } }
             });
+        } else {
+             canvas.style.display = 'none';
+             chartContainer.insertAdjacentHTML('beforeend', '<p>No hay datos de egresos para graficar en este período.</p>');
         }
     }
 
@@ -252,10 +264,6 @@ async function cargarContabilidad() {
     document.getElementById('btnExportarIngresos').addEventListener('click', () => exportarTablaAExcel('tabla-ingresos-export', 'Ingresos'));
     document.getElementById('btnExportarEgresos').addEventListener('click', () => exportarTablaAExcel('tabla-egresos-export', 'Egresos'));
 
-    const modalEgreso = document.getElementById('modalEgreso');
-    document.getElementById('btnAgregarEgreso').addEventListener('click', () => modalEgreso.style.display = 'flex');
-    document.getElementById('btnCerrarModalEgreso').addEventListener('click', () => modalEgreso.style.display = 'none');
-
     document.getElementById('formEgreso').addEventListener('submit', async (e) => {
         e.preventDefault();
         mostrarSpinner();
@@ -268,7 +276,8 @@ async function cargarContabilidad() {
                 if (typeof buscarOCrearCarpetaDeParcela !== 'function' || typeof subirComprobante !== 'function') {
                     throw new Error("Las funciones de Google Drive no están disponibles.");
                 }
-                const carpetaId = await buscarOCrearCarpetaDeParcela("Egresos");
+                // MODIFICADO: Se especifica una carpeta de Drive más clara.
+                const carpetaId = await buscarOCrearCarpetaDeParcela("Egresos Contabilidad");
                 const resultadoSubida = await subirComprobante(archivo, carpetaId);
                 linkComprobante = resultadoSubida.webViewLink;
             }
@@ -286,7 +295,6 @@ async function cargarContabilidad() {
             
             await agregarEgreso(datosEgreso);
             mostrarMensaje("Egreso agregado con éxito.", "success");
-            modalEgreso.style.display = 'none';
             cargarContabilidad();
 
         } catch (err) {
