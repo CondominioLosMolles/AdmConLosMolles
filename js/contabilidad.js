@@ -32,12 +32,14 @@ async function cargarContabilidad() {
   limpiarMainContent();
   mostrarSpinner();
 
-  let allPagos = [], allEgresos = [], config = {};
+  // MODIFICADO: Se añade 'categoriasEgresos' a la carga de datos inicial
+  let allPagos = [], allEgresos = [], config = {}, categoriasEgresos = [];
   try {
-    [allPagos, allEgresos, config] = await Promise.all([
+    [allPagos, allEgresos, config, categoriasEgresos] = await Promise.all([
         obtenerPagosGC(),
         obtenerEgresos(),
-        obtenerConfiguracion()
+        obtenerConfiguracion(),
+        obtenerCategoriasEgresos() // <-- Se llama a la nueva función
     ]);
   } catch (e) {
     ocultarSpinner();
@@ -153,19 +155,14 @@ async function cargarContabilidad() {
         <h3>Agregar Nuevo Egreso</h3>
         <form id="formEgreso" style="display:flex; flex-wrap:wrap; gap:15px;">
             <div style="flex: 1 1 180px;"><label>Fecha</label><input type="date" name="fecha" required></div>
+            
             <div style="flex: 1 1 180px;"><label>Categoría</label>
                 <select name="categoria" required>
                     <option value="" disabled selected>-- Seleccione --</option>
-                    <option value="Remuneraciones">Remuneraciones</option>
-                    <option value="Reparaciones y Mantención">Reparaciones y Mantención</option>
-                    <option value="Cuentas Básicas">Cuentas Básicas (Luz, Agua)</option>
-                    <option value="Administración">Administración</option>
-                    <option value="Insumos">Insumos (Limpieza, oficina)</option>
-                    <option value="Jardinería">Jardinería</option>
-                    <option value="Imprevistos">Imprevistos</option>
-                    <option value="Otros">Otros</option>
+                    ${categoriasEgresos.map(cat => `<option value="${cat}">${cat}</option>`).join('')}
                 </select>
             </div>
+
             <div style="flex: 1 1 100%;"><label>Descripción</label><input type="text" name="descripcion" required></div>
             <div style="display:flex; gap: 15px; flex-basis: 100%; flex-wrap: wrap; position: relative;">
                 <div style="flex: 2 1 300px;"><label>Proveedor / Beneficiario</label><input type="text" name="proveedor" autocomplete="off" required>
