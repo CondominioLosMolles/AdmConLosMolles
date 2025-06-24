@@ -11,8 +11,9 @@ const SHEET_MULTAS = 'Multas';
 const SHEET_ASAMBLEAS = 'Asambleas';
 const SHEET_COMUNICACIONES = 'Comunicaciones';
 const SHEET_CONFIGURACION = 'Configuracion';
+const MAIN_DRIVE_FOLDER_NAME = 'Los Molles'; // Carpeta principal en Drive
 
-// --- IDs de las Hojas (para operaciones de borrado) ---
+// --- IDs de las Hojas ---
 const SHEET_ID_RESIDENTES = 1835488459;
 const SHEET_ID_PAGOS_GC = 1954366455;
 const SHEET_ID_EGRESOS = 1945700474;
@@ -20,6 +21,81 @@ const SHEET_ID_MANTENCIONES = 895242560;
 const SHEET_ID_MULTAS = 456683145;
 const SHEET_ID_ASAMBLEAS = 791789730;
 const SHEET_ID_COMUNICACIONES = 569621527;
+
+
+// -------- FUNCIONES DE GOOGLE DRIVE --------
+
+/**
+ * Busca una carpeta por nombre dentro de una carpeta padre.
+ * @param {string} name - El nombre de la carpeta a buscar.
+ * @param {string} parentId - El ID de la carpeta donde buscar (por defecto 'root').
+ * @returns {Promise<string|null>} El ID de la carpeta si se encuentra, o null.
+ */
+async function findFolderId(name, parentId = 'root') {
+    const q = `mimeType='application/vnd.google-apps.folder' and name='${name}' and trashed=false and '${parentId}' in parents`;
+    const response = await gapi.client.drive.files.list({
+        q: q,
+        fields: 'files(id)',
+        spaces: 'drive'
+    });
+    return response.result.files.length > 0 ? response.result.files[0].id : null;
+}
+
+/**
+ * Crea una carpeta con un nombre específico dentro de una carpeta padre.
+ * @param {string} name - El nombre de la nueva carpeta.
+ * @param {string} parentId - El ID de la carpeta padre (por defecto 'root').
+ * @returns {Promise<string>} El ID de la carpeta creada.
+ */
+async function createFolder(name, parentId = 'root') {
+    const metadata = {
+        name: name,
+        mimeType: 'application/vnd.google-apps.folder',
+        parents: [parentId]
+    };
+    const response = await gapi.client.drive.files.create({
+        resource: metadata,
+        fields: 'id'
+    });
+    return response.result.id;
+}
+
+/**
+ * Busca una carpeta y, si no existe, la crea.
+ * @param {string} name - El nombre de la carpeta.
+ * @param {string} parentId - El ID de la carpeta padre.
+ * @returns {Promise<string>} El ID de la carpeta existente o recién creada.
+ */
+async function buscarOCrearCarpetaDeParcela(name, parentId = 'root') {
+    let folderId = await findFolderId(name, parentId);
+    if (!folderId) {
+        folderId = await createFolder(name, parentId);
+    }
+    return folderId;
+}
+
+/**
+ * Sube un archivo a una carpeta específica en Google Drive.
+ * @param {File} file - El objeto de archivo del input.
+ * @param {string} folderId - El ID de la carpeta de destino.
+ * @returns {Promise<Object>} El resultado de la subida, incluyendo el webViewLink.
+ */
+async function subirComprobante(file, folderId) {
+    const metadata = {
+        name: file.name,
+        parents: [folderId]
+    };
+    const formData = new FormData();
+    formData.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
+    formData.append('file', file);
+
+    const response = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,webViewLink', {
+        method: 'POST',
+        headers: new Headers({ 'Authorization': 'Bearer ' + gapi.auth.getToken().access_token }),
+        body: formData,
+    });
+    return response.json();
+}
 
 
 // -------- FUNCIONES DE CONFIGURACIÓN GLOBAL --------
@@ -78,9 +154,8 @@ async function obtenerTIMCs() { try { const res = await gapi.client.sheets.sprea
 async function guardarTIMC(anio, mes, valor) { try { const todosLosTIMCs = await obtenerTIMCs(); const filaExistenteIndex = todosLosTIMCs.findIndex(fila => fila[0] == anio && fila[1] == mes); if (filaExistenteIndex !== -1) { const filaParaActualizar = filaExistenteIndex + 2; await gapi.client.sheets.spreadsheets.values.update({ spreadsheetId: SPREADSHEET_ID, range: `${SHEET_CONFIG_TIMC}!C${filaParaActualizar}`, valueInputOption: 'USER_ENTERED', resource: { values: [[valor]] } }); } else { const nuevaFila = [anio, mes, valor]; await gapi.client.sheets.spreadsheets.values.append({ spreadsheetId: SPREADSHEET_ID, range: `${SHEET_CONFIG_TIMC}!A:C`, valueInputOption: 'USER_ENTERED', resource: { values: [nuevaFila] } }); } } catch (err) { console.error("ERROR AL GUARDAR TIMC:", err); throw err; } }
 
 // -------- CONTABILIDAD (EGRESOS) --------
-// MODIFICADO: Se actualizan rangos a la columna I, según tu planilla.
-async function obtenerEgresos() { const res = await gapi.client.sheets.spreadsheets.values.get({ spreadsheetId: SPREADSHEET_ID, range: `${SHEET_EGRESOS}!A2:I` }); return res.result.values || []; }
-async function agregarEgreso(datos) { const egresos = await obtenerEgresos(); const lastId = egresos.length > 0 && egresos[egresos.length-1][0] ? parseInt(egresos[egresos.length-1][0]) : 0; datos[0] = (lastId + 1).toString(); await gapi.client.sheets.spreadsheets.values.append({ spreadsheetId: SPREADSHEET_ID, range: `${SHEET_EGRESOS}!A:I`, valueInputOption: 'USER_ENTERED', resource: { values: [datos] } }); }
+async function obtenerEgresos() { const res = await gapi.client.sheets.spreadsheets.values.get({ spreadsheetId: SPREADSHEET_ID, range: `${SHEET_EGRESOS}!A2:J` }); return res.result.values || []; }
+async function agregarEgreso(datos) { const egresos = await obtenerEgresos(); const lastId = egresos.length > 0 && egresos[egresos.length-1][0] ? parseInt(egresos[egresos.length-1][0]) : 0; datos[0] = (lastId + 1).toString(); await gapi.client.sheets.spreadsheets.values.append({ spreadsheetId: SPREADSHEET_ID, range: `${SHEET_EGRESOS}!A:J`, valueInputOption: 'USER_ENTERED', resource: { values: [datos] } }); }
 async function eliminarEgreso(id) { const egresos = await obtenerEgresos(); const idx = egresos.findIndex(e => e[0] === id); if (idx === -1) throw new Error('No encontrado'); const row = idx + 2; await gapi.client.sheets.spreadsheets.batchUpdate({ spreadsheetId: SPREADSHEET_ID, resource: { requests: [{ deleteDimension: { range: { sheetId: SHEET_ID_EGRESOS, dimension: "ROWS", startIndex: row - 1, endIndex: row } } }] } }); }
 
 // -------- MANTENCIONES --------
