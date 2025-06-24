@@ -45,10 +45,9 @@ async function cargarContabilidad() {
     return;
   }
   
-  // NUEVO: Procesar lista única de proveedores para autocompletar
   const proveedoresUnicos = allEgresos.reduce((acc, egreso) => {
-    const nombre = egreso[4]; // Columna E: Proveedor
-    const rut = egreso[5];    // Columna F: Rut_Proveedor
+    const nombre = egreso[4];
+    const rut = egreso[5];   
     if (nombre) {
       acc[nombre.toLowerCase()] = { nombre, rut: rut || '' };
     }
@@ -70,7 +69,7 @@ async function cargarContabilidad() {
       .view-toggle input { display: none; }
       .view-toggle input:checked + label { background: #007bff; color: white; font-weight: bold; }
       .suggestion-item { padding: 8px 12px; cursor: pointer; border-bottom: 1px solid #eee; background: white; }
-      .suggestion-item:hover { background-color: #f0f0f0; }
+      .suggestion-item:hover, .suggestion-item.active { background-color: #e9f1fb; }
       .suggestion-item:last-child { border-bottom: none; }
     </style>
     <h2>Contabilidad y Flujo de Caja</h2>
@@ -184,7 +183,7 @@ async function cargarContabilidad() {
                     <option value="Webpay">Webpay</option>
                 </select>
             </div>
-            <div style="flex: 1 1 100%;"><label>Comprobante(s) (Factura, Boleta)</label><input type="file" name="comprobante" multiple></div>
+            <div style="flex: 1 1 100%;"><label>Comprobante(s)</label><input type="file" name="comprobante" multiple></div>
             <div style="flex: 1 1 100%; text-align: right; margin-top: 20px;">
                 <button class="btn secondary" type="button" id="btnCerrarModalEgreso">Cancelar</button>
                 <button class="btn" type="submit">Guardar Egreso</button>
@@ -193,8 +192,9 @@ async function cargarContabilidad() {
       </div>
     </div>
   `;
+
     let chartIngresosInstance = null;
-  let chartEgresosInstance = null;
+    let chartEgresosInstance = null;
 
     function renderizarContabilidad(pagos, egresos, saldoInicialGlobal) {
         const fechaInicioFiltro = document.getElementById('fechaInicio').valueAsDate;
@@ -249,19 +249,26 @@ async function cargarContabilidad() {
         // Gráfico de Ingresos
         const ingresosPorConcepto = pagos.reduce((acc, p) => {
             acc['Gastos Comunes'] = (acc['Gastos Comunes'] || 0) + parseFloat(p[6] || 0);
-            acc['Abonos Convenio'] = (acc['Abonos Convenio'] || 0) + parseFloat(p[17] || 0);
+            if(parseFloat(p[17] || 0) > 0) acc['Abonos Convenio'] = (acc['Abonos Convenio'] || 0) + parseFloat(p[17] || 0);
             return acc;
-        }, { 'Gastos Comunes': 0, 'Abonos Convenio': 0 });
+        }, {});
+
+        const chartIngresosContainer = document.getElementById('chart-container-ingresos');
+        const canvasIngresos = document.getElementById('graficoIngresos');
+        const noDataIngresos = chartIngresosContainer.querySelector('p');
+        if(noDataIngresos) noDataIngresos.remove();
         
-        if(chartIngresosInstance) chartIngresosInstance.destroy();
-        if(ingresosPorConcepto['Gastos Comunes'] > 0 || ingresosPorConcepto['Abonos Convenio'] > 0){
-            document.getElementById('graficoIngresos').style.display = 'block';
-            chartIngresosInstance = new Chart(document.getElementById('graficoIngresos').getContext('2d'), {
+        if (chartIngresosInstance) chartIngresosInstance.destroy();
+        if(Object.values(ingresosPorConcepto).some(v => v > 0)){
+            canvasIngresos.style.display = 'block';
+            chartIngresosInstance = new Chart(canvasIngresos.getContext('2d'), {
                 type: 'pie', data: { labels: Object.keys(ingresosPorConcepto), datasets: [{ data: Object.values(ingresosPorConcepto), backgroundColor: ['#4e91f9', '#f6d743'] }] }, options: { responsive: true, plugins: { legend: { position: 'right' } } }
             });
         } else {
-            document.getElementById('graficoIngresos').style.display = 'none';
+            canvasIngresos.style.display = 'none';
+            if (!chartIngresosContainer.querySelector('p')) chartIngresosContainer.insertAdjacentHTML('beforeend', '<p>No hay datos de ingresos para graficar en este período.</p>');
         }
+
 
         // Gráfico de Egresos
         const egresosPorCategoria = egresos.reduce((acc, e) => {
@@ -294,8 +301,16 @@ async function cargarContabilidad() {
         let fechaFin = document.getElementById('fechaFin').value;
         const saldoInicialGlobal = parseFloat(config.Saldo_Inicial_Caja || 0);
 
-        const pagosFiltrados = allPagos.filter(p => { const fechaPago = p[13]; if (!fechaPago) return false; return (!fechaInicio || fechaPago >= fechaInicio) && (!fechaFin || fechaPago <= fechaFin); });
-        const egresosFiltrados = allEgresos.filter(e => { const fechaEgreso = e[1]; if (!fechaEgreso) return false; return (!fechaInicio || fechaEgreso >= fechaEgreso) && (!fechaFin || fechaEgreso <= fechaFin); });
+        const pagosFiltrados = allPagos.filter(p => {
+            const fechaPago = p[13];
+            if (!fechaPago) return false;
+            return (!fechaInicio || fechaPago >= fechaInicio) && (!fechaFin || fechaPago <= fechaFin);
+        });
+        const egresosFiltrados = allEgresos.filter(e => {
+            const fechaEgreso = e[1];
+            if (!fechaEgreso) return false;
+            return (!fechaInicio || fechaEgreso >= fechaEgreso) && (!fechaFin || fechaEgreso <= fechaFin);
+        });
 
         renderizarContabilidad(pagosFiltrados, egresosFiltrados, saldoInicialGlobal);
     }
@@ -407,20 +422,21 @@ async function cargarContabilidad() {
         }
     });
     
+    // MODIFICADO: Lógica de autocompletar proveedor con teclado
     const proveedorInput = document.querySelector('#formEgreso input[name="proveedor"]');
     const rutInput = document.querySelector('#formEgreso input[name="rut_proveedor"]');
     const suggestionsContainer = document.getElementById('proveedor-suggestions');
+    let activeSuggestion = -1;
 
     proveedorInput.addEventListener('input', () => {
         const searchTerm = proveedorInput.value.toLowerCase();
         suggestionsContainer.innerHTML = '';
+        activeSuggestion = -1;
         if (searchTerm.length < 2) {
             suggestionsContainer.style.display = 'none';
             return;
         }
-
         const matches = Object.values(proveedoresUnicos).filter(p => p.nombre.toLowerCase().includes(searchTerm));
-
         if (matches.length > 0) {
             matches.forEach(p => {
                 const item = document.createElement('div');
@@ -439,13 +455,46 @@ async function cargarContabilidad() {
         }
     });
 
+    proveedorInput.addEventListener('keydown', (e) => {
+        const items = suggestionsContainer.querySelectorAll('.suggestion-item');
+        if (items.length === 0) return;
+
+        if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            activeSuggestion++;
+            if (activeSuggestion >= items.length) activeSuggestion = 0;
+            updateSuggestionHighlight(items);
+        } else if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            activeSuggestion--;
+            if (activeSuggestion < 0) activeSuggestion = items.length - 1;
+            updateSuggestionHighlight(items);
+        } else if (e.key === 'Enter') {
+            e.preventDefault();
+            if (activeSuggestion > -1) {
+                items[activeSuggestion].click();
+            }
+            suggestionsContainer.style.display = 'none';
+        }
+    });
+
+    function updateSuggestionHighlight(items) {
+        items.forEach((item, index) => {
+            if (index === activeSuggestion) {
+                item.classList.add('active');
+            } else {
+                item.classList.remove('active');
+            }
+        });
+    }
+
     document.addEventListener('click', (e) => {
         if (!proveedorInput.contains(e.target)) {
             suggestionsContainer.style.display = 'none';
         }
     });
     
-    // Carga inicial y configuración de vista por defecto
+    // Carga inicial
     const hoy = new Date();
     const primerDiaMes = new Date(hoy.getFullYear(), hoy.getMonth(), 1).toISOString().split('T')[0];
     const ultimoDiaMes = new Date(hoy.getFullYear(), hoy.getMonth() + 1, 0).toISOString().split('T')[0];
