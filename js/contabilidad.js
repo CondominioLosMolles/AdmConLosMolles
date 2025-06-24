@@ -32,14 +32,13 @@ async function cargarContabilidad() {
   limpiarMainContent();
   mostrarSpinner();
 
-  // MODIFICADO: Se añade 'categoriasEgresos' a la carga de datos inicial
   let allPagos = [], allEgresos = [], config = {}, categoriasEgresos = [];
   try {
     [allPagos, allEgresos, config, categoriasEgresos] = await Promise.all([
         obtenerPagosGC(),
         obtenerEgresos(),
         obtenerConfiguracion(),
-        obtenerCategoriasEgresos() // <-- Se llama a la nueva función
+        obtenerCategoriasEgresos()
     ]);
   } catch (e) {
     ocultarSpinner();
@@ -48,8 +47,8 @@ async function cargarContabilidad() {
   }
   
   const proveedoresUnicos = allEgresos.reduce((acc, egreso) => {
-    const nombre = egreso[4]; // Columna E: Proveedor
-    const rut = egreso[5];    // Columna F: Rut_Proveedor
+    const nombre = egreso[4];
+    const rut = egreso[5];
     if (nombre) {
       acc[nombre.toLowerCase().trim()] = { nombre: nombre.trim(), rut: rut || '' };
     }
@@ -155,14 +154,29 @@ async function cargarContabilidad() {
         <h3>Agregar Nuevo Egreso</h3>
         <form id="formEgreso" style="display:flex; flex-wrap:wrap; gap:15px;">
             <div style="flex: 1 1 180px;"><label>Fecha</label><input type="date" name="fecha" required></div>
-            
             <div style="flex: 1 1 180px;"><label>Categoría</label>
                 <select name="categoria" required>
                     <option value="" disabled selected>-- Seleccione --</option>
                     ${categoriasEgresos.map(cat => `<option value="${cat}">${cat}</option>`).join('')}
                 </select>
             </div>
-
+            <div style="flex: 1 1 180px;"><label>Mes de Pago</label>
+                <select name="mes_pago" required>
+                    <option value="" disabled selected>-- Seleccione mes --</option>
+                    <option value="Enero">Enero</option>
+                    <option value="Febrero">Febrero</option>
+                    <option value="Marzo">Marzo</option>
+                    <option value="Abril">Abril</option>
+                    <option value="Mayo">Mayo</option>
+                    <option value="Junio">Junio</option>
+                    <option value="Julio">Julio</option>
+                    <option value="Agosto">Agosto</option>
+                    <option value="Septiembre">Septiembre</option>
+                    <option value="Octubre">Octubre</option>
+                    <option value="Noviembre">Noviembre</option>
+                    <option value="Diciembre">Diciembre</option>
+                </select>
+            </div>
             <div style="flex: 1 1 100%;"><label>Descripción</label><input type="text" name="descripcion" required></div>
             <div style="display:flex; gap: 15px; flex-basis: 100%; flex-wrap: wrap; position: relative;">
                 <div style="flex: 2 1 300px;"><label>Proveedor / Beneficiario</label><input type="text" name="proveedor" autocomplete="off" required>
@@ -230,16 +244,27 @@ async function cargarContabilidad() {
         const tablaEgresosDiv = document.getElementById('tablaEgresos');
         tablaEgresosDiv.innerHTML = '<p>No hay egresos en el período seleccionado.</p>';
         if (egresos.length > 0) {
-            let egresosHTML = '<table id="tabla-egresos-export" class="table"><thead><tr><th>Fecha</th><th>Proveedor</th><th>RUT</th><th>Categoría</th><th>Monto</th><th>Método Pago</th><th>Comprobante</th></tr></thead><tbody>';
+            // INICIO: Modificación de la tabla de egresos para añadir 'Mes Pago'
+            let egresosHTML = '<table id="tabla-egresos-export" class="table"><thead><tr><th>Fecha</th><th>Mes Pago</th><th>Proveedor</th><th>RUT</th><th>Categoría</th><th>Monto</th><th>Método Pago</th><th>Comprobante</th></tr></thead><tbody>';
             egresos.sort((a,b) => new Date(a[1]) - new Date(b[1])).forEach(e => {
                 let linksHtml = "N/A";
                 if (e[7]) {
                     const links = e[7].split(',');
                     linksHtml = links.map((link, index) => `<a href="${link.trim()}" target="_blank" class="btn small">Ver ${index + 1}</a>`).join(' ');
                 }
-                egresosHTML += `<tr><td>${new Date(e[1].replace(/-/g, '/')).toLocaleDateString('es-CL')}</td><td>${e[4]}</td><td>${e[5] || ''}</td><td>${e[2]}</td><td>$${parseFloat(e[6] || 0).toLocaleString('es-CL')}</td><td>${e[8] || 'N/A'}</td><td>${linksHtml}</td></tr>`;
+                egresosHTML += `<tr>
+                    <td>${new Date(e[1].replace(/-/g, '/')).toLocaleDateString('es-CL')}</td>
+                    <td>${e[9] || 'N/A'}</td>
+                    <td>${e[4]}</td>
+                    <td>${e[5] || ''}</td>
+                    <td>${e[2]}</td>
+                    <td>$${parseFloat(e[6] || 0).toLocaleString('es-CL')}</td>
+                    <td>${e[8] || 'N/A'}</td>
+                    <td>${linksHtml}</td>
+                </tr>`;
             });
             egresosHTML += '</tbody></table>';
+            // FIN: Modificación de la tabla de egresos
             tablaEgresosDiv.innerHTML = egresosHTML;
         }
         
@@ -383,18 +408,24 @@ async function cargarContabilidad() {
             const linksComprobantes = [];
 
             if (archivos && archivos.length > 0 && archivos[0].size > 0) {
-                if (typeof buscarOCrearCarpetaDeParcela !== 'function' || typeof subirComprobante !== 'function') {
-                    throw new Error("Las funciones de Google Drive no están disponibles.");
+                if (typeof buscarOCrearRutaDeEgreso !== 'function') {
+                    throw new Error("La función de Google Drive 'buscarOCrearRutaDeEgreso' no está disponible.");
                 }
-                const carpetaId = await buscarOCrearCarpetaDeParcela("Egresos Contabilidad");
+                // INICIO: Lógica para obtener carpeta de destino
+                const nombreMes = formData.get('mes_pago');
+                const anio = formData.get('fecha').split('-')[0];
+                const carpetaId = await buscarOCrearRutaDeEgreso(nombreMes, anio);
+                // FIN: Lógica para obtener carpeta de destino
+                
                 for (const archivo of archivos) {
                     const resultadoSubida = await subirComprobante(archivo, carpetaId);
                     linksComprobantes.push(resultadoSubida.webViewLink);
                 }
             }
             
+            // Se añade el nuevo campo 'mes_pago' al array de datos
             const datosEgreso = [
-                null,
+                null, // ID
                 formData.get('fecha'),
                 formData.get('categoria'),
                 formData.get('descripcion'),
@@ -402,7 +433,8 @@ async function cargarContabilidad() {
                 formData.get('rut_proveedor'),
                 formData.get('monto'),
                 linksComprobantes.join(','),
-                formData.get('metodo_pago')
+                formData.get('metodo_pago'),
+                formData.get('mes_pago') // <-- Nuevo dato
             ];
             
             await agregarEgreso(datosEgreso);
