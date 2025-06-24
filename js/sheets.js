@@ -11,7 +11,6 @@ const SHEET_MULTAS = 'Multas';
 const SHEET_ASAMBLEAS = 'Asambleas';
 const SHEET_COMUNICACIONES = 'Comunicaciones';
 const SHEET_CONFIGURACION = 'Configuracion';
-const SHEET_CATEGORIAS_EGRESOS = 'Categorias_Egresos';
 const MAIN_DRIVE_FOLDER_NAME = 'Los Molles'; // Carpeta principal en Drive
 
 // --- IDs de las Hojas ---
@@ -25,6 +24,13 @@ const SHEET_ID_COMUNICACIONES = 569621527;
 
 
 // -------- FUNCIONES DE GOOGLE DRIVE --------
+
+/**
+ * Busca una carpeta por nombre dentro de una carpeta padre.
+ * @param {string} name - El nombre de la carpeta a buscar.
+ * @param {string} parentId - El ID de la carpeta donde buscar (por defecto 'root').
+ * @returns {Promise<string|null>} El ID de la carpeta si se encuentra, o null.
+ */
 async function findFolderId(name, parentId = 'root') {
     const q = `mimeType='application/vnd.google-apps.folder' and name='${name}' and trashed=false and '${parentId}' in parents`;
     const response = await gapi.client.drive.files.list({
@@ -35,6 +41,12 @@ async function findFolderId(name, parentId = 'root') {
     return response.result.files.length > 0 ? response.result.files[0].id : null;
 }
 
+/**
+ * Crea una carpeta con un nombre específico dentro de una carpeta padre.
+ * @param {string} name - El nombre de la nueva carpeta.
+ * @param {string} parentId - El ID de la carpeta padre (por defecto 'root').
+ * @returns {Promise<string>} El ID de la carpeta creada.
+ */
 async function createFolder(name, parentId = 'root') {
     const metadata = {
         name: name,
@@ -48,6 +60,12 @@ async function createFolder(name, parentId = 'root') {
     return response.result.id;
 }
 
+/**
+ * Busca una carpeta y, si no existe, la crea.
+ * @param {string} name - El nombre de la carpeta.
+ * @param {string} parentId - El ID de la carpeta padre.
+ * @returns {Promise<string>} El ID de la carpeta existente o recién creada.
+ */
 async function buscarOCrearCarpetaDeParcela(name, parentId = 'root') {
     let folderId = await findFolderId(name, parentId);
     if (!folderId) {
@@ -56,6 +74,12 @@ async function buscarOCrearCarpetaDeParcela(name, parentId = 'root') {
     return folderId;
 }
 
+/**
+ * Sube un archivo a una carpeta específica en Google Drive.
+ * @param {File} file - El objeto de archivo del input.
+ * @param {string} folderId - El ID de la carpeta de destino.
+ * @returns {Promise<Object>} El resultado de la subida, incluyendo el webViewLink.
+ */
 async function subirComprobante(file, folderId) {
     const metadata = {
         name: file.name,
@@ -64,6 +88,7 @@ async function subirComprobante(file, folderId) {
     const formData = new FormData();
     formData.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
     formData.append('file', file);
+
     const response = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,webViewLink', {
         method: 'POST',
         headers: new Headers({ 'Authorization': 'Bearer ' + gapi.auth.getToken().access_token }),
@@ -71,6 +96,7 @@ async function subirComprobante(file, folderId) {
     });
     return response.json();
 }
+
 
 // -------- FUNCIONES DE CONFIGURACIÓN GLOBAL --------
 async function obtenerConfiguracion() {
@@ -113,18 +139,6 @@ async function actualizarConfiguracion(key, value) {
     }
 }
 
-async function obtenerCategoriasEgresos() {
-    try {
-        const res = await gapi.client.sheets.spreadsheets.values.get({
-            spreadsheetId: SPREADSHEET_ID,
-            range: `${SHEET_CATEGORIAS_EGRESOS}!A:A`,
-        });
-        return res.result.values ? res.result.values.flat().filter(Boolean) : [];
-    } catch (e) {
-        console.error("Error al obtener categorías de egresos:", e);
-        return ["Remuneraciones", "Reparaciones y Mantención", "Cuentas Básicas", "Otros"];
-    }
-}
 
 // -------- FUNCIONES DE RESIDENTES --------
 async function obtenerResidentes() { const res = await gapi.client.sheets.spreadsheets.values.get({ spreadsheetId: SPREADSHEET_ID, range: `${SHEET_RESIDENTES}!A2:M` }); return res.result.values || []; }
