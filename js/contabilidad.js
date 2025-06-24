@@ -72,6 +72,34 @@ async function cargarContabilidad() {
       .suggestion-item { padding: 8px 12px; cursor: pointer; border-bottom: 1px solid #eee; background: white; }
       .suggestion-item:hover, .suggestion-item.active { background-color: #e9f1fb; }
       .suggestion-item:last-child { border-bottom: none; }
+
+      /* --- INICIO: ESTILOS PARA LA TABLA DE EGRESOS --- */
+
+      /* 1. Permite ajustar el tamaño de las columnas y añade el separador vertical */
+      #tabla-egresos-export th {
+        position: relative;
+        resize: horizontal; /* Permite el ajuste horizontal */
+        overflow: auto; /* Necesario para que 'resize' funcione */
+      }
+      #tabla-egresos-export th:not(:last-child) {
+         border-right: 1px solid #ccc; /* Línea separadora vertical */
+      }
+
+      /* 2. Centra el texto de las columnas específicas (encabezados y celdas) */
+      #tabla-egresos-export th:nth-child(1), /* Fecha */
+      #tabla-egresos-export td:nth-child(1),
+      #tabla-egresos-export th:nth-child(2), /* Mes Pago */
+      #tabla-egresos-export td:nth-child(2),
+      #tabla-egresos-export th:nth-child(4), /* RUT */
+      #tabla-egresos-export td:nth-child(4),
+      #tabla-egresos-export th:nth-child(6), /* Monto */
+      #tabla-egresos-export td:nth-child(6),
+      #tabla-egresos-export th:nth-child(7), /* Método Pago */
+      #tabla-egresos-export td:nth-child(7) {
+        text-align: center;
+      }
+      /* --- FIN: ESTILOS PARA LA TABLA DE EGRESOS --- */
+
     </style>
     <h2>Contabilidad y Flujo de Caja</h2>
 
@@ -244,7 +272,6 @@ async function cargarContabilidad() {
         const tablaEgresosDiv = document.getElementById('tablaEgresos');
         tablaEgresosDiv.innerHTML = '<p>No hay egresos en el período seleccionado.</p>';
         if (egresos.length > 0) {
-            // INICIO: Modificación de la tabla de egresos para añadir 'Mes Pago'
             let egresosHTML = '<table id="tabla-egresos-export" class="table"><thead><tr><th>Fecha</th><th>Mes Pago</th><th>Proveedor</th><th>RUT</th><th>Categoría</th><th>Monto</th><th>Método Pago</th><th>Comprobante</th></tr></thead><tbody>';
             egresos.sort((a,b) => new Date(a[1]) - new Date(b[1])).forEach(e => {
                 let linksHtml = "N/A";
@@ -264,7 +291,6 @@ async function cargarContabilidad() {
                 </tr>`;
             });
             egresosHTML += '</tbody></table>';
-            // FIN: Modificación de la tabla de egresos
             tablaEgresosDiv.innerHTML = egresosHTML;
         }
         
@@ -411,11 +437,9 @@ async function cargarContabilidad() {
                 if (typeof buscarOCrearRutaDeEgreso !== 'function') {
                     throw new Error("La función de Google Drive 'buscarOCrearRutaDeEgreso' no está disponible.");
                 }
-                // INICIO: Lógica para obtener carpeta de destino
                 const nombreMes = formData.get('mes_pago');
                 const anio = formData.get('fecha').split('-')[0];
                 const carpetaId = await buscarOCrearRutaDeEgreso(nombreMes, anio);
-                // FIN: Lógica para obtener carpeta de destino
                 
                 for (const archivo of archivos) {
                     const resultadoSubida = await subirComprobante(archivo, carpetaId);
@@ -423,7 +447,6 @@ async function cargarContabilidad() {
                 }
             }
             
-            // Se añade el nuevo campo 'mes_pago' al array de datos
             const datosEgreso = [
                 null, // ID
                 formData.get('fecha'),
@@ -434,7 +457,7 @@ async function cargarContabilidad() {
                 formData.get('monto'),
                 linksComprobantes.join(','),
                 formData.get('metodo_pago'),
-                formData.get('mes_pago') // <-- Nuevo dato
+                formData.get('mes_pago')
             ];
             
             await agregarEgreso(datosEgreso);
