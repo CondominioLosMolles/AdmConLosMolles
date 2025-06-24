@@ -256,6 +256,8 @@ h2, h3, h4 {
     margin-bottom: 10px;
   }
 }
+
+/* --- ESTILOS MODALES ANTIGUOS (REFERENCIA) --- */
 #modalResidente, #modalGC, #modalEgreso, #modalMantencion, #modalMulta, #modalAsamblea, #modalComunicacion {
   position: fixed !important;
   top: 0; left: 0; right: 0; bottom: 0;
@@ -297,8 +299,38 @@ h2, h3, h4 {
 }
 
 /* ================================================== */
-/* === INICIO: CÓDIGO NUEVO AÑADIDO ================= */
+/* === INICIO: CÓDIGO NUEVO AÑADIDO Y CORREGIDO ===== */
 /* ================================================== */
+
+/* --- Estilos para Modal Global --- */
+.modal {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    z-index: 1001;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    background: rgba(36, 60, 89, 0.3); /* Fondo oscurecido */
+    transition: opacity 0.2s ease-in-out;
+}
+/* Regla para asegurar que el modal se muestre cuando JS cambie el display */
+.modal[style*="display: flex"] {
+    display: flex !important;
+}
+.modal .modal-content {
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 8px 32px rgba(78, 145, 249, 0.3);
+    padding: 32px 36px;
+    min-width: 320px;
+    max-width: 500px; /* Ancho por defecto */
+    width: 90%;
+    animation: modalFadeIn 0.25s ease-out;
+}
+/* Modales más anchos para formularios con más campos */
+.modal .modal-content.large {
+    max-width: 750px; /* Ancho para formularios grandes */
+}
 
 /* --- Estilos para Notificaciones Flotantes --- */
 .mensaje-flotante {
@@ -353,14 +385,9 @@ h2, h3, h4 {
 .status-finalizado { background: #e8f5e9; color: #2e7d32; }
 .status-cancelado { background: #fbe9e7; color: #d84315; }
 
-/* Modales más anchos para formularios con más campos */
-.modal .modal-content.large {
-    max-width: 700px;
-}
-
 /* Grid para formularios con dos columnas */
 .form-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 16px;
+    gap: 16px 24px; /* Aumenta el espaciado horizontal */
 }
