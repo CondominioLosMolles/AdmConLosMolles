@@ -295,3 +295,72 @@ h2, h3, h4 {
   from { transform: translateY(-30px); opacity: 0; }
   to { transform: translateY(0); opacity: 1; }
 }
+
+/* ================================================== */
+/* === INICIO: CÓDIGO NUEVO AÑADIDO ================= */
+/* ================================================== */
+
+/* --- Estilos para Notificaciones Flotantes --- */
+.mensaje-flotante {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 14px 28px;
+    border-radius: 8px;
+    color: #fff;
+    font-family: 'Poppins', sans-serif;
+    font-size: 1em;
+    font-weight: 600;
+    z-index: 10000;
+    opacity: 0;
+    transition: opacity 0.4s ease, bottom 0.4s ease;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+    text-align: center;
+}
+
+.mensaje-flotante.visible {
+    bottom: 40px;
+    opacity: 1;
+}
+
+.mensaje-flotante.success {
+    background-color: #28a745;
+}
+
+.mensaje-flotante.error {
+    background-color: #dc3545;
+}
+
+.mensaje-flotante.info {
+    background-color: #17a2b8;
+}
+
+/* --- Estilos para nuevos módulos (Proveedores y Tareas) --- */
+
+/* Etiquetas de estado para el Gestor de Tareas */
+.badge {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 16px;
+  font-weight: 600;
+  font-size: 0.9em;
+}
+
+.status-cotizando { background: #eef3ff; color: #4e91f9; }
+.status-aprobado { background: #fff8e1; color: #f57f17; }
+.status-en-proceso { background: #e3f2fd; color: #1e88e5; }
+.status-finalizado { background: #e8f5e9; color: #2e7d32; }
+.status-cancelado { background: #fbe9e7; color: #d84315; }
+
+/* Modales más anchos para formularios con más campos */
+.modal .modal-content.large {
+    max-width: 700px;
+}
+
+/* Grid para formularios con dos columnas */
+.form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+}
