@@ -1,5 +1,51 @@
 // js/contabilidad.js
 
+// --- INICIO: NUEVAS FUNCIONES PARA ANCHO DE COLUMNAS ---
+const ANCHOS_STORAGE_KEY = 'egresosColumnWidths';
+
+/**
+ * Guarda los anchos actuales de las columnas de la tabla de egresos en localStorage.
+ */
+function guardarAnchosDeColumna() {
+    const headers = document.querySelectorAll('#tabla-egresos-export th');
+    if (headers.length === 0) return;
+    const widths = Array.from(headers).map(th => th.offsetWidth);
+    localStorage.setItem(ANCHOS_STORAGE_KEY, JSON.stringify(widths));
+}
+
+/**
+ * Aplica los anchos de columna guardados desde localStorage a la tabla de egresos.
+ */
+function aplicarAnchosDeColumnaGuardados() {
+    const savedWidths = localStorage.getItem(ANCHOS_STORAGE_KEY);
+    if (savedWidths) {
+        try {
+            const widths = JSON.parse(savedWidths);
+            const headers = document.querySelectorAll('#tabla-egresos-export th');
+            if (headers.length === widths.length) {
+                headers.forEach((th, index) => {
+                    th.style.width = `${widths[index]}px`;
+                });
+            }
+        } catch (e) {
+            console.error("Error al aplicar anchos de columna:", e);
+            localStorage.removeItem(ANCHOS_STORAGE_KEY); // Limpiar si hay datos corruptos
+        }
+    }
+}
+
+/**
+ * Inicializa los listeners para que se guarden los anchos al soltar el mouse después de ajustar.
+ */
+function inicializarColumnasAjustables() {
+    const headers = document.querySelectorAll('#tabla-egresos-export th');
+    headers.forEach(th => {
+        th.addEventListener('mouseup', guardarAnchosDeColumna);
+    });
+}
+// --- FIN: NUEVAS FUNCIONES PARA ANCHO DE COLUMNAS ---
+
+
 // --- Utilidad para exportar a Excel ---
 function exportarTablaAExcel(tableID, filename = ''){
     let downloadLink;
@@ -73,33 +119,27 @@ async function cargarContabilidad() {
       .suggestion-item:hover, .suggestion-item.active { background-color: #e9f1fb; }
       .suggestion-item:last-child { border-bottom: none; }
 
-      /* --- INICIO: ESTILOS PARA LA TABLA DE EGRESOS --- */
-
-      /* 1. Permite ajustar el tamaño de las columnas y añade el separador vertical */
+      /* --- ESTILOS PARA LA TABLA DE EGRESOS --- */
       #tabla-egresos-export th {
         position: relative;
-        resize: horizontal; /* Permite el ajuste horizontal */
-        overflow: auto; /* Necesario para que 'resize' funcione */
+        resize: horizontal;
+        overflow: auto;
       }
       #tabla-egresos-export th:not(:last-child) {
-         border-right: 1px solid #ccc; /* Línea separadora vertical */
+         border-right: 1px solid #ccc;
       }
-
-      /* 2. Centra el texto de las columnas específicas (encabezados y celdas) */
-      #tabla-egresos-export th:nth-child(1), /* Fecha */
+      #tabla-egresos-export th:nth-child(1),
       #tabla-egresos-export td:nth-child(1),
-      #tabla-egresos-export th:nth-child(2), /* Mes Pago */
+      #tabla-egresos-export th:nth-child(2),
       #tabla-egresos-export td:nth-child(2),
-      #tabla-egresos-export th:nth-child(4), /* RUT */
+      #tabla-egresos-export th:nth-child(4),
       #tabla-egresos-export td:nth-child(4),
-      #tabla-egresos-export th:nth-child(6), /* Monto */
+      #tabla-egresos-export th:nth-child(6),
       #tabla-egresos-export td:nth-child(6),
-      #tabla-egresos-export th:nth-child(7), /* Método Pago */
+      #tabla-egresos-export th:nth-child(7),
       #tabla-egresos-export td:nth-child(7) {
         text-align: center;
       }
-      /* --- FIN: ESTILOS PARA LA TABLA DE EGRESOS --- */
-
     </style>
     <h2>Contabilidad y Flujo de Caja</h2>
 
@@ -292,6 +332,12 @@ async function cargarContabilidad() {
             });
             egresosHTML += '</tbody></table>';
             tablaEgresosDiv.innerHTML = egresosHTML;
+
+            // --- INICIO: APLICAR Y GUARDAR ANCHOS DE COLUMNA ---
+            // Se aplican los anchos guardados y se preparan para guardar nuevos cambios.
+            aplicarAnchosDeColumnaGuardados();
+            inicializarColumnasAjustables();
+            // --- FIN: APLICAR Y GUARDAR ANCHOS DE COLUMNA ---
         }
         
         // Gráfico de Ingresos
