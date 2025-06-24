@@ -5,6 +5,9 @@ function exportarTablaAExcel(tableID, filename = ''){
     let downloadLink;
     const dataType = 'application/vnd.ms-excel';
     const tableSelect = document.getElementById(tableID);
+    if(!tableSelect) {
+        return mostrarMensaje('No se encontró la tabla para exportar.', 'error');
+    }
     const tableHTML = tableSelect.outerHTML.replace(/ /g, '%20');
     
     filename = filename?filename+'.xls':'excel_data.xls';
@@ -85,37 +88,72 @@ async function cargarContabilidad() {
         </div>
     </div>
 
-    <div style="margin-top: 2rem;">
-        <h3>Detalle de Ingresos</h3>
-        <button class="btn secondary btn-sm" id="btnExportarIngresos">Exportar a Excel</button>
-        <div id="tablaIngresos" style="margin-top:1rem; overflow-x:auto;"></div>
+    <div class="widget" style="margin-top: 2rem;">
+        <div style="display:flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+            <h3 style="margin-top:0; margin-bottom:0;">Detalle de Ingresos</h3>
+            <button class="btn secondary btn-sm" id="btnExportarIngresos">Exportar a Excel</button>
+        </div>
+        <div id="tablaIngresos" style="overflow-x:auto;"></div>
     </div>
-    <div style="margin-top: 2rem;">
-        <h3>Detalle de Egresos</h3>
-        <button class="btn secondary btn-sm" id="btnExportarEgresos">Exportar a Excel</button>
-        <div id="tablaEgresos" style="margin-top:1rem; overflow-x:auto;"></div>
+    <div class="widget" style="margin-top: 2rem;">
+        <div style="display:flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+            <h3 style="margin-top:0; margin-bottom:0;">Detalle de Egresos</h3>
+            <div>
+              <button class="btn" id="btnAgregarEgreso">Agregar Egreso</button>
+              <button class="btn secondary btn-sm" id="btnExportarEgresos">Exportar a Excel</button>
+            </div>
+        </div>
+        <div id="tablaEgresos" style="overflow-x:auto;"></div>
+    </div>
+
+    <div id="modalEgreso" class="modal" style="display:none;">
+      <div>
+        <h3>Agregar Nuevo Egreso</h3>
+        <form id="formEgreso" style="display:flex; flex-wrap:wrap; gap:15px;">
+            <div style="flex: 1 1 180px;"><label>Fecha</label><input type="date" name="fecha" required></div>
+            <div style="flex: 1 1 180px;"><label>N° Documento</label><input type="text" name="n_doc"></div>
+            <div style="flex: 1 1 100%;"><label>Proveedor / Beneficiario</label><input type="text" name="proveedor" required></div>
+            <div style="flex: 1 1 180px;"><label>Categoría</label>
+                <select name="categoria" required>
+                    <option value="Remuneraciones">Remuneraciones</option>
+                    <option value="Reparaciones y Mantención">Reparaciones y Mantención</option>
+                    <option value="Cuentas Básicas">Cuentas Básicas (Luz, Agua)</option>
+                    <option value="Administración">Administración</option>
+                    <option value="Insumos">Insumos (Limpieza, oficina)</option>
+                    <option value="Jardinería">Jardinería</option>
+                    <option value="Imprevistos">Imprevistos</option>
+                    <option value="Otros">Otros</option>
+                </select>
+            </div>
+            <div style="flex: 1 1 180px;"><label>Monto</label><input type="number" name="monto" min="0" step="1" required></div>
+            <div style="flex: 1 1 100%;"><label>Descripción</label><textarea name="descripcion" rows="3" required></textarea></div>
+            <div style="flex: 1 1 100%;"><label>Comprobante (Factura, Boleta)</label><input type="file" name="comprobante"></div>
+            <div style="flex: 1 1 100%; text-align: right; margin-top: 20px;">
+                <button class="btn secondary" type="button" id="btnCerrarModalEgreso">Cancelar</button>
+                <button class="btn" type="submit">Guardar Egreso</button>
+            </div>
+        </form>
+      </div>
     </div>
   `;
-
     let chartInstance = null;
 
     function renderizarContabilidad(pagos, egresos, saldoInicialGlobal) {
-        // Calcular Resumen
-        const totalIngresos = pagos.reduce((sum, p) => sum + parseFloat(p[6] || 0) + parseFloat(p[17] || 0), 0);
-        const totalEgresos = egresos.reduce((sum, e) => sum + parseFloat(e[6] || 0), 0);
-        
         const fechaInicioFiltro = document.getElementById('fechaInicio').valueAsDate;
         let saldoInicialPeriodo = saldoInicialGlobal;
         if(fechaInicioFiltro) {
+            fechaInicioFiltro.setHours(0,0,0,0);
             const ingresosPrevios = allPagos
-                .filter(p => new Date(p[13].replace(/-/g, '/')) < fechaInicioFiltro)
+                .filter(p => p[13] && new Date(p[13].replace(/-/g, '/')) < fechaInicioFiltro)
                 .reduce((sum, p) => sum + parseFloat(p[6] || 0) + parseFloat(p[17] || 0), 0);
             const egresosPrevios = allEgresos
-                .filter(e => new Date(e[1].replace(/-/g, '/')) < fechaInicioFiltro)
+                .filter(e => e[1] && new Date(e[1].replace(/-/g, '/')) < fechaInicioFiltro)
                 .reduce((sum, e) => sum + parseFloat(e[6] || 0), 0);
             saldoInicialPeriodo = saldoInicialGlobal + ingresosPrevios - egresosPrevios;
         }
 
+        const totalIngresos = pagos.reduce((sum, p) => sum + parseFloat(p[6] || 0) + parseFloat(p[17] || 0), 0);
+        const totalEgresos = egresos.reduce((sum, e) => sum + parseFloat(e[6] || 0), 0);
         const saldoFinalPeriodo = saldoInicialPeriodo + totalIngresos - totalEgresos;
 
         document.getElementById('saldo-inicial-periodo').textContent = `$${saldoInicialPeriodo.toLocaleString('es-CL')}`;
@@ -123,7 +161,6 @@ async function cargarContabilidad() {
         document.getElementById('egresos-periodo').textContent = `$${totalEgresos.toLocaleString('es-CL')}`;
         document.getElementById('saldo-final-periodo').textContent = `$${saldoFinalPeriodo.toLocaleString('es-CL')}`;
 
-        // Renderizar Tablas
         const tablaIngresosDiv = document.getElementById('tablaIngresos');
         tablaIngresosDiv.innerHTML = '<p>No hay ingresos en el período seleccionado.</p>';
         if (pagos.length > 0) {
@@ -138,15 +175,15 @@ async function cargarContabilidad() {
         const tablaEgresosDiv = document.getElementById('tablaEgresos');
         tablaEgresosDiv.innerHTML = '<p>No hay egresos en el período seleccionado.</p>';
         if (egresos.length > 0) {
-            let egresosHTML = '<table id="tabla-egresos-export" class="table"><thead><tr><th>Fecha</th><th>N° Doc.</th><th>Proveedor</th><th>Categoría</th><th>Descripción</th><th>Monto</th></tr></thead><tbody>';
+            let egresosHTML = '<table id="tabla-egresos-export" class="table"><thead><tr><th>Fecha</th><th>N° Doc.</th><th>Proveedor</th><th>Categoría</th><th>Descripción</th><th>Monto</th><th>Comprobante</th></tr></thead><tbody>';
             egresos.sort((a,b) => new Date(a[1]) - new Date(b[1])).forEach(e => {
-                egresosHTML += `<tr><td>${new Date(e[1].replace(/-/g, '/')).toLocaleDateString('es-CL')}</td><td>${e[2]}</td><td>${e[3]}</td><td>${e[4]}</td><td>${e[5]}</td><td>$${parseFloat(e[6] || 0).toLocaleString('es-CL')}</td></tr>`;
+                const link = e[7] ? `<a href="${e[7]}" target="_blank" class="btn small">Ver</a>` : "N/A";
+                egresosHTML += `<tr><td>${new Date(e[1].replace(/-/g, '/')).toLocaleDateString('es-CL')}</td><td>${e[2]}</td><td>${e[3]}</td><td>${e[4]}</td><td>${e[5]}</td><td>$${parseFloat(e[6] || 0).toLocaleString('es-CL')}</td><td>${link}</td></tr>`;
             });
             egresosHTML += '</tbody></table>';
             tablaEgresosDiv.innerHTML = egresosHTML;
         }
         
-        // Renderizar Gráfico
         const egresosPorCategoria = egresos.reduce((acc, e) => {
             const categoria = e[4] || 'Sin Categoría';
             const monto = parseFloat(e[6] || 0);
@@ -157,26 +194,25 @@ async function cargarContabilidad() {
         if (chartInstance) {
             chartInstance.destroy();
         }
-        const ctx = document.getElementById('graficoEgresos').getContext('2d');
-        chartInstance = new Chart(ctx, {
-            type: 'pie',
-            data: {
-                labels: Object.keys(egresosPorCategoria),
-                datasets: [{
-                    data: Object.values(egresosPorCategoria),
-                    backgroundColor: ['#4e91f9', '#7fd6c2', '#f6d743', '#f9a38b', '#a3a1fb', '#8bcf9e'],
-                }]
-            },
-            options: {
-                responsive: true,
-                plugins: { legend: { position: 'right' } }
-            }
-        });
+        if (Object.keys(egresosPorCategoria).length > 0) {
+            const ctx = document.getElementById('graficoEgresos').getContext('2d');
+            chartInstance = new Chart(ctx, {
+                type: 'pie',
+                data: {
+                    labels: Object.keys(egresosPorCategoria),
+                    datasets: [{
+                        data: Object.values(egresosPorCategoria),
+                        backgroundColor: ['#4e91f9', '#7fd6c2', '#f6d743', '#f9a38b', '#a3a1fb', '#8bcf9e', '#f17979', '#a2d2ff'],
+                    }]
+                },
+                options: { responsive: true, plugins: { legend: { position: 'right' } } }
+            });
+        }
     }
 
     function filtrarYRenderizar() {
-        const fechaInicio = document.getElementById('fechaInicio').value;
-        const fechaFin = document.getElementById('fechaFin').value;
+        let fechaInicio = document.getElementById('fechaInicio').value;
+        let fechaFin = document.getElementById('fechaFin').value;
         const saldoInicialGlobal = parseFloat(config.Saldo_Inicial_Caja || 0);
 
         const pagosFiltrados = allPagos.filter(p => {
@@ -193,13 +229,12 @@ async function cargarContabilidad() {
         renderizarContabilidad(pagosFiltrados, egresosFiltrados, saldoInicialGlobal);
     }
     
-    // Event Listeners
+    // Listeners
     document.getElementById('btnFiltrar').addEventListener('click', filtrarYRenderizar);
     document.getElementById('btnGuardarSaldo').addEventListener('click', async () => {
         const nuevoSaldo = document.getElementById('inputSaldoInicial').value;
         if (isNaN(parseFloat(nuevoSaldo))) {
-            mostrarMensaje("Por favor, ingrese un valor numérico para el saldo.", "error");
-            return;
+            return mostrarMensaje("Por favor, ingrese un valor numérico para el saldo.", "error");
         }
         mostrarSpinner();
         try {
@@ -213,10 +248,55 @@ async function cargarContabilidad() {
             ocultarSpinner();
         }
     });
+
     document.getElementById('btnExportarIngresos').addEventListener('click', () => exportarTablaAExcel('tabla-ingresos-export', 'Ingresos'));
     document.getElementById('btnExportarEgresos').addEventListener('click', () => exportarTablaAExcel('tabla-egresos-export', 'Egresos'));
+
+    const modalEgreso = document.getElementById('modalEgreso');
+    document.getElementById('btnAgregarEgreso').addEventListener('click', () => modalEgreso.style.display = 'flex');
+    document.getElementById('btnCerrarModalEgreso').addEventListener('click', () => modalEgreso.style.display = 'none');
+
+    document.getElementById('formEgreso').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        mostrarSpinner();
+        try {
+            const formData = new FormData(e.target);
+            let linkComprobante = '';
+            const archivo = formData.get('comprobante');
+
+            if (archivo && archivo.size > 0) {
+                if (typeof buscarOCrearCarpetaDeParcela !== 'function' || typeof subirComprobante !== 'function') {
+                    throw new Error("Las funciones de Google Drive no están disponibles.");
+                }
+                const carpetaId = await buscarOCrearCarpetaDeParcela("Egresos");
+                const resultadoSubida = await subirComprobante(archivo, carpetaId);
+                linkComprobante = resultadoSubida.webViewLink;
+            }
+            
+            const datosEgreso = [
+                null, // ID se autogenera
+                formData.get('fecha'),
+                formData.get('n_doc'),
+                formData.get('proveedor'),
+                formData.get('categoria'),
+                formData.get('descripcion'),
+                formData.get('monto'),
+                linkComprobante
+            ];
+            
+            await agregarEgreso(datosEgreso);
+            mostrarMensaje("Egreso agregado con éxito.", "success");
+            modalEgreso.style.display = 'none';
+            cargarContabilidad();
+
+        } catch (err) {
+            mostrarMensaje("Error al guardar el egreso: " + err.message, "error");
+        } finally {
+            ocultarSpinner();
+        }
+    });
     
-    // Carga inicial
+    // Carga inicial con el mes actual por defecto
     const hoy = new Date();
     const primerDiaMes = new Date(hoy.getFullYear(), hoy.getMonth(), 1).toISOString().split('T')[0];
     const ultimoDiaMes = new Date(hoy.getFullYear(), hoy.getMonth() + 1, 0).toISOString().split('T')[0];
