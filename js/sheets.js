@@ -23,6 +23,7 @@ const SHEET_ID_MULTAS = 456683145;
 const SHEET_ID_ASAMBLEAS = 791789730;
 const SHEET_ID_COMUNICACIONES = 569621527;
 
+
 // -------- FUNCIONES DE GOOGLE DRIVE --------
 async function findFolderId(name, parentId = 'root') {
     const q = `mimeType='application/vnd.google-apps.folder' and name='${name}' and trashed=false and '${parentId}' in parents`;
