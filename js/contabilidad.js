@@ -60,14 +60,26 @@ async function cargarContabilidad() {
     </style>
     <h2>Contabilidad y Flujo de Caja</h2>
 
-    <div style="display: flex; flex-wrap: wrap; gap: 24px;">
-        <div class="widget" style="flex: 2; min-width: 450px;">
-            <h4 style="margin-top:0;">Filtros</h4>
-            <div style="display:flex; flex-wrap:wrap; gap:20px; align-items:flex-end;">
-                <div><label>Fecha de Inicio</label><input type="date" id="fechaInicio"></div>
-                <div><label>Fecha de Fin</label><input type="date" id="fechaFin"></div>
-                <button class="btn" id="btnFiltrar">Filtrar</button>
-            </div>
+    <div class="widget">
+        <h4 style="margin-top:0;">Filtros</h4>
+        <div style="display:flex; flex-wrap:wrap; gap:20px; align-items:flex-end;">
+            <div><label>Fecha de Inicio</label><input type="date" id="fechaInicio"></div>
+            <div><label>Fecha de Fin</label><input type="date" id="fechaFin"></div>
+            <button class="btn" id="btnFiltrar">Filtrar</button>
+        </div>
+    </div>
+
+    <div class="summary-grid" style="margin-top:2rem;">
+        <div class="summary-card"><h4 >Saldo Inicial Período</h4><div id="saldo-inicial-periodo" class="amount text-info">$0</div></div>
+        <div class="summary-card"><h4>Ingresos del Período</h4><div id="ingresos-periodo" class="amount text-success">$0</div></div>
+        <div class="summary-card"><h4>Egresos del Período</h4><div id="egresos-periodo" class="amount text-danger">$0</div></div>
+        <div class="summary-card"><h4>Saldo Final Período</h4><div id="saldo-final-periodo" class="amount text-primary">$0</div></div>
+    </div>
+    
+    <div style="display:flex; flex-wrap:wrap; gap: 24px;">
+        <div id="chart-container" style="flex:1; min-width: 300px;">
+            <h4 style="margin-top:0;">Egresos por Categoría</h4>
+            <canvas id="graficoEgresos" style="max-height: 300px;"></canvas>
         </div>
         <div class="widget" style="flex:1; min-width: 300px;">
             <h4 style="margin-top:0;">Configuración Contable</h4>
@@ -76,19 +88,8 @@ async function cargarContabilidad() {
                 <input type="number" id="inputSaldoInicial" value="${parseFloat(config.Saldo_Inicial_Caja || 0)}">
                 <button class="btn" id="btnGuardarSaldo">Guardar</button>
             </div>
+            <small>Este es el punto de partida para todo el flujo de caja.</small>
         </div>
-    </div>
-    
-    <div class="summary-grid" style="margin-top:2rem;">
-        <div class="summary-card"><h4 >Saldo Inicial Período</h4><div id="saldo-inicial-periodo" class="amount text-info">$0</div></div>
-        <div class="summary-card"><h4>Ingresos del Período</h4><div id="ingresos-periodo" class="amount text-success">$0</div></div>
-        <div class="summary-card"><h4>Egresos del Período</h4><div id="egresos-periodo" class="amount text-danger">$0</div></div>
-        <div class="summary-card"><h4>Saldo Final Período</h4><div id="saldo-final-periodo" class="amount text-primary">$0</div></div>
-    </div>
-    
-    <div id="chart-container" style="margin-top:2rem;">
-        <h4 style="margin-top:0;">Egresos por Categoría</h4>
-        <canvas id="graficoEgresos" style="max-height: 300px;"></canvas>
     </div>
 
     <div class="widget" style="margin-top: 2rem;">
@@ -97,7 +98,6 @@ async function cargarContabilidad() {
             <div class="view-toggle" id="detalle-view-toggle">
                 <input type="radio" id="verIngresos" name="vistaDetalle" value="ingresos" checked><label for="verIngresos">Ingresos</label>
                 <input type="radio" id="verEgresos" name="vistaDetalle" value="egresos"><label for="verEgresos">Egresos</label>
-                <input type="radio" id="verAmbos" name="vistaDetalle" value="ambos"><label for="verAmbos">Ambos</label>
             </div>
         </div>
 
@@ -125,10 +125,9 @@ async function cargarContabilidad() {
         <h3>Agregar Nuevo Egreso</h3>
         <form id="formEgreso" style="display:flex; flex-wrap:wrap; gap:15px;">
             <div style="flex: 1 1 180px;"><label>Fecha</label><input type="date" name="fecha" required></div>
-            <div style="flex: 1 1 180px;"><label>N° Documento</label><input type="text" name="n_doc"></div>
-            <div style="flex: 1 1 100%;"><label>Proveedor / Beneficiario</label><input type="text" name="proveedor" required></div>
             <div style="flex: 1 1 180px;"><label>Categoría</label>
                 <select name="categoria" required>
+                    <option value="" disabled selected>-- Seleccione --</option>
                     <option value="Remuneraciones">Remuneraciones</option>
                     <option value="Reparaciones y Mantención">Reparaciones y Mantención</option>
                     <option value="Cuentas Básicas">Cuentas Básicas (Luz, Agua)</option>
@@ -139,9 +138,22 @@ async function cargarContabilidad() {
                     <option value="Otros">Otros</option>
                 </select>
             </div>
+            <div style="flex: 1 1 100%;"><label>Descripción</label><input type="text" name="descripcion" required></div>
+            <div style="display:flex; gap: 15px; flex-basis: 100%; flex-wrap: wrap;">
+                <div style="flex: 2 1 300px;"><label>Proveedor / Beneficiario</label><input type="text" name="proveedor" required></div>
+                <div style="flex: 1 1 150px;"><label>RUT Proveedor</label><input type="text" name="rut_proveedor"></div>
+            </div>
             <div style="flex: 1 1 180px;"><label>Monto</label><input type="number" name="monto" min="0" step="1" required></div>
-            <div style="flex: 1 1 100%;"><label>Descripción</label><textarea name="descripcion" rows="3" required></textarea></div>
-            <div style="flex: 1 1 100%;"><label>Comprobante (Factura, Boleta)</label><input type="file" name="comprobante"></div>
+            <div style="flex: 1 1 180px;"><label>Método de Pago</label>
+                <select name="metodo_pago" required>
+                    <option value="Transferencia">Transferencia</option>
+                    <option value="Efectivo">Efectivo</option>
+                    <option value="Tarjeta">Tarjeta</option>
+                    <option value="Servipag">Servipag</option>
+                    <option value="Webpay">Webpay</option>
+                </select>
+            </div>
+            <div style="flex: 1 1 100%;"><label>Comprobante(s) (Factura, Boleta)</label><input type="file" name="comprobante" multiple></div>
             <div style="flex: 1 1 100%; text-align: right; margin-top: 20px;">
                 <button class="btn secondary" type="button" id="btnCerrarModalEgreso">Cancelar</button>
                 <button class="btn" type="submit">Guardar Egreso</button>
@@ -190,17 +202,23 @@ async function cargarContabilidad() {
         const tablaEgresosDiv = document.getElementById('tablaEgresos');
         tablaEgresosDiv.innerHTML = '<p>No hay egresos en el período seleccionado.</p>';
         if (egresos.length > 0) {
-            let egresosHTML = '<table id="tabla-egresos-export" class="table"><thead><tr><th>Fecha</th><th>N° Doc.</th><th>Proveedor</th><th>Categoría</th><th>Descripción</th><th>Monto</th><th>Comprobante</th></tr></thead><tbody>';
+            let egresosHTML = '<table id="tabla-egresos-export" class="table"><thead><tr><th>Fecha</th><th>Proveedor</th><th>RUT</th><th>Categoría</th><th>Monto</th><th>Método Pago</th><th>Comprobante</th></tr></thead><tbody>';
             egresos.sort((a,b) => new Date(a[1]) - new Date(b[1])).forEach(e => {
-                const link = e[7] ? `<a href="${e[7]}" target="_blank" class="btn small">Ver</a>` : "N/A";
-                egresosHTML += `<tr><td>${new Date(e[1].replace(/-/g, '/')).toLocaleDateString('es-CL')}</td><td>${e[2]}</td><td>${e[3]}</td><td>${e[4]}</td><td>${e[5]}</td><td>$${parseFloat(e[6] || 0).toLocaleString('es-CL')}</td><td>${link}</td></tr>`;
+                let linksHtml = "N/A";
+                // Column H is index 7
+                if (e[7]) {
+                    const links = e[7].split(',');
+                    linksHtml = links.map((link, index) => `<a href="${link.trim()}" target="_blank" class="btn small">Ver ${index + 1}</a>`).join(' ');
+                }
+                // e[2]=Cat, e[3]=Desc, e[4]=Prov, e[5]=RUT, e[6]=Monto, e[7]=Link, e[8]=Metodo
+                egresosHTML += `<tr><td>${new Date(e[1].replace(/-/g, '/')).toLocaleDateString('es-CL')}</td><td>${e[4]}</td><td>${e[5] || ''}</td><td>${e[2]}</td><td>$${parseFloat(e[6] || 0).toLocaleString('es-CL')}</td><td>${e[8] || 'N/A'}</td><td>${linksHtml}</td></tr>`;
             });
             egresosHTML += '</tbody></table>';
             tablaEgresosDiv.innerHTML = egresosHTML;
         }
         
         const egresosPorCategoria = egresos.reduce((acc, e) => {
-            const categoria = e[4] || 'Sin Categoría';
+            const categoria = e[2] || 'Sin Categoría'; // Categoria is in column C (index 2)
             const monto = parseFloat(e[6] || 0);
             acc[categoria] = (acc[categoria] || 0) + monto;
             return acc;
@@ -234,7 +252,9 @@ async function cargarContabilidad() {
             });
         } else {
              canvas.style.display = 'none';
-             chartContainer.insertAdjacentHTML('beforeend', '<p>No hay datos de egresos para graficar en este período.</p>');
+             if (!chartContainer.querySelector('p')) {
+                chartContainer.insertAdjacentHTML('beforeend', '<p>No hay datos de egresos para graficar en este período.</p>');
+             }
         }
     }
 
@@ -251,7 +271,7 @@ async function cargarContabilidad() {
         const egresosFiltrados = allEgresos.filter(e => {
             const fechaEgreso = e[1];
             if (!fechaEgreso) return false;
-            return (!fechaInicio || fechaEgreso >= fechaInicio) && (!fechaFin || fechaEgreso <= fechaFin);
+            return (!fechaInicio || fechaEgreso >= fechaEgreso) && (!fechaFin || fechaEgreso <= fechaFin);
         });
 
         renderizarContabilidad(pagosFiltrados, egresosFiltrados, saldoInicialGlobal);
@@ -281,10 +301,13 @@ async function cargarContabilidad() {
     document.getElementById('btnExportarEgresos').addEventListener('click', () => exportarTablaAExcel('tabla-egresos-export', 'Egresos'));
 
     const modalEgreso = document.getElementById('modalEgreso');
+    const formEgreso = document.getElementById('formEgreso');
     document.getElementById('btnAgregarEgreso').addEventListener('click', () => modalEgreso.style.display = 'flex');
-    document.getElementById('btnCerrarModalEgreso').addEventListener('click', () => modalEgreso.style.display = 'none');
+    document.getElementById('btnCerrarModalEgreso').addEventListener('click', () => {
+        modalEgreso.style.display = 'none';
+        formEgreso.reset(); // Limpiar el formulario al cerrar
+    });
     
-    // Listener para el selector de vista de detalles
     document.getElementById('detalle-view-toggle').addEventListener('change', (e) => {
         const vista = e.target.value;
         const ingresosContainer = document.getElementById('tablaIngresosContainer');
@@ -295,43 +318,47 @@ async function cargarContabilidad() {
         } else if (vista === 'egresos') {
             ingresosContainer.style.display = 'none';
             egresosContainer.style.display = 'block';
-        } else { // ambos
+        } else {
             ingresosContainer.style.display = 'block';
             egresosContainer.style.display = 'block';
         }
     });
 
-    document.getElementById('formEgreso').addEventListener('submit', async (e) => {
+    formEgreso.addEventListener('submit', async (e) => {
         e.preventDefault();
         mostrarSpinner();
         try {
             const formData = new FormData(e.target);
-            let linkComprobante = '';
-            const archivo = formData.get('comprobante');
+            const archivos = formData.getAll('comprobante');
+            const linksComprobantes = [];
 
-            if (archivo && archivo.size > 0) {
+            if (archivos && archivos.length > 0 && archivos[0].size > 0) {
                 if (typeof buscarOCrearCarpetaDeParcela !== 'function' || typeof subirComprobante !== 'function') {
                     throw new Error("Las funciones de Google Drive no están disponibles.");
                 }
                 const carpetaId = await buscarOCrearCarpetaDeParcela("Egresos Contabilidad");
-                const resultadoSubida = await subirComprobante(archivo, carpetaId);
-                linkComprobante = resultadoSubida.webViewLink;
+                for (const archivo of archivos) {
+                    const resultadoSubida = await subirComprobante(archivo, carpetaId);
+                    linksComprobantes.push(resultadoSubida.webViewLink);
+                }
             }
             
             const datosEgreso = [
-                null, // ID se autogenera
-                formData.get('fecha'),
-                formData.get('n_doc'),
-                formData.get('proveedor'),
-                formData.get('categoria'),
-                formData.get('descripcion'),
-                formData.get('monto'),
-                linkComprobante
+                null, // A: ID_Egreso
+                formData.get('fecha'), // B: Fecha
+                formData.get('categoria'), // C: Categoria
+                formData.get('descripcion'), // D: Descripcion
+                formData.get('proveedor'), // E: Proveedor
+                formData.get('rut_proveedor'), // F: Rut_Proveedor
+                formData.get('monto'), // G: Monto
+                linksComprobantes.join(','), // H: ID_Factura_Drive
+                formData.get('metodo_pago') // I: Metodo_Pago
             ];
             
             await agregarEgreso(datosEgreso);
             mostrarMensaje("Egreso agregado con éxito.", "success");
             modalEgreso.style.display = 'none';
+            formEgreso.reset(); // Limpiar el formulario al guardar
             cargarContabilidad();
 
         } catch (err) {
@@ -341,17 +368,14 @@ async function cargarContabilidad() {
         }
     });
     
-    // Carga inicial
+    // Carga inicial y configuración de vista por defecto
     const hoy = new Date();
     const primerDiaMes = new Date(hoy.getFullYear(), hoy.getMonth(), 1).toISOString().split('T')[0];
     const ultimoDiaMes = new Date(hoy.getFullYear(), hoy.getMonth() + 1, 0).toISOString().split('T')[0];
     document.getElementById('fechaInicio').value = primerDiaMes;
     document.getElementById('fechaFin').value = ultimoDiaMes;
     filtrarYRenderizar();
-    
-    // Activar vista por defecto del toggle
     document.getElementById('verIngresos').dispatchEvent(new Event('change', { bubbles: true }));
-
 
     ocultarSpinner();
 }
