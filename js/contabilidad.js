@@ -46,10 +46,10 @@ async function cargarContabilidad() {
   }
   
   const proveedoresUnicos = allEgresos.reduce((acc, egreso) => {
-    const nombre = egreso[4];
-    const rut = egreso[5];   
+    const nombre = egreso[4]; // Columna E: Proveedor
+    const rut = egreso[5];    // Columna F: Rut_Proveedor
     if (nombre) {
-      acc[nombre.toLowerCase()] = { nombre, rut: rut || '' };
+      acc[nombre.toLowerCase().trim()] = { nombre: nombre.trim(), rut: rut || '' };
     }
     return acc;
   }, {});
@@ -252,7 +252,7 @@ async function cargarContabilidad() {
             if(parseFloat(p[17] || 0) > 0) acc['Abonos Convenio'] = (acc['Abonos Convenio'] || 0) + parseFloat(p[17] || 0);
             return acc;
         }, {});
-
+        
         const chartIngresosContainer = document.getElementById('chart-container-ingresos');
         const canvasIngresos = document.getElementById('graficoIngresos');
         const noDataIngresos = chartIngresosContainer.querySelector('p');
@@ -266,9 +266,8 @@ async function cargarContabilidad() {
             });
         } else {
             canvasIngresos.style.display = 'none';
-            if (!chartIngresosContainer.querySelector('p')) chartIngresosContainer.insertAdjacentHTML('beforeend', '<p>No hay datos de ingresos para graficar en este período.</p>');
+            if (!chartIngresosContainer.querySelector('p')) chartIngresosContainer.insertAdjacentHTML('beforeend', '<p>No hay datos de ingresos para graficar.</p>');
         }
-
 
         // Gráfico de Egresos
         const egresosPorCategoria = egresos.reduce((acc, e) => {
@@ -292,7 +291,7 @@ async function cargarContabilidad() {
             });
         } else {
              canvasEgresos.style.display = 'none';
-             if (!chartEgresosContainer.querySelector('p')) chartEgresosContainer.insertAdjacentHTML('beforeend', '<p>No hay datos de egresos para graficar en este período.</p>');
+             if (!chartEgresosContainer.querySelector('p')) chartEgresosContainer.insertAdjacentHTML('beforeend', '<p>No hay datos de egresos para graficar.</p>');
         }
     }
 
@@ -398,7 +397,7 @@ async function cargarContabilidad() {
             }
             
             const datosEgreso = [
-                null, 
+                null,
                 formData.get('fecha'),
                 formData.get('categoria'),
                 formData.get('descripcion'),
@@ -411,8 +410,8 @@ async function cargarContabilidad() {
             
             await agregarEgreso(datosEgreso);
             mostrarMensaje("Egreso agregado con éxito.", "success");
-            modalEgreso.style.display = 'none';
             formEgreso.reset();
+            modalEgreso.style.display = 'none';
             cargarContabilidad();
 
         } catch (err) {
@@ -422,7 +421,6 @@ async function cargarContabilidad() {
         }
     });
     
-    // MODIFICADO: Lógica de autocompletar proveedor con teclado
     const proveedorInput = document.querySelector('#formEgreso input[name="proveedor"]');
     const rutInput = document.querySelector('#formEgreso input[name="rut_proveedor"]');
     const suggestionsContainer = document.getElementById('proveedor-suggestions');
@@ -461,13 +459,11 @@ async function cargarContabilidad() {
 
         if (e.key === 'ArrowDown') {
             e.preventDefault();
-            activeSuggestion++;
-            if (activeSuggestion >= items.length) activeSuggestion = 0;
+            activeSuggestion = (activeSuggestion + 1) % items.length;
             updateSuggestionHighlight(items);
         } else if (e.key === 'ArrowUp') {
             e.preventDefault();
-            activeSuggestion--;
-            if (activeSuggestion < 0) activeSuggestion = items.length - 1;
+            activeSuggestion = (activeSuggestion - 1 + items.length) % items.length;
             updateSuggestionHighlight(items);
         } else if (e.key === 'Enter') {
             e.preventDefault();
@@ -480,11 +476,7 @@ async function cargarContabilidad() {
 
     function updateSuggestionHighlight(items) {
         items.forEach((item, index) => {
-            if (index === activeSuggestion) {
-                item.classList.add('active');
-            } else {
-                item.classList.remove('active');
-            }
+            item.classList.toggle('active', index === activeSuggestion);
         });
     }
 
@@ -494,7 +486,7 @@ async function cargarContabilidad() {
         }
     });
     
-    // Carga inicial
+    // Carga inicial y configuración de vista por defecto
     const hoy = new Date();
     const primerDiaMes = new Date(hoy.getFullYear(), hoy.getMonth(), 1).toISOString().split('T')[0];
     const ultimoDiaMes = new Date(hoy.getFullYear(), hoy.getMonth() + 1, 0).toISOString().split('T')[0];
