@@ -90,8 +90,6 @@ async function cargarComunicaciones() {
     const inputAsunto = document.getElementById('inputAsunto');
     const textareaMensaje = document.getElementById('textareaMensaje');
 
-    // --- Lógica de la Interfaz ---
-
     function renderTablaComunicaciones() {
         let html = `<table class="table"><thead><tr><th>Fecha</th><th>Asunto</th><th>Destinatario(s)</th></tr></thead><tbody>`;
         comunicaciones.sort((a, b) => new Date(b[5]) - new Date(a[5])).forEach(c => {
@@ -166,32 +164,31 @@ async function cargarComunicaciones() {
         try {
             for (const res of destinatarios) {
                 const email = res[5];
-                // Personalizar mensaje si usa placeholders
                 let mensajePersonalizado = mensajeBase.replace(/{nombre_residente}/g, res[1]).replace(/{n_parcela}/g, res[3]);
                 
-                await enviarCorreo(email, asunto, mensajePersonalizado); // Asumimos que enviarCorreo puede manejar adjuntos ahora
+                await enviarCorreo(email, asunto, mensajePersonalizado);
                 
                 await agregarComunicacion([
-                    null, // ID
-                    res[0], // idResidente
-                    res[3], // N_Parcela
-                    res[1], // Nombre_Completo
-                    email,
-                    new Date().toISOString(),
-                    asunto,
-                    mensajePersonalizado
+                    null, res[0], res[3], res[1], email,
+                    new Date().toISOString(), asunto, mensajePersonalizado
                 ]);
             }
             
-            // Registro general si fue para 'todos'
             if (selectDestinatarioTipo.value === 'todos') {
                  await agregarComunicacion([ null, 'TODOS', 'N/A', 'Comunidad', 'N/A', new Date().toISOString(), asunto, mensajeBase ]);
             }
 
             comunicaciones = await obtenerComunicaciones();
             renderTablaComunicaciones();
-            formComunicacion.reset();
             mostrarMensaje(`Comunicación enviada a ${destinatarios.length} residente(s) con éxito.`);
+            
+            // --- CÓDIGO CORREGIDO PARA LIMPIAR EL FORMULARIO ---
+            formComunicacion.reset();
+            document.querySelectorAll('.residente-checkbox:checked').forEach(cb => cb.checked = false);
+            destinatariosContainer.style.display = 'none';
+            selectDestinatarioTipo.value = 'todos';
+            // --- FIN DE LA CORRECCIÓN ---
+
         } catch (error) {
             mostrarMensaje('Error al enviar la comunicación: ' + error.message, 'error');
         } finally {
