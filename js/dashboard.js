@@ -2,19 +2,21 @@
 async function cargarDashboard() {
   limpiarMainContent();
   mostrarSpinner();
-  let residentes = [], pagos = [], egresos = [], mantenciones = [], config = {};
+  // Se cambió 'mantenciones' por 'tareas' para mayor claridad
+  let residentes = [], pagos = [], egresos = [], tareas = [], config = {};
   try {
-    const [residentesData, pagosData, egresosData, mantencionesData, configData] = await Promise.all([
+    // Se corrigió la llamada a la función obtenerTareas()
+    const [residentesData, pagosData, egresosData, tareasData, configData] = await Promise.all([
         obtenerResidentes(),
         obtenerPagosGC(),
         obtenerEgresos(),
-        obtenerMantenciones(),
+        obtenerTareas(), 
         obtenerConfiguracion()
     ]);
     residentes = residentesData || [];
     pagos = pagosData || [];
     egresos = egresosData || [];
-    mantenciones = mantencionesData || [];
+    tareas = tareasData || []; // Se usa la variable actualizada
     config = configData || {};
   } catch (e) {
     ocultarSpinner();
@@ -32,7 +34,8 @@ async function cargarDashboard() {
   const totalEgresos = egresos.reduce((a,b) => a + Number(b[6]||0), 0);
   const saldoCaja = saldoInicial + totalIngresos - totalEgresos;
 
-  const mantPendientes = mantenciones.filter(m => m && (m[5] === 'Pendiente' || m[5] === 'Urgente')).length;
+  // CORREGIDO: Se ajustó el filtro para usar la columna correcta (índice 6) y los estados actuales.
+  const tareasAbiertas = tareas.filter(t => t && t[6] && t[6] !== 'Finalizado' && t[6] !== 'Cancelado').length;
 
   const morososData = {};
   
@@ -66,7 +69,7 @@ async function cargarDashboard() {
       <div class="widget" style="flex:1;min-width:160px;"><div style="font-size:2em;font-weight:700;">$${ingresosMes.toLocaleString('es-CL')}</div><div>Ingresos del Mes</div></div>
       <div class="widget" style="flex:1;min-width:160px;"><div style="font-size:2em;font-weight:700;">$${egresosMes.toLocaleString('es-CL')}</div><div>Egresos del Mes</div></div>
       <div class="widget" style="flex:1;min-width:160px;"><div style="font-size:2em;font-weight:700;">$${saldoCaja.toLocaleString('es-CL')}</div><div>Saldo de Caja</div></div>
-      <div class="widget" style="flex:1;min-width:160px;"><div style="font-size:2em;font-weight:700;">${mantPendientes}</div><div>Mantenciones Pendientes/Urgentes</div></div>
+      <div class="widget" style="flex:1;min-width:160px;"><div style="font-size:2em;font-weight:700;">${tareasAbiertas}</div><div>Tareas Abiertas</div></div>
     </div>
     <div style="display:flex;gap:24px;flex-wrap:wrap;">
       <div class="widget" style="flex:2;min-width:380px;">
@@ -95,7 +98,7 @@ async function cargarDashboard() {
     egresosPorMes.push(egresos.filter(e => e && e[1] && e[1].startsWith(periodo)).reduce((a,b) => a + Number(b[6]||0), 0));
   }
 
-  // RESTAURADO: Lógica para renderizar el gráfico
+  // Lógica para renderizar el gráfico
   setTimeout(() => {
     const maxY = Math.max(...ingresosPorMes, ...egresosPorMes, 100000);
     let stepSize = 100000;
@@ -134,4 +137,5 @@ async function cargarDashboard() {
   ocultarSpinner();
 }
 
-document.querySelector('[data-module="dashboard"]').addEventListener('click', cargarDashboard);
+// Se elimina este listener porque el index.html ya lo maneja de forma centralizada
+// document.querySelector('[data-module="dashboard"]').addEventListener('click', cargarDashboard);
