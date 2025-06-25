@@ -3,12 +3,12 @@ const SPREADSHEET_ID = '1bFo5dBC3HM0xupginTBe-hrrUNgkiuUn4fkXXzHide8';
 
 // --- Nombres de las Hojas ---
 const SHEET_RESIDENTES = 'Residentes';
-const SHEET_PROVEEDORES = 'Proveedores'; // <-- NUEVA HOJA
+const SHEET_PROVEEDORES = 'Proveedores';
 const SHEET_PAGOS_GC = 'Pagos_GC';
 const SHEET_CONFIG_TIMC = 'Config_TIMC';
 const SHEET_EGRESOS = 'Egresos';
 const SHEET_CATEGORIAS_EGRESOS = 'Categorias_Egresos';
-const SHEET_MANTENCIONES = 'Mantenciones'; // Ahora usado para "Tareas"
+const SHEET_MANTENCIONES = 'Mantenciones'; // El nombre de la hoja sigue igual, pero ahora la usamos para "Tareas"
 const SHEET_MULTAS = 'Multas';
 const SHEET_ASAMBLEAS = 'Asambleas';
 const SHEET_COMUNICACIONES = 'Comunicaciones';
@@ -16,9 +16,8 @@ const SHEET_CONFIGURACION = 'Configuracion';
 const MAIN_DRIVE_FOLDER_NAME = 'Los Molles';
 
 // --- IDs de las Hojas ---
-// (El ID de Proveedores es un ejemplo, debes obtener el real de tu hoja para que la función de eliminar funcione)
 const SHEET_ID_RESIDENTES = 1835488459;
-const SHEET_ID_PROVEEDORES = 705052879; // ¡OJO! Reemplazar con el GID real de tu hoja 'Proveedores'.
+const SHEET_ID_PROVEEDORES = 705052879;
 const SHEET_ID_PAGOS_GC = 1954366455;
 const SHEET_ID_EGRESOS = 1945700474;
 const SHEET_ID_MANTENCIONES = 895242560;
@@ -147,7 +146,7 @@ async function obtenerProveedores() {
 async function agregarProveedor(datos) {
     const proveedores = await obtenerProveedores();
     const lastId = proveedores.length > 0 && proveedores[proveedores.length-1][0] ? parseInt(proveedores[proveedores.length-1][0]) : 0;
-    datos[0] = (lastId + 1).toString(); // Asigna el nuevo ID
+    datos[0] = (lastId + 1).toString();
     await gapi.client.sheets.spreadsheets.values.append({
         spreadsheetId: SPREADSHEET_ID,
         range: `${SHEET_PROVEEDORES}!A:H`,
@@ -173,7 +172,7 @@ async function eliminarProveedor(id) {
     const proveedores = await obtenerProveedores();
     const rowIndex = proveedores.findIndex(p => p[0] === id);
     if (rowIndex === -1) throw new Error('Proveedor no encontrado para eliminar.');
-    const rowToDelete = rowIndex + 1; // El índice para batchUpdate es base 1 desde la primera fila de la hoja
+    const rowToDelete = rowIndex + 1;
     await gapi.client.sheets.spreadsheets.batchUpdate({
         spreadsheetId: SPREADSHEET_ID,
         resource: {
@@ -210,10 +209,58 @@ async function obtenerEgresos() { const res = await gapi.client.sheets.spreadshe
 async function agregarEgreso(datos) { const egresos = await obtenerEgresos(); const lastId = egresos.length > 0 && egresos[egresos.length-1][0] ? parseInt(egresos[egresos.length-1][0]) : 0; datos[0] = (lastId + 1).toString(); await gapi.client.sheets.spreadsheets.values.append({ spreadsheetId: SPREADSHEET_ID, range: `${SHEET_EGRESOS}!A:J`, valueInputOption: 'USER_ENTERED', resource: { values: [datos] } }); }
 async function eliminarEgreso(id) { const egresos = await obtenerEgresos(); const idx = egresos.findIndex(e => e[0] === id); if (idx === -1) throw new Error('No encontrado'); const row = idx + 2; await gapi.client.sheets.spreadsheets.batchUpdate({ spreadsheetId: SPREADSHEET_ID, resource: { requests: [{ deleteDimension: { range: { sheetId: SHEET_ID_EGRESOS, dimension: "ROWS", startIndex: row - 1, endIndex: row } } }] } }); }
 
-// -------- MANTENCIONES (AHORA TAREAS) --------
-async function obtenerMantenciones() { const res = await gapi.client.sheets.spreadsheets.values.get({ spreadsheetId: SPREADSHEET_ID, range: `${SHEET_MANTENCIONES}!A2:H` }); return res.result.values || []; }
-async function agregarMantencion(datos) { const mantenciones = await obtenerMantenciones(); const lastId = mantenciones.length > 0 && mantenciones[mantenciones.length - 1][0] ? parseInt(mantenciones[mantenciones.length - 1][0]) : 0; datos[0] = (lastId + 1).toString(); await gapi.client.sheets.spreadsheets.values.append({ spreadsheetId: SPREADSHEET_ID, range: `${SHEET_MANTENCIONES}!A:H`, valueInputOption: 'USER_ENTERED', resource: { values: [datos] } }); }
-async function eliminarMantencion(id) { const mantenciones = await obtenerMantenciones(); const idx = mantenciones.findIndex(m => m[0] === id); if (idx === -1) throw new Error('No encontrada'); const row = idx + 2; await gapi.client.sheets.spreadsheets.batchUpdate({ spreadsheetId: SPREADSHEET_ID, resource: { requests: [{ deleteDimension: { range: { sheetId: SHEET_ID_MANTENCIONES, dimension: "ROWS", startIndex: row - 1, endIndex: row } } }] } }); }
+// -------- GESTOR DE TAREAS (ANTES MANTENCIONES) --------
+async function obtenerTareas() {
+    const res = await gapi.client.sheets.spreadsheets.values.get({ spreadsheetId: SPREADSHEET_ID, range: `${SHEET_MANTENCIONES}!A2:H` });
+    return res.result.values || [];
+}
+
+async function agregarTarea(datos) {
+    const tareas = await obtenerTareas();
+    const lastId = tareas.length > 0 && tareas[tareas.length - 1][0] ? parseInt(tareas[tareas.length - 1][0]) : 0;
+    datos[0] = (lastId + 1).toString();
+    await gapi.client.sheets.spreadsheets.values.append({
+        spreadsheetId: SPREADSHEET_ID,
+        range: `${SHEET_MANTENCIONES}!A:H`,
+        valueInputOption: 'USER_ENTERED',
+        resource: { values: [datos] }
+    });
+}
+
+async function actualizarTarea(datos) {
+    const tareas = await obtenerTareas();
+    const rowIndex = tareas.findIndex(t => t[0] === datos[0]);
+    if (rowIndex === -1) throw new Error('Tarea no encontrada para actualizar.');
+    const rowToUpdate = rowIndex + 2;
+    await gapi.client.sheets.spreadsheets.values.update({
+        spreadsheetId: SPREADSHEET_ID,
+        range: `${SHEET_MANTENCIONES}!A${rowToUpdate}:H${rowToUpdate}`,
+        valueInputOption: 'USER_ENTERED',
+        resource: { values: [datos] }
+    });
+}
+
+async function eliminarTarea(id) {
+    const tareas = await obtenerTareas();
+    const idx = tareas.findIndex(t => t[0] === id);
+    if (idx === -1) throw new Error('Tarea no encontrada para eliminar.');
+    const row = idx + 2;
+    await gapi.client.sheets.spreadsheets.batchUpdate({
+        spreadsheetId: SPREADSHEET_ID,
+        resource: {
+            requests: [{
+                deleteDimension: {
+                    range: {
+                        sheetId: SHEET_ID_MANTENCIONES,
+                        dimension: "ROWS",
+                        startIndex: row - 1,
+                        endIndex: row
+                    }
+                }
+            }]
+        }
+    });
+}
 
 // -------- MULTAS --------
 async function obtenerMultas() { const res = await gapi.client.sheets.spreadsheets.values.get({ spreadsheetId: SPREADSHEET_ID, range: `${SHEET_MULTAS}!A2:G` }); return res.result.values || []; }
