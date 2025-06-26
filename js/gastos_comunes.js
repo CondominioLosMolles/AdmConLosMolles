@@ -447,6 +447,43 @@ function mostrarTablaResidente(data) {
         renderizarTablaGeneral(pagosGC_obj.filter(p => p.anio == anio));
     }
   }
+
+  function renderizarTablaGeneral(pagos) { [cite: 4]
+    const tabla = document.querySelector('#tabla-gastos-comunes tbody'); [cite: 4]
+    if (!tabla) return; [cite: 4]
+    if (!pagos || pagos.length === 0) { [cite: 5]
+      tabla.innerHTML = '<tr><td colspan="20" style="text-align:center;">No hay registros que coincidan con los filtros.</td></tr>'; [cite: 5]
+      return; [cite: 6]
+    }
+  
+    tabla.innerHTML = pagos.map(p => `
+      <tr>
+        <td>${p[0]}</td> [cite: 6]
+        <td>${p[1]}</td> [cite: 6]
+        <td>${p[2]}</td> [cite: 6]
+        <td>${p[3]}</td> [cite: 6]
+        <td>${p[4]}</td> [cite: 6]
+        <td>${p[5]}</td> [cite: 6]
+        <td>${p[6]}</td> [cite: 6]
+        <td>${p[7]}</td> [cite: 6]
+        <td>${p[8]}</td> [cite: 6]
+        <td>${p[9]}</td> [cite: 7]
+        <td>${p[10]}</td> [cite: 7]
+        <td>${p[11]}</td> [cite: 7]
+        <td>${p[12]}</td> [cite: 7]
+        <td>${p[13]}</td> [cite: 7]
+        <td>${p[14]}</td> [cite: 7]
+        <td>${p[15]}</td> [cite: 7]
+        <td>${p[16]}</td> [cite: 7]
+        <td>${p[17]}</td> [cite: 7]
+        <td>${p[18]}</td> [cite: 7]
+        <td>${p[19]}</td> [cite: 8]
+      </tr>
+    `).join('');
+  
+    aplicarAnchosGuardados(document.getElementById('tabla-gastos-comunes')); [cite: 8]
+    hacerColumnasRedimensionables(document.getElementById('tabla-gastos-comunes')); [cite: 8]
+  }
   
   function actualizarVistaTIMC() {
     const anio = document.getElementById('filtroAnio').value || new Date().getFullYear();
