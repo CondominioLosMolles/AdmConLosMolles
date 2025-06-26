@@ -208,37 +208,62 @@ async function cargarGastosComunes() {
   const tbodyGastos = document.getElementById('tbody-gastos');
   const theadGastos = document.getElementById('thead-gastos');
 
-  function renderizarTablaGeneral(datos) {
-    document.getElementById('widget-convenio').style.display = 'none';
-    document.querySelector('#detalle-gastos h3').textContent = 'Detalle de Pagos Registrados';
-    theadGastos.innerHTML = `<tr><th>Residente</th><th>Parcela</th><th>Período</th><th>Monto Pagado G.C.</th><th>Abono Convenio</th><th>Deuda Pendiente G.C.</th><th>Fecha Pago</th><th>Estado</th><th>Comprobante</th></tr>`;
-    tbodyGastos.innerHTML = '';
-    if (!datos || datos.length === 0) { tbodyGastos.innerHTML = `<tr><td colspan="9" style="text-align:center; padding:20px;">No hay registros para el año seleccionado.</td></tr>`; return; }
-    datos.sort((a,b) => (b.Fecha_Pago ? new Date(b.Fecha_Pago) : 0) - (a.Fecha_Pago ? new Date(a.Fecha_Pago) : 0));
-    datos.forEach(pago => {
-        const estadoClass = (pago.Estado || 'pendiente').toLowerCase().trim().replace(' ', '-');
-        const tr = document.createElement('tr');
-        tr.dataset.idPago = pago.ID_Pago;
-        tr.classList.add('fila-clicable');
-        const abonoConvenio = parseFloat(pago.Abono_Convenio || 0);
-        const comprobanteEnviado = pago.Comprobante_Enviado === 'SI' ? '<span class="comprobante-enviado">✓</span>' : '';
+// === REEMPLAZO COMPLETO de renderizarTablaResidente y mostrarTablaResidente ===
 
-        tr.innerHTML = `
-            <td>${pago.Nombre_Residente || 'N/A'}</td>
-            <td>${pago.N_Parcela}</td>
-            <td>${formatearPeriodo(pago.Periodo) || 'N/A'}</td>
-            <td>$${parseFloat(pago.Monto_Pagado || 0).toLocaleString('es-CL')}</td>
-            <td>$${abonoConvenio.toLocaleString('es-CL')}</td>
-            <td style="font-weight:bold; color: red;">$${parseFloat(pago.Deuda_Total || 0).toLocaleString('es-CL')}</td>
-            <td>${pago.Fecha_Pago ? new Date(pago.Fecha_Pago.replace(/-/g, '/')).toLocaleDateString('es-CL', {timeZone:'UTC'}) : '---'}</td>
-            <td><span class="estado-tag estado-${estadoClass}">${pago.Estado || 'Pendiente'}</span></td>
-            <td>${comprobanteEnviado}</td>`;
-        tbodyGastos.appendChild(tr);
+function renderizarTablaResidente(parcela) {
+  const tbodyGastos = document.getElementById('tbody-gastos');
+  const theadGastos = document.getElementById('thead-gastos');
+  theadGastos.innerHTML = '';
+  tbodyGastos.innerHTML = `<tr><td colspan="9" style="text-align:center; padding:40px;">Cargando estado de cuenta para Parcela ${parcela}... <div class="spinner"></div></td></tr>`;
+  document.querySelector('#detalle-gastos h3').textContent = `Estado de Cuenta para Parcela ${parcela}`;
+
+  obtenerEstadoDeCuenta(parcela)
+    .then(mostrarTablaResidente)
+    .catch(e => {
+      mostrarMensaje('Error al cargar datos desde Google: ' + e.message, 'error');
+      tbodyGastos.innerHTML = `<tr><td colspan="9" style="text-align:center; color:red; padding:20px;">${e.message}</td></tr>`;
     });
-    const tabla = document.getElementById('table-pagos');
+}
+
+function mostrarTablaResidente(data) {
+  const tbodyGastos = document.getElementById('tbody-gastos');
+  const theadGastos = document.getElementById('thead-gastos');
+
+  if (!data || data.length === 0) {
+    tbodyGastos.innerHTML = '<tr><td colspan="9" style="text-align:center; padding:20px;">No se encontraron registros.</td></tr>';
+    return;
+  }
+
+  theadGastos.innerHTML = `
+    <tr>
+      <th>Periodo</th>
+      <th>Descripción</th>
+      <th>Deuda Pendiente</th>
+      <th>Estado</th>
+      <th>Fecha Vencimiento</th>
+      <th>Fecha Pago</th>
+      <th>Monto Pagado</th>
+    </tr>`;
+
+  tbodyGastos.innerHTML = data.map(r => `
+    <tr>
+      <td>${r.periodo}</td>
+      <td>${r.descripcion}</td>
+      <td>CLP ${r.deudaPendiente.toLocaleString('es-CL')}</td>
+      <td>${r.estado}</td>
+      <td>${r.fechaVencimiento}</td>
+      <td>${r.fechaPago || '---'}</td>
+      <td>CLP ${r.montoPagado.toLocaleString('es-CL')}</td>
+    </tr>
+  `).join('');
+
+  const tabla = document.querySelector('#tabla-detalle-gastos');
+  if (tabla) {
     aplicarAnchosGuardados(tabla);
     hacerColumnasRedimensionables(tabla);
   }
+}
+
   
   function renderizarTablaResidente(parcela, anio) {
     const residente = residentes.find(r => String(r[3]) === String(parcela));
