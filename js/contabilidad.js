@@ -92,7 +92,7 @@ async function cargarContabilidad() {
   }, {});
 
   const main = document.getElementById('main-content');
-  const fechaSaldoInicial = config.Fecha_Saldo_Inicial ? new Date(config.Fecha_Saldo_Inicial.replace(/-/g, '/')).toLocaleDateString('es-CL') : 'No establecida';
+  const fechaSaldoInicial = config.Fecha_Saldo_Inicial ? new Date(config.Fecha_Saldo_Inicial.replace(/-/g, '/')).toLocaleDateString('es-CL', { timeZone: 'UTC'}) : 'No establecida';
 
   main.innerHTML = `
     <style>
@@ -180,7 +180,7 @@ async function cargarContabilidad() {
             </div>
             <div id="tablaIngresos" style="overflow-x:auto; margin-top:0.5rem;"></div>
         </div>
-        <div id="tablaEgresosContainer" style="margin-top:1.5rem;">
+        <div id="tablaEgresosContainer" style="display:none; margin-top:1.5rem;">
             <div style="display:flex; justify-content: space-between; align-items: center;">
                 <h4>Egresos</h4>
                 <div>
@@ -255,11 +255,20 @@ async function cargarContabilidad() {
         let saldoInicialPeriodo = saldoInicialGlobal;
         if(fechaInicioFiltro) {
             fechaInicioFiltro.setHours(0,0,0,0);
+            const fechaSaldoInicialDate = new Date(config.Fecha_Saldo_Inicial.replace(/-/g, '/'));
             const ingresosPrevios = allPagos
-                .filter(p => p[13] && new Date(p[13].replace(/-/g, '/')) < fechaInicioFiltro)
+                .filter(p => {
+                    if (!p[13]) return false;
+                    const fechaPago = new Date(p[13].replace(/-/g, '/'));
+                    return fechaPago >= fechaSaldoInicialDate && fechaPago < fechaInicioFiltro;
+                })
                 .reduce((sum, p) => sum + parseFloat(p[6] || 0) + parseFloat(p[17] || 0), 0);
             const egresosPrevios = allEgresos
-                .filter(e => e[1] && new Date(e[1].replace(/-/g, '/')) < fechaInicioFiltro)
+                .filter(e => {
+                    if (!e[1]) return false;
+                    const fechaEgreso = new Date(e[1].replace(/-/g, '/'));
+                    return fechaEgreso >= fechaSaldoInicialDate && fechaEgreso < fechaInicioFiltro;
+                 })
                 .reduce((sum, e) => sum + parseFloat(e[6] || 0), 0);
             saldoInicialPeriodo = saldoInicialGlobal + ingresosPrevios - egresosPrevios;
         }
@@ -277,8 +286,8 @@ async function cargarContabilidad() {
         tablaIngresosDiv.innerHTML = '<p>No hay ingresos en el período seleccionado.</p>';
         if (pagos.length > 0) {
             let ingresosHTML = '<table id="tabla-ingresos-export" class="table"><thead><tr><th>Fecha</th><th>Residente</th><th>Parcela</th><th>Período</th><th>Monto G.C.</th><th>Abono Convenio</th></tr></thead><tbody>';
-            pagos.sort((a,b) => new Date(a[13]) - new Date(b[13])).forEach(p => {
-                ingresosHTML += `<tr><td>${new Date(p[13].replace(/-/g, '/')).toLocaleDateString('es-CL')}</td><td>${p[1]}</td><td>${p[2]}</td><td>${p[4]}</td><td>$${parseFloat(p[6] || 0).toLocaleString('es-CL')}</td><td>$${parseFloat(p[17] || 0).toLocaleString('es-CL')}</td></tr>`;
+            pagos.sort((a,b) => new Date(a[13].replace(/-/g, '/')) - new Date(b[13].replace(/-/g, '/'))).forEach(p => {
+                ingresosHTML += `<tr><td>${new Date(p[13].replace(/-/g, '/')).toLocaleDateString('es-CL', {timeZone: 'UTC'})}</td><td>${p[1]}</td><td>${p[2]}</td><td>${p[4]}</td><td>$${parseFloat(p[6] || 0).toLocaleString('es-CL')}</td><td>$${parseFloat(p[17] || 0).toLocaleString('es-CL')}</td></tr>`;
             });
             ingresosHTML += '</tbody></table>';
             tablaIngresosDiv.innerHTML = ingresosHTML;
@@ -288,14 +297,14 @@ async function cargarContabilidad() {
         tablaEgresosDiv.innerHTML = '<p>No hay egresos en el período seleccionado.</p>';
         if (egresos.length > 0) {
             let egresosHTML = '<table id="tabla-egresos-export" class="table"><thead><tr><th>Fecha</th><th>Mes Pago</th><th>Proveedor</th><th>RUT</th><th>Categoría</th><th>Monto</th><th>Método Pago</th><th>Comprobante</th></tr></thead><tbody>';
-            egresos.sort((a,b) => new Date(a[1]) - new Date(b[1])).forEach(e => {
+            egresos.sort((a,b) => new Date(a[1].replace(/-/g, '/')) - new Date(b[1].replace(/-/g, '/'))).forEach(e => {
                 let linksHtml = "N/A";
                 if (e[7]) {
                     const links = e[7].split(',');
                     linksHtml = links.map((link, index) => `<a href="${link.trim()}" target="_blank" class="btn small">Ver ${index + 1}</a>`).join(' ');
                 }
                 egresosHTML += `<tr>
-                    <td>${new Date(e[1].replace(/-/g, '/')).toLocaleDateString('es-CL')}</td>
+                    <td>${new Date(e[1].replace(/-/g, '/')).toLocaleDateString('es-CL', {timeZone: 'UTC'})}</td>
                     <td>${e[9] || 'N/A'}</td>
                     <td>${e[4]}</td>
                     <td>${e[5] || ''}</td>
@@ -397,7 +406,7 @@ async function cargarContabilidad() {
             
             saldoInput.disabled = true;
             fechaInput.style.display = 'none';
-            document.getElementById('fecha-saldo-display').textContent = new Date(nuevaFecha.replace(/-/g, '/')).toLocaleDateString('es-CL');
+            document.getElementById('fecha-saldo-display').textContent = new Date(nuevaFecha.replace(/-/g, '/')).toLocaleDateString('es-CL', { timeZone: 'UTC' });
             document.getElementById('fecha-saldo-display').style.display = 'inline-block';
             document.getElementById('btnGuardarSaldo').style.display = 'none';
             document.getElementById('btnEditarSaldo').style.display = 'inline-block';
@@ -564,3 +573,5 @@ async function cargarContabilidad() {
 }
 
 document.querySelector('[data-module="contabilidad"]').addEventListener('click', cargarContabilidad);
+
+}
