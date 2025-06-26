@@ -169,4 +169,3 @@ function mostrarFormularioProveedor(proveedor) {
     };
 
     mostrarModalGlobal(titulo, cuerpoHtml, guardarFn, 'large');
-}
