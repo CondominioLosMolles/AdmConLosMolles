@@ -1,11 +1,58 @@
-// js/proveedores.js - Versión Corregida con Modal Global
+// js/proveedores.js - Versión Corregida y Completa
+
+// =================================================================
+// ===== FUNCIONES DE COMUNICACIÓN CON GOOGLE APPS SCRIPT =====
+// Estas funciones son el "puente" para hablar con tu hoja de cálculo.
+// =================================================================
+
+function obtenerProveedores() {
+  return new Promise((resolve, reject) => {
+    google.script.run
+      .withSuccessHandler(resolve)
+      .withFailureHandler(reject)
+      .obtenerProveedores_GS();
+  });
+}
+
+function agregarProveedor(datosProveedor) {
+  return new Promise((resolve, reject) => {
+    google.script.run
+      .withSuccessHandler(resolve)
+      .withFailureHandler(reject)
+      .agregarProveedor_GS(datosProveedor);
+  });
+}
+
+function actualizarProveedor(datosProveedor) {
+  return new Promise((resolve, reject) => {
+    google.script.run
+      .withSuccessHandler(resolve)
+      .withFailureHandler(reject)
+      .actualizarProveedor_GS(datosProveedor);
+  });
+}
+
+function eliminarProveedor(id) {
+  return new Promise((resolve, reject) => {
+    google.script.run
+      .withSuccessHandler(resolve)
+      .withFailureHandler(reject)
+      .eliminarProveedor_GS(id);
+  });
+}
+
+
+// =================================================================
+// ===== CÓDIGO DE LA INTERFAZ DE USUARIO (TU CÓDIGO ORIGINAL) =====
+// =================================================================
 
 async function cargarProveedores() {
   limpiarMainContent();
   mostrarSpinner();
   let proveedores = [];
   try {
-    proveedores = await obtenerProveedores();
+    // Esta llamada ahora funcionará porque la función está definida arriba
+    proveedores = await obtenerProveedores(); 
   } catch (e) {
     ocultarSpinner();
     mostrarMensaje('Error al cargar proveedores: ' + e.message, 'error');
@@ -42,7 +89,7 @@ function renderTablaProveedores(proveedores) {
         </tr>`;
     });
   } else {
-    html += `<tr><td colspan="7">No hay proveedores registrados.</td></tr>`;
+    html += `<tr><td colspan="7" style="text-align:center; padding:20px;">No hay proveedores registrados.</td></tr>`;
   }
   html += `</tbody></table>`;
   container.innerHTML = html;
@@ -50,7 +97,8 @@ function renderTablaProveedores(proveedores) {
   container.querySelectorAll('.btn-edit').forEach(btn => {
     btn.addEventListener('click', async (e) => {
       const id = e.target.dataset.id;
-      const proveedor = (await obtenerProveedores()).find(prov => prov[0] === id);
+      // Esta llamada también funcionará ahora
+      const proveedor = (await obtenerProveedores()).find(prov => prov[0] == id);
       if(proveedor) mostrarFormularioProveedor(proveedor);
     });
   });
@@ -61,6 +109,7 @@ function renderTablaProveedores(proveedores) {
       if (confirm('¿Estás seguro de que quieres eliminar este proveedor?')) {
         mostrarSpinner();
         try {
+          // Y esta...
           await eliminarProveedor(id);
           renderTablaProveedores(await obtenerProveedores());
           mostrarMensaje('Proveedor eliminado.', 'success');
@@ -108,6 +157,7 @@ function mostrarFormularioProveedor(proveedor) {
         mostrarSpinner();
         try {
             if (esNuevo) {
+                // ...y esta llamada también es correcta ahora.
                 await agregarProveedor(datosProveedor);
                 mostrarMensaje('Proveedor agregado con éxito.', 'success');
             } else {
