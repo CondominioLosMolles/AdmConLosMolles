@@ -479,3 +479,19 @@ async function agregarComunicacion(datos) {
         resource: { values: [datos] }
     });
 }
+// -------- FUNCIONES DE CORREO --------
+async function enviarCorreo(destinatarios, asunto, mensaje) {
+    const toField = Array.isArray(destinatarios) ? destinatarios.join(',') : destinatarios;
+    const email =
+        `To: ${toField}\r\n` +
+        `Subject: ${asunto}\r\n` +
+        `Content-Type: text/html; charset=UTF-8\r\n\r\n` +
+        `${mensaje}`;
+    const base64EncodedEmail = btoa(unescape(encodeURIComponent(email)))
+        .replace(/\+/g, '-')
+        .replace(/\//g, '_');
+    await gapi.client.gmail.users.messages.send({
+        userId: 'me',
+        resource: { raw: base64EncodedEmail }
+    });
+}
