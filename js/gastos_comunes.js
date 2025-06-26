@@ -202,68 +202,8 @@ async function cargarGastosComunes() {
     </div>
   `;
   
-  // ... El resto del código continúa en la Parte 2 ...
-// ... continuación de la Parte 1 ...
-
   const tbodyGastos = document.getElementById('tbody-gastos');
   const theadGastos = document.getElementById('thead-gastos');
-
-// === REEMPLAZO COMPLETO de renderizarTablaResidente y mostrarTablaResidente ===
-
-function renderizarTablaResidente(parcela) {
-  const tbodyGastos = document.getElementById('tbody-gastos');
-  const theadGastos = document.getElementById('thead-gastos');
-  theadGastos.innerHTML = '';
-  tbodyGastos.innerHTML = `<tr><td colspan="9" style="text-align:center; padding:40px;">Cargando estado de cuenta para Parcela ${parcela}... <div class="spinner"></div></td></tr>`;
-  document.querySelector('#detalle-gastos h3').textContent = `Estado de Cuenta para Parcela ${parcela}`;
-
-  obtenerEstadoDeCuenta(parcela)
-    .then(mostrarTablaResidente)
-    .catch(e => {
-      mostrarMensaje('Error al cargar datos desde Google: ' + e.message, 'error');
-      tbodyGastos.innerHTML = `<tr><td colspan="9" style="text-align:center; color:red; padding:20px;">${e.message}</td></tr>`;
-    });
-}
-
-function mostrarTablaResidente(data) {
-  const tbodyGastos = document.getElementById('tbody-gastos');
-  const theadGastos = document.getElementById('thead-gastos');
-
-  if (!data || data.length === 0) {
-    tbodyGastos.innerHTML = '<tr><td colspan="9" style="text-align:center; padding:20px;">No se encontraron registros.</td></tr>';
-    return;
-  }
-
-  theadGastos.innerHTML = `
-    <tr>
-      <th>Periodo</th>
-      <th>Descripción</th>
-      <th>Deuda Pendiente</th>
-      <th>Estado</th>
-      <th>Fecha Vencimiento</th>
-      <th>Fecha Pago</th>
-      <th>Monto Pagado</th>
-    </tr>`;
-
-  tbodyGastos.innerHTML = data.map(r => `
-    <tr>
-      <td>${r.periodo}</td>
-      <td>${r.descripcion}</td>
-      <td>CLP ${r.deudaPendiente.toLocaleString('es-CL')}</td>
-      <td>${r.estado}</td>
-      <td>${r.fechaVencimiento}</td>
-      <td>${r.fechaPago || '---'}</td>
-      <td>CLP ${r.montoPagado.toLocaleString('es-CL')}</td>
-    </tr>
-  `).join('');
-
-  const tabla = document.querySelector('#tabla-detalle-gastos');
-  if (tabla) {
-    aplicarAnchosGuardados(tabla);
-    hacerColumnasRedimensionables(tabla);
-  }
-}
-
   
   function renderizarTablaResidente(parcela, anio) {
     const residente = residentes.find(r => String(r[3]) === String(parcela));
@@ -448,41 +388,21 @@ function mostrarTablaResidente(data) {
     }
   }
 
-  function renderizarTablaGeneral(pagos) { [cite: 4]
-    const tabla = document.querySelector('#tabla-gastos-comunes tbody'); [cite: 4]
-    if (!tabla) return; [cite: 4]
-    if (!pagos || pagos.length === 0) { [cite: 5]
-      tabla.innerHTML = '<tr><td colspan="20" style="text-align:center;">No hay registros que coincidan con los filtros.</td></tr>'; [cite: 5]
-      return; [cite: 6]
+  function renderizarTablaGeneral(pagos) {
+    const tabla = document.querySelector('#tabla-gastos-comunes tbody');
+    if (!tabla) return;
+    if (!pagos || pagos.length === 0) {
+      tabla.innerHTML = '<tr><td colspan="20" style="text-align:center;">No hay registros que coincidan con los filtros.</td></tr>';
+      return;
     }
   
     tabla.innerHTML = pagos.map(p => `
       <tr>
-        <td>${p[0]}</td> [cite: 6]
-        <td>${p[1]}</td> [cite: 6]
-        <td>${p[2]}</td> [cite: 6]
-        <td>${p[3]}</td> [cite: 6]
-        <td>${p[4]}</td> [cite: 6]
-        <td>${p[5]}</td> [cite: 6]
-        <td>${p[6]}</td> [cite: 6]
-        <td>${p[7]}</td> [cite: 6]
-        <td>${p[8]}</td> [cite: 6]
-        <td>${p[9]}</td> [cite: 7]
-        <td>${p[10]}</td> [cite: 7]
-        <td>${p[11]}</td> [cite: 7]
-        <td>${p[12]}</td> [cite: 7]
-        <td>${p[13]}</td> [cite: 7]
-        <td>${p[14]}</td> [cite: 7]
-        <td>${p[15]}</td> [cite: 7]
-        <td>${p[16]}</td> [cite: 7]
-        <td>${p[17]}</td> [cite: 7]
-        <td>${p[18]}</td> [cite: 7]
-        <td>${p[19]}</td> [cite: 8]
-      </tr>
+        <td>${p[0]}</td> <td>${p[1]}</td> <td>${p[2]}</td> <td>${p[3]}</td> <td>${p[4]}</td> <td>${p[5]}</td> <td>${p[6]}</td> <td>${p[7]}</td> <td>${p[8]}</td> <td>${p[9]}</td> <td>${p[10]}</td> <td>${p[11]}</td> <td>${p[12]}</td> <td>${p[13]}</td> <td>${p[14]}</td> <td>${p[15]}</td> <td>${p[16]}</td> <td>${p[17]}</td> <td>${p[18]}</td> <td>${p[19]}</td> </tr>
     `).join('');
   
-    aplicarAnchosGuardados(document.getElementById('tabla-gastos-comunes')); [cite: 8]
-    hacerColumnasRedimensionables(document.getElementById('tabla-gastos-comunes')); [cite: 8]
+    aplicarAnchosGuardados(document.getElementById('tabla-gastos-comunes'));
+    hacerColumnasRedimensionables(document.getElementById('tabla-gastos-comunes'));
   }
   
   function actualizarVistaTIMC() {
