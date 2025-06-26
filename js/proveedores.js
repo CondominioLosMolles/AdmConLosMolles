@@ -2,7 +2,6 @@
 
 // =================================================================
 // ===== FUNCIONES DE COMUNICACIÓN CON GOOGLE APPS SCRIPT =====
-// Estas funciones son el "puente" para hablar con tu hoja de cálculo.
 // =================================================================
 
 function obtenerProveedores() {
@@ -43,7 +42,7 @@ function eliminarProveedor(id) {
 
 
 // =================================================================
-// ===== CÓDIGO DE LA INTERFAZ DE USUARIO (TU CÓDIGO ORIGINAL) =====
+// ===== CÓDIGO DE LA INTERFAZ DE USUARIO =====
 // =================================================================
 
 async function cargarProveedores() {
@@ -51,7 +50,6 @@ async function cargarProveedores() {
   mostrarSpinner();
   let proveedores = [];
   try {
-    // Esta llamada ahora funcionará porque la función está definida arriba
     proveedores = await obtenerProveedores(); 
   } catch (e) {
     ocultarSpinner();
@@ -97,8 +95,8 @@ function renderTablaProveedores(proveedores) {
   container.querySelectorAll('.btn-edit').forEach(btn => {
     btn.addEventListener('click', async (e) => {
       const id = e.target.dataset.id;
-      // Esta llamada también funcionará ahora
-      const proveedor = (await obtenerProveedores()).find(prov => prov[0] == id);
+      const todosLosProveedores = await obtenerProveedores();
+      const proveedor = todosLosProveedores.find(prov => prov[0] == id);
       if(proveedor) mostrarFormularioProveedor(proveedor);
     });
   });
@@ -109,9 +107,9 @@ function renderTablaProveedores(proveedores) {
       if (confirm('¿Estás seguro de que quieres eliminar este proveedor?')) {
         mostrarSpinner();
         try {
-          // Y esta...
           await eliminarProveedor(id);
-          renderTablaProveedores(await obtenerProveedores());
+          const proveedoresActualizados = await obtenerProveedores();
+          renderTablaProveedores(proveedoresActualizados);
           mostrarMensaje('Proveedor eliminado.', 'success');
         } catch (err) { mostrarMensaje('Error al eliminar: ' + err.message, 'error'); } 
         finally { ocultarSpinner(); }
@@ -129,7 +127,7 @@ function mostrarFormularioProveedor(proveedor) {
         <form id="form-proveedor-global">
             <input type="hidden" name="id" value="${id}">
             <div class="form-grid">
-              <div><label>Nombre Empresa</label><input type="text" name="nombre_empresa" value="${esNuevo ? '' : proveedor[1]}" required></div>
+              <div><label>Nombre Empresa</label><input type="text" name="nombre_empresa" value="${esNuevo ? '' : (proveedor[1] || '')}" required></div>
               <div><label>RUT Empresa</label><input type="text" name="rut_empresa" value="${esNuevo ? '' : proveedor[2] || ''}"></div>
               <div><label>Nombre Contacto</label><input type="text" name="nombre_contacto" value="${esNuevo ? '' : proveedor[3] || ''}"></div>
               <div><label>Teléfono Contacto</label><input type="text" name="telefono_contacto" value="${esNuevo ? '' : proveedor[4] || ''}"></div>
@@ -157,7 +155,6 @@ function mostrarFormularioProveedor(proveedor) {
         mostrarSpinner();
         try {
             if (esNuevo) {
-                // ...y esta llamada también es correcta ahora.
                 await agregarProveedor(datosProveedor);
                 mostrarMensaje('Proveedor agregado con éxito.', 'success');
             } else {
@@ -165,7 +162,8 @@ function mostrarFormularioProveedor(proveedor) {
                 mostrarMensaje('Proveedor actualizado con éxito.', 'success');
             }
             ocultarModalGlobal();
-            renderTablaProveedores(await obtenerProveedores());
+            const proveedoresActualizados = await obtenerProveedores();
+            renderTablaProveedores(proveedoresActualizados);
         } catch (err) { mostrarMensaje('Error al guardar: ' + err.message, 'error'); }
         finally { ocultarSpinner(); }
     };
