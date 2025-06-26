@@ -1,270 +1,332 @@
-// ==================================================================
-//               API de Google Sheets y Autenticación
-// ==================================================================
-const SHEET_ID = '1Zf72DWa52R5yv9WB_2Jg59j2CC22s7N2J92u2J-G2xo';
-const API_KEY = 'TU_API_KEY'; // Reemplazar con tu API Key real
-const CLIENT_ID = 'TU_CLIENT_ID.apps.googleusercontent.com'; // Reemplazar con tu Client ID real
-const SCOPES = 'https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/drive https://www.googleapis.com/auth/gmail.send';
+// js/sheets.js
+const SPREADSHEET_ID = '1bFo5dBC3HM0xupginTBe-hrrUNgkiuUn4fkXXzHide8';
 
-let tokenClient;
-let gapiInited = false;
-let gisInited = false;
+// --- Nombres de las Hojas ---
+const SHEET_RESIDENTES = 'Residentes';
+const SHEET_PROVEEDORES = 'Proveedores';
+const SHEET_PAGOS_GC = 'Pagos_GC';
+const SHEET_CONFIG_TIMC = 'Config_TIMC';
+const SHEET_EGRESOS = 'Egresos';
+const SHEET_CATEGORIAS_EGRESOS = 'Categorias_Egresos';
+const SHEET_MANTENCIONES = 'Mantenciones';
+const SHEET_MULTAS = 'Multas';
+const SHEET_ASAMBLEAS = 'Asambleas';
+const SHEET_COMUNICACIONES = 'Comunicaciones';
+const SHEET_CONFIGURACION = 'Configuracion';
+const MAIN_DRIVE_FOLDER_NAME = 'Los Molles';
 
-document.getElementById('authorize_button').style.visibility = 'hidden';
-document.getElementById('signout_button').style.visibility = 'hidden';
-
-function gapiLoad() {
-    gapi.load('client', initializeGapiClient);
-}
-
-async function initializeGapiClient() {
-    await gapi.client.init({
-        apiKey: API_KEY,
-        discoveryDocs: ['https://sheets.googleapis.com/$discovery/rest?version=v4'],
-    });
-    gapiInited = true;
-    maybeEnableButtons();
-}
-
-function gisInit() {
-    tokenClient = google.accounts.oauth2.initTokenClient({
-        client_id: CLIENT_ID,
-        scope: SCOPES,
-        callback: '', // Se define en el momento de la llamada
-    });
-    gisInited = true;
-    maybeEnableButtons();
-}
-
-function handleAuthClick() {
-    tokenClient.callback = async (resp) => {
-        if (resp.error !== undefined) {
-            throw (resp);
-        }
-        document.getElementById('signout_button').style.visibility = 'visible';
-        document.getElementById('authorize_button').innerText = 'Refrescar Token';
-        sessionStorage.setItem('gapi_token', JSON.stringify(gapi.client.getToken()));
-        await cargarPagina('dashboard');
-    };
-
-    if (gapi.client.getToken() === null) {
-        tokenClient.requestAccessToken({ prompt: 'consent' });
-    } else {
-        tokenClient.requestAccessToken({ prompt: '' });
-    }
-}
-
-function handleSignoutClick() {
-    const token = gapi.client.getToken();
-    if (token !== null) {
-        google.accounts.oauth2.revoke(token.access_token);
-        gapi.client.setToken('');
-        sessionStorage.removeItem('gapi_token');
-        document.getElementById('content').innerHTML = "<p>Has cerrado la sesión. Por favor, autoriza para continuar.</p>";
-        document.getElementById('authorize_button').innerText = 'Autorizar';
-        document.getElementById('signout_button').style.visibility = 'hidden';
-        document.getElementById('authorize_button').style.visibility = 'visible';
-    }
-}
-
-function maybeEnableButtons() {
-    if (gapiInited && gisInited) {
-        document.getElementById('authorize_button').style.visibility = 'visible';
-    }
-}
-
-// ==================================================================
-//               Funciones de Interacción con Google Sheets
-// ==================================================================
-
-// --- FUNCIONES DE LECTURA (GET) ---
-
-function obtenerResidentes() {
-    return gapi.client.sheets.spreadsheets.values.get({
-        spreadsheetId: SHEET_ID,
-        range: 'Residentes!A2:S',
-    }).then(response => response.result.values || []);
-}
-
-function obtenerPagosGC() {
-  return gapi.client.sheets.spreadsheets.values.get({
-    spreadsheetId: SHEET_ID,
-    range: 'Pagos_GC!A2:T', // Leemos hasta la columna T (20) por la descripción
-  }).then(response => {
-    // ---- INICIO DE LA CORRECCIÓN ----
-    // Se añade el "|| []" para asegurar que siempre devolvemos un array,
-    // incluso si la hoja está vacía. Esto soluciona el error .map is not a function of null.
-    return response.result.values || [];
-    // ---- FIN DE LA CORRECCIÓN ----
-  });
-}
-
-function obtenerTIMCs() {
-    return gapi.client.sheets.spreadsheets.values.get({
-        spreadsheetId: SHEET_ID,
-        range: 'Config_TIMC!A2:C',
-    }).then(response => response.result.values || []);
-}
+// --- IDs de las Hojas ---
+const SHEET_ID_RESIDENTES = 1835488459;
+const SHEET_ID_PROVEEDORES = 705052879;
+const SHEET_ID_PAGOS_GC = 1954366455;
+const SHEET_ID_EGRESOS = 1945700474;
+const SHEET_ID_MANTENCIONES = 895242560;
+const SHEET_ID_MULTAS = 456683145;
+const SHEET_ID_ASAMBLEAS = 791789730;
+const SHEET_ID_COMUNICACIONES = 569621527;
 
 
-// --- FUNCIONES DE ESCRITURA (UPDATE/APPEND) ---
-
-function agregarPagoGC(datosFila) {
-    return gapi.client.sheets.spreadsheets.values.append({
-        spreadsheetId: SHEET_ID,
-        range: 'Pagos_GC!A:S',
-        valueInputOption: 'USER_ENTERED',
-        resource: {
-            values: [datosFila],
-        },
-    });
-}
-
-function guardarTIMC(anio, mes, valor) {
-    // Esta función es más compleja, necesita buscar la fila correcta o agregar una nueva.
-    // Una implementación simple sería agregar siempre, pero lo ideal es buscar y actualizar.
-    // Por simplicidad, aquí un ejemplo de búsqueda y actualización.
-    const rangeToRead = `Config_TIMC!A2:C`;
-    return gapi.client.sheets.spreadsheets.values.get({
-        spreadsheetId: SHEET_ID,
-        range: rangeToRead,
-    }).then(response => {
-        const rows = response.result.values || [];
-        const rowIndex = rows.findIndex(row => row[0] == anio && row[1] == mes);
-        
-        if (rowIndex !== -1) {
-            // Actualizar fila existente
-            const rangeToUpdate = `Config_TIMC!C${rowIndex + 2}`;
-            return gapi.client.sheets.spreadsheets.values.update({
-                spreadsheetId: SHEET_ID,
-                range: rangeToUpdate,
-                valueInputOption: 'USER_ENTERED',
-                resource: { values: [[valor]] }
-            });
-        } else {
-            // Agregar nueva fila
-            return gapi.client.sheets.spreadsheets.values.append({
-                spreadsheetId: SHEET_ID,
-                range: 'Config_TIMC!A:C',
-                valueInputOption: 'USER_ENTERED',
-                resource: { values: [[anio, mes, valor]] }
-            });
-        }
-    });
-}
-
-function actualizarSaldoConvenioEnSheet(rowNum, nuevoSaldo) {
-  const range = `Residentes!M${rowNum}`; // Columna M para Saldo Convenio
-  return gapi.client.sheets.spreadsheets.values.update({
-    spreadsheetId: SHEET_ID,
-    range: range,
-    valueInputOption: 'USER_ENTERED',
-    resource: {
-      values: [[nuevoSaldo]]
-    }
-  });
-}
-
-function marcarComprobanteEnviado(rowNum) {
-  const range = `Pagos_GC!S${rowNum}`; // Columna S para Comprobante Enviado
-  return gapi.client.sheets.spreadsheets.values.update({
-    spreadsheetId: SHEET_ID,
-    range: range,
-    valueInputOption: 'USER_ENTERED',
-    resource: {
-      values: [['SI']]
-    }
-  });
-}
-
-
-// ==================================================================
-//               Funciones de Interacción con Google Drive y Gmail
-// ==================================================================
-
-const FOLDER_COMPROBANTES_ID = '1Q3EaKq5nQuX9gO6w3qg8iE8D6n-QyWlq'; // ID de la carpeta raíz de comprobantes
-
-async function buscarOCrearCarpetaDeParcela(nombreCarpeta) {
-    // Buscar si la carpeta ya existe
-    const query = `mimeType='application/vnd.google-apps.folder' and name='${nombreCarpeta}' and '${FOLDER_COMPROBANTES_ID}' in parents and trashed=false`;
+// -------- FUNCIONES DE GOOGLE DRIVE --------
+async function findFolderId(name, parentId = 'root') {
+    const q = `mimeType='application/vnd.google-apps.folder' and name='${name}' and trashed=false and '${parentId}' in parents`;
     const response = await gapi.client.drive.files.list({
-        q: query,
-        fields: 'files(id, name)',
+        q: q,
+        fields: 'files(id)',
+        spaces: 'drive'
     });
-    
-    if (response.result.files && response.result.files.length > 0) {
-        return response.result.files[0].id; // Carpeta encontrada, devuelve su ID
-    } else {
-        // Crear la carpeta si no existe
-        const fileMetadata = {
-            'name': nombreCarpeta,
-            'mimeType': 'application/vnd.google-apps.folder',
-            'parents': [FOLDER_COMPROBANTES_ID]
-        };
-        const createResponse = await gapi.client.drive.files.create({
-            resource: fileMetadata,
-            fields: 'id'
+    return response.result.files.length > 0 ? response.result.files[0].id : null;
+}
+
+async function createFolder(name, parentId = 'root') {
+    const metadata = {
+        name: name,
+        mimeType: 'application/vnd.google-apps.folder',
+        parents: [parentId]
+    };
+    const response = await gapi.client.drive.files.create({
+        resource: metadata,
+        fields: 'id'
+    });
+    return response.result.id;
+}
+
+async function buscarOCrearRutaDeEgreso(nombreMes, anio) {
+    const carpetaPrincipalId = await findFolderId(MAIN_DRIVE_FOLDER_NAME);
+    if (!carpetaPrincipalId) {
+        throw new Error(`No se encontró la carpeta principal de Drive: "${MAIN_DRIVE_FOLDER_NAME}"`);
+    }
+    let carpetaPagosId = await findFolderId('Pagos', carpetaPrincipalId);
+    if (!carpetaPagosId) {
+        carpetaPagosId = await createFolder('Pagos', carpetaPrincipalId);
+    }
+    const nombreCarpetaMes = `${nombreMes} ${anio}`;
+    let carpetaMesId = await findFolderId(nombreCarpetaMes, carpetaPagosId);
+    if (!carpetaMesId) {
+        carpetaMesId = await createFolder(nombreCarpetaMes, carpetaPagosId);
+    }
+    return carpetaMesId;
+}
+
+async function subirComprobante(file, folderId) {
+    const metadata = {
+        name: file.name,
+        parents: [folderId]
+    };
+    const formData = new FormData();
+    formData.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
+    formData.append('file', file);
+
+    const response = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,webViewLink', {
+        method: 'POST',
+        headers: new Headers({ 'Authorization': 'Bearer ' + gapi.auth.getToken().access_token }),
+        body: formData,
+    });
+    return response.json();
+}
+
+
+// -------- FUNCIONES DE CONFIGURACIÓN GLOBAL --------
+async function obtenerConfiguracion() {
+    const response = await gapi.client.sheets.spreadsheets.values.get({
+        spreadsheetId: SPREADSHEET_ID,
+        range: `${SHEET_CONFIGURACION}!A:B`,
+    });
+    const values = response.result.values || [];
+    const config = {};
+    values.forEach(row => {
+        if (row[0] && row[1]) {
+            config[row[0]] = row[1];
+        }
+    });
+    return config;
+}
+
+async function actualizarConfiguracion(key, value) {
+    const response = await gapi.client.sheets.spreadsheets.values.get({
+        spreadsheetId: SPREADSHEET_ID,
+        range: `${SHEET_CONFIGURACION}!A:A`,
+    });
+    const keys = response.result.values || [];
+    const rowIndex = keys.findIndex(row => row[0] === key);
+    if (rowIndex === -1) {
+        await gapi.client.sheets.spreadsheets.values.append({
+            spreadsheetId: SPREADSHEET_ID,
+            range: `${SHEET_CONFIGURACION}!A:B`,
+            valueInputOption: 'USER_ENTERED',
+            resource: { values: [[key, value]] }
         });
-        return createResponse.result.id; // Devuelve el ID de la nueva carpeta
+    } else {
+        const rowToUpdate = rowIndex + 1;
+        await gapi.client.sheets.spreadsheets.values.update({
+            spreadsheetId: SPREADSHEET_ID,
+            range: `${SHEET_CONFIGURACION}!B${rowToUpdate}`,
+            valueInputOption: 'USER_ENTERED',
+            resource: { values: [[value]] }
+        });
     }
 }
 
-function subirComprobante(file, folderId) {
-    return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.readAsArrayBuffer(file);
-        reader.onload = () => {
-            const fileData = reader.result;
-            const boundary = '-------314159265358979323846';
-            const delimiter = "\r\n--" + boundary + "\r\n";
-            const close_delim = "\r\n--" + boundary + "--";
 
-            const metadata = {
-                'name': `comprobante_${new Date().toISOString()}.pdf`, // Asumiendo PDF, se puede adaptar
-                'mimeType': file.type,
-                'parents': [folderId]
-            };
+// -------- FUNCIONES DE RESIDENTES --------
+async function obtenerResidentes() { const res = await gapi.client.sheets.spreadsheets.values.get({ spreadsheetId: SPREADSHEET_ID, range: `${SHEET_RESIDENTES}!A2:AC` }); return res.result.values || []; }
+async function agregarResidente(datos) { const residentes = await obtenerResidentes(); const lastId = residentes.length > 0 && residentes[residentes.length-1][0] ? parseInt(residentes[residentes.length-1][0]) : 0; datos[0] = (lastId + 1).toString(); await gapi.client.sheets.spreadsheets.values.append({ spreadsheetId: SPREADSHEET_ID, range: `${SHEET_RESIDENTES}!A:M`, valueInputOption: 'USER_ENTERED', resource: { values: [datos] } });}
+async function actualizarResidente(datos) { const residentes = await obtenerResidentes(); const idx = residentes.findIndex(r => r[0] === datos[0]); if (idx === -1) throw new Error('Residente no encontrado'); const row = idx + 2; await gapi.client.sheets.spreadsheets.values.update({ spreadsheetId: SPREADSHEET_ID, range: `${SHEET_RESIDENTES}!A${row}:M${row}`, valueInputOption: 'USER_ENTERED', resource: { values: [datos] } });}
+async function actualizarSaldoConvenioEnSheet(rowNumber, nuevoSaldo) { if (rowNumber < 2) throw new Error("Número de fila inválido para actualizar."); await gapi.client.sheets.spreadsheets.values.update({ spreadsheetId: SPREADSHEET_ID, range: `${SHEET_RESIDENTES}!M${rowNumber}`, valueInputOption: 'USER_ENTERED', resource: { values: [[nuevoSaldo]] } });}
+async function eliminarResidente(id) { const residentes = await obtenerResidentes(); const idx = residentes.findIndex(r => r[0] === id); if (idx === -1) throw new Error('Residente no encontrado'); const row = idx + 2; await gapi.client.sheets.spreadsheets.batchUpdate({ spreadsheetId: SPREADSHEET_ID, resource: { requests: [{ deleteDimension: { range: { sheetId: SHEET_ID_RESIDENTES, dimension: "ROWS", startIndex: row - 1, endIndex: row } } }] } });}
 
-            const multipartRequestBody =
-                delimiter +
-                'Content-Type: application/json\r\n\r\n' +
-                JSON.stringify(metadata) +
-                delimiter +
-                'Content-Type: ' + file.type + '\r\n' +
-                'Content-Transfer-Encoding: base64\r\n' +
-                '\r\n' +
-                btoa(String.fromCharCode.apply(null, new Uint8Array(fileData))) +
-                close_delim;
+// -------- FUNCIONES DE PROVEEDORES --------
+async function obtenerProveedores() {
+    const res = await gapi.client.sheets.spreadsheets.values.get({
+        spreadsheetId: SPREADSHEET_ID,
+        range: `${SHEET_PROVEEDORES}!A2:H`
+    });
+    return res.result.values || [];
+}
 
-            gapi.client.request({
-                'path': '/upload/drive/v3/files',
-                'method': 'POST',
-                'params': { 'uploadType': 'multipart' },
-                'headers': {
-                    'Content-Type': 'multipart/related; boundary="' + boundary + '"'
-                },
-                'body': multipartRequestBody
-            }).then(response => resolve(response.result), err => reject(err));
-        };
+async function agregarProveedor(datos) {
+    const proveedores = await obtenerProveedores();
+    const lastId = proveedores.length > 0 && proveedores[proveedores.length-1][0] ? parseInt(proveedores[proveedores.length-1][0]) : 0;
+    datos[0] = (lastId + 1).toString();
+    await gapi.client.sheets.spreadsheets.values.append({
+        spreadsheetId: SPREADSHEET_ID,
+        range: `${SHEET_PROVEEDORES}!A:H`,
+        valueInputOption: 'USER_ENTERED',
+        resource: { values: [datos] }
     });
 }
 
-async function enviarCorreo(destinatario, asunto, cuerpoHtml) {
-  const message = [
-    `To: ${destinatario}`,
-    'Content-Type: text/html; charset=utf-8',
-    'MIME-Version: 1.0',
-    `Subject: =?utf-8?B?${btoa(unescape(encodeURIComponent(asunto)))}?=`,
-    '',
-    cuerpoHtml
-  ].join('\r\n');
+async function actualizarProveedor(datos) {
+    const proveedores = await obtenerProveedores();
+    const rowIndex = proveedores.findIndex(p => p[0] === datos[0]);
+    if (rowIndex === -1) throw new Error('Proveedor no encontrado para actualizar.');
+    const rowToUpdate = rowIndex + 2;
+    await gapi.client.sheets.spreadsheets.values.update({
+        spreadsheetId: SPREADSHEET_ID,
+        range: `${SHEET_PROVEEDORES}!A${rowToUpdate}:H${rowToUpdate}`,
+        valueInputOption: 'USER_ENTERED',
+        resource: { values: [datos] }
+    });
+}
 
-  const rawMessage = btoa(unescape(encodeURIComponent(message))).replace(/\+/g, '-').replace(/\//g, '_');
-  
-  return gapi.client.gmail.users.messages.send({
-    'userId': 'me',
-    'resource': {
-      'raw': rawMessage
+async function eliminarProveedor(id) {
+    const proveedores = await obtenerProveedores();
+    const rowIndex = proveedores.findIndex(p => p[0] === id);
+    if (rowIndex === -1) throw new Error('Proveedor no encontrado para eliminar.');
+    const rowToDelete = rowIndex + 1;
+    await gapi.client.sheets.spreadsheets.batchUpdate({
+        spreadsheetId: SPREADSHEET_ID,
+        resource: {
+            requests: [{
+                deleteDimension: {
+                    range: {
+                        sheetId: SHEET_ID_PROVEEDORES,
+                        dimension: "ROWS",
+                        startIndex: rowToDelete,
+                        endIndex: rowToDelete + 1
+                    }
+                }
+            }]
+        }
+    });
+}
+
+// -------- GASTOS COMUNES Y TIMC --------
+async function obtenerPagosGC() {
+    // ---- INICIO DE LA CORRECCIÓN ----
+    try {
+        const response = await gapi.client.sheets.spreadsheets.values.get({
+            spreadsheetId: SPREADSHEET_ID,
+            range: `${SHEET_PAGOS_GC}!A2:T` // Corregido a columna T (20)
+        });
+        // Esta guarda de seguridad asegura que si la hoja está vacía, la app no se detenga.
+        return response.result.values || []; 
+    } catch (err) {
+        console.error("Error grave en obtenerPagosGC:", err);
+        // En caso de un error de API, también devolvemos un array vacío para no detener la app.
+        return [];
     }
+    // ---- FIN DE LA CORRECCIÓN ----
+}
+async function agregarPagoGC(datos) { 
+    // ---- INICIO DE LA CORRECCIÓN ----
+    // Mantenemos la lógica de ID, pero corregimos el rango a la columna T.
+    const pagos = await obtenerPagosGC(); 
+    const lastId = pagos.length > 0 && pagos[pagos.length-1][0] ? parseInt(pagos[pagos.length-1][0]) : 0; 
+    datos[0] = (lastId + 1).toString(); 
+
+    await gapi.client.sheets.spreadsheets.values.append({ 
+        spreadsheetId: SPREADSHEET_ID, 
+        range: `${SHEET_PAGOS_GC}!A:T`, // Corregido a columna T (20)
+        valueInputOption: 'USER_ENTERED', 
+        resource: { values: [datos] } 
+    }); 
+    // ---- FIN DE LA CORRECCIÓN ----
+}
+async function obtenerTIMCs() { try { const res = await gapi.client.sheets.spreadsheets.values.get({ spreadsheetId: SPREADSHEET_ID, range: `${SHEET_CONFIG_TIMC}!A2:C` }); return res.result.values || []; } catch (err) { console.error("ERROR AL OBTENER TIMC:", err); if (err.result && err.result.error.message.includes("Unable to parse range")) { throw new Error(`No se pudo encontrar la hoja llamada '${SHEET_CONFIG_TIMC}'. Revisa que el nombre sea exacto.`); } throw err; } }
+async function guardarTIMC(anio, mes, valor) { try { const todosLosTIMCs = await obtenerTIMCs(); const filaExistenteIndex = todosLosTIMCs.findIndex(fila => fila[0] == anio && fila[1] == mes); if (filaExistenteIndex !== -1) { const filaParaActualizar = filaExistenteIndex + 2; await gapi.client.sheets.spreadsheets.values.update({ spreadsheetId: SPREADSHEET_ID, range: `${SHEET_CONFIG_TIMC}!C${filaParaActualizar}`, valueInputOption: 'USER_ENTERED', resource: { values: [[valor]] } }); } else { const nuevaFila = [anio, mes, valor]; await gapi.client.sheets.spreadsheets.values.append({ spreadsheetId: SPREADSHEET_ID, range: `${SHEET_CONFIG_TIMC}!A:C`, valueInputOption: 'USER_ENTERED', resource: { values: [nuevaFila] } }); } } catch (err) { console.error("ERROR AL GUARDAR TIMC:", err); throw err; } }
+
+// -------- CONTABILIDAD (EGRESOS) --------
+async function obtenerCategoriasEgresos() {
+    const res = await gapi.client.sheets.spreadsheets.values.get({
+        spreadsheetId: SPREADSHEET_ID,
+        range: `${SHEET_CATEGORIAS_EGRESOS}!A2:A`,
+    });
+    const values = res.result.values || [];
+    return values.flat();
+}
+async function obtenerEgresos() { const res = await gapi.client.sheets.spreadsheets.values.get({ spreadsheetId: SPREADSHEET_ID, range: `${SHEET_EGRESOS}!A2:J` }); return res.result.values || []; }
+async function agregarEgreso(datos) { const egresos = await obtenerEgresos(); const lastId = egresos.length > 0 && egresos[egresos.length-1][0] ? parseInt(egresos[egresos.length-1][0]) : 0; datos[0] = (lastId + 1).toString(); await gapi.client.sheets.spreadsheets.values.append({ spreadsheetId: SPREADSHEET_ID, range: `${SHEET_EGRESOS}!A:J`, valueInputOption: 'USER_ENTERED', resource: { values: [datos] } }); }
+async function eliminarEgreso(id) { const egresos = await obtenerEgresos(); const idx = egresos.findIndex(e => e[0] === id); if (idx === -1) throw new Error('No encontrado'); const row = idx + 2; await gapi.client.sheets.spreadsheets.batchUpdate({ spreadsheetId: SPREADSHEET_ID, resource: { requests: [{ deleteDimension: { range: { sheetId: SHEET_ID_EGRESOS, dimension: "ROWS", startIndex: row - 1, endIndex: row } } }] } }); }
+
+// -------- GESTOR DE TAREAS (ANTES MANTENCIONES) --------
+async function obtenerTareas() {
+    const res = await gapi.client.sheets.spreadsheets.values.get({ spreadsheetId: SPREADSHEET_ID, range: `${SHEET_MANTENCIONES}!A2:H` });
+    return res.result.values || [];
+}
+
+async function agregarTarea(datos) {
+    const tareas = await obtenerTareas();
+    const lastId = tareas.length > 0 && tareas[tareas.length - 1][0] ? parseInt(tareas[tareas.length - 1][0]) : 0;
+    datos[0] = (lastId + 1).toString();
+    await gapi.client.sheets.spreadsheets.values.append({
+        spreadsheetId: SPREADSHEET_ID,
+        range: `${SHEET_MANTENCIONES}!A:H`,
+        valueInputOption: 'USER_ENTERED',
+        resource: { values: [datos] }
+    });
+}
+
+async function actualizarTarea(datos) {
+    const tareas = await obtenerTareas();
+    const rowIndex = tareas.findIndex(t => t[0] === datos[0]);
+    if (rowIndex === -1) throw new Error('Tarea no encontrada para actualizar.');
+    const rowToUpdate = rowIndex + 2;
+    await gapi.client.sheets.spreadsheets.values.update({
+        spreadsheetId: SPREADSHEET_ID,
+        range: `${SHEET_MANTENCIONES}!A${rowToUpdate}:H${rowToUpdate}`,
+        valueInputOption: 'USER_ENTERED',
+        resource: { values: [datos] }
+    });
+}
+
+async function eliminarTarea(id) {
+    const tareas = await obtenerTareas();
+    const idx = tareas.findIndex(t => t[0] === id);
+    if (idx === -1) throw new Error('Tarea no encontrada para eliminar.');
+    const row = idx + 2;
+    await gapi.client.sheets.spreadsheets.batchUpdate({
+        spreadsheetId: SPREADSHEET_ID,
+        resource: {
+            requests: [{
+                deleteDimension: {
+                    range: {
+                        sheetId: SHEET_ID_MANTENCIONES,
+                        dimension: "ROWS",
+                        startIndex: row - 1,
+                        endIndex: row
+                    }
+                }
+            }]
+        }
+    });
+}
+
+// -------- MULTAS --------
+async function obtenerMultas() { const res = await gapi.client.sheets.spreadsheets.values.get({ spreadsheetId: SPREADSHEET_ID, range: `${SHEET_MULTAS}!A2:G` }); return res.result.values || []; }
+async function agregarMulta(datos) { const multas = await obtenerMultas(); const lastId = multas.length > 0 && multas[multas.length - 1][0] ? parseInt(multas[multas.length - 1][0]) : 0; datos[0] = (lastId + 1).toString(); await gapi.client.sheets.spreadsheets.values.append({ spreadsheetId: SPREADSHEET_ID, range: `${SHEET_MULTAS}!A:G`, valueInputOption: 'USER_ENTERED', resource: { values: [datos] } }); }
+async function actualizarMulta(datos) { const multas = await obtenerMultas(); const idx = multas.findIndex(m => m[0] === datos[0]); if (idx === -1) throw new Error('Multa no encontrada para actualizar.'); const row = idx + 2; await gapi.client.sheets.spreadsheets.values.update({ spreadsheetId: SPREADSHEET_ID, range: `${SHEET_MULTAS}!A${row}:G${row}`, valueInputOption: 'USER_ENTERED', resource: { values: [datos] } }); }
+async function eliminarMulta(id) { const multas = await obtenerMultas(); const idx = multas.findIndex(m => m[0] === id); if (idx === -1) throw new Error('Multa no encontrada para eliminar.'); const row = idx + 2; await gapi.client.sheets.spreadsheets.batchUpdate({ spreadsheetId: SPREADSHEET_ID, resource: { requests: [{ deleteDimension: { range: { sheetId: SHEET_ID_MULTAS, dimension: "ROWS", startIndex: row - 1, endIndex: row } } }] } }); }
+
+// -------- ASAMBLEAS --------
+async function obtenerAsambleas() { const res = await gapi.client.sheets.spreadsheets.values.get({ spreadsheetId: SPREADSHEET_ID, range: `${SHEET_ASAMBLEAS}!A2:F` }); return res.result.values || []; }
+async function agregarAsamblea(datos) { const asambleas = await obtenerAsambleas(); const lastId = asambleas.length > 0 && asambleas[asambleas.length - 1][0] ? parseInt(asambleas[asambleas.length - 1][0]) : 0; datos[0] = (lastId + 1).toString(); await gapi.client.sheets.spreadsheets.values.append({ spreadsheetId: SPREADSHEET_ID, range: `${SHEET_ASAMBLEAS}!A:F`, valueInputOption: 'USER_ENTERED', resource: { values: [datos] } }); }
+async function eliminarAsamblea(id) { const asambleas = await obtenerAsambleas(); const idx = asambleas.findIndex(a => a[0] === id); if (idx === -1) throw new Error('No encontrada'); const row = idx + 2; await gapi.client.sheets.spreadsheets.batchUpdate({ spreadsheetId: SPREADSHEET_ID, resource: { requests: [{ deleteDimension: { range: { sheetId: SHEET_ID_ASAMBLEAS, dimension: "ROWS", startIndex: row - 1, endIndex: row } } }] } }); }
+
+// -------- COMUNICACIONES --------
+async function obtenerComunicaciones() { const res = await gapi.client.sheets.spreadsheets.values.get({ spreadsheetId: SPREADSHEET_ID, range: `${SHEET_COMUNICACIONES}!A2:H` }); return res.result.values || []; }
+async function agregarComunicacion(datos) { const comunicaciones = await obtenerComunicaciones(); const lastId = comunicaciones.length > 0 && comunicaciones[comunicaciones.length-1][0] ? parseInt(comunicaciones[comunicaciones.length-1][0]) : 0; datos[0] = (lastId + 1).toString(); await gapi.client.sheets.spreadsheets.values.append({ spreadsheetId: SPREADSHEET_ID, range: `${SHEET_COMUNICACIONES}!A:H`, valueInputOption: 'USER_ENTERED', resource: { values: [datos] } }); }
+
+// -------- FUNCIONES DE CORREO Y COMPROBANTES --------
+async function enviarCorreo(destinatarios, asunto, mensaje) {
+  const toField = Array.isArray(destinatarios) ? destinatarios.join(',') : destinatarios;
+  const email =
+    `To: ${toField}\r\n` +
+    `Subject: ${asunto}\r\n` +
+    `Content-Type: text/html; charset=UTF-8\r\n\r\n` +
+    `${mensaje}`;
+  const base64EncodedEmail = btoa(unescape(encodeURIComponent(email))).replace(/\+/g, '-').replace(/\//g, '_');
+  await gapi.client.gmail.users.messages.send({
+    userId: 'me',
+    resource: { raw: base64EncodedEmail }
   });
+}
+
+async function marcarComprobanteEnviado(rowNumber) {
+    if (rowNumber < 2) throw new Error("Número de fila inválido para actualizar.");
+    await gapi.client.sheets.spreadsheets.values.update({
+        spreadsheetId: SPREADSHEET_ID,
+        range: `${SHEET_PAGOS_GC}!S${rowNumber}`,
+        valueInputOption: 'USER_ENTERED',
+        resource: { values: [['SI']] }
+    });
 }
