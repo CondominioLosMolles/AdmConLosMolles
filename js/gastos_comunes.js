@@ -90,21 +90,18 @@ async function cargarGastosComunes() {
   mostrarSpinner();
 
   let residentes = [];
-  let pagosGC_obj = [];
+  let pagosGC_obj = []; // Se mantiene para la lógica de los modales de envío de correo
   let timcData = {};
 
   try {
     const [residentes_data, pagosGC_raw, timcs_raw] = await Promise.all([
         obtenerResidentes(),
-        obtenerPagosGC(),
+        obtenerPagosGC(), // Necesario para el modal de envío de comprobantes
         obtenerTIMCs()
     ]);
     
     residentes = residentes_data || [];
     
-    // ---- INICIO DE LA CORRECCIÓN ----
-    // Nos aseguramos de que 'pagosGC_raw' sea un array antes de usar .map()
-    // Esto previene el error "Cannot read properties of null (reading 'map')"
     const pagosParaMapear = Array.isArray(pagosGC_raw) ? pagosGC_raw : [];
     pagosGC_obj = pagosParaMapear.map((fila, index) => {
         let obj = {};
@@ -116,7 +113,6 @@ async function cargarGastosComunes() {
         obj.rowNum = index + 2;
         return obj;
     }).filter(p => p.N_Parcela);
-    // ---- FIN DE LA CORRECCIÓN ----
 
     (timcs_raw || []).forEach(fila => {
         const [anio, mes, valor] = fila;
@@ -131,6 +127,7 @@ async function cargarGastosComunes() {
   }
   
   const main = document.getElementById('main-content');
+  // ESTE BLOQUE HTML ES EL QUE FALTABA Y CAUSABA EL ERROR. AHORA ESTÁ COMPLETO.
   main.innerHTML = `
     <style>
       .estado-pagado { background-color: #198754; color: white; }
@@ -166,7 +163,7 @@ async function cargarGastosComunes() {
             </div>
             <div style="flex: 1; min-width: 150px;">
               <label for="filtroAnio"><b>Año:</b></label>
-              <input type="number" id="filtroAnio" value="${new Date().getFullYear()}" style="width:100%;">
+              <input type="number" id="filtroAnio" value="${new Date().getFullYear()}" style="width:100%;" disabled title="El año se gestiona automáticamente.">
             </div>
           </div>
         </div>
@@ -176,7 +173,7 @@ async function cargarGastosComunes() {
         </div>
       </section>
 
-      <section class="widget" style="flex: 2; min-width: 450px;"><h4 style="margin-top:0;">Configuración de TIMC</h4><div style="display: flex; align-items: flex-end; gap: 16px; margin-bottom: 20px;"><div style="min-width: 120px;"><label for="inputTMC"><b>TIMC (%)</b></label><input type="number" id="inputTMC" step="0.1" placeholder="Ej: 25"></div><div><label for="selectMesTMC"><b>Mes</b></label><select id="selectMesTMC" style="padding: 11px 10px;">${MESES.map((m, i) => `<option value="${i + 1}">${m}</option>`).join('')}</select></div><button id="btnGuardarTMC" class="btn">Guardar en Sheet</button></div><div id="timc-display"><h5 style="margin-top:0; margin-bottom: 10px;">TIMC Guardado para el año seleccionado:</h5><div id="timc-list-horizontal" style="display: flex; flex-wrap: wrap; gap: 15px; background: #e9f1fb; padding: 12px; border-radius: 8px;"></div></div></section>
+      <section class="widget" style="flex: 2; min-width: 450px;"><h4 style="margin-top:0;">Configuración de TIMC</h4><div style="display: flex; align-items: flex-end; gap: 16px; margin-bottom: 20px;"><div style="min-width: 120px;"><label for="inputTMC"><b>TIMC (%)</b></label><input type="number" id="inputTMC" step="0.1" placeholder="Ej: 25"></div><div><label for="selectMesTMC"><b>Mes</b></label><select id="selectMesTMC" style="padding: 11px 10px;">${MESES.map((m, i) => `<option value="<span class="math-inline">\{i \+ 1\}"\></span>{m}</option>`).join('')}</select></div><button id="btnGuardarTMC" class="btn">Guardar en Sheet</button></div><div id="timc-display"><h5 style="margin-top:0; margin-bottom: 10px;">TIMC Guardado para el año seleccionado:</h5><div id="timc-list-horizontal" style="display: flex; flex-wrap: wrap; gap: 15px; background: #e9f1fb; padding: 12px; border-radius: 8px;"></div></div></section>
     </div>
 
     <section id="widget-convenio" class="widget" style="display:none; margin-top: 2rem;">
@@ -186,9 +183,9 @@ async function cargarGastosComunes() {
         <div style="overflow-x:auto;"><table class="table"><thead id="thead-abonos"></thead><tbody id="tbody-abonos"></tbody></table></div>
     </section>
 
-    <section id="detalle-gastos" style="margin-top: 2rem;"><h3>Estado de Cuenta</h3><div style="overflow-x:auto;"><table id="table-pagos" class="table"><thead id="thead-gastos"></thead><tbody id="tbody-gastos"></tbody></table></div></section>
+    <section id="detalle-gastos" style="margin-top: 2rem;"><h3>Estado de Cuenta</h3><div style="overflow-x:auto;"><table id="table-pagos" class="table"><thead id="thead-gastos"><tr style="text-align: center;"><td colspan="9">Seleccione una parcela para ver su estado de cuenta.</td></tr></thead><tbody id="tbody-gastos"></tbody></table></div></section>
     
-    <div id="modalGC" class="modal" style="display:none;"><div><h3>Agregar Gasto Común</h3><form id="formGastoComun" style="display:flex; flex-wrap:wrap; gap:15px;"><div style="flex: 1 1 120px;"><label>N° Parcela</label><input type="number" name="N_Parcela" id="inputNParcela" min="1" max="26" required></div><div style="flex: 1 1 300px; position: relative;"><label>Nombre Residente</label><input type="text" name="Nombre_Residente" id="inputNombreResidente" autocomplete="off" required><div id="nombre-suggestions" style="display: none; position: absolute; background-color: white; border: 1px solid #ccc; max-height: 150px; overflow-y: auto; width: 100%; z-index: 10;"></div></div><div style="flex: 1 1 180px;"><label>Valor Gasto Común</label><input type="text" name="Valor_Gasto_Comun" id="inputValorGastoComun" readonly style="background:#eee;"></div><div style="flex: 1 1 180px;"><label>Fecha de Pago</label><input type="date" name="Fecha_Pago" required></div><div style="flex: 1 1 180px;"><label>Mes que Paga (Período)</label><select name="Periodo" required>${MESES.map((m, i) => `<option value="${i}">${m}</option>`).join('')}</select></div><div style="flex: 1 1 180px;"><label>Año que Paga</label><input type="number" name="Anio_Periodo" id="inputAnioPeriodo" required></div><div style="flex: 1 1 180px;"><label>Monto Pagado G.C.</label><input type="number" name="Monto_Pagado" min="0" step="1" required placeholder="CLP"></div><div style="flex: 1 1 180px;"><label>Abono a Convenio (CLP)</label><input type="number" name="Abono_Convenio" min="0" step="1" placeholder="CLP"><small id="saldo-convenio-info" style="display:none; color: #007bff;"></small></div><div style="flex: 1 1 180px;"><label>Método de Pago</label><select name="Metodo_Pago" required><option value="Transferencia">Transferencia</option><option value="Efectivo">Efectivo</option></select></div><div style="flex: 1 1 100%;"><label>Comprobante</label><input type="file" name="Comprobante"></div><div style="flex: 1 1 100%; text-align: right; margin-top: 20px;"><button class="btn secondary" type="button" id="btnCerrarModal">Cancelar</button><button class="btn" type="submit">Guardar Gasto</button></div></form></div></div>
+    <div id="modalGC" class="modal" style="display:none;"><div><h3>Agregar Gasto Común</h3><form id="formGastoComun" style="display:flex; flex-wrap:wrap; gap:15px;"><div style="flex: 1 1 120px;"><label>N° Parcela</label><input type="number" name="N_Parcela" id="inputNParcela" min="1" max="26" required></div><div style="flex: 1 1 300px; position: relative;"><label>Nombre Residente</label><input type="text" name="Nombre_Residente" id="inputNombreResidente" autocomplete="off" required><div id="nombre-suggestions" style="display: none; position: absolute; background-color: white; border: 1px solid #ccc; max-height: 150px; overflow-y: auto; width: 100%; z-index: 10;"></div></div><div style="flex: 1 1 180px;"><label>Valor Gasto Común</label><input type="text" name="Valor_Gasto_Comun" id="inputValorGastoComun" readonly style="background:#eee;"></div><div style="flex: 1 1 180px;"><label>Fecha de Pago</label><input type="date" name="Fecha_Pago" required></div><div style="flex: 1 1 180px;"><label>Mes que Paga (Período)</label><select name="Periodo" required>${MESES.map((m, i) => `<option value="<span class="math-inline">\{i\}"\></span>{m}</option>`).join('')}</select></div><div style="flex: 1 1 180px;"><label>Año que Paga</label><input type="number" name="Anio_Periodo" id="inputAnioPeriodo" required></div><div style="flex: 1 1 180px;"><label>Monto Pagado G.C.</label><input type="number" name="Monto_Pagado" min="0" step="1" required placeholder="CLP"></div><div style="flex: 1 1 180px;"><label>Abono a Convenio (CLP)</label><input type="number" name="Abono_Convenio" min="0" step="1" placeholder="CLP"><small id="saldo-convenio-info" style="display:none; color: #007bff;"></small></div><div style="flex: 1 1 180px;"><label>Método de Pago</label><select name="Metodo_Pago" required><option value="Transferencia">Transferencia</option><option value="Efectivo">Efectivo</option></select></div><div style="flex: 1 1 100%;"><label>Comprobante</label><input type="file" name="Comprobante"></div><div style="flex: 1 1 100%; text-align: right; margin-top: 20px;"><button class="btn secondary" type="button" id="btnCerrarModal">Cancelar</button><button class="btn" type="submit">Guardar Gasto</button></div></form></div></div>
 
     <div id="modalComprobante" class="modal" style="display:none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.5); align-items: center; justify-content: center;">
       <div class="widget" style="max-width: 650px; width: 90%; margin: auto; z-index: 1001;">
@@ -206,6 +203,10 @@ async function cargarGastosComunes() {
     </div>
   `;
   
+  // ===================================================================
+  // ===== LÓGICA DE LA PÁGINA CON LA NUEVA ARQUITECTURA =====
+  // ===================================================================
+
   function renderizarTablaResidente(parcela) {
       const tbodyGastos = document.getElementById('tbody-gastos');
       const theadGastos = document.getElementById('thead-gastos');
@@ -233,7 +234,7 @@ async function cargarGastosComunes() {
       const tbodyGastos = document.getElementById('tbody-gastos');
       const theadGastos = document.getElementById('thead-gastos');
       
-      theadGastos.innerHTML = `<tr><th>Período Cursado</th><th>Descripción</th><th>Deuda Generada</th><th>Estado</th><th>Fecha Pago</th><th>Monto Pagado</th><th>Interés</th><th>Multa</th><th>Saldo</th></tr>`;
+      theadGastos.innerHTML = `<tr><th>Período Cursado</th><th>Descripción</th><th>Deuda Generada</th><th>Estado</th><th>Fecha Pago</th><th>Monto Pagado</th></tr>`;
       tbodyGastos.innerHTML = '';
       
       estadoDeCuenta.sort((a, b) => {
@@ -243,6 +244,7 @@ async function cargarGastosComunes() {
         return a.descripcion.startsWith('Gasto Común') ? -1 : 1;
       });
 
+      let totalDeuda = 0;
       estadoDeCuenta.forEach(registro => {
           const tr = document.createElement('tr');
           tr.dataset.idPago = registro.idPago;
@@ -250,7 +252,10 @@ async function cargarGastosComunes() {
               tr.classList.add('fila-clicable');
           }
           const estadoClass = (registro.estado || 'pendiente').toLowerCase().replace(/ /g, '-');
-          const saldo = registro.saldoTransaccion || 0;
+          
+          if (estadoClass === 'moroso' || estadoClass === 'multa') {
+              totalDeuda += parseFloat(registro.deudaPendiente || 0);
+          }
 
           tr.innerHTML = `
               <td><b>${registro.periodo}</b></td>
@@ -259,12 +264,20 @@ async function cargarGastosComunes() {
               <td><span class="estado-tag estado-${estadoClass}">${registro.estado}</span></td>
               <td>${registro.fechaPago || '---'}</td>
               <td>$${(registro.montoPagado || 0).toLocaleString('es-CL')}</td>
-              <td>$${(registro.interes || 0).toLocaleString('es-CL')}</td>
-              <td>$${(registro.multa || 0).toLocaleString('es-CL')}</td>
-              <td style="color:${saldo < 0 ? 'red' : 'green'}; font-weight:bold;">$${saldo.toLocaleString('es-CL')}</td>
               `;
           tbodyGastos.appendChild(tr);
       });
+
+      // Añadir fila de total al final
+      const trTotal = document.createElement('tr');
+      trTotal.style.fontWeight = 'bold';
+      trTotal.style.backgroundColor = '#f8f9fa';
+      trTotal.innerHTML = `
+        <td colspan="2" style="text-align:right;">Deuda Total Pendiente:</td>
+        <td style="color:red;">$${totalDeuda.toLocaleString('es-CL')}</td>
+        <td colspan="3"></td>
+      `;
+      tbodyGastos.appendChild(trTotal);
 
       const tabla = document.getElementById('table-pagos');
       aplicarAnchosGuardados(tabla);
@@ -272,9 +285,10 @@ async function cargarGastosComunes() {
   }
 
   function abrirModalDetalle(idPago) {
+    // Busca en la copia local de los pagos. Si no, debería buscar en el estado de cuenta actual.
     const pago = pagosGC_obj.find(p => p.ID_Pago == idPago);
     if (!pago) {
-        mostrarMensaje('No se encontró el registro del pago. La información puede estar desactualizada.', 'error');
+        mostrarMensaje('No se encontró el detalle para este pago. La funcionalidad de detalle solo está disponible para pagos manuales recientes.', 'warning');
         return;
     }
 
@@ -324,7 +338,6 @@ async function cargarGastosComunes() {
 
   function filtrarYRenderizar() {
     const parcela = document.getElementById('filtroParcela').value;
-    const anio = document.getElementById('filtroAnio').value;
     if (parcela) {
         renderizarTablaResidente(parcela);
     } else {
@@ -817,7 +830,6 @@ async function cargarGastosComunes() {
     document.getElementById('modalDetallePago').style.display = 'none';
   });
 
-  // LLamada inicial para poblar la tabla vacía.
   filtrarYRenderizar();
   actualizarVistaTIMC();
   ocultarSpinner();
