@@ -90,26 +90,33 @@ async function cargarGastosComunes() {
   mostrarSpinner();
 
   let residentes = [];
-  let pagosGC_obj = []; // Se mantiene para la lógica de los modales de envío de correo
+  let pagosGC_obj = [];
   let timcData = {};
 
   try {
-    // La carga inicial ahora es más rápida, solo trae lo necesario para los formularios
     const [residentes_data, pagosGC_raw, timcs_raw] = await Promise.all([
         obtenerResidentes(),
-        obtenerPagosGC(), // Aún necesario para el modal de envío de comprobantes
+        obtenerPagosGC(),
         obtenerTIMCs()
     ]);
     
     residentes = residentes_data || [];
     
-    // Mapeamos los pagos para tener la info completa si se necesita en otras partes (como el modal de comprobantes)
-    pagosGC_obj = (pagosGC_raw || []).map((fila, index) => {
+    // ---- INICIO DE LA CORRECCIÓN ----
+    // Nos aseguramos de que 'pagosGC_raw' sea un array antes de usar .map()
+    // Esto previene el error "Cannot read properties of null (reading 'map')"
+    const pagosParaMapear = Array.isArray(pagosGC_raw) ? pagosGC_raw : [];
+    pagosGC_obj = pagosParaMapear.map((fila, index) => {
         let obj = {};
         ENCABEZADOS_PAGOS.forEach((encabezado, i) => { obj[encabezado] = fila[i]; });
+        if (obj.Periodo) {
+            const anioMatch = obj.Periodo.toString().match(/\d{4}/);
+            obj.anio = anioMatch ? parseInt(anioMatch[0]) : null;
+        }
         obj.rowNum = index + 2;
         return obj;
-    });
+    }).filter(p => p.N_Parcela);
+    // ---- FIN DE LA CORRECCIÓN ----
 
     (timcs_raw || []).forEach(fila => {
         const [anio, mes, valor] = fila;
@@ -128,16 +135,14 @@ async function cargarGastosComunes() {
     <style>
       .estado-pagado { background-color: #198754; color: white; }
       .estado-moroso { background-color: #dc3545; color: white; }
-      .estado-abono { background-color: #ffc107; color: #333; }
       .estado-multa { background-color: #fd7e14; color: white; }
-
+      .estado-abono { background-color: #ffc107; color: #333; }
       .fila-clicable:hover { background-color: #e9f1fb; cursor: pointer; }
       #detalle-pago-grid { display: grid; grid-template-columns: auto 1fr; gap: 10px 20px; align-items: center;}
-      #detalle-pAGOS b { grid-column: 1; text-align: right; }
+      #detalle-pago-grid b { grid-column: 1; text-align: right; }
       #detalle-pago-grid span { grid-column: 2; text-align: left; word-break: break-all; }
       .suggestion-item { padding: 8px 12px; cursor: pointer; }
       .suggestion-item:hover { background-color: #e9f1fb; }
-      
       #table-pagos { table-layout: fixed; width: 100%; border-collapse: collapse; }
       #table-pagos th { position: relative; }
       .resizer { position: absolute; top: 0; right: -2px; width: 5px; cursor: col-resize; user-select: none; height: 100%; z-index: 1;}
@@ -161,7 +166,7 @@ async function cargarGastosComunes() {
             </div>
             <div style="flex: 1; min-width: 150px;">
               <label for="filtroAnio"><b>Año:</b></label>
-              <input type="number" id="filtroAnio" value="${new Date().getFullYear()}" style="width:100%;" disabled title="El año se gestiona automáticamente con la nueva arquitectura.">
+              <input type="number" id="filtroAnio" value="${new Date().getFullYear()}" style="width:100%;">
             </div>
           </div>
         </div>
@@ -181,7 +186,7 @@ async function cargarGastosComunes() {
         <div style="overflow-x:auto;"><table class="table"><thead id="thead-abonos"></thead><tbody id="tbody-abonos"></tbody></table></div>
     </section>
 
-    <section id="detalle-gastos" style="margin-top: 2rem;"><h3>Estado de Cuenta</h3><div style="overflow-x:auto;"><table id="table-pagos" class="table"><thead id="thead-gastos"><tr style="text-align: center;"><td colspan="9">Seleccione una parcela para ver su estado de cuenta.</td></tr></thead><tbody id="tbody-gastos"></tbody></table></div></section>
+    <section id="detalle-gastos" style="margin-top: 2rem;"><h3>Estado de Cuenta</h3><div style="overflow-x:auto;"><table id="table-pagos" class="table"><thead id="thead-gastos"></thead><tbody id="tbody-gastos"></tbody></table></div></section>
     
     <div id="modalGC" class="modal" style="display:none;"><div><h3>Agregar Gasto Común</h3><form id="formGastoComun" style="display:flex; flex-wrap:wrap; gap:15px;"><div style="flex: 1 1 120px;"><label>N° Parcela</label><input type="number" name="N_Parcela" id="inputNParcela" min="1" max="26" required></div><div style="flex: 1 1 300px; position: relative;"><label>Nombre Residente</label><input type="text" name="Nombre_Residente" id="inputNombreResidente" autocomplete="off" required><div id="nombre-suggestions" style="display: none; position: absolute; background-color: white; border: 1px solid #ccc; max-height: 150px; overflow-y: auto; width: 100%; z-index: 10;"></div></div><div style="flex: 1 1 180px;"><label>Valor Gasto Común</label><input type="text" name="Valor_Gasto_Comun" id="inputValorGastoComun" readonly style="background:#eee;"></div><div style="flex: 1 1 180px;"><label>Fecha de Pago</label><input type="date" name="Fecha_Pago" required></div><div style="flex: 1 1 180px;"><label>Mes que Paga (Período)</label><select name="Periodo" required>${MESES.map((m, i) => `<option value="${i}">${m}</option>`).join('')}</select></div><div style="flex: 1 1 180px;"><label>Año que Paga</label><input type="number" name="Anio_Periodo" id="inputAnioPeriodo" required></div><div style="flex: 1 1 180px;"><label>Monto Pagado G.C.</label><input type="number" name="Monto_Pagado" min="0" step="1" required placeholder="CLP"></div><div style="flex: 1 1 180px;"><label>Abono a Convenio (CLP)</label><input type="number" name="Abono_Convenio" min="0" step="1" placeholder="CLP"><small id="saldo-convenio-info" style="display:none; color: #007bff;"></small></div><div style="flex: 1 1 180px;"><label>Método de Pago</label><select name="Metodo_Pago" required><option value="Transferencia">Transferencia</option><option value="Efectivo">Efectivo</option></select></div><div style="flex: 1 1 100%;"><label>Comprobante</label><input type="file" name="Comprobante"></div><div style="flex: 1 1 100%; text-align: right; margin-top: 20px;"><button class="btn secondary" type="button" id="btnCerrarModal">Cancelar</button><button class="btn" type="submit">Guardar Gasto</button></div></form></div></div>
 
@@ -200,10 +205,6 @@ async function cargarGastosComunes() {
         </div>
     </div>
   `;
-  
-  // ===================================================================
-  // ===== SECCIÓN MODIFICADA PARA LA NUEVA ARQUITECTURA =====
-  // ===================================================================
   
   function renderizarTablaResidente(parcela) {
       const tbodyGastos = document.getElementById('tbody-gastos');
@@ -239,14 +240,13 @@ async function cargarGastosComunes() {
         const fechaA = a.fechaVencimiento ? new Date(a.fechaVencimiento.split('/').reverse().join('-')) : 0;
         const fechaB = b.fechaVencimiento ? new Date(b.fechaVencimiento.split('/').reverse().join('-')) : 0;
         if(fechaA - fechaB !== 0) return fechaA - fechaB;
-        // Si las fechas son iguales, un criterio secundario puede ser el tipo de registro
         return a.descripcion.startsWith('Gasto Común') ? -1 : 1;
       });
 
       estadoDeCuenta.forEach(registro => {
           const tr = document.createElement('tr');
           tr.dataset.idPago = registro.idPago;
-          if (registro.estado.toLowerCase() === 'pagado') {
+          if (registro.estado && (registro.estado.toLowerCase() === 'pagado' || registro.estado.toLowerCase() === 'abono')) {
               tr.classList.add('fila-clicable');
           }
           const estadoClass = (registro.estado || 'pendiente').toLowerCase().replace(/ /g, '-');
@@ -270,25 +270,11 @@ async function cargarGastosComunes() {
       aplicarAnchosGuardados(tabla);
       hacerColumnasRedimensionables(tabla);
   }
-  
-  function filtrarYRenderizar() {
-    const parcela = document.getElementById('filtroParcela').value;
-    if (parcela) {
-        renderizarTablaResidente(parcela);
-    } else {
-        document.getElementById('thead-gastos').innerHTML = `<tr><td colspan="9" style="text-align:center;">Seleccione una parcela para ver su estado de cuenta.</td></tr>`;
-        document.getElementById('tbody-gastos').innerHTML = '';
-    }
-  }
-
-  // ===================================================================
-  // ===== CÓDIGO RESTANTE (SIN CAMBIOS) =====
-  // ===================================================================
 
   function abrirModalDetalle(idPago) {
     const pago = pagosGC_obj.find(p => p.ID_Pago == idPago);
     if (!pago) {
-        mostrarMensaje('No se encontró el registro del pago.', 'error');
+        mostrarMensaje('No se encontró el registro del pago. La información puede estar desactualizada.', 'error');
         return;
     }
 
@@ -310,7 +296,6 @@ async function cargarGastosComunes() {
     }
     
     const filaAbono = `<b>Abono a Convenio:</b> <span style="font-weight:bold; color:${colorAbono};">$${abonoConvenio.toLocaleString('es-CL')}</span>`;
-
 
     contenido.innerHTML = `
         <div id="detalle-pago-grid">
@@ -336,9 +321,20 @@ async function cargarGastosComunes() {
 
     modal.style.display = 'flex';
   }
+
+  function filtrarYRenderizar() {
+    const parcela = document.getElementById('filtroParcela').value;
+    const anio = document.getElementById('filtroAnio').value;
+    if (parcela) {
+        renderizarTablaResidente(parcela);
+    } else {
+        document.getElementById('thead-gastos').innerHTML = `<tr><td colspan="9" style="text-align:center;">Seleccione una parcela para ver su estado de cuenta.</td></tr>`;
+        document.getElementById('tbody-gastos').innerHTML = '';
+    }
+  }
   
   function actualizarVistaTIMC() {
-    const anio = new Date().getFullYear();
+    const anio = document.getElementById('filtroAnio').value || new Date().getFullYear();
     const timcList = document.getElementById('timc-list-horizontal');
     timcList.innerHTML = '';
     const anioData = timcData[anio] || {};
@@ -361,7 +357,6 @@ async function cargarGastosComunes() {
       if (!timcData[anio]) timcData[anio] = {};
       timcData[anio][mes] = valor;
       actualizarVistaTIMC();
-      if (document.getElementById('filtroParcela').value) filtrarYRenderizar();
       mostrarMensaje(`TIMC guardado en la hoja "Config_TIMC".`, 'success');
     } catch (err) {
       mostrarMensaje('Error al guardar TIMC: ' + err.message, 'error');
@@ -454,7 +449,7 @@ async function cargarGastosComunes() {
   });
   
   document.addEventListener('click', (e) => {
-      if (!nombreInput.contains(e.target)) {
+      if (suggestionsContainer && !nombreInput.contains(e.target)) {
           suggestionsContainer.style.display = 'none';
       }
   });
@@ -542,7 +537,7 @@ async function cargarGastosComunes() {
         }
 
         const datosParaSheet = [
-          null, formData.get('Nombre_Residente'), parcela, valorGastoComun, periodoStr,
+          "PGC-" + new Date().getTime(), formData.get('Nombre_Residente'), parcela, valorGastoComun, periodoStr,
           fechaVencimiento.toISOString().split('T')[0], montoPagadoGC, saldoTransaccion, interes, null,
           multa, mesesImpagos, deudaPendienteParaSheet, formData.get('Fecha_Pago'), formData.get('Metodo_Pago'),
           estadoPago, linkComprobante, abonoConvenio, null,
@@ -635,7 +630,6 @@ async function cargarGastosComunes() {
                                 <a href="${pago.ID_Comprobante_Drive}" target="_blank" style="display: inline-block; padding: 10px 15px; font-size: 14px; color: #ffffff; background-color: #007bff; text-decoration: none; border-radius: 5px;">Ver Comprobante de Pago</a>
                               </p>`;
     }
-
 
     return `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; border: 1px solid #ddd; padding: 20px; font-size: 14px; line-height: 1.6;">
@@ -823,6 +817,7 @@ async function cargarGastosComunes() {
     document.getElementById('modalDetallePago').style.display = 'none';
   });
 
+  // LLamada inicial para poblar la tabla vacía.
   filtrarYRenderizar();
   actualizarVistaTIMC();
   ocultarSpinner();
