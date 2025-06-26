@@ -573,5 +573,3 @@ async function cargarContabilidad() {
 }
 
 document.querySelector('[data-module="contabilidad"]').addEventListener('click', cargarContabilidad);
-
-}
