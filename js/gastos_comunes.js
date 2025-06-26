@@ -207,29 +207,53 @@ async function cargarGastosComunes() {
   // ===== LÓGICA DE LA PÁGINA CON LA NUEVA ARQUITECTURA =====
   // ===================================================================
 
-  function renderizarTablaResidente(parcela) {
-      const tbodyGastos = document.getElementById('tbody-gastos');
-      const theadGastos = document.getElementById('thead-gastos');
-      theadGastos.innerHTML = '';
-      tbodyGastos.innerHTML = `<tr><td colspan="9" style="text-align:center; padding:40px;">Cargando estado de cuenta para Parcela ${parcela}... <div class="spinner"></div></td></tr>`;
-      document.querySelector('#detalle-gastos h3').textContent = `Estado de Cuenta para Parcela ${parcela}`;
+ function renderizarTablaResidente(parcela) {
+  const tbodyGastos = document.getElementById('tbody-gastos');
+  const theadGastos = document.getElementById('thead-gastos');
+  theadGastos.innerHTML = '';
+  tbodyGastos.innerHTML = `<tr><td colspan="9" style="text-align:center; padding:40px;">Cargando estado de cuenta para Parcela ${parcela}... <div class="spinner"></div></td></tr>`;
+  document.querySelector('#detalle-gastos h3').textContent = `Estado de Cuenta para Parcela ${parcela}`;
 
-      google.script.run
-          .withSuccessHandler(mostrarTablaResidente)
-          .withFailureHandler(e => {
-              mostrarMensaje('Error al cargar datos desde Google: ' + e.message, 'error');
-              tbodyGastos.innerHTML = `<tr><td colspan="9" style="text-align:center; color:red; padding:20px;">${e.message}</td></tr>`;
-          })
-          .obtenerEstadoDeCuenta(parcela);
+  obtenerEstadoDeCuenta(parcela)
+    .then(mostrarTablaResidente)
+    .catch(e => {
+      mostrarMensaje('Error al cargar datos desde Google: ' + e.message, 'error');
+      tbodyGastos.innerHTML = `<tr><td colspan="9" style="text-align:center; color:red; padding:20px;">${e.message}</td></tr>`;
+    });
+}
+
+  function mostrarTablaResidente(data) {
+  const tbodyGastos = document.getElementById('tbody-gastos');
+  const theadGastos = document.getElementById('thead-gastos');
+
+  if (!data || data.length === 0) {
+    tbodyGastos.innerHTML = '<tr><td colspan="9" style="text-align:center; padding:20px;">No se encontraron registros.</td></tr>';
+    return;
   }
 
-  function mostrarTablaResidente(estadoDeCuenta) {
-      if (!estadoDeCuenta || estadoDeCuenta.error) {
-          const tbodyGastos = document.getElementById('tbody-gastos');
-          tbodyGastos.innerHTML = `<tr><td colspan="9" style="text-align:center; color:red; padding:20px;">Error: ${estadoDeCuenta ? estadoDeCuenta.error : 'No se recibieron datos.'}</td></tr>`;
-          mostrarMensaje('Error al obtener el estado de cuenta.', 'error');
-          return;
-      }
+  theadGastos.innerHTML = `
+    <tr>
+      <th>Periodo</th>
+      <th>Descripción</th>
+      <th>Deuda Pendiente</th>
+      <th>Estado</th>
+      <th>Fecha Vencimiento</th>
+      <th>Fecha Pago</th>
+      <th>Monto Pagado</th>
+    </tr>`;
+
+  tbodyGastos.innerHTML = data.map(r => `
+    <tr>
+      <td>${r.periodo}</td>
+      <td>${r.descripcion}</td>
+      <td>CLP ${r.deudaPendiente.toLocaleString('es-CL')}</td>
+      <td>${r.estado}</td>
+      <td>${r.fechaVencimiento}</td>
+      <td>${r.fechaPago || '---'}</td>
+      <td>CLP ${r.montoPagado.toLocaleString('es-CL')}</td>
+    </tr>
+  `).join('');
+}
       
       const tbodyGastos = document.getElementById('tbody-gastos');
       const theadGastos = document.getElementById('thead-gastos');
