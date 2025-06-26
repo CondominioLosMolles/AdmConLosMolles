@@ -11,6 +11,16 @@ function actualizarPagoGC(datosActualizacion) {
       .actualizarPagoGC_GS(datosActualizacion);
   });
 }
+// ===== AÑADE ESTA NUEVA FUNCIÓN AQUÍ =====
+function agregarPagoGC(datosParaSheet) {
+  return new Promise((resolve, reject) => {
+    google.script.run
+      .withSuccessHandler(resolve)
+      .withFailureHandler(reject)
+      .agregarPagoGC_GS(datosParaSheet);
+  });
+}
+// ===== FIN DE LA NUEVA FUNCIÓN =====
 
 // Constantes globales para el módulo
 const MESES = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
