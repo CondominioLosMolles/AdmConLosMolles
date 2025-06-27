@@ -24,6 +24,7 @@ const SHEET_ID_MANTENCIONES = 895242560;
 const SHEET_ID_MULTAS = 456683145;
 const SHEET_ID_ASAMBLEAS = 791789730;
 const SHEET_ID_COMUNICACIONES = 569621527;
+
 // -------- FUNCIONES DE GOOGLE DRIVE --------
 async function findFolderId(name, parentId = 'root') {
     const q = `mimeType='application/vnd.google-apps.folder' and name='${name}' and trashed=false and '${parentId}' in parents`;
@@ -201,6 +202,48 @@ async function agregarPagoGC(datos) {
         resource: { values: [datos] }
     });
 }
+
+// ==================================================================
+// ===== INICIO: NUEVA FUNCIÓN PARA ACTUALIZAR PAGOS EXISTENTES =====
+// ==================================================================
+async function actualizarPagoGC(datos) {
+    const rowToUpdate = datos.rowNum;
+    if (!rowToUpdate || rowToUpdate < 2) {
+        throw new Error("Número de fila inválido para actualizar.");
+    }
+
+    // Preparamos un arreglo de rangos y valores para actualizar en una sola llamada (batchUpdate)
+    // Esto es más eficiente que hacer una llamada a la API por cada celda.
+    const dataForUpdate = [
+        { range: `${SHEET_PAGOS_GC}!G${rowToUpdate}`, values: [[datos.montoPagado]] },      // Columna G: Monto_Pagado
+        { range: `${SHEET_PAGOS_GC}!H${rowToUpdate}`, values: [[datos.saldo]] },            // Columna H: Saldo_Pendiente_o_a_favor
+        { range: `${SHEET_PAGOS_GC}!M${rowToUpdate}`, values: [[datos.deudaTotal]] },       // Columna M: Deuda_Total
+        { range: `${SHEET_PAGOS_GC}!N${rowToUpdate}`, values: [[datos.fechaPago]] },        // Columna N: Fecha_Pago
+        { range: `${SHEET_PAGOS_GC}!O${rowToUpdate}`, values: [[datos.metodoPago]] },       // Columna O: Metodo_Pago
+        { range: `${SHEET_PAGOS_GC}!P${rowToUpdate}`, values: [[datos.estado]] },           // Columna P: Estado
+        { range: `${SHEET_PAGOS_GC}!Q${rowToUpdate}`, values: [[datos.idComprobante]] },    // Columna Q: ID_Comprobante_Drive
+        { range: `${SHEET_PAGOS_GC}!R${rowToUpdate}`, values: [[datos.abonoConvenio]] }     // Columna R: Abono_Convenio
+    ];
+    
+    try {
+        await gapi.client.sheets.spreadsheets.values.batchUpdate({
+            spreadsheetId: SPREADSHEET_ID,
+            resource: {
+                valueInputOption: 'USER_ENTERED',
+                // Filtramos para no intentar actualizar celdas con valores nulos o indefinidos
+                data: dataForUpdate.filter(d => d.values[0][0] !== null && d.values[0][0] !== undefined)
+            }
+        });
+        return `Fila ${rowToUpdate} actualizada con éxito.`;
+    } catch (e) {
+        console.error('Error en batchUpdate de pago:', e);
+        throw new Error('Error del cliente al actualizar el pago en la hoja: ' + (e.result?.error?.message || e.message));
+    }
+}
+// ==================================================================
+// ===== FIN: NUEVA FUNCIÓN PARA ACTUALIZAR PAGOS EXISTENTES ======
+// ==================================================================
+
 
 async function obtenerTIMCs() {
     try {
