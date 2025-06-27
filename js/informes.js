@@ -2,7 +2,8 @@
 // Módulo Informes: morosidad, estado de resultados, historial de pagos, gastos por categoría, exportación PDF/Excel
 
 /**
- * Parsea una cadena de fecha que puede estar en formato YYYY-MM-DD o DD-MM-YYYY.
+ * Parsea una cadena de fecha que puede estar en formato YYYY-MM-DD o DD-MM-YYYY a un objeto Date.
+ * La función está diseñada para ser robusta y manejar las inconsistencias de formato de Google Sheets.
  * @param {string} dateStr La cadena de fecha a parsear.
  * @returns {Date|null} Un objeto Date o null si el formato es inválido.
  */
@@ -12,7 +13,7 @@ function parseSheetDate(dateStr) {
     // Intenta formato YYYY-MM-DD
     let match = dateStr.match(/^(\d{4})-(\d{2})-(\d{2})$/);
     if (match) {
-        // new Date(año, mes - 1, día)
+        // new Date(año, mes - 1, día) - Usamos UTC para evitar problemas de zona horaria.
         return new Date(Date.UTC(parseInt(match[1]), parseInt(match[2]) - 1, parseInt(match[3])));
     }
     
@@ -22,13 +23,13 @@ function parseSheetDate(dateStr) {
         return new Date(Date.UTC(parseInt(match[3]), parseInt(match[2]) - 1, parseInt(match[1])));
     }
 
-    // Intento final con el constructor de Date, por si acaso.
+    // Intento final con el constructor de Date, por si acaso el formato es inesperado pero válido.
     const d = new Date(dateStr);
     if (!isNaN(d.getTime())) {
         return d;
     }
 
-    return null; // Formato no reconocido
+    return null; // Si ninguno de los formatos coincide, retorna null.
 }
 
 
@@ -49,7 +50,6 @@ async function cargarInformes() {
     egresos = egresosData || [];
     config = configData || {};
     
-    // Convertir pagos a un formato de objeto más manejable
     const ENCABEZADOS_PAGOS = [
         'ID_Pago', 'Nombre_Residente', 'N_Parcela', 'Valor_Gasto_Comun', 'Periodo',
         'Fecha_Vencimiento', 'Monto_Pagado', 'Saldo_Pendiente_o_a_favor', 'Interes', 'TIMC',
@@ -276,7 +276,7 @@ async function cargarInformes() {
     const residenteInfo = residentes.find(r => r[3] === filtros.parcela);
     const todosLosMovimientos = pagosGC_obj.filter(p => p.N_Parcela === filtros.parcela);
 
-    // 1. Movimientos a visualizar: Se filtra por Fecha_Vencimiento para mostrar todos los cargos del período.
+    // 1. Movimientos a visualizar: Se filtra por Fecha_Vencimiento.
     let movimientosAVisualizar = [...todosLosMovimientos];
     if (filtros.fechaInicio) {
         const fechaInicioDate = parseSheetDate(filtros.fechaInicio);
@@ -313,7 +313,7 @@ async function cargarInformes() {
     const totalPagadoGC = pagosDelPeriodo.reduce((sum, p) => sum + parseFloat(p.Monto_Pagado || 0), 0);
     const totalAbonoConvenio = pagosDelPeriodo.reduce((sum, p) => sum + parseFloat(p.Abono_Convenio || 0), 0);
     
-    // 3. Deuda total: Se calcula sobre todos los movimientos históricos, no solo los del período.
+    // 3. Deuda total: Se calcula sobre todos los movimientos históricos.
     const deudaTotalConvenio = parseFloat(residenteInfo ? residenteInfo[12] || 0 : 0);
     const deudaTotalGC = todosLosMovimientos.filter(p => p.Estado === 'Moroso').reduce((sum, p) => sum + parseFloat(p.Deuda_Total || 0), 0);
 
