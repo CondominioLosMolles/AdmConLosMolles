@@ -18,7 +18,7 @@ async function cargarInformes() {
     egresos = egresosData || [];
     config = configData || {};
     
-    // Convertir pagos a un formato de objeto más manejable, similar a gastos_comunes.js
+    // Convertir pagos a un formato de objeto más manejable
     const ENCABEZADOS_PAGOS = [
         'ID_Pago', 'Nombre_Residente', 'N_Parcela', 'Valor_Gasto_Comun', 'Periodo',
         'Fecha_Vencimiento', 'Monto_Pagado', 'Saldo_Pendiente_o_a_favor', 'Interes', 'TIMC',
@@ -235,21 +235,36 @@ async function cargarInformes() {
     }
     
     const residenteInfo = residentes.find(r => r[3] === filtros.parcela);
-    const movimientos = pagosGC_obj.filter(p => p.N_Parcela === filtros.parcela);
+    const todosLosMovimientos = pagosGC_obj.filter(p => p.N_Parcela === filtros.parcela);
 
-    let movimientosFiltrados = [...movimientos];
+    let movimientosFiltrados = [...todosLosMovimientos];
+
+    // --- LOGICA DE FILTRADO CORREGIDA ---
     if (filtros.fechaInicio) {
-        movimientosFiltrados = movimientosFiltrados.filter(p => p.Fecha_Pago && p.Fecha_Pago >= filtros.fechaInicio);
+        // Se crean objetos Date para una comparación cronológica correcta, evitando problemas con strings.
+        // Se añade T00:00:00 para estandarizar la hora y evitar problemas de zona horaria.
+        const fechaInicioDate = new Date(`${filtros.fechaInicio}T00:00:00`);
+        movimientosFiltrados = movimientosFiltrados.filter(p => {
+            if (!p.Fecha_Pago) return false;
+            const fechaPagoDate = new Date(`${p.Fecha_Pago}T00:00:00`);
+            return fechaPagoDate >= fechaInicioDate;
+        });
     }
     if (filtros.fechaFin) {
-        movimientosFiltrados = movimientosFiltrados.filter(p => p.Fecha_Pago && p.Fecha_Pago <= filtros.fechaFin);
+        const fechaFinDate = new Date(`${filtros.fechaFin}T00:00:00`);
+        movimientosFiltrados = movimientosFiltrados.filter(p => {
+            if (!p.Fecha_Pago) return false;
+            const fechaPagoDate = new Date(`${p.Fecha_Pago}T00:00:00`);
+            return fechaPagoDate <= fechaFinDate;
+        });
     }
-    
+    // --- FIN DE LA CORRECCIÓN ---
+
     const totalPagadoGC = movimientosFiltrados.reduce((sum, p) => sum + parseFloat(p.Monto_Pagado || 0), 0);
     const totalAbonoConvenio = movimientosFiltrados.reduce((sum, p) => sum + parseFloat(p.Abono_Convenio || 0), 0);
     
     const deudaTotalConvenio = parseFloat(residenteInfo ? residenteInfo[12] || 0 : 0);
-    const deudaTotalGC = movimientos.filter(p => p.Estado === 'Moroso').reduce((sum, p) => sum + parseFloat(p.Deuda_Total || 0), 0);
+    const deudaTotalGC = todosLosMovimientos.filter(p => p.Estado === 'Moroso').reduce((sum, p) => sum + parseFloat(p.Deuda_Total || 0), 0);
 
     let html = `
         <div class="widget">
@@ -277,7 +292,7 @@ async function cargarInformes() {
                 <tbody>
                     ${movimientosFiltrados.map(m => `
                         <tr>
-                            <td>${m.Fecha_Pago ? new Date(m.Fecha_Pago.replace(/-/g,'/')).toLocaleDateString('es-CL') : 'N/A'}</td>
+                            <td>${m.Fecha_Pago ? new Date(m.Fecha_Pago.replace(/-/g,'/')).toLocaleDateString('es-CL', { timeZone: 'UTC' }) : 'N/A'}</td>
                             <td>${m.Periodo}</td>
                             <td>$${parseFloat(m.Monto_Pagado || 0).toLocaleString('es-CL')}</td>
                             <td>$${parseFloat(m.Abono_Convenio || 0).toLocaleString('es-CL')}</td>
@@ -303,7 +318,7 @@ async function cargarInformes() {
             [],
             ["Fecha Pago", "Periodo", "Monto Pagado G.C.", "Abono Convenio", "Estado"],
             ...movimientosFiltrados.map(m => [
-                m.Fecha_Pago ? new Date(m.Fecha_Pago.replace(/-/g,'/')).toLocaleDateString('es-CL') : 'N/A',
+                m.Fecha_Pago ? new Date(m.Fecha_Pago.replace(/-/g,'/')).toLocaleDateString('es-CL', { timeZone: 'UTC' }) : 'N/A',
                 m.Periodo,
                 parseFloat(m.Monto_Pagado || 0),
                 parseFloat(m.Abono_Convenio || 0),
@@ -377,7 +392,7 @@ async function cargarInformes() {
                 <tbody>
                     ${pagosFiltrados.map(p => `
                         <tr>
-                            <td>${new Date(p.Fecha_Pago.replace(/-/g,'/')).toLocaleDateString('es-CL')}</td>
+                            <td>${new Date(p.Fecha_Pago.replace(/-/g,'/')).toLocaleDateString('es-CL', { timeZone: 'UTC' })}</td>
                             <td>${p.N_Parcela}</td>
                             <td>${p.Nombre_Residente}</td>
                             <td>${p.Periodo}</td>
@@ -392,7 +407,7 @@ async function cargarInformes() {
     document.getElementById('btnExportar').onclick = () => {
         const dataToExport = [["Fecha Pago", "Parcela", "Residente", "Periodo", "Monto Pagado", "Estado"],
             ...pagosFiltrados.map(p => [
-                new Date(p.Fecha_Pago.replace(/-/g,'/')).toLocaleDateString('es-CL'),
+                new Date(p.Fecha_Pago.replace(/-/g,'/')).toLocaleDateString('es-CL', { timeZone: 'UTC' }),
                 p.N_Parcela,
                 p.Nombre_Residente,
                 p.Periodo,
@@ -556,13 +571,13 @@ async function cargarInformes() {
     } = datos;
 
     const periodoStr = (fechaInicio && fechaFin) 
-        ? `para el período del <b>${new Date(fechaInicio.replace(/-/g,'/')).toLocaleDateString('es-CL')}</b> al <b>${new Date(fechaFin.replace(/-/g,'/')).toLocaleDateString('es-CL')}</b>`
+        ? `para el período del <b>${new Date(fechaInicio.replace(/-/g,'/')).toLocaleDateString('es-CL', { timeZone: 'UTC' })}</b> al <b>${new Date(fechaFin.replace(/-/g,'/')).toLocaleDateString('es-CL', { timeZone: 'UTC' })}</b>`
         : 'a la fecha';
 
     const movimientosHtml = movimientos.length > 0 
         ? movimientos.map(m => `
             <tr style="border-bottom: 1px solid #ddd;">
-                <td style="padding: 10px;">${m.Fecha_Pago ? new Date(m.Fecha_Pago.replace(/-/g,'/')).toLocaleDateString('es-CL') : 'N/A'}</td>
+                <td style="padding: 10px;">${m.Fecha_Pago ? new Date(m.Fecha_Pago.replace(/-/g,'/')).toLocaleDateString('es-CL', { timeZone: 'UTC' }) : 'N/A'}</td>
                 <td style="padding: 10px;">${m.Periodo}</td>
                 <td style="padding: 10px; text-align: right;">$${parseFloat(m.Monto_Pagado || 0).toLocaleString('es-CL')}</td>
                 <td style="padding: 10px; text-align: right;">$${parseFloat(m.Abono_Convenio || 0).toLocaleString('es-CL')}</td>
