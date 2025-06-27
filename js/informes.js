@@ -5,11 +5,32 @@ async function cargarInformes() {
   limpiarMainContent();
   mostrarSpinner();
 
-  let residentes = [], pagos = [], egresos = [];
+  let residentes = [], pagosGC_obj = [], egresos = [], config = {};
+
   try {
-    residentes = await obtenerResidentes();
-    pagos = await obtenerPagosGC();
-    egresos = await obtenerEgresos();
+    const [residentesData, pagosData, egresosData, configData] = await Promise.all([
+      obtenerResidentes(),
+      obtenerPagosGC(),
+      obtenerEgresos(),
+      obtenerConfiguracion()
+    ]);
+    residentes = residentesData || [];
+    egresos = egresosData || [];
+    config = configData || {};
+    
+    // Convertir pagos a un formato de objeto más manejable, similar a gastos_comunes.js
+    const ENCABEZADOS_PAGOS = [
+        'ID_Pago', 'Nombre_Residente', 'N_Parcela', 'Valor_Gasto_Comun', 'Periodo',
+        'Fecha_Vencimiento', 'Monto_Pagado', 'Saldo_Pendiente_o_a_favor', 'Interes', 'TIMC',
+        'Multa_1/4', 'Meses_Inpagos', 'Deuda_Total', 'Fecha_Pago', 'Metodo_Pago', 'Estado',
+        'ID_Comprobante_Drive', 'Abono_Convenio', 'Comprobante_Enviado'
+    ];
+    pagosGC_obj = (pagosData || []).map(fila => {
+        let obj = {};
+        ENCABEZADOS_PAGOS.forEach((encabezado, i) => { obj[encabezado] = fila[i]; });
+        return obj;
+    });
+
   } catch (e) {
     ocultarSpinner();
     mostrarMensaje('Error al cargar datos: ' + e.message, 'error');
@@ -18,182 +39,478 @@ async function cargarInformes() {
 
   const main = document.getElementById('main-content');
   main.innerHTML = `
-    <h2>Informes</h2>
-    <div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:16px;">
-      <button class="btn" id="btnInformeMorosidad">Morosidad</button>
-      <button class="btn" id="btnInformeResultados">Estado de Resultados</button>
-      <button class="btn" id="btnInformePagos">Historial de Pagos</button>
-      <button class="btn" id="btnInformeEgresos">Gastos por Categoría</button>
+    <style>
+      #filtros-informe { background-color: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 2rem; display: none; flex-wrap: wrap; gap: 20px; align-items: flex-end; }
+      #areaInforme .widget { margin-top: 1rem; }
+      #chart-container { max-width: 600px; max-height: 400px; margin: 20px auto; }
+    </style>
+    <h2>Informes Contables y de Gestión</h2>
+    <div class="widget">
+      <h4 style="margin-top:0;">Seleccione un Informe</h4>
+      <div style="display:flex; gap:16px; flex-wrap:wrap; margin-bottom:16px;">
+        <button class="btn" data-informe="morosidad">Informe de Morosidad</button>
+        <button class="btn" data-informe="estado_parcela">Estado de Parcela</button>
+        <button class="btn" data-informe="historial_pagos">Historial de Pagos</button>
+        <button class="btn" data-informe="gastos_categoria">Gastos por Categoría</button>
+        <button class="btn" data-informe="estado_resultados">Estado de Resultados</button>
+      </div>
     </div>
-    <div id="areaInforme"></div>
+    
+    <div id="filtros-informe" class="widget">
+        <div id="filtro-fechas" style="display:none;">
+          <label><b>Fecha Inicio</b></label>
+          <input type="date" id="fechaInicio">
+        </div>
+        <div id="filtro-fechas2" style="display:none;">
+           <label><b>Fecha Fin</b></label>
+          <input type="date" id="fechaFin">
+        </div>
+        <div id="filtro-parcela" style="display:none;">
+          <label><b>N° Parcela</b></label>
+          <input list="lista-parcelas" id="inputParcela" placeholder="Seleccione o escriba...">
+          <datalist id="lista-parcelas">
+            ${residentes.map(r => r[3]).filter((v, i, a) => a.indexOf(v) === i && v).sort((a,b) => a-b).map(p => `<option value="${p}"></option>`).join('')}
+          </datalist>
+        </div>
+        <button class="btn" id="btnGenerarInforme" style="display:none;">Generar Informe</button>
+    </div>
+
+    <div id="areaInforme">
+        <div class="widget" style="text-align:center; padding: 40px; color: #6c757d;">
+            <p>Seleccione un tipo de informe para comenzar.</p>
+        </div>
+    </div>
   `;
 
-  // Morosidad
-  document.getElementById('btnInformeMorosidad').onclick = () => {
-    const morosos = residentes.filter(r => r[7] === 'Moroso');
-    const parcelasMorosas = morosos.map(r => r[3]);
-    const deudaMorosos = pagos
-      .filter(p => parcelasMorosas.includes(p[2]) && p[15] === 'Moroso')
-      .reduce((a,b) => a + Number(b[12]||0), 0);
-    let html = `<h3>Informe de Morosidad</h3>
-      <table class="table">
-        <thead>
-          <tr><th>Nombre</th><th>Parcela</th><th>Email</th><th>Deuda Total</th></tr>
-        </thead>
-        <tbody>`;
-    for (const r of morosos) {
-      const deuda = pagos
-        .filter(p => p[2] === r[3] && p[15] === 'Moroso')
-        .reduce((a,b) => a + Number(b[12]||0), 0);
-      html += `<tr>
-        <td>${r[1]}</td>
-        <td>${r[3]}</td>
-        <td>${r[5]}</td>
-        <td>$${deuda.toLocaleString()}</td>
-      </tr>`;
-    }
-    html += `</tbody></table>
-      <div><b>Total Morosos:</b> ${morosos.length}</div>
-      <div><b>Deuda Total:</b> $${deudaMorosos.toLocaleString()}</div>
-      <button class="btn secondary" id="btnExportarMorosidad">Exportar Excel</button>
-    `;
-    document.getElementById('areaInforme').innerHTML = html;
+  let currentReport = '';
+  const btnGenerar = document.getElementById('btnGenerarInforme');
+  const filtrosContainer = document.getElementById('filtros-informe');
+  const areaInforme = document.getElementById('areaInforme');
 
-    document.getElementById('btnExportarMorosidad').onclick = () => {
-      const ws = XLSX.utils.aoa_to_sheet([
-        ["Nombre","Parcela","Email","Deuda Total"],
-        ...morosos.map(r => [
-          r[1], r[3], r[5],
-          pagos.filter(p => p[2] === r[3] && p[15] === 'Moroso').reduce((a,b) => a + Number(b[12]||0), 0)
-        ])
-      ]);
-      const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, ws, "Morosidad");
-      XLSX.writeFile(wb, "Morosidad.xlsx");
+  document.querySelectorAll('[data-informe]').forEach(btn => {
+    btn.onclick = () => {
+      currentReport = btn.dataset.informe;
+      configurarFiltros(currentReport);
+      areaInforme.innerHTML = `<div class="widget" style="text-align:center; padding: 40px; color: #6c757d;"><p>Configure los filtros y presione "Generar Informe".</p></div>`;
     };
+  });
+
+  btnGenerar.onclick = () => {
+      mostrarSpinner();
+      // Pequeño delay para que el spinner sea visible y la UI se sienta más responsiva
+      setTimeout(() => {
+        try {
+            switch(currentReport) {
+                case 'morosidad': generarInformeMorosidad(); break;
+                case 'estado_parcela': generarInformeEstadoParcela(); break;
+                case 'historial_pagos': generarInformeHistorialPagos(); break;
+                case 'gastos_categoria': generarInformeGastosCategoria(); break;
+                case 'estado_resultados': generarInformeEstadoResultados(); break;
+            }
+        } catch(e) {
+            mostrarMensaje("Error generando el informe: " + e.message, 'error');
+            console.error(e);
+        } finally {
+            ocultarSpinner();
+        }
+      }, 50);
   };
+  
+  function configurarFiltros(informe) {
+      const filtroFechas = document.getElementById('filtro-fechas');
+      const filtroFechas2 = document.getElementById('filtro-fechas2');
+      const filtroParcela = document.getElementById('filtro-parcela');
+      
+      // Reset
+      filtroFechas.style.display = 'none';
+      filtroFechas2.style.display = 'none';
+      filtroParcela.style.display = 'none';
+      filtrosContainer.style.display = 'flex';
+      btnGenerar.style.display = 'block';
 
-  // Estado de Resultados
-  document.getElementById('btnInformeResultados').onclick = () => {
-    const ingresos = pagos.reduce((a,b) => a + Number(b[6]||0), 0);
-    const multas = pagos.reduce((a,b) => a + Number(b[10]||0), 0);
-    const egresosTot = egresos.reduce((a,b) => a + Number(b[6]||0), 0);
-    const saldo = ingresos + multas - egresosTot;
-    let html = `<h3>Estado de Resultados</h3>
-      <table class="table">
-        <tr><th>Ingresos por Pagos</th><td>$${ingresos.toLocaleString()}</td></tr>
-        <tr><th>Ingresos por Multas</th><td>$${multas.toLocaleString()}</td></tr>
-        <tr><th>Total Egresos</th><td>$${egresosTot.toLocaleString()}</td></tr>
-        <tr><th>Saldo Final</th><td><b>$${saldo.toLocaleString()}</b></td></tr>
-      </table>
-      <button class="btn secondary" id="btnExportarResultados">Exportar Excel</button>
-    `;
-    document.getElementById('areaInforme').innerHTML = html;
+      switch(informe) {
+          case 'morosidad':
+          case 'gastos_categoria':
+          case 'estado_resultados':
+              filtroFechas.style.display = 'block';
+              filtroFechas2.style.display = 'block';
+              break;
+          case 'estado_parcela':
+              filtroFechas.style.display = 'block';
+              filtroFechas2.style.display = 'block';
+              filtroParcela.style.display = 'block';
+              break;
+          case 'historial_pagos':
+              filtroFechas.style.display = 'block';
+              filtroFechas2.style.display = 'block';
+              filtroParcela.style.display = 'block';
+              break;
+          default:
+              filtrosContainer.style.display = 'none';
+              btnGenerar.style.display = 'none';
+      }
+  }
+  
+  function getFiltros() {
+      return {
+          fechaInicio: document.getElementById('fechaInicio').value,
+          fechaFin: document.getElementById('fechaFin').value,
+          parcela: document.getElementById('inputParcela').value
+      };
+  }
 
-    document.getElementById('btnExportarResultados').onclick = () => {
-      const ws = XLSX.utils.aoa_to_sheet([
-        ["Concepto","Monto"],
-        ["Ingresos por Pagos", ingresos],
-        ["Ingresos por Multas", multas],
-        ["Total Egresos", egresosTot],
-        ["Saldo Final", saldo]
-      ]);
-      const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, ws, "Resultados");
-      XLSX.writeFile(wb, "Resultados.xlsx");
+  function generarInformeMorosidad() {
+    const filtros = getFiltros();
+    let pagosMorosos = pagosGC_obj.filter(p => p.Estado === 'Moroso' && parseFloat(p.Deuda_Total || 0) > 0);
+
+    if (filtros.fechaInicio) {
+        pagosMorosos = pagosMorosos.filter(p => p.Fecha_Vencimiento && p.Fecha_Vencimiento >= filtros.fechaInicio);
+    }
+    if (filtros.fechaFin) {
+        pagosMorosos = pagosMorosos.filter(p => p.Fecha_Vencimiento && p.Fecha_Vencimiento <= filtros.fechaFin);
+    }
+    
+    const deudaPorParcela = pagosMorosos.reduce((acc, p) => {
+        const parcela = p.N_Parcela;
+        if (!acc[parcela]) {
+            const residente = residentes.find(r => r[3] === parcela);
+            acc[parcela] = {
+                nombre: residente ? residente[1] : 'N/A',
+                email: residente ? residente[5] : 'N/A',
+                deuda: 0,
+                periodos: []
+            };
+        }
+        acc[parcela].deuda += parseFloat(p.Deuda_Total || 0);
+        acc[parcela].periodos.push(p.Periodo);
+        return acc;
+    }, {});
+
+    const morososArray = Object.entries(deudaPorParcela).map(([parcela, data]) => ({ parcela, ...data }));
+    const deudaTotalGeneral = morososArray.reduce((sum, item) => sum + item.deuda, 0);
+
+    let html = `
+        <div class="widget">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+                <h3>Informe de Morosidad</h3>
+                <button class="btn secondary" id="btnExportar">Exportar Excel</button>
+            </div>
+            <p>Mostrando ${morososArray.length} parcelas con deuda en el período seleccionado.</p>
+            <table class="table">
+                <thead><tr><th>Parcela</th><th>Residente</th><th>Email</th><th>Períodos Adeudados</th><th>Deuda Total</th></tr></thead>
+                <tbody>
+                    ${morososArray.map(m => `
+                        <tr>
+                            <td>${m.parcela}</td>
+                            <td>${m.nombre}</td>
+                            <td>${m.email}</td>
+                            <td>${m.periodos.join(', ')}</td>
+                            <td style="color:red; font-weight:bold;">$${m.deuda.toLocaleString('es-CL')}</td>
+                        </tr>`).join('') || `<tr><td colspan="5" style="text-align:center;">No hay morosos en el período seleccionado.</td></tr>`
+                    }
+                </tbody>
+                <tfoot>
+                    <tr>
+                        <td colspan="4" style="text-align:right; font-weight:bold;">Deuda Total General:</td>
+                        <td style="font-weight:bold; font-size:1.2em;">$${deudaTotalGeneral.toLocaleString('es-CL')}</td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>`;
+    areaInforme.innerHTML = html;
+    
+    document.getElementById('btnExportar').onclick = () => {
+        const dataToExport = [["Parcela", "Residente", "Email", "Deuda Total", "Periodos Adeudados"],
+            ...morososArray.map(m => [m.parcela, m.nombre, m.email, m.deuda, m.periodos.join(', ')])];
+        const ws = XLSX.utils.aoa_to_sheet(dataToExport);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "Morosidad");
+        XLSX.writeFile(wb, "Informe_Morosidad.xlsx");
     };
-  };
+  }
 
-  // Historial de Pagos
-  document.getElementById('btnInformePagos').onclick = () => {
-    let html = `<h3>Historial de Pagos</h3>
-      <table class="table">
-        <thead>
-          <tr>
-            <th>Residente</th>
-            <th>Parcela</th>
-            <th>Periodo</th>
-            <th>Monto Pagado</th>
-            <th>Fecha Pago</th>
-            <th>Estado</th>
-          </tr>
-        </thead>
-        <tbody>`;
-    for (const p of pagos) {
-      html += `<tr>
-        <td>${p[1]}</td>
-        <td>${p[2]}</td>
-        <td>${p[4]}</td>
-        <td>${p[6]}</td>
-        <td>${p[13]}</td>
-        <td>${p[15]}</td>
-      </tr>`;
+  function generarInformeEstadoParcela() {
+    const filtros = getFiltros();
+    if (!filtros.parcela) {
+        areaInforme.innerHTML = `<div class="widget"><p style="color:red;">Por favor, seleccione un número de parcela para generar este informe.</p></div>`;
+        return;
     }
-    html += `</tbody></table>
-      <button class="btn secondary" id="btnExportarPagos">Exportar Excel</button>
-    `;
-    document.getElementById('areaInforme').innerHTML = html;
+    
+    const residenteInfo = residentes.find(r => r[3] === filtros.parcela);
+    let movimientos = pagosGC_obj.filter(p => p.N_Parcela === filtros.parcela);
 
-    document.getElementById('btnExportarPagos').onclick = () => {
-      const ws = XLSX.utils.aoa_to_sheet([
-        ["Residente","Parcela","Periodo","Monto Pagado","Fecha Pago","Estado"],
-        ...pagos.map(p => [p[1],p[2],p[4],p[6],p[13],p[15]])
-      ]);
-      const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, ws, "Pagos");
-      XLSX.writeFile(wb, "Pagos.xlsx");
+    if (filtros.fechaInicio) {
+        movimientos = movimientos.filter(p => p.Fecha_Pago && p.Fecha_Pago >= filtros.fechaInicio);
+    }
+    if (filtros.fechaFin) {
+        movimientos = movimientos.filter(p => p.Fecha_Pago && p.Fecha_Pago <= filtros.fechaFin);
+    }
+    
+    const totalPagadoGC = movimientos.reduce((sum, p) => sum + parseFloat(p.Monto_Pagado || 0), 0);
+    const totalAbonoConvenio = movimientos.reduce((sum, p) => sum + parseFloat(p.Abono_Convenio || 0), 0);
+    const deudaActual = parseFloat(residenteInfo ? residenteInfo[12] || 0 : 0); // Saldo Convenio
+    const deudaTotalGC = pagosGC_obj.filter(p=>p.N_Parcela === filtros.parcela && p.Estado === 'Moroso').reduce((sum,p)=>sum+parseFloat(p.Deuda_Total||0),0);
+
+    let html = `
+        <div class="widget">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+                <h3>Estado de Cuenta - Parcela ${filtros.parcela}</h3>
+                <button class="btn secondary" id="btnExportar">Exportar Excel</button>
+            </div>
+            
+            <h4>Información del Residente</h4>
+            <p><b>Nombre:</b> ${residenteInfo ? residenteInfo[1] : 'N/A'}<br>
+               <b>Email:</b> ${residenteInfo ? residenteInfo[5] : 'N/A'}</p>
+
+            <h4>Resumen General</h4>
+            <div style="display:flex; gap: 20px; margin-bottom: 20px;">
+                <div><b>Deuda G.C. Total:</b> <span style="color:red;">$${deudaTotalGC.toLocaleString('es-CL')}</span></div>
+                <div><b>Deuda Convenio:</b> <span style="color:orange;">$${deudaActual.toLocaleString('es-CL')}</span></div>
+            </div>
+
+            <h4>Movimientos en el Período Seleccionado</h4>
+            <table class="table">
+                <thead><tr><th>Fecha Pago</th><th>Período</th><th>Monto Pagado G.C.</th><th>Abono Convenio</th><th>Estado</th></tr></thead>
+                <tbody>
+                    ${movimientos.map(m => `
+                        <tr>
+                            <td>${m.Fecha_Pago ? new Date(m.Fecha_Pago.replace(/-/g,'/')).toLocaleDateString('es-CL') : 'N/A'}</td>
+                            <td>${m.Periodo}</td>
+                            <td>$${parseFloat(m.Monto_Pagado || 0).toLocaleString('es-CL')}</td>
+                            <td>$${parseFloat(m.Abono_Convenio || 0).toLocaleString('es-CL')}</td>
+                            <td>${m.Estado}</td>
+                        </tr>`).join('') || `<tr><td colspan="5" style="text-align:center;">No hay movimientos en el período seleccionado.</td></tr>`}
+                </tbody>
+                 <tfoot>
+                    <tr>
+                        <td colspan="2" style="text-align:right; font-weight:bold;">Totales del Período:</td>
+                        <td style="font-weight:bold;">$${totalPagadoGC.toLocaleString('es-CL')}</td>
+                        <td style="font-weight:bold;">$${totalAbonoConvenio.toLocaleString('es-CL')}</td>
+                        <td></td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>`;
+    areaInforme.innerHTML = html;
+    
+    document.getElementById('btnExportar').onclick = () => {
+        const dataToExport = [
+            ["Estado de Cuenta - Parcela", filtros.parcela],
+            ["Nombre Residente", residenteInfo ? residenteInfo[1] : 'N/A'],
+            [],
+            ["Fecha Pago", "Periodo", "Monto Pagado G.C.", "Abono Convenio", "Estado"],
+            ...movimientos.map(m => [
+                m.Fecha_Pago ? new Date(m.Fecha_Pago.replace(/-/g,'/')).toLocaleDateString('es-CL') : 'N/A',
+                m.Periodo,
+                parseFloat(m.Monto_Pagado || 0),
+                parseFloat(m.Abono_Convenio || 0),
+                m.Estado
+            ])];
+        const ws = XLSX.utils.aoa_to_sheet(dataToExport);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, `Estado Parcela ${filtros.parcela}`);
+        XLSX.writeFile(wb, `Estado_Parcela_${filtros.parcela}.xlsx`);
     };
-  };
+  }
 
-  // Gastos por Categoría (torta)
-  document.getElementById('btnInformeEgresos').onclick = () => {
-    // Agrupar por categoría
-    const categorias = {};
-    for (const e of egresos) {
-      categorias[e[2]] = (categorias[e[2]] || 0) + Number(e[6]||0);
-    }
-    let html = `<h3>Gastos por Categoría</h3>
-      <canvas id="graficoCategorias"></canvas>
-      <table class="table">
-        <thead>
-          <tr><th>Categoría</th><th>Monto</th></tr>
-        </thead>
-        <tbody>`;
-    for (const cat in categorias) {
-      html += `<tr><td>${cat}</td><td>$${categorias[cat].toLocaleString()}</td></tr>`;
-    }
-    html += `</tbody></table>
-      <button class="btn secondary" id="btnExportarEgresosCat">Exportar Excel</button>
-    `;
-    document.getElementById('areaInforme').innerHTML = html;
+  function generarInformeHistorialPagos() {
+    const filtros = getFiltros();
+    let pagosFiltrados = [...pagosGC_obj].filter(p => p.Fecha_Pago); // Solo pagos realizados
 
+    if (filtros.parcela) {
+        pagosFiltrados = pagosFiltrados.filter(p => p.N_Parcela === filtros.parcela);
+    }
+    if (filtros.fechaInicio) {
+        pagosFiltrados = pagosFiltrados.filter(p => p.Fecha_Pago >= filtros.fechaInicio);
+    }
+    if (filtros.fechaFin) {
+        pagosFiltrados = pagosFiltrados.filter(p => p.Fecha_Pago <= filtros.fechaFin);
+    }
+    
+    pagosFiltrados.sort((a,b) => new Date(b.Fecha_Pago) - new Date(a.Fecha_Pago));
+
+    let html = `
+        <div class="widget">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+                <h3>Historial de Pagos</h3>
+                <button class="btn secondary" id="btnExportar">Exportar Excel</button>
+            </div>
+            <table class="table">
+                <thead><tr><th>Fecha Pago</th><th>Parcela</th><th>Residente</th><th>Período</th><th>Monto Pagado</th><th>Estado</th></tr></thead>
+                <tbody>
+                    ${pagosFiltrados.map(p => `
+                        <tr>
+                            <td>${new Date(p.Fecha_Pago.replace(/-/g,'/')).toLocaleDateString('es-CL')}</td>
+                            <td>${p.N_Parcela}</td>
+                            <td>${p.Nombre_Residente}</td>
+                            <td>${p.Periodo}</td>
+                            <td>$${(parseFloat(p.Monto_Pagado || 0) + parseFloat(p.Abono_Convenio || 0)).toLocaleString('es-CL')}</td>
+                            <td>${p.Estado}</td>
+                        </tr>`).join('') || `<tr><td colspan="6" style="text-align:center;">No se encontraron pagos con los filtros seleccionados.</td></tr>`}
+                </tbody>
+            </table>
+        </div>`;
+    areaInforme.innerHTML = html;
+    
+    document.getElementById('btnExportar').onclick = () => {
+        const dataToExport = [["Fecha Pago", "Parcela", "Residente", "Periodo", "Monto Pagado", "Estado"],
+            ...pagosFiltrados.map(p => [
+                new Date(p.Fecha_Pago.replace(/-/g,'/')).toLocaleDateString('es-CL'),
+                p.N_Parcela,
+                p.Nombre_Residente,
+                p.Periodo,
+                (parseFloat(p.Monto_Pagado || 0) + parseFloat(p.Abono_Convenio || 0)),
+                p.Estado
+            ])];
+        const ws = XLSX.utils.aoa_to_sheet(dataToExport);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "Historial Pagos");
+        XLSX.writeFile(wb, "Historial_Pagos.xlsx");
+    };
+  }
+
+  function generarInformeGastosCategoria() {
+    const filtros = getFiltros();
+    let egresosFiltrados = [...egresos];
+    
+    if (filtros.fechaInicio) {
+        egresosFiltrados = egresosFiltrados.filter(e => e[1] && e[1] >= filtros.fechaInicio);
+    }
+    if (filtros.fechaFin) {
+        egresosFiltrados = egresosFiltrados.filter(e => e[1] && e[1] <= filtros.fechaFin);
+    }
+    
+    const categorias = egresosFiltrados.reduce((acc, e) => {
+        const categoria = e[2] || 'Sin Categoría';
+        const monto = parseFloat(e[6] || 0);
+        acc[categoria] = (acc[categoria] || 0) + monto;
+        return acc;
+    }, {});
+    
+    const totalEgresos = Object.values(categorias).reduce((sum, val) => sum + val, 0);
+
+    let html = `
+        <div class="widget">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+                <h3>Gastos por Categoría</h3>
+                <button class="btn secondary" id="btnExportar">Exportar Excel</button>
+            </div>
+            <div style="display:flex; flex-wrap:wrap; gap:20px; justify-content:center;">
+                <div id="chart-container">
+                    <canvas id="graficoCategorias"></canvas>
+                </div>
+                <div style="flex-grow:1; min-width:300px;">
+                    <h4>Detalle de Egresos</h4>
+                    <table class="table">
+                        <thead><tr><th>Categoría</th><th>Monto</th><th>% del Total</th></tr></thead>
+                        <tbody>
+                        ${Object.entries(categorias).map(([cat, monto]) => `
+                            <tr>
+                                <td>${cat}</td>
+                                <td>$${monto.toLocaleString('es-CL')}</td>
+                                <td>${totalEgresos > 0 ? ((monto/totalEgresos)*100).toFixed(2) : 0}%</td>
+                            </tr>`).join('') || `<tr><td colspan="3" style="text-align:center;">No hay egresos en el período.</td></tr>`}
+                        </tbody>
+                        <tfoot>
+                             <tr>
+                                <td style="font-weight:bold;">Total</td>
+                                <td style="font-weight:bold;">$${totalEgresos.toLocaleString('es-CL')}</td>
+                                <td></td>
+                             </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+        </div>`;
+    areaInforme.innerHTML = html;
+    
+    // El timeout asegura que el canvas exista en el DOM antes de que Chart.js intente dibujarlo.
     setTimeout(() => {
-      new Chart(document.getElementById('graficoCategorias'), {
-        type: 'pie',
-        data: {
-          labels: Object.keys(categorias),
-          datasets: [{
-            data: Object.values(categorias),
-            backgroundColor: ['#2a7ca3','#7fd6c2','#f6c23e','#e74a3b','#858796']
-          }]
-        },
-        options: { responsive:true, plugins:{legend:{position:'top'}} }
-      });
+        const canvas = document.getElementById('graficoCategorias');
+        if(canvas && Object.keys(categorias).length > 0) {
+            new Chart(canvas, {
+                type: 'pie',
+                data: {
+                    labels: Object.keys(categorias),
+                    datasets: [{
+                        data: Object.values(categorias),
+                        backgroundColor: ['#2a7ca3', '#7fd6c2', '#f6c23e', '#e74a3b', '#858796', '#5a5c69', '#f8f9fc']
+                    }]
+                },
+                options: { responsive: true, maintainAspectRatio: true, plugins: { legend: { position: 'top' } } }
+            });
+        }
     }, 100);
 
-    document.getElementById('btnExportarEgresosCat').onclick = () => {
-      const ws = XLSX.utils.aoa_to_sheet([
-        ["Categoría","Monto"],
-        ...Object.entries(categorias)
-      ]);
-      const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, ws, "Egresos por Categoría");
-      XLSX.writeFile(wb, "EgresosPorCategoria.xlsx");
+    document.getElementById('btnExportar').onclick = () => {
+        const dataToExport = [["Categoría", "Monto"], ...Object.entries(categorias)];
+        const ws = XLSX.utils.aoa_to_sheet(dataToExport);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "Egresos por Categoría");
+        XLSX.writeFile(wb, "EgresosPorCategoria.xlsx");
     };
-  };
+  }
+  
+  function generarInformeEstadoResultados() {
+      const filtros = getFiltros();
+      let pagosFiltrados = [...pagosGC_obj].filter(p => p.Fecha_Pago);
+      let egresosFiltrados = [...egresos].filter(e => e[1]);
+      
+      if (filtros.fechaInicio) {
+          pagosFiltrados = pagosFiltrados.filter(p => p.Fecha_Pago >= filtros.fechaInicio);
+          egresosFiltrados = egresosFiltrados.filter(e => e[1] >= filtros.fechaInicio);
+      }
+      if (filtros.fechaFin) {
+          pagosFiltrados = pagosFiltrados.filter(p => p.Fecha_Pago <= filtros.fechaFin);
+          egresosFiltrados = egresosFiltrados.filter(e => e[1] <= filtros.fechaFin);
+      }
+
+      const ingresosGC = pagosFiltrados.reduce((sum, p) => sum + parseFloat(p.Monto_Pagado || 0), 0);
+      const ingresosConvenio = pagosFiltrados.reduce((sum, p) => sum + parseFloat(p.Abono_Convenio || 0), 0);
+      const totalIngresos = ingresosGC + ingresosConvenio;
+      const totalEgresos = egresosFiltrados.reduce((sum, e) => sum + parseFloat(e[6] || 0), 0);
+      const saldoFinal = totalIngresos - totalEgresos;
+
+      let html = `
+        <div class="widget">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+                <h3>Estado de Resultados</h3>
+                <button class="btn secondary" id="btnExportar">Exportar Excel</button>
+            </div>
+            <p>Mostrando resultados para el período seleccionado.</p>
+            <table class="table">
+                <tbody>
+                    <tr><th colspan="2" style="background-color:#e9f1fb;">INGRESOS</th></tr>
+                    <tr><td>Ingresos por Gastos Comunes</td><td style="text-align:right;">$${ingresosGC.toLocaleString('es-CL')}</td></tr>
+                    <tr><td>Ingresos por Abonos a Convenio</td><td style="text-align:right;">$${ingresosConvenio.toLocaleString('es-CL')}</td></tr>
+                    <tr style="font-weight:bold;"><td style="color:green;">Total Ingresos</td><td style="text-align:right; color:green;">$${totalIngresos.toLocaleString('es-CL')}</td></tr>
+                    
+                    <tr><th colspan="2" style="background-color:#e9f1fb; padding-top:20px;">EGRESOS</th></tr>
+                    <tr><td>Total Egresos</td><td style="text-align:right;">$${totalEgresos.toLocaleString('es-CL')}</td></tr>
+                    <tr style="font-weight:bold;"><td style="color:red;">Total Egresos</td><td style="text-align:right; color:red;">$${totalEgresos.toLocaleString('es-CL')}</td></tr>
+
+                    <tr><th colspan="2" style="background-color:#e9f1fb; padding-top:20px;">RESULTADO</th></tr>
+                    <tr style="font-weight:bold; font-size:1.2em;"><td>Saldo Final del Período</td><td style="text-align:right;">$${saldoFinal.toLocaleString('es-CL')}</td></tr>
+                </tbody>
+            </table>
+        </div>`;
+      areaInforme.innerHTML = html;
+
+      document.getElementById('btnExportar').onclick = () => {
+          const dataToExport = [
+              ["Concepto", "Monto"],
+              ["Ingresos por Gastos Comunes", ingresosGC],
+              ["Ingresos por Abonos a Convenio", ingresosConvenio],
+              ["Total Ingresos", totalIngresos],
+              ["Total Egresos", -totalEgresos],
+              ["Saldo Final", saldoFinal]
+          ];
+          const ws = XLSX.utils.aoa_to_sheet(dataToExport);
+          const wb = XLSX.utils.book_new();
+          XLSX.utils.book_append_sheet(wb, ws, "Estado de Resultados");
+          XLSX.writeFile(wb, "Estado_de_Resultados.xlsx");
+      };
+  }
 
   ocultarSpinner();
 }
-
-// Evento de menú
-document.querySelector('[data-module="informes"]').addEventListener('click', cargarInformes);
