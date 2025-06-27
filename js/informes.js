@@ -284,7 +284,6 @@ async function cargarInformes() {
 
             <h4>Movimientos en el Período Seleccionado</h4>
             <table class="table">
-                {/* --- MODIFICACIÓN: Columnas añadidas a la tabla --- */}
                 <thead><tr><th>Fecha Pago</th><th>Período</th><th>Interés</th><th>Multa</th><th>Monto Pagado G.C.</th><th>Abono Convenio</th><th>Estado</th></tr></thead>
                 <tbody>
                     ${movimientosFiltrados.map(m => `
@@ -300,7 +299,6 @@ async function cargarInformes() {
                 </tbody>
                  <tfoot>
                     <tr>
-                        {/* --- MODIFICACIÓN: Colspan ajustado --- */}
                         <td colspan="4" style="text-align:right; font-weight:bold;">Totales del Período:</td>
                         <td style="font-weight:bold;">$${totalPagadoGC.toLocaleString('es-CL')}</td>
                         <td style="font-weight:bold;">$${totalAbonoConvenio.toLocaleString('es-CL')}</td>
@@ -316,7 +314,6 @@ async function cargarInformes() {
             ["Estado de Cuenta - Parcela", filtros.parcela],
             ["Nombre Residente", residenteInfo ? residenteInfo[1] : 'N/A'],
             [],
-             // --- MODIFICACIÓN: Columnas añadidas a la exportación de Excel ---
             ["Fecha Pago", "Periodo", "Interés", "Multa", "Monto Pagado G.C.", "Abono Convenio", "Estado"],
             ...movimientosFiltrados.map(m => [
                 m.Fecha_Pago ? new Date(m.Fecha_Pago.replace(/-/g,'/')).toLocaleDateString('es-CL', { timeZone: 'UTC' }) : 'N/A',
@@ -582,7 +579,6 @@ async function cargarInformes() {
             <tr style="border-bottom: 1px solid #ddd;">
                 <td style="padding: 10px;">${m.Fecha_Pago ? new Date(m.Fecha_Pago.replace(/-/g,'/')).toLocaleDateString('es-CL', { timeZone: 'UTC' }) : 'N/A'}</td>
                 <td style="padding: 10px;">${m.Periodo}</td>
-                {/* --- MODIFICACIÓN: Columnas añadidas al correo --- */}
                 <td style="padding: 10px; text-align: right;">$${parseFloat(m.Interes || 0).toLocaleString('es-CL')}</td>
                 <td style="padding: 10px; text-align: right;">$${parseFloat(m['Multa_1/4'] || 0).toLocaleString('es-CL')}</td>
                 <td style="padding: 10px; text-align: right;">$${parseFloat(m.Monto_Pagado || 0).toLocaleString('es-CL')}</td>
@@ -619,7 +615,6 @@ async function cargarInformes() {
             <h3 style="border-bottom: 2px solid #004a7f; padding-bottom: 5px; margin-top: 30px; font-size: 18px;">Detalle de Movimientos del Período</h3>
             <table style="width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 14px;">
                 <thead>
-                     {/* --- MODIFICACIÓN: Cabeceras de columna añadidas al correo --- */}
                     <tr style="background-color: #f4f4f4; text-align: left;">
                         <th style="padding: 10px;">Fecha Pago</th>
                         <th style="padding: 10px;">Período</th>
@@ -634,7 +629,6 @@ async function cargarInformes() {
                     ${movimientosHtml}
                 </tbody>
                 <tfoot>
-                     {/* --- MODIFICACIÓN: Colspan del footer ajustado --- */}
                     <tr style="background-color: #f4f4f4; font-weight: bold;">
                         <td colspan="4" style="padding: 12px; text-align: right;">Totales del Período:</td>
                         <td style="padding: 12px; text-align: right;">$${totalPagadoGC.toLocaleString('es-CL')}</td>
@@ -650,7 +644,7 @@ async function cargarInformes() {
             <p style="margin: 0; color: #777;">${cargoAdmin}</p>
         </div>
         <div style="background-color: #f4f4f4; text-align: center; padding: 15px; font-size: 12px; color: #777;">
-            Este es un correo electrónico generado automáticamente a solicitud el propietario, administración o comité.
+            Este es un correo electrónico generado automáticamente. Por favor, no responda a esta dirección.
         </div>
       </div>
     `;
