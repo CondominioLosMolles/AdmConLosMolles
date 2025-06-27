@@ -237,43 +237,28 @@ async function cargarInformes() {
     const residenteInfo = residentes.find(r => r[3] === filtros.parcela);
     const todosLosMovimientos = pagosGC_obj.filter(p => p.N_Parcela === filtros.parcela);
 
-    // --- LÓGICA CORREGIDA ---
+    // --- LÓGICA DE FILTRADO DEFINITIVA ---
     // 1. Movimientos a visualizar: Se filtra por Fecha_Vencimiento para mostrar todos los cargos del período.
     let movimientosAVisualizar = [...todosLosMovimientos];
     if (filtros.fechaInicio) {
-        const fechaInicioDate = new Date(`${filtros.fechaInicio}T00:00:00`);
+        // Se usa comparación de texto directa (YYYY-MM-DD), que es segura para este formato.
         movimientosAVisualizar = movimientosAVisualizar.filter(p => {
-            if (!p.Fecha_Vencimiento) return false;
-            const fechaVencimientoDate = new Date(`${p.Fecha_Vencimiento}T00:00:00`);
-            return fechaVencimientoDate >= fechaInicioDate;
+            return p.Fecha_Vencimiento && p.Fecha_Vencimiento >= filtros.fechaInicio;
         });
     }
     if (filtros.fechaFin) {
-        const fechaFinDate = new Date(`${filtros.fechaFin}T00:00:00`);
         movimientosAVisualizar = movimientosAVisualizar.filter(p => {
-            if (!p.Fecha_Vencimiento) return false;
-            const fechaVencimientoDate = new Date(`${p.Fecha_Vencimiento}T00:00:00`);
-            return fechaVencimientoDate <= fechaFinDate;
+            return p.Fecha_Vencimiento && p.Fecha_Vencimiento <= filtros.fechaFin;
         });
     }
 
     // 2. Pagos del período: Se filtra por Fecha_Pago para los totales del pie de página.
     let pagosDelPeriodo = [...todosLosMovimientos];
      if (filtros.fechaInicio) {
-        const fechaInicioDate = new Date(`${filtros.fechaInicio}T00:00:00`);
-        pagosDelPeriodo = pagosDelPeriodo.filter(p => {
-            if (!p.Fecha_Pago) return false;
-            const fechaPagoDate = new Date(`${p.Fecha_Pago}T00:00:00`);
-            return fechaPagoDate >= fechaInicioDate;
-        });
+        pagosDelPeriodo = pagosDelPeriodo.filter(p => p.Fecha_Pago && p.Fecha_Pago >= filtros.fechaInicio);
     }
     if (filtros.fechaFin) {
-        const fechaFinDate = new Date(`${filtros.fechaFin}T00:00:00`);
-        pagosDelPeriodo = pagosDelPeriodo.filter(p => {
-            if (!p.Fecha_Pago) return false;
-            const fechaPagoDate = new Date(`${p.Fecha_Pago}T00:00:00`);
-            return fechaPagoDate <= fechaFinDate;
-        });
+        pagosDelPeriodo = pagosDelPeriodo.filter(p => p.Fecha_Pago && p.Fecha_Pago <= filtros.fechaFin);
     }
 
     const totalPagadoGC = pagosDelPeriodo.reduce((sum, p) => sum + parseFloat(p.Monto_Pagado || 0), 0);
@@ -316,7 +301,7 @@ async function cargarInformes() {
                             <td>$${parseFloat(m.Monto_Pagado || 0).toLocaleString('es-CL')}</td>
                             <td>$${parseFloat(m.Abono_Convenio || 0).toLocaleString('es-CL')}</td>
                             <td>${m.Estado}</td>
-                        </tr>`).join('') || `<tr><td colspan="7" style="text-align:center;">No hay movimientos en el período seleccionado.</td></tr>`}
+                        </tr>`).join('') || `<tr><td colspan="7" style="text-align:center;">No hay cargos de gastos comunes en el período seleccionado.</td></tr>`}
                 </tbody>
                  <tfoot>
                     <tr>
@@ -367,7 +352,7 @@ async function cargarInformes() {
                 fechaFin: filtros.fechaFin,
                 deudaGC: deudaTotalGC,
                 deudaConvenio: deudaTotalConvenio,
-                movimientos: movimientosAVisualizar, // Usamos los movimientos del período para el detalle del correo
+                movimientos: movimientosAVisualizar,
                 totalPagadoGC: totalPagadoGC,
                 totalAbonoConvenio: totalAbonoConvenio,
                 nombreAdmin: "Alex Thiele",
