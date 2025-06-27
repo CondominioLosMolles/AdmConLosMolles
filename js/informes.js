@@ -277,13 +277,12 @@ async function cargarInformes() {
     const todosLosMovimientos = pagosGC_obj.filter(p => p.N_Parcela === filtros.parcela);
 
     // 1. Movimientos a visualizar: Se filtra por Fecha_Vencimiento.
-    let movimientosAVisualizar = [...todosLosMovimientos];
-    if (filtros.fechaInicio) {
-        const fechaInicioDate = parseSheetDate(filtros.fechaInicio);
-        movimientosAVisualizar = movimientosAVisualizar.filter(p => {
-            const fechaVencimientoDate = parseSheetDate(p.Fecha_Vencimiento);
-            return fechaVencimientoDate && fechaVencimientoDate >= fechaInicioDate;
-        });
+    let movimientosAVisualizar = todosLosMovimientos.filter(p => {
+    const fechaVencimientoDate = parseSheetDate(p.Fecha_Vencimiento);
+    if (filtros.fechaInicio && parseSheetDate(filtros.fechaInicio) > fechaVencimientoDate) return false;
+    if (filtros.fechaFin && parseSheetDate(filtros.fechaFin) < fechaVencimientoDate) return false;
+    return true;
+});
     }
     if (filtros.fechaFin) {
         const fechaFinDate = parseSheetDate(filtros.fechaFin);
@@ -294,13 +293,13 @@ async function cargarInformes() {
     }
 
     // 2. Pagos del período: Se filtra por Fecha_Pago para los totales del pie de página.
-    let pagosDelPeriodo = [...todosLosMovimientos];
-     if (filtros.fechaInicio) {
-        const fechaInicioDate = parseSheetDate(filtros.fechaInicio);
-        pagosDelPeriodo = pagosDelPeriodo.filter(p => {
-            const fechaPagoDate = parseSheetDate(p.Fecha_Pago);
-            return fechaPagoDate && fechaPagoDate >= fechaInicioDate;
-        });
+   let pagosDelPeriodo = todosLosMovimientos.filter(p => {
+    if (!p.Fecha_Pago) return false;
+    const fechaPagoDate = parseSheetDate(p.Fecha_Pago);
+    if (filtros.fechaInicio && parseSheetDate(filtros.fechaInicio) > fechaPagoDate) return false;
+    if (filtros.fechaFin && parseSheetDate(filtros.fechaFin) < fechaPagoDate) return false;
+    return true;
+});
     }
     if (filtros.fechaFin) {
         const fechaFinDate = parseSheetDate(filtros.fechaFin);
