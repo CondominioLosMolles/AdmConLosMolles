@@ -1,6 +1,37 @@
 // js/informes.js
 // Módulo Informes: morosidad, estado de resultados, historial de pagos, gastos por categoría, exportación PDF/Excel
 
+/**
+ * Parsea una cadena de fecha que puede estar en formato YYYY-MM-DD o DD-MM-YYYY.
+ * @param {string} dateStr La cadena de fecha a parsear.
+ * @returns {Date|null} Un objeto Date o null si el formato es inválido.
+ */
+function parseSheetDate(dateStr) {
+    if (!dateStr || typeof dateStr !== 'string') return null;
+    
+    // Intenta formato YYYY-MM-DD
+    let match = dateStr.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (match) {
+        // new Date(año, mes - 1, día)
+        return new Date(Date.UTC(parseInt(match[1]), parseInt(match[2]) - 1, parseInt(match[3])));
+    }
+    
+    // Intenta formato DD-MM-YYYY
+    match = dateStr.match(/^(\d{2})-(\d{2})-(\d{4})$/);
+    if (match) {
+        return new Date(Date.UTC(parseInt(match[3]), parseInt(match[2]) - 1, parseInt(match[1])));
+    }
+
+    // Intento final con el constructor de Date, por si acaso.
+    const d = new Date(dateStr);
+    if (!isNaN(d.getTime())) {
+        return d;
+    }
+
+    return null; // Formato no reconocido
+}
+
+
 async function cargarInformes() {
   limpiarMainContent();
   mostrarSpinner();
@@ -162,10 +193,18 @@ async function cargarInformes() {
     let pagosMorosos = pagosGC_obj.filter(p => p.Estado === 'Moroso' && parseFloat(p.Deuda_Total || 0) > 0);
 
     if (filtros.fechaInicio) {
-        pagosMorosos = pagosMorosos.filter(p => p.Fecha_Vencimiento && p.Fecha_Vencimiento >= filtros.fechaInicio);
+        const fechaInicioDate = parseSheetDate(filtros.fechaInicio);
+        pagosMorosos = pagosMorosos.filter(p => {
+            const fechaVencimientoDate = parseSheetDate(p.Fecha_Vencimiento);
+            return fechaVencimientoDate && fechaVencimientoDate >= fechaInicioDate;
+        });
     }
     if (filtros.fechaFin) {
-        pagosMorosos = pagosMorosos.filter(p => p.Fecha_Vencimiento && p.Fecha_Vencimiento <= filtros.fechaFin);
+        const fechaFinDate = parseSheetDate(filtros.fechaFin);
+        pagosMorosos = pagosMorosos.filter(p => {
+            const fechaVencimientoDate = parseSheetDate(p.Fecha_Vencimiento);
+            return fechaVencimientoDate && fechaVencimientoDate <= fechaFinDate;
+        });
     }
     
     const deudaPorParcela = pagosMorosos.reduce((acc, p) => {
@@ -237,28 +276,38 @@ async function cargarInformes() {
     const residenteInfo = residentes.find(r => r[3] === filtros.parcela);
     const todosLosMovimientos = pagosGC_obj.filter(p => p.N_Parcela === filtros.parcela);
 
-    // --- LÓGICA DE FILTRADO DEFINITIVA ---
     // 1. Movimientos a visualizar: Se filtra por Fecha_Vencimiento para mostrar todos los cargos del período.
     let movimientosAVisualizar = [...todosLosMovimientos];
     if (filtros.fechaInicio) {
-        // Se usa comparación de texto directa (YYYY-MM-DD), que es segura para este formato.
+        const fechaInicioDate = parseSheetDate(filtros.fechaInicio);
         movimientosAVisualizar = movimientosAVisualizar.filter(p => {
-            return p.Fecha_Vencimiento && p.Fecha_Vencimiento >= filtros.fechaInicio;
+            const fechaVencimientoDate = parseSheetDate(p.Fecha_Vencimiento);
+            return fechaVencimientoDate && fechaVencimientoDate >= fechaInicioDate;
         });
     }
     if (filtros.fechaFin) {
+        const fechaFinDate = parseSheetDate(filtros.fechaFin);
         movimientosAVisualizar = movimientosAVisualizar.filter(p => {
-            return p.Fecha_Vencimiento && p.Fecha_Vencimiento <= filtros.fechaFin;
+            const fechaVencimientoDate = parseSheetDate(p.Fecha_Vencimiento);
+            return fechaVencimientoDate && fechaVencimientoDate <= fechaFinDate;
         });
     }
 
     // 2. Pagos del período: Se filtra por Fecha_Pago para los totales del pie de página.
     let pagosDelPeriodo = [...todosLosMovimientos];
      if (filtros.fechaInicio) {
-        pagosDelPeriodo = pagosDelPeriodo.filter(p => p.Fecha_Pago && p.Fecha_Pago >= filtros.fechaInicio);
+        const fechaInicioDate = parseSheetDate(filtros.fechaInicio);
+        pagosDelPeriodo = pagosDelPeriodo.filter(p => {
+            const fechaPagoDate = parseSheetDate(p.Fecha_Pago);
+            return fechaPagoDate && fechaPagoDate >= fechaInicioDate;
+        });
     }
     if (filtros.fechaFin) {
-        pagosDelPeriodo = pagosDelPeriodo.filter(p => p.Fecha_Pago && p.Fecha_Pago <= filtros.fechaFin);
+        const fechaFinDate = parseSheetDate(filtros.fechaFin);
+        pagosDelPeriodo = pagosDelPeriodo.filter(p => {
+            const fechaPagoDate = parseSheetDate(p.Fecha_Pago);
+            return fechaPagoDate && fechaPagoDate <= fechaFinDate;
+        });
     }
 
     const totalPagadoGC = pagosDelPeriodo.reduce((sum, p) => sum + parseFloat(p.Monto_Pagado || 0), 0);
@@ -379,13 +428,21 @@ async function cargarInformes() {
         pagosFiltrados = pagosFiltrados.filter(p => p.N_Parcela === filtros.parcela);
     }
     if (filtros.fechaInicio) {
-        pagosFiltrados = pagosFiltrados.filter(p => p.Fecha_Pago >= filtros.fechaInicio);
+        const fechaInicioDate = parseSheetDate(filtros.fechaInicio);
+        pagosFiltrados = pagosFiltrados.filter(p => {
+             const fechaPagoDate = parseSheetDate(p.Fecha_Pago);
+             return fechaPagoDate && fechaPagoDate >= fechaInicioDate;
+        });
     }
     if (filtros.fechaFin) {
-        pagosFiltrados = pagosFiltrados.filter(p => p.Fecha_Pago <= filtros.fechaFin);
+        const fechaFinDate = parseSheetDate(filtros.fechaFin);
+        pagosFiltrados = pagosFiltrados.filter(p => {
+             const fechaPagoDate = parseSheetDate(p.Fecha_Pago);
+             return fechaPagoDate && fechaPagoDate <= fechaFinDate;
+        });
     }
     
-    pagosFiltrados.sort((a,b) => new Date(b.Fecha_Pago) - new Date(a.Fecha_Pago));
+    pagosFiltrados.sort((a,b) => parseSheetDate(b.Fecha_Pago) - parseSheetDate(a.Fecha_Pago));
 
     let html = `
         <div class="widget">
@@ -432,10 +489,18 @@ async function cargarInformes() {
     let egresosFiltrados = [...egresos];
     
     if (filtros.fechaInicio) {
-        egresosFiltrados = egresosFiltrados.filter(e => e[1] && e[1] >= filtros.fechaInicio);
+        const fechaInicioDate = parseSheetDate(filtros.fechaInicio);
+        egresosFiltrados = egresosFiltrados.filter(e => {
+            const fechaEgresoDate = parseSheetDate(e[1]); // Columna B es Fecha
+            return fechaEgresoDate && fechaEgresoDate >= fechaInicioDate;
+        });
     }
     if (filtros.fechaFin) {
-        egresosFiltrados = egresosFiltrados.filter(e => e[1] && e[1] <= filtros.fechaFin);
+        const fechaFinDate = parseSheetDate(filtros.fechaFin);
+        egresosFiltrados = egresosFiltrados.filter(e => {
+            const fechaEgresoDate = parseSheetDate(e[1]);
+            return fechaEgresoDate && fechaEgresoDate <= fechaFinDate;
+        });
     }
     
     const categorias = egresosFiltrados.reduce((acc, e) => {
@@ -514,12 +579,26 @@ async function cargarInformes() {
       let egresosFiltrados = [...egresos].filter(e => e[1]);
       
       if (filtros.fechaInicio) {
-          pagosFiltrados = pagosFiltrados.filter(p => p.Fecha_Pago >= filtros.fechaInicio);
-          egresosFiltrados = egresosFiltrados.filter(e => e[1] >= filtros.fechaInicio);
+          const fechaInicioDate = parseSheetDate(filtros.fechaInicio);
+          pagosFiltrados = pagosFiltrados.filter(p => {
+              const fechaPagoDate = parseSheetDate(p.Fecha_Pago);
+              return fechaPagoDate && fechaPagoDate >= fechaInicioDate;
+          });
+          egresosFiltrados = egresosFiltrados.filter(e => {
+              const fechaEgresoDate = parseSheetDate(e[1]);
+              return fechaEgresoDate && fechaEgresoDate >= fechaInicioDate;
+          });
       }
       if (filtros.fechaFin) {
-          pagosFiltrados = pagosFiltrados.filter(p => p.Fecha_Pago <= filtros.fechaFin);
-          egresosFiltrados = egresosFiltrados.filter(e => e[1] <= filtros.fechaFin);
+          const fechaFinDate = parseSheetDate(filtros.fechaFin);
+          pagosFiltrados = pagosFiltrados.filter(p => {
+              const fechaPagoDate = parseSheetDate(p.Fecha_Pago);
+              return fechaPagoDate && fechaPagoDate <= fechaFinDate;
+          });
+          egresosFiltrados = egresosFiltrados.filter(e => {
+              const fechaEgresoDate = parseSheetDate(e[1]);
+              return fechaEgresoDate && fechaEgresoDate <= fechaFinDate;
+          });
       }
 
       const ingresosGC = pagosFiltrados.reduce((sum, p) => sum + parseFloat(p.Monto_Pagado || 0), 0);
@@ -650,7 +729,7 @@ async function cargarInformes() {
             <p style="margin: 0; color: #777;">${cargoAdmin}</p>
         </div>
         <div style="background-color: #f4f4f4; text-align: center; padding: 15px; font-size: 12px; color: #777;">
-           Este es un correo electrónico generado automáticamente a solicitud el propietario, administración o comité.
+            Este es un correo electrónico generado automáticamente. Por favor, no responda a esta dirección.
         </div>
       </div>
     `;
