@@ -202,9 +202,6 @@ async function cargarGastosComunes() {
     </div>
   `;
   
-  // ... El resto del código continúa en la Parte 2 ...
-// ... continuación de la Parte 1 ...
-
   const tbodyGastos = document.getElementById('tbody-gastos');
   const theadGastos = document.getElementById('thead-gastos');
 
@@ -295,12 +292,11 @@ async function cargarGastosComunes() {
         const mesNumero = index + 1;
         const pagoExistente = pagosGC_obj.find(p => String(p.N_Parcela) === String(parcela) && p.Periodo && formatearPeriodo(p.Periodo).toLowerCase().startsWith(mes.toLowerCase()) && p.anio == anio);
         
-        let interes = 0, multa = 0, mesesImpagos = 0, saldo = 0;
+        let interes = 0, multa = 0, saldo = 0;
         let estado = 'Pendiente', montoPagado = 0, fechaPago = '---', metodoPago = '---';
         let deudaPendiente = 0;
         
         const fechaVencimiento = new Date(anio, index, 10);
-        const hoy = new Date();
 
         if (pagoExistente) {
             estado = pagoExistente.Estado;
@@ -313,28 +309,10 @@ async function cargarGastosComunes() {
             const fechaPagoStr = pagoExistente.Fecha_Pago;
             fechaPago = fechaPagoStr ? new Date(fechaPagoStr.replace(/-/g, '/')).toLocaleDateString('es-CL', {timeZone: 'UTC'}) : '---';
             metodoPago = pagoExistente.Metodo_Pago || '---';
-        } else if (hoy > fechaVencimiento) {
-            const parcelaNum = parseInt(parcela);
-            const cutoffDate = new Date(2025, 6, 10);
-            const esParcelaExcepcion = (parcelaNum === 7 || parcelaNum === 11);
-            const esPeriodoPostCorte = fechaVencimiento >= cutoffDate;
-
-            if (esParcelaExcepcion || esPeriodoPostCorte) {
-                estado = 'Moroso';
-                let tempVenc = new Date(fechaVencimiento);
-                mesesImpagos = 0;
-                while(tempVenc < hoy) {
-                    mesesImpagos++;
-                    tempVenc.setMonth(tempVenc.getMonth() + 1);
-                }
-                
-                const timcAnual = (timcData[anio] && timcData[anio][mesNumero]) ? timcData[anio][mesNumero] : 0;
-                interes = valorGastoComun * (timcAnual / 100) / 12;
-                multa = (valorGastoComun / 4) * mesesImpagos;
-                deudaPendiente = valorGastoComun + interes + multa;
-                saldo = -deudaPendiente;
-            }
         }
+        // [MODIFICACIÓN] Se ha eliminado el bloque 'else if' que calculaba intereses y multas dinámicamente.
+        // Si 'pagoExistente' no se encuentra, se usarán los valores por defecto (0 y 'Pendiente'),
+        // mostrando solo la información de la hoja de cálculo.
 
         const tr = document.createElement('tr');
         if (pagoExistente) {
