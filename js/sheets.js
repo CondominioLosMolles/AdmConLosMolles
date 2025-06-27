@@ -178,40 +178,71 @@ async function eliminarResidente(id) {
     });
 }
 // -------- PROVEEDORES --------
-function obtenerProveedores() {
-  return new Promise((resolve, reject) => {
-    google.script.run
-      .withSuccessHandler(resolve)
-      .withFailureHandler(reject)
-      .obtenerProveedores_GS(); // Asumo que esta función existe en tu Apps Script
-  });
+// REEMPLAZA LA SECCIÓN ANTERIOR DE PROVEEDORES CON ESTA
+async function obtenerProveedores() {
+    const res = await gapi.client.sheets.spreadsheets.values.get({
+        spreadsheetId: SPREADSHEET_ID,
+        range: `${SHEET_PROVEEDORES}!A2:H` // Ajustado para 8 columnas (ID + 7 campos del form)
+    });
+    return res.result.values || [];
 }
 
-function agregarProveedor(datosProveedor) {
-  return new Promise((resolve, reject) => {
-    google.script.run
-      .withSuccessHandler(resolve)
-      .withFailureHandler(reject)
-      .agregarProveedor_GS(datosProveedor); // Asumo que esta función existe
-  });
+async function agregarProveedor(datosProveedor) {
+    // Se espera que datosProveedor sea [id, nombre, rut, ...] donde id es ''
+    // Le asignamos un ID provisional basado en la fecha para unicidad simple.
+    // Lo ideal es que tu Apps Script lo reemplace con un ID secuencial si es necesario.
+    datosProveedor[0] = `P-${Date.now()}`; 
+    
+    await gapi.client.sheets.spreadsheets.values.append({
+        spreadsheetId: SPREADSHEET_ID,
+        range: `${SHEET_PROVEEDORES}!A:H`,
+        valueInputOption: 'USER_ENTERED',
+        resource: { values: [datosProveedor] }
+    });
 }
 
-function actualizarProveedor(datosProveedor) {
-  return new Promise((resolve, reject) => {
-    google.script.run
-      .withSuccessHandler(resolve)
-      .withFailureHandler(reject)
-      .actualizarProveedor_GS(datosProveedor); // Asumo que esta función existe
-  });
+async function actualizarProveedor(datosProveedor) {
+    const proveedores = await obtenerProveedores();
+    const idProveedor = datosProveedor[0];
+    const rowIndex = proveedores.findIndex(p => p[0] === idProveedor);
+
+    if (rowIndex === -1) {
+        throw new Error('Proveedor no encontrado para actualizar.');
+    }
+    const rowToUpdate = rowIndex + 2; // +2 porque los datos empiezan en la fila 2
+
+    await gapi.client.sheets.spreadsheets.values.update({
+        spreadsheetId: SPREADSHEET_ID,
+        range: `${SHEET_PROVEEDORES}!A${rowToUpdate}:H${rowToUpdate}`,
+        valueInputOption: 'USER_ENTERED',
+        resource: { values: [datosProveedor] }
+    });
 }
 
-function eliminarProveedor(id) {
-  return new Promise((resolve, reject) => {
-    google.script.run
-      .withSuccessHandler(resolve)
-      .withFailureHandler(reject)
-      .eliminarProveedor_GS(id); // Asumo que esta función existe
-  });
+async function eliminarProveedor(id) {
+    const proveedores = await obtenerProveedores();
+    const rowIndex = proveedores.findIndex(p => p[0] === id);
+    
+    if (rowIndex === -1) {
+        throw new Error('Proveedor no encontrado para eliminar.');
+    }
+    const rowToDelete = rowIndex + 1; // El índice para la API es base 0 desde el inicio del rango
+
+    await gapi.client.sheets.spreadsheets.batchUpdate({
+        spreadsheetId: SPREADSHEET_ID,
+        resource: {
+            requests: [{
+                deleteDimension: {
+                    range: {
+                        sheetId: SHEET_ID_PROVEEDORES, // Usamos el ID numérico de la hoja
+                        dimension: "ROWS",
+                        startIndex: rowToDelete, // Fila a eliminar (índice base 1, pero la data empieza en la 2)
+                        endIndex: rowToDelete + 1
+                    }
+                }
+            }]
+        }
+    });
 }
 // -------- GASTOS COMUNES Y TIMC --------
 async function obtenerPagosGC() {
