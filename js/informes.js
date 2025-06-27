@@ -237,11 +237,31 @@ async function cargarInformes() {
     const residenteInfo = residentes.find(r => r[3] === filtros.parcela);
     const todosLosMovimientos = pagosGC_obj.filter(p => p.N_Parcela === filtros.parcela);
 
-    let movimientosFiltrados = [...todosLosMovimientos];
-
+    // --- LÓGICA CORREGIDA ---
+    // 1. Movimientos a visualizar: Se filtra por Fecha_Vencimiento para mostrar todos los cargos del período.
+    let movimientosAVisualizar = [...todosLosMovimientos];
     if (filtros.fechaInicio) {
         const fechaInicioDate = new Date(`${filtros.fechaInicio}T00:00:00`);
-        movimientosFiltrados = movimientosFiltrados.filter(p => {
+        movimientosAVisualizar = movimientosAVisualizar.filter(p => {
+            if (!p.Fecha_Vencimiento) return false;
+            const fechaVencimientoDate = new Date(`${p.Fecha_Vencimiento}T00:00:00`);
+            return fechaVencimientoDate >= fechaInicioDate;
+        });
+    }
+    if (filtros.fechaFin) {
+        const fechaFinDate = new Date(`${filtros.fechaFin}T00:00:00`);
+        movimientosAVisualizar = movimientosAVisualizar.filter(p => {
+            if (!p.Fecha_Vencimiento) return false;
+            const fechaVencimientoDate = new Date(`${p.Fecha_Vencimiento}T00:00:00`);
+            return fechaVencimientoDate <= fechaFinDate;
+        });
+    }
+
+    // 2. Pagos del período: Se filtra por Fecha_Pago para los totales del pie de página.
+    let pagosDelPeriodo = [...todosLosMovimientos];
+     if (filtros.fechaInicio) {
+        const fechaInicioDate = new Date(`${filtros.fechaInicio}T00:00:00`);
+        pagosDelPeriodo = pagosDelPeriodo.filter(p => {
             if (!p.Fecha_Pago) return false;
             const fechaPagoDate = new Date(`${p.Fecha_Pago}T00:00:00`);
             return fechaPagoDate >= fechaInicioDate;
@@ -249,16 +269,17 @@ async function cargarInformes() {
     }
     if (filtros.fechaFin) {
         const fechaFinDate = new Date(`${filtros.fechaFin}T00:00:00`);
-        movimientosFiltrados = movimientosFiltrados.filter(p => {
+        pagosDelPeriodo = pagosDelPeriodo.filter(p => {
             if (!p.Fecha_Pago) return false;
             const fechaPagoDate = new Date(`${p.Fecha_Pago}T00:00:00`);
             return fechaPagoDate <= fechaFinDate;
         });
     }
 
-    const totalPagadoGC = movimientosFiltrados.reduce((sum, p) => sum + parseFloat(p.Monto_Pagado || 0), 0);
-    const totalAbonoConvenio = movimientosFiltrados.reduce((sum, p) => sum + parseFloat(p.Abono_Convenio || 0), 0);
+    const totalPagadoGC = pagosDelPeriodo.reduce((sum, p) => sum + parseFloat(p.Monto_Pagado || 0), 0);
+    const totalAbonoConvenio = pagosDelPeriodo.reduce((sum, p) => sum + parseFloat(p.Abono_Convenio || 0), 0);
     
+    // 3. Deuda total: Se calcula sobre todos los movimientos históricos, no solo los del período.
     const deudaTotalConvenio = parseFloat(residenteInfo ? residenteInfo[12] || 0 : 0);
     const deudaTotalGC = todosLosMovimientos.filter(p => p.Estado === 'Moroso').reduce((sum, p) => sum + parseFloat(p.Deuda_Total || 0), 0);
 
@@ -286,9 +307,9 @@ async function cargarInformes() {
             <table class="table">
                 <thead><tr><th>Fecha Pago</th><th>Período</th><th>Interés</th><th>Multa</th><th>Monto Pagado G.C.</th><th>Abono Convenio</th><th>Estado</th></tr></thead>
                 <tbody>
-                    ${movimientosFiltrados.map(m => `
+                    ${movimientosAVisualizar.map(m => `
                         <tr>
-                            <td>${m.Fecha_Pago ? new Date(m.Fecha_Pago.replace(/-/g,'/')).toLocaleDateString('es-CL', { timeZone: 'UTC' }) : 'N/A'}</td>
+                            <td>${m.Fecha_Pago ? new Date(m.Fecha_Pago.replace(/-/g,'/')).toLocaleDateString('es-CL', { timeZone: 'UTC' }) : '---'}</td>
                             <td>${m.Periodo}</td>
                             <td>$${parseFloat(m.Interes || 0).toLocaleString('es-CL')}</td>
                             <td>$${parseFloat(m['Multa_1/4'] || 0).toLocaleString('es-CL')}</td>
@@ -299,7 +320,7 @@ async function cargarInformes() {
                 </tbody>
                  <tfoot>
                     <tr>
-                        <td colspan="4" style="text-align:right; font-weight:bold;">Totales del Período:</td>
+                        <td colspan="4" style="text-align:right; font-weight:bold;">Totales Pagados en el Período:</td>
                         <td style="font-weight:bold;">$${totalPagadoGC.toLocaleString('es-CL')}</td>
                         <td style="font-weight:bold;">$${totalAbonoConvenio.toLocaleString('es-CL')}</td>
                         <td></td>
@@ -315,8 +336,8 @@ async function cargarInformes() {
             ["Nombre Residente", residenteInfo ? residenteInfo[1] : 'N/A'],
             [],
             ["Fecha Pago", "Periodo", "Interés", "Multa", "Monto Pagado G.C.", "Abono Convenio", "Estado"],
-            ...movimientosFiltrados.map(m => [
-                m.Fecha_Pago ? new Date(m.Fecha_Pago.replace(/-/g,'/')).toLocaleDateString('es-CL', { timeZone: 'UTC' }) : 'N/A',
+            ...movimientosAVisualizar.map(m => [
+                m.Fecha_Pago ? new Date(m.Fecha_Pago.replace(/-/g,'/')).toLocaleDateString('es-CL', { timeZone: 'UTC' }) : '---',
                 m.Periodo,
                 parseFloat(m.Interes || 0),
                 parseFloat(m['Multa_1/4'] || 0),
@@ -346,7 +367,7 @@ async function cargarInformes() {
                 fechaFin: filtros.fechaFin,
                 deudaGC: deudaTotalGC,
                 deudaConvenio: deudaTotalConvenio,
-                movimientos: movimientosFiltrados,
+                movimientos: movimientosAVisualizar, // Usamos los movimientos del período para el detalle del correo
                 totalPagadoGC: totalPagadoGC,
                 totalAbonoConvenio: totalAbonoConvenio,
                 nombreAdmin: "Alex Thiele",
@@ -577,7 +598,7 @@ async function cargarInformes() {
     const movimientosHtml = movimientos.length > 0 
         ? movimientos.map(m => `
             <tr style="border-bottom: 1px solid #ddd;">
-                <td style="padding: 10px;">${m.Fecha_Pago ? new Date(m.Fecha_Pago.replace(/-/g,'/')).toLocaleDateString('es-CL', { timeZone: 'UTC' }) : 'N/A'}</td>
+                <td style="padding: 10px;">${m.Fecha_Pago ? new Date(m.Fecha_Pago.replace(/-/g,'/')).toLocaleDateString('es-CL', { timeZone: 'UTC' }) : '---'}</td>
                 <td style="padding: 10px;">${m.Periodo}</td>
                 <td style="padding: 10px; text-align: right;">$${parseFloat(m.Interes || 0).toLocaleString('es-CL')}</td>
                 <td style="padding: 10px; text-align: right;">$${parseFloat(m['Multa_1/4'] || 0).toLocaleString('es-CL')}</td>
@@ -630,7 +651,7 @@ async function cargarInformes() {
                 </tbody>
                 <tfoot>
                     <tr style="background-color: #f4f4f4; font-weight: bold;">
-                        <td colspan="4" style="padding: 12px; text-align: right;">Totales del Período:</td>
+                        <td colspan="4" style="padding: 12px; text-align: right;">Totales Pagados en el Período:</td>
                         <td style="padding: 12px; text-align: right;">$${totalPagadoGC.toLocaleString('es-CL')}</td>
                         <td style="padding: 12px; text-align: right;">$${totalAbonoConvenio.toLocaleString('es-CL')}</td>
                         <td style="padding: 12px;"></td>
@@ -644,7 +665,7 @@ async function cargarInformes() {
             <p style="margin: 0; color: #777;">${cargoAdmin}</p>
         </div>
         <div style="background-color: #f4f4f4; text-align: center; padding: 15px; font-size: 12px; color: #777;">
-            Este es un correo electrónico generado automáticamente a solicitud el propietario, administración o comité
+            Este es un correo electrónico generado automáticamente. Por favor, no responda a esta dirección.
         </div>
       </div>
     `;
