@@ -640,7 +640,7 @@ async function cargarInformes() {
             <p style="margin: 0; color: #777;">${cargoAdmin}</p>
         </div>
         <div style="background-color: #f4f4f4; text-align: center; padding: 15px; font-size: 12px; color: #777;">
-            Este es un correo electrónico generado automáticamente.
+            Este es un correo electrónico generado automáticamente a solicitud el propietario, administración o comite.
         </div>
       </div>
     `;
