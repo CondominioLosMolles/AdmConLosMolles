@@ -177,6 +177,42 @@ async function eliminarResidente(id) {
         }
     });
 }
+// -------- PROVEEDORES --------
+function obtenerProveedores() {
+  return new Promise((resolve, reject) => {
+    google.script.run
+      .withSuccessHandler(resolve)
+      .withFailureHandler(reject)
+      .obtenerProveedores_GS(); // Asumo que esta función existe en tu Apps Script
+  });
+}
+
+function agregarProveedor(datosProveedor) {
+  return new Promise((resolve, reject) => {
+    google.script.run
+      .withSuccessHandler(resolve)
+      .withFailureHandler(reject)
+      .agregarProveedor_GS(datosProveedor); // Asumo que esta función existe
+  });
+}
+
+function actualizarProveedor(datosProveedor) {
+  return new Promise((resolve, reject) => {
+    google.script.run
+      .withSuccessHandler(resolve)
+      .withFailureHandler(reject)
+      .actualizarProveedor_GS(datosProveedor); // Asumo que esta función existe
+  });
+}
+
+function eliminarProveedor(id) {
+  return new Promise((resolve, reject) => {
+    google.script.run
+      .withSuccessHandler(resolve)
+      .withFailureHandler(reject)
+      .eliminarProveedor_GS(id); // Asumo que esta función existe
+  });
+}
 // -------- GASTOS COMUNES Y TIMC --------
 async function obtenerPagosGC() {
     try {
