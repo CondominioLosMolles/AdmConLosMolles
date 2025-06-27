@@ -316,9 +316,7 @@ async function cargarGastosComunes() {
         } else if (hoy > fechaVencimiento) {
             const parcelaNum = parseInt(parcela);
             const cutoffDate = new Date(2025, 6, 10);
-            // ===== INICIO DE LA MODIFICACIÓN =====
-            const esParcelaExcepcion = (parcelaNum === 7 || parcelaNum === 11 || parcelaNum === 8);
-            // ===== FIN DE LA MODIFICACIÓN =====
+            const esParcelaExcepcion = (parcelaNum === 7 || parcelaNum === 11);
             const esPeriodoPostCorte = fechaVencimiento >= cutoffDate;
 
             if (esParcelaExcepcion || esPeriodoPostCorte) {
@@ -574,9 +572,7 @@ async function cargarGastosComunes() {
         if (esPagoAtrasado) {
             const parcelaNum = parseInt(parcela);
             const cutoffDate = new Date(2025, 6, 10);
-            // ===== INICIO DE LA MODIFICACIÓN =====
-            const esParcelaExcepcion = (parcelaNum === 7 || parcelaNum === 11 || parcelaNum === 8);
-            // ===== FIN DE LA MODIFICACIÓN =====
+            const esParcelaExcepcion = (parcelaNum === 7 || parcelaNum === 11);
             const esPeriodoPostCorte = fechaVencimiento >= cutoffDate;
 
             if (esParcelaExcepcion || esPeriodoPostCorte) {
