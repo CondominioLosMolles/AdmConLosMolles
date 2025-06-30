@@ -2,14 +2,14 @@
 // Módulo Informes: morosidad, estado de resultados, historial de pagos, gastos por categoría, exportación PDF/Excel
 
 /**
- * Parsea una cadena de fecha que puede estar en formato YYYY-MM-DD o DD-MM-YYYY.
+ * Parsea una cadena de fecha que puede estar en formato諏-MM-DD o DD-MM-YYYY.
  * @param {string} dateStr La cadena de fecha a parsear.
  * @returns {Date|null} Un objeto Date o null si el formato es inválido.
  */
 function parseSheetDate(dateStr) {
     if (!dateStr || typeof dateStr !== 'string') return null;
     
-    // Intenta formato YYYY-MM-DD
+    // Intenta formato諏-MM-DD
     let match = dateStr.match(/^(\d{4})-(\d{2})-(\d{2})$/);
     if (match) {
         // new Date(año, mes - 1, día)
@@ -276,33 +276,35 @@ async function cargarInformes() {
     const residenteInfo = residentes.find(r => r[3] === filtros.parcela);
     const todosLosMovimientos = pagosGC_obj.filter(p => p.N_Parcela === filtros.parcela);
 
-    // 1. Movimientos a visualizar: Se filtra por Fecha_Vencimiento para mostrar todos los cargos del período.
-    // CORRECCIÓN: La lógica de filtrado ha sido reestructurada para mayor claridad y para asegurar
-    // que el rango de fechas se aplique correctamente sobre la 'Fecha_Vencimiento'.
+    // 1. Movimientos a visualizar: Esta es la variable que genera las FILAS de la tabla.
+    // Se filtra por Fecha_Vencimiento para mostrar todos los cargos (Pagados, Morosos, Pendientes) del período.
+    // **NO SE FILTRA POR ESTADO.**
     let movimientosAVisualizar = [...todosLosMovimientos];
     const fechaInicioDate = filtros.fechaInicio ? parseSheetDate(filtros.fechaInicio) : null;
     const fechaFinDate = filtros.fechaFin ? parseSheetDate(filtros.fechaFin) : null;
 
     if (fechaInicioDate || fechaFinDate) {
         movimientosAVisualizar = movimientosAVisualizar.filter(p => {
+            // Se obtiene la fecha de vencimiento de cada movimiento.
             const fechaVencimientoDate = parseSheetDate(p.Fecha_Vencimiento);
             if (!fechaVencimientoDate) {
-                return false; // Excluir registros sin fecha de vencimiento válida
+                return false; // Se excluye si no tiene una fecha de vencimiento válida.
             }
             
-            // Comprobar si la fecha del movimiento está dentro del rango seleccionado.
-            // Si una fecha de filtro no se proporciona, la condición para esa fecha es verdadera.
+            // Se comprueba si la fecha está dentro del rango.
             const afterStartDate = !fechaInicioDate || fechaVencimientoDate >= fechaInicioDate;
             const beforeEndDate = !fechaFinDate || fechaVencimientoDate <= fechaFinDate;
             
+            // Se retorna true (manteniendo el registro) solo si pasa ambas validaciones de fecha.
             return afterStartDate && beforeEndDate;
         });
     }
 
-    // 2. Pagos del período: Se filtra por Fecha_Pago para los totales del pie de página.
-    // Esta sección no requiere cambios y su lógica es correcta para los totales.
+    // 2. Pagos del período: Esta variable se usa SOLO para calcular los TOTALES DEL PIE DE PÁGINA.
+    // Se filtra por Fecha_Pago, por lo que naturalmente solo incluirá registros pagados.
+    // Esto es correcto para sumar los pagos, y NO AFECTA las filas que se muestran en la tabla.
     let pagosDelPeriodo = [...todosLosMovimientos];
-    if (filtros.fechaInicio) {
+     if (filtros.fechaInicio) {
         const fechaInicioDateFilter = parseSheetDate(filtros.fechaInicio);
         pagosDelPeriodo = pagosDelPeriodo.filter(p => {
             const fechaPagoDate = parseSheetDate(p.Fecha_Pago);
