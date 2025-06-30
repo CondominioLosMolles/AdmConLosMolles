@@ -374,15 +374,15 @@ async function cargarInformes() {
                         </tr>
                     `}).join('') || `<tr><td colspan="8" style="text-align:center;">No hay cargos de gastos comunes en el período seleccionado.</td></tr>`}
                 </tbody>
-                 <tfoot style="font-weight:bold;">
-                    <tr>
-                        <td colspan="2" style="text-align:right;">Totales:</td>
-                        <td>$${totalInteres.toLocaleString('es-CL')}</td>
-                        <td>$${totalMulta.toLocaleString('es-CL')}</td>
-                        <td>$${totalPagadoGC.toLocaleString('es-CL')}</td>
-                        <td>$${totalAbonoConvenio.toLocaleString('es-CL')}</td>
-                        <td style="color:red;">$${totalDeudaPendiente.toLocaleString('es-CL')}</td>
-                        <td></td>
+                <tfoot style="font-weight:bold;">
+                    <tr style="background-color: #f8f9fa; border-top: 2px solid #dee2e6;">
+                        <td style="padding: 0.75rem; text-align:right;" colspan="2">Totales:</td>
+                        <td style="padding: 0.75rem;">$${totalInteres.toLocaleString('es-CL')}</td>
+                        <td style="padding: 0.75rem;">$${totalMulta.toLocaleString('es-CL')}</td>
+                        <td style="padding: 0.75rem;">$${totalPagadoGC.toLocaleString('es-CL')}</td>
+                        <td style="padding: 0.75rem;">$${totalAbonoConvenio.toLocaleString('es-CL')}</td>
+                        <td style="padding: 0.75rem; color:red;">$${totalDeudaPendiente.toLocaleString('es-CL')}</td>
+                        <td style="padding: 0.75rem;"></td>
                     </tr>
                 </tfoot>
             </table>
@@ -441,8 +441,8 @@ async function cargarInformes() {
                 deudaGC: deudaTotalGC,
                 deudaConvenio: deudaTotalConvenio,
                 movimientos: movimientosAVisualizar,
-                totalPagadoGC: totalPagadoGC, // Actualizado para reflejar lo mostrado
-                totalAbonoConvenio: totalAbonoConvenio, // Actualizado para reflejar lo mostrado
+                totalPagadoGC: totalPagadoGC, 
+                totalAbonoConvenio: totalAbonoConvenio,
                 nombreAdmin: "Alex Thiele",
                 cargoAdmin: "Administrador Condominio Los Molles"
             };
