@@ -1,5 +1,5 @@
 // js/sheets.js
-const SPREADSHEET_ID = '1p-yBZc1yvgzpnZiYispSjB9MqCUwpiB2s2-MC1lydJ2rneFl_iDi0ttr';
+const SPREADSHEET_ID = '1bFo5dBC3HM0xupginTBe-hrrUNgkiuUn4fkXXzHide8';
 
 // --- Nombres de las Hojas ---
 const SHEET_RESIDENTES = 'Residentes';
