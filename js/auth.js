@@ -24,15 +24,23 @@ function gisLoaded() {
     resolveGisAuthReady();
 }
 
+// =======================================================
+// ===== CAMBIO: Usando gapi.client.load para mayor robustez =====
+// =======================================================
 async function initializeGapiClient() {
-    await gapi.client.init({
-        discoveryDocs: [
-            "https://sheets.googleapis.com/$discovery/rest?version=v4",
-            "https://www.googleapis.com/discovery/v1/apis/gmail/v1/rest",
-            "https://www.googleapis.com/discovery/v1/apis/drive/v3/rest",
-            "https://script.googleapis.com/$discovery/rest?version=v1"
-        ],
+    // Inicializa el cliente principal de GAPI
+    await gapi.client.init({});
+    
+    // Carga explícitamente cada API que necesitamos. Esto es más seguro que usar discoveryDocs.
+    await Promise.all([
+        gapi.client.load('https://sheets.googleapis.com/$discovery/rest?version=v4'),
+        gapi.client.load('https://www.googleapis.com/discovery/v1/apis/gmail/v1/rest'),
+        gapi.client.load('https://www.googleapis.com/discovery/v1/apis/drive/v3/rest'),
+        gapi.client.load('https://script.googleapis.com/$discovery/rest?version=v1')
+    ]).catch(err => {
+        console.error("Error crítico al cargar las bibliotecas cliente de GAPI:", err);
     });
+    
     resolveGapiClientReady();
 }
 
@@ -54,8 +62,7 @@ async function handleTokenResponse(resp) {
         console.error("Error en la respuesta del token:", resp);
         throw (resp);
     }
-    // ▼▼▼ CORRECCIÓN CRÍTICA: ESTA LÍNEA FALTABA ▼▼▼
-    // Comunica el token de autorización a la biblioteca GAPI para que sepa que estás autenticado.
+    // Línea crítica que comunica el token a GAPI
     gapi.client.setToken(resp);
     
     resolveAuthReady();
