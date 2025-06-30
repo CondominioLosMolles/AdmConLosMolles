@@ -31,6 +31,35 @@ function parseSheetDate(dateStr) {
     return null; // Formato no reconocido
 }
 
+/**
+ * Parsea una cadena de período (ej: "Enero 2025") a un objeto de fecha UTC.
+ * @param {string} periodoStr La cadena de período a parsear.
+ * @returns {Date|null} Un objeto Date para el primer día del mes, o null si el formato es inválido.
+ */
+function parsePeriodo(periodoStr) {
+    if (!periodoStr || typeof periodoStr !== 'string') return null;
+
+    const meses = {
+        'enero': 0, 'febrero': 1, 'marzo': 2, 'abril': 3, 'mayo': 4, 'junio': 5,
+        'julio': 6, 'agosto': 7, 'septiembre': 8, 'octubre': 9, 'noviembre': 10, 'diciembre': 11
+    };
+
+    const parts = periodoStr.toLowerCase().trim().split(' ');
+    if (parts.length !== 2) return null;
+
+    const mesNombre = parts[0];
+    const anio = parseInt(parts[1], 10);
+
+    if (isNaN(anio) || !meses.hasOwnProperty(mesNombre)) {
+        return null;
+    }
+
+    const mesNumero = meses[mesNombre];
+    
+    // Retorna un objeto Date representando el primer día del mes/año del período.
+    return new Date(Date.UTC(anio, mesNumero, 1));
+}
+
 
 async function cargarInformes() {
   limpiarMainContent();
@@ -276,33 +305,29 @@ async function cargarInformes() {
     const residenteInfo = residentes.find(r => r[3] === filtros.parcela);
     const todosLosMovimientos = pagosGC_obj.filter(p => p.N_Parcela === filtros.parcela);
 
-    // 1. Movimientos a visualizar: Esta es la variable que genera las FILAS de la tabla.
-    // Se filtra por Fecha_Vencimiento para mostrar todos los cargos (Pagados, Morosos, Pendientes) del período.
-    // **NO SE FILTRA POR ESTADO.**
+    // 1. Movimientos a visualizar: Se filtra por el campo 'Periodo' (ej: "Enero 2025")
+    // según la nueva solicitud del usuario.
     let movimientosAVisualizar = [...todosLosMovimientos];
     const fechaInicioDate = filtros.fechaInicio ? parseSheetDate(filtros.fechaInicio) : null;
     const fechaFinDate = filtros.fechaFin ? parseSheetDate(filtros.fechaFin) : null;
 
     if (fechaInicioDate || fechaFinDate) {
         movimientosAVisualizar = movimientosAVisualizar.filter(p => {
-            // Se obtiene la fecha de vencimiento de cada movimiento.
-            const fechaVencimientoDate = parseSheetDate(p.Fecha_Vencimiento);
-            if (!fechaVencimientoDate) {
-                return false; // Se excluye si no tiene una fecha de vencimiento válida.
+            // Se usa la nueva función para convertir el "Periodo" en una fecha comparable.
+            const periodoDate = parsePeriodo(p.Periodo);
+            if (!periodoDate) {
+                return false; // Excluir si el formato del periodo no es válido.
             }
             
-            // Se comprueba si la fecha está dentro del rango.
-            const afterStartDate = !fechaInicioDate || fechaVencimientoDate >= fechaInicioDate;
-            const beforeEndDate = !fechaFinDate || fechaVencimientoDate <= fechaFinDate;
+            // Comprobar si la fecha del periodo está dentro del rango seleccionado.
+            const afterStartDate = !fechaInicioDate || periodoDate >= fechaInicioDate;
+            const beforeEndDate = !fechaFinDate || periodoDate <= fechaFinDate;
             
-            // Se retorna true (manteniendo el registro) solo si pasa ambas validaciones de fecha.
             return afterStartDate && beforeEndDate;
         });
     }
 
-    // 2. Pagos del período: Esta variable se usa SOLO para calcular los TOTALES DEL PIE DE PÁGINA.
-    // Se filtra por Fecha_Pago, por lo que naturalmente solo incluirá registros pagados.
-    // Esto es correcto para sumar los pagos, y NO AFECTA las filas que se muestran en la tabla.
+    // 2. Pagos del período: Esta lógica se mantiene para calcular correctamente los totales del pie de página.
     let pagosDelPeriodo = [...todosLosMovimientos];
      if (filtros.fechaInicio) {
         const fechaInicioDateFilter = parseSheetDate(filtros.fechaInicio);
@@ -322,7 +347,7 @@ async function cargarInformes() {
     const totalPagadoGC = pagosDelPeriodo.reduce((sum, p) => sum + parseFloat(p.Monto_Pagado || 0), 0);
     const totalAbonoConvenio = pagosDelPeriodo.reduce((sum, p) => sum + parseFloat(p.Abono_Convenio || 0), 0);
     
-    // 3. Deuda total: Se calcula sobre todos los movimientos históricos, no solo los del período.
+    // 3. Deuda total: Se calcula sobre todos los movimientos históricos.
     const deudaTotalConvenio = parseFloat(residenteInfo ? residenteInfo[12] || 0 : 0);
     const deudaTotalGC = todosLosMovimientos.filter(p => p.Estado === 'Moroso').reduce((sum, p) => sum + parseFloat(p.Deuda_Total || 0), 0);
 
