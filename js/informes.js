@@ -324,29 +324,16 @@ async function cargarInformes() {
         });
     }
 
-    // 2. Pagos del período: para calcular los totales del pie de página.
-    let pagosDelPeriodo = [...todosLosMovimientos];
-     if (filtros.fechaInicio) {
-        const fechaInicioDateFilter = parseSheetDate(filtros.fechaInicio);
-        pagosDelPeriodo = pagosDelPeriodo.filter(p => {
-            const fechaPagoDate = parseSheetDate(p.Fecha_Pago);
-            return fechaPagoDate && fechaPagoDate >= fechaInicioDateFilter;
-        });
-    }
-    if (filtros.fechaFin) {
-        const fechaFinDateFilter = parseSheetDate(filtros.fechaFin);
-        pagosDelPeriodo = pagosDelPeriodo.filter(p => {
-            const fechaPagoDate = parseSheetDate(p.Fecha_Pago);
-            return fechaPagoDate && fechaPagoDate <= fechaFinDateFilter;
-        });
-    }
-
-    const totalPagadoGC = pagosDelPeriodo.reduce((sum, p) => sum + parseFloat(p.Monto_Pagado || 0), 0);
-    const totalAbonoConvenio = pagosDelPeriodo.reduce((sum, p) => sum + parseFloat(p.Abono_Convenio || 0), 0);
-    
-    // 3. Deuda total: Se calcula sobre todos los movimientos históricos.
+    // 2. Deuda total general: Se calcula sobre todos los movimientos históricos de la parcela.
     const deudaTotalConvenio = parseFloat(residenteInfo ? residenteInfo[12] || 0 : 0);
     const deudaTotalGC = todosLosMovimientos.filter(p => p.Estado === 'Moroso').reduce((sum, p) => sum + parseFloat(p.Deuda_Total || 0), 0);
+    
+    // 3. Calcular los totales para el pie de página a partir de los movimientos mostrados en la tabla.
+    const totalInteres = movimientosAVisualizar.reduce((sum, m) => sum + parseFloat(m.Interes || 0), 0);
+    const totalMulta = movimientosAVisualizar.reduce((sum, m) => sum + parseFloat(m['Multa_1/4'] || 0), 0);
+    const totalPagadoGC = movimientosAVisualizar.reduce((sum, m) => sum + parseFloat(m.Monto_Pagado || 0), 0);
+    const totalAbonoConvenio = movimientosAVisualizar.reduce((sum, m) => sum + parseFloat(m.Abono_Convenio || 0), 0);
+    const totalDeudaPendiente = movimientosAVisualizar.reduce((sum, m) => sum + parseFloat(m.Deuda_Total || 0), 0);
 
     let html = `
         <div class="widget">
@@ -387,11 +374,14 @@ async function cargarInformes() {
                         </tr>
                     `}).join('') || `<tr><td colspan="8" style="text-align:center;">No hay cargos de gastos comunes en el período seleccionado.</td></tr>`}
                 </tbody>
-                 <tfoot>
+                 <tfoot style="font-weight:bold;">
                     <tr>
-                        <td colspan="6" style="text-align:right; font-weight:bold;">Totales Pagados en el Período:</td>
-                        <td style="font-weight:bold;">$${totalPagadoGC.toLocaleString('es-CL')}</td>
-                        <td style="font-weight:bold;">$${totalAbonoConvenio.toLocaleString('es-CL')}</td>
+                        <td colspan="2" style="text-align:right;">Totales:</td>
+                        <td>$${totalInteres.toLocaleString('es-CL')}</td>
+                        <td>$${totalMulta.toLocaleString('es-CL')}</td>
+                        <td>$${totalPagadoGC.toLocaleString('es-CL')}</td>
+                        <td>$${totalAbonoConvenio.toLocaleString('es-CL')}</td>
+                        <td style="color:red;">$${totalDeudaPendiente.toLocaleString('es-CL')}</td>
                         <td></td>
                     </tr>
                 </tfoot>
@@ -415,6 +405,19 @@ async function cargarInformes() {
                 parseFloat(m.Deuda_Total || 0),
                 m.Estado
             ])];
+        
+        // Agregar fila de totales al exportable de Excel
+        dataToExport.push([
+            "", 
+            "Totales:",
+            totalInteres,
+            totalMulta,
+            totalPagadoGC,
+            totalAbonoConvenio,
+            totalDeudaPendiente,
+            ""
+        ]);
+
         const ws = XLSX.utils.aoa_to_sheet(dataToExport);
         const wb = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(wb, ws, `Estado Parcela ${filtros.parcela}`);
@@ -438,8 +441,8 @@ async function cargarInformes() {
                 deudaGC: deudaTotalGC,
                 deudaConvenio: deudaTotalConvenio,
                 movimientos: movimientosAVisualizar,
-                totalPagadoGC: totalPagadoGC,
-                totalAbonoConvenio: totalAbonoConvenio,
+                totalPagadoGC: totalPagadoGC, // Actualizado para reflejar lo mostrado
+                totalAbonoConvenio: totalAbonoConvenio, // Actualizado para reflejar lo mostrado
                 nombreAdmin: "Alex Thiele",
                 cargoAdmin: "Administrador Condominio Los Molles"
             };
