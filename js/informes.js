@@ -305,7 +305,7 @@ async function cargarInformes() {
     const residenteInfo = residentes.find(r => r[3] === filtros.parcela);
     const todosLosMovimientos = pagosGC_obj.filter(p => p.N_Parcela === filtros.parcela);
 
-    // 1. Movimientos a visualizar: Se filtra por el campo 'Periodo'
+    // 1. Movimientos a visualizar: Se filtra por el campo 'Periodo' (ej: "Enero 2025")
     let movimientosAVisualizar = [...todosLosMovimientos];
     const fechaInicioDate = filtros.fechaInicio ? parseSheetDate(filtros.fechaInicio) : null;
     const fechaFinDate = filtros.fechaFin ? parseSheetDate(filtros.fechaFin) : null;
@@ -313,7 +313,9 @@ async function cargarInformes() {
     if (fechaInicioDate || fechaFinDate) {
         movimientosAVisualizar = movimientosAVisualizar.filter(p => {
             const periodoDate = parsePeriodo(p.Periodo);
-            if (!periodoDate) return false; 
+            if (!periodoDate) {
+                return false; 
+            }
             
             const afterStartDate = !fechaInicioDate || periodoDate >= fechaInicioDate;
             const beforeEndDate = !fechaFinDate || periodoDate <= fechaFinDate;
@@ -321,141 +323,6 @@ async function cargarInformes() {
             return afterStartDate && beforeEndDate;
         });
     }
-
-    // 2. NUEVA LÓGICA DE CÁLCULO DE DEUDA Y SALDO A FAVOR
-    // ***************************************************************
-    // AJUSTE IMPORTANTE: Asumimos que la nueva columna "Saldo a Favor" está en la posición 13 (columna N).
-    // ¡DEBES AJUSTAR ESTE NÚMERO (13) A LA POSICIÓN REAL DE TU NUEVA COLUMNA EN LA HOJA "RESIDENTES"! 
-    // (A=0, B=1, C=2, ..., M=12, N=13)
-    const saldoFavorInicial = parseFloat(residenteInfo ? residenteInfo[13] || 0 : 0);
-
-    // Se calcula la posición neta sumando todas las deudas (positivas) y créditos (negativos).
-    // Tu campo 'Deuda_Total' por período ya debería reflejar esto.
-    const posicionNetaMovimientos = todosLosMovimientos.reduce((sum, p) => sum + parseFloat(p.Deuda_Total || 0), 0);
-
-    // El balance final es la suma de deudas/créditos de los movimientos, menos cualquier saldo a favor inicial que hayas registrado.
-    const balanceFinal = posicionNetaMovimientos - saldoFavorInicial;
-
-    let deudaTotalGC = 0;
-    let saldoFavorFinal = 0;
-
-    if (balanceFinal > 0) {
-        deudaTotalGC = balanceFinal;
-    } else {
-        saldoFavorFinal = Math.abs(balanceFinal);
-    }
-    // ***************************************************************
-
-    const deudaTotalConvenio = parseFloat(residenteInfo ? residenteInfo[12] || 0 : 0);
-    
-    // 3. Calcular los totales para el pie de página a partir de los movimientos mostrados.
-    const totalInteres = movimientosAVisualizar.reduce((sum, m) => sum + parseFloat(m.Interes || 0), 0);
-    const totalMulta = movimientosAVisualizar.reduce((sum, m) => sum + parseFloat(m['Multa_1/4'] || 0), 0);
-    const totalPagadoGC = movimientosAVisualizar.reduce((sum, m) => sum + parseFloat(m.Monto_Pagado || 0), 0);
-    const totalAbonoConvenio = movimientosAVisualizar.reduce((sum, m) => sum + parseFloat(m.Abono_Convenio || 0), 0);
-    const totalDeudaPendiente = movimientosAVisualizar.reduce((sum, m) => sum + parseFloat(m.Deuda_Total || 0), 0);
-
-    let html = `
-        <div class="widget">
-            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
-                <h3>Estado de Cuenta - Parcela ${filtros.parcela}</h3>
-                <div>
-                  <button class="btn secondary" id="btnExportar">Exportar Excel</button>
-                  <button class="btn" id="btnEnviarCorreo" style="background-color: #28a745; border-color: #28a745;">✉️ Enviar por Correo</button>
-                </div>
-            </div>
-            
-            <h4>Información del Residente</h4>
-            <p><b>Nombre:</b> ${residenteInfo ? residenteInfo[1] : 'N/A'}<br>
-               <b>Email:</b> ${residenteInfo ? residenteInfo[5] : 'N/A'}</p>
-
-            <h4>Resumen General de Deudas</h4>
-            <div style="display:flex; gap: 20px; margin-bottom: 20px; flex-wrap:wrap;">
-                ${deudaTotalGC > 0 ? `
-                <div style="padding:10px; border-radius:5px; background-color:#fff0f1;"><b>Deuda G.C. Total:</b> <span style="color:red; font-weight:bold;">$${deudaTotalGC.toLocaleString('es-CL')}</span></div>
-                ` : ''}
-                ${saldoFavorFinal > 0 ? `
-                <div style="padding:10px; border-radius:5px; background-color:#e8f5e9;"><b>Saldo a Favor:</b> <span style="color:green; font-weight:bold;">$${saldoFavorFinal.toLocaleString('es-CL')}</span></div>
-                ` : ''}
-                ${deudaTotalGC === 0 && saldoFavorFinal === 0 ? `
-                <div style="padding:10px; border-radius:5px; background-color:#f5f5f5;"><b>Deuda G.C. Total:</b> <span style="color:black; font-weight:bold;">$0</span></div>
-                ` : ''}
-                <div style="padding:10px; border-radius:5px; background-color:#fff8e1;"><b>Deuda Convenio:</b> <span style="color:#f57f17; font-weight:bold;">$${deudaTotalConvenio.toLocaleString('es-CL')}</span></div>
-            </div>
-
-            <h4>Movimientos en el Período Seleccionado</h4>
-            <table class="table">
-                <thead><tr><th>Fecha Pago</th><th>Período</th><th>Interés</th><th>Multa</th><th>Monto Pagado G.C.</th><th>Abono Convenio</th><th>Deuda Pendiente</th><th>Estado</th></tr></thead>
-                <tbody>
-                    ${movimientosAVisualizar.map(m => {
-                        const deuda = parseFloat(m.Deuda_Total || 0);
-                        return `
-                        <tr>
-                            <td>${m.Fecha_Pago ? new Date(m.Fecha_Pago.replace(/-/g,'/')).toLocaleDateString('es-CL', { timeZone: 'UTC' }) : '---'}</td>
-                            <td>${m.Periodo}</td>
-                            <td>$${parseFloat(m.Interes || 0).toLocaleString('es-CL')}</td>
-                            <td>$${parseFloat(m['Multa_1/4'] || 0).toLocaleString('es-CL')}</td>
-                            <td>$${parseFloat(m.Monto_Pagado || 0).toLocaleString('es-CL')}</td>
-                            <td>$${parseFloat(m.Abono_Convenio || 0).toLocaleString('es-CL')}</td>
-                            <td style="${deuda > 0 ? 'color:red; font-weight:bold;' : ''}">${deuda < 0 ? '-' : ''}$${Math.abs(deuda).toLocaleString('es-CL')}</td>
-                            <td>${m.Estado}</td>
-                        </tr>
-                    `}).join('') || `<tr><td colspan="8" style="text-align:center;">No hay cargos de gastos comunes en el período seleccionado.</td></tr>`}
-                </tbody>
-                <tfoot style="font-weight:bold;">
-                    <tr style="background-color: #f8f9fa; border-top: 2px solid #dee2e6;">
-                        <td style="padding: 0.75rem; text-align:right;" colspan="2">Totales:</td>
-                        <td style="padding: 0.75rem;">$${totalInteres.toLocaleString('es-CL')}</td>
-                        <td style="padding: 0.75rem;">$${totalMulta.toLocaleString('es-CL')}</td>
-                        <td style="padding: 0.75rem;">$${totalPagadoGC.toLocaleString('es-CL')}</td>
-                        <td style="padding: 0.75rem;">$${totalAbonoConvenio.toLocaleString('es-CL')}</td>
-                        <td style="padding: 0.75rem; color:red;">$${totalDeudaPendiente.toLocaleString('es-CL')}</td>
-                        <td style="padding: 0.75rem;"></td>
-                    </tr>
-                </tfoot>
-            </table>
-        </div>`;
-    areaInforme.innerHTML = html;
-    
-    document.getElementById('btnExportar').onclick = () => {
-        // (El resto de la función no necesita cambios, se mantiene igual)
-        const dataToExport = [
-            ["Estado de Cuenta - Parcela", filtros.parcela],
-            ["Nombre Residente", residenteInfo ? residenteInfo[1] : 'N/A'],
-            [],
-            ["Fecha Pago", "Periodo", "Interés", "Multa", "Monto Pagado G.C.", "Abono Convenio", "Deuda Pendiente", "Estado"],
-            ...movimientosAVisualizar.map(m => [
-                m.Fecha_Pago ? new Date(m.Fecha_Pago.replace(/-/g,'/')).toLocaleDateString('es-CL', { timeZone: 'UTC' }) : '---',
-                m.Periodo,
-                parseFloat(m.Interes || 0),
-                parseFloat(m['Multa_1/4'] || 0),
-                parseFloat(m.Monto_Pagado || 0),
-                parseFloat(m.Abono_Convenio || 0),
-                parseFloat(m.Deuda_Total || 0),
-                m.Estado
-            ])];
-        
-        dataToExport.push([
-            "", 
-            "Totales:",
-            totalInteres,
-            totalMulta,
-            totalPagadoGC,
-            totalAbonoConvenio,
-            totalDeudaPendiente,
-            ""
-        ]);
-
-        const ws = XLSX.utils.aoa_to_sheet(dataToExport);
-        const wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, ws, `Estado Parcela ${filtros.parcela}`);
-        XLSX.writeFile(wb, `Estado_Parcela_${filtros.parcela}.xlsx`);
-    };
-
-    document.getElementById('btnEnviarCorreo').onclick = async () => {
-        // (El resto de la función no necesita cambios, se mantiene igual)
-    };
-  }
 
     // 2. Deuda total general: Se calcula sobre todos los movimientos históricos de la parcela.
     const deudaTotalConvenio = parseFloat(residenteInfo ? residenteInfo[12] || 0 : 0);
