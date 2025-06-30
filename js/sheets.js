@@ -49,16 +49,24 @@ async function createFolder(name, parentId = 'root') {
     return response.result.id;
 }
 
-async function buscarOCrearRutaDeEgreso(nombreMes, anio) {
+// MODIFICADO: Cambiado el nombre de la función para mayor claridad y consistencia.
+async function buscarOCrearRutaDeComprobantes(nombreCarpetaParcela, nombreMes, anio) {
     const carpetaPrincipalId = await findFolderId(MAIN_DRIVE_FOLDER_NAME);
     if (!carpetaPrincipalId) throw new Error(`No se encontró la carpeta principal de Drive: "${MAIN_DRIVE_FOLDER_NAME}"`);
+    
     let carpetaPagosId = await findFolderId('Pagos', carpetaPrincipalId);
     if (!carpetaPagosId) carpetaPagosId = await createFolder('Pagos', carpetaPrincipalId);
+
+    let carpetaParcelaId = await findFolderId(nombreCarpetaParcela, carpetaPagosId);
+    if (!carpetaParcelaId) carpetaParcelaId = await createFolder(nombreCarpetaParcela, carpetaPagosId);
+
     const nombreCarpetaMes = `${nombreMes} ${anio}`;
-    let carpetaMesId = await findFolderId(nombreCarpetaMes, carpetaPagosId);
-    if (!carpetaMesId) carpetaMesId = await createFolder(nombreCarpetaMes, carpetaPagosId);
+    let carpetaMesId = await findFolderId(nombreCarpetaMes, carpetaParcelaId);
+    if (!carpetaMesId) carpetaMesId = await createFolder(nombreCarpetaMes, carpetaParcelaId);
+    
     return carpetaMesId;
 }
+
 
 async function subirComprobante(file, folderId) {
     const metadata = {
@@ -116,7 +124,8 @@ async function actualizarConfiguracion(key, value) {
 async function obtenerResidentes() {
     const res = await gapi.client.sheets.spreadsheets.values.get({
         spreadsheetId: SPREADSHEET_ID,
-        range: `${SHEET_RESIDENTES}!A2:AC`
+        // MODIFICADO: Ampliado el rango para incluir la nueva columna N (Saldo a Favor)
+        range: `${SHEET_RESIDENTES}!A2:N`
     });
     return res.result.values || [];
 }
@@ -127,7 +136,8 @@ async function agregarResidente(datos) {
     datos[0] = (lastId + 1).toString();
     await gapi.client.sheets.spreadsheets.values.append({
         spreadsheetId: SPREADSHEET_ID,
-        range: `${SHEET_RESIDENTES}!A:M`,
+        // MODIFICADO: Ampliado el rango para incluir la nueva columna N (Saldo a Favor)
+        range: `${SHEET_RESIDENTES}!A:N`,
         valueInputOption: 'USER_ENTERED',
         resource: { values: [datos] }
     });
@@ -140,7 +150,8 @@ async function actualizarResidente(datos) {
     const row = idx + 2;
     await gapi.client.sheets.spreadsheets.values.update({
         spreadsheetId: SPREADSHEET_ID,
-        range: `${SHEET_RESIDENTES}!A${row}:M${row}`,
+        // MODIFICADO: Ampliado el rango para incluir la nueva columna N (Saldo a Favor)
+        range: `${SHEET_RESIDENTES}!A${row}:N${row}`,
         valueInputOption: 'USER_ENTERED',
         resource: { values: [datos] }
     });
@@ -150,11 +161,23 @@ async function actualizarSaldoConvenioEnSheet(rowNumber, nuevoSaldo) {
     if (rowNumber < 2) throw new Error("Número de fila inválido para actualizar.");
     await gapi.client.sheets.spreadsheets.values.update({
         spreadsheetId: SPREADSHEET_ID,
-        range: `${SHEET_RESIDENTES}!M${rowNumber}`,
+        range: `${SHEET_RESIDENTES}!M${rowNumber}`, // Columna M para Saldo Convenio
         valueInputOption: 'USER_ENTERED',
         resource: { values: [[nuevoSaldo]] }
     });
 }
+
+// NUEVA FUNCIÓN: Para actualizar solo la celda de Saldo a Favor del residente
+async function actualizarSaldoFavorResidente(rowNumber, nuevoSaldo) {
+    if (rowNumber < 2) throw new Error("Número de fila inválido para actualizar el saldo a favor.");
+    await gapi.client.sheets.spreadsheets.values.update({
+        spreadsheetId: SPREADSHEET_ID,
+        range: `${SHEET_RESIDENTES}!N${rowNumber}`, // Columna N para Saldo a Favor
+        valueInputOption: 'USER_ENTERED',
+        resource: { values: [[nuevoSaldo]] }
+    });
+}
+
 
 async function eliminarResidente(id) {
     const residentes = await obtenerResidentes();
@@ -178,21 +201,16 @@ async function eliminarResidente(id) {
     });
 }
 // -------- PROVEEDORES --------
-// REEMPLAZA LA SECCIÓN ANTERIOR DE PROVEEDORES CON ESTA
 async function obtenerProveedores() {
     const res = await gapi.client.sheets.spreadsheets.values.get({
         spreadsheetId: SPREADSHEET_ID,
-        range: `${SHEET_PROVEEDORES}!A2:H` // Ajustado para 8 columnas (ID + 7 campos del form)
+        range: `${SHEET_PROVEEDORES}!A2:H`
     });
     return res.result.values || [];
 }
 
 async function agregarProveedor(datosProveedor) {
-    // Se espera que datosProveedor sea [id, nombre, rut, ...] donde id es ''
-    // Le asignamos un ID provisional basado en la fecha para unicidad simple.
-    // Lo ideal es que tu Apps Script lo reemplace con un ID secuencial si es necesario.
     datosProveedor[0] = `P-${Date.now()}`; 
-    
     await gapi.client.sheets.spreadsheets.values.append({
         spreadsheetId: SPREADSHEET_ID,
         range: `${SHEET_PROVEEDORES}!A:H`,
@@ -209,7 +227,7 @@ async function actualizarProveedor(datosProveedor) {
     if (rowIndex === -1) {
         throw new Error('Proveedor no encontrado para actualizar.');
     }
-    const rowToUpdate = rowIndex + 2; // +2 porque los datos empiezan en la fila 2
+    const rowToUpdate = rowIndex + 2;
 
     await gapi.client.sheets.spreadsheets.values.update({
         spreadsheetId: SPREADSHEET_ID,
@@ -226,7 +244,7 @@ async function eliminarProveedor(id) {
     if (rowIndex === -1) {
         throw new Error('Proveedor no encontrado para eliminar.');
     }
-    const rowToDelete = rowIndex + 1; // El índice para la API es base 0 desde el inicio del rango
+    const rowToDelete = rowIndex + 1;
 
     await gapi.client.sheets.spreadsheets.batchUpdate({
         spreadsheetId: SPREADSHEET_ID,
@@ -234,9 +252,9 @@ async function eliminarProveedor(id) {
             requests: [{
                 deleteDimension: {
                     range: {
-                        sheetId: SHEET_ID_PROVEEDORES, // Usamos el ID numérico de la hoja
+                        sheetId: SHEET_ID_PROVEEDORES,
                         dimension: "ROWS",
-                        startIndex: rowToDelete, // Fila a eliminar (índice base 1, pero la data empieza en la 2)
+                        startIndex: rowToDelete,
                         endIndex: rowToDelete + 1
                     }
                 }
@@ -249,7 +267,8 @@ async function obtenerPagosGC() {
     try {
         const response = await gapi.client.sheets.spreadsheets.values.get({
             spreadsheetId: SPREADSHEET_ID,
-            range: `${SHEET_PAGOS_GC}!A2:T`
+            // MODIFICADO: Ampliado el rango para incluir las nuevas columnas U y V
+            range: `${SHEET_PAGOS_GC}!A2:V`
         });
         return response.result.values || [];
     } catch (err) {
@@ -264,23 +283,20 @@ async function agregarPagoGC(datos) {
     datos[0] = (lastId + 1).toString();
     await gapi.client.sheets.spreadsheets.values.append({
         spreadsheetId: SPREADSHEET_ID,
-        range: `${SHEET_PAGOS_GC}!A:T`,
+        // MODIFICADO: Ampliado el rango para incluir las nuevas columnas U y V
+        range: `${SHEET_PAGOS_GC}!A:V`,
         valueInputOption: 'USER_ENTERED',
         resource: { values: [datos] }
     });
 }
 
-// ==================================================================
-// ===== INICIO: NUEVA FUNCIÓN PARA ACTUALIZAR PAGOS EXISTENTES =====
-// ==================================================================
+// MODIFICADO: Ahora actualiza también las nuevas columnas
 async function actualizarPagoGC(datos) {
     const rowToUpdate = datos.rowNum;
     if (!rowToUpdate || rowToUpdate < 2) {
         throw new Error("Número de fila inválido para actualizar.");
     }
 
-    // Preparamos un arreglo de rangos y valores para actualizar en una sola llamada (batchUpdate)
-    // Esto es más eficiente que hacer una llamada a la API por cada celda.
     const dataForUpdate = [
         { range: `${SHEET_PAGOS_GC}!G${rowToUpdate}`, values: [[datos.montoPagado]] },      // Columna G: Monto_Pagado
         { range: `${SHEET_PAGOS_GC}!H${rowToUpdate}`, values: [[datos.saldo]] },            // Columna H: Saldo_Pendiente_o_a_favor
@@ -289,7 +305,10 @@ async function actualizarPagoGC(datos) {
         { range: `${SHEET_PAGOS_GC}!O${rowToUpdate}`, values: [[datos.metodoPago]] },       // Columna O: Metodo_Pago
         { range: `${SHEET_PAGOS_GC}!P${rowToUpdate}`, values: [[datos.estado]] },           // Columna P: Estado
         { range: `${SHEET_PAGOS_GC}!Q${rowToUpdate}`, values: [[datos.idComprobante]] },    // Columna Q: ID_Comprobante_Drive
-        { range: `${SHEET_PAGOS_GC}!R${rowToUpdate}`, values: [[datos.abonoConvenio]] }     // Columna R: Abono_Convenio
+        { range: `${SHEET_PAGOS_GC}!R${rowToUpdate}`, values: [[datos.abonoConvenio]] },    // Columna R: Abono_Convenio
+        // NUEVO: Se añaden las columnas U y V para la actualización
+        { range: `${SHEET_PAGOS_GC}!U${rowToUpdate}`, values: [[datos.descripcionPago]] },  // Columna U: Descripcion_Pago
+        { range: `${SHEET_PAGOS_GC}!V${rowToUpdate}`, values: [[datos.saldoFavorUsado]] }   // Columna V: Saldo_Favor_Usado
     ];
     
     try {
@@ -297,7 +316,6 @@ async function actualizarPagoGC(datos) {
             spreadsheetId: SPREADSHEET_ID,
             resource: {
                 valueInputOption: 'USER_ENTERED',
-                // Filtramos para no intentar actualizar celdas con valores nulos o indefinidos
                 data: dataForUpdate.filter(d => d.values[0][0] !== null && d.values[0][0] !== undefined)
             }
         });
@@ -307,9 +325,6 @@ async function actualizarPagoGC(datos) {
         throw new Error('Error del cliente al actualizar el pago en la hoja: ' + (e.result?.error?.message || e.message));
     }
 }
-// ==================================================================
-// ===== FIN: NUEVA FUNCIÓN PARA ACTUALIZAR PAGOS EXISTENTES ======
-// ==================================================================
 
 
 async function obtenerTIMCs() {
@@ -349,7 +364,7 @@ async function guardarTIMC(anio, mes, valor) {
         throw err;
     }
 }
-// -------- NUEVA FUNCIÓN PARA GITHUB PAGES --------
+
 async function obtenerEstadoDeCuenta(parcela) {
     const pagos = await obtenerPagosGC();
     return pagos
