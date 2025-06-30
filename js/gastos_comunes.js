@@ -183,7 +183,7 @@ async function cargarGastosComunes() {
     <section id="detalle-gastos" style="margin-top: 2rem;"><h3>Detalle de Pagos Registrados</h3><div style="overflow-x:auto;"><table id="table-pagos" class="table"><thead id="thead-gastos"></thead><tbody id="tbody-gastos"></tbody></table></div></section>
     
     <div id="modalGC" class="modal" style="display:none;">
-      <div>
+      <div class="widget" style="max-width: 750px; width: 95%; max-height: 90vh; overflow-y: auto;">
         <h3>Agregar Gasto Común</h3>
         <form id="formGastoComun">
           <div style="display: flex; flex-wrap: wrap; gap: 20px;">
