@@ -170,12 +170,29 @@ async function actualizarSaldoConvenioEnSheet(rowNumber, nuevoSaldo) {
 // NUEVA FUNCIÓN: Para actualizar solo la celda de Saldo a Favor del residente
 async function actualizarSaldoFavorResidente(rowNumber, nuevoSaldo) {
     if (rowNumber < 2) throw new Error("Número de fila inválido para actualizar el saldo a favor.");
-    // Esta función del lado del cliente llama a la función del lado del servidor (Apps Script)
-    await gapi.client.script.run({
-        'scriptId': 'AKfycbx_hE0-l_f364pe622sX4G9o71sBu4w04nH2d0aDq_e_s8x5LwG0yDq_8yWv7j7bYgV', // Reemplaza con tu Script ID
-        'function': 'actualizarSaldoFavorResidente_GS',
-        'parameters': [rowNumber, nuevoSaldo]
-    });
+    
+    try {
+        console.log("Ejecutando llamada directa a Apps Script para actualizarSaldoFavorResidente...");
+        const response = await gapi.client.request({
+            'path': `https://script.googleapis.com/v1/scripts/${SCRIPT_ID}:run`,
+            'method': 'POST',
+            'body': {
+                'function': 'actualizarSaldoFavorResidente_GS',
+                'parameters': [rowNumber, nuevoSaldo]
+            }
+        });
+
+        const result = response.result;
+        if (result.error) {
+            throw new Error(result.error.details || 'Error en el script de Google al actualizar saldo a favor.');
+        }
+        return result.response?.result;
+
+    } catch (err) {
+        const errorMessage = err.result?.error?.message || err.message || 'Error desconocido.';
+        console.error('Error al llamar a actualizarSaldoFavorResidente_GS:', errorMessage);
+        throw new Error(`Error del cliente al actualizar saldo a favor: ${errorMessage}`);
+    }
 }
 
 
@@ -300,21 +317,26 @@ async function agregarPagoGC(datos) {
 // Reemplaza la función existente en sheets.js con esta
 async function actualizarPagoGC(datos) {
     try {
-        console.log("Paso 6: Intentando llamar a actualizarPagoGC. Objeto gapi.client:", gapi.client);
-        console.log("Paso 7: Verificando gapi.client.script:", gapi.client.script);
-
-        const response = await gapi.client.script.run({
-            'scriptId': 'AKfycbx_hE0-l_f364pe622sX4G9o71sBu4w04nH2d0aDq_e_s8x5LwG0yDq_8yWv7j7bYgV', // Reemplaza con tu Script ID
-            'function': 'actualizarPagoGC_GS',
-            'parameters': [datos]
+        console.log("Ejecutando llamada directa a Apps Script para actualizarPagoGC...");
+        const response = await gapi.client.request({
+            'path': `https://script.googleapis.com/v1/scripts/${SCRIPT_ID}:run`,
+            'method': 'POST',
+            'body': {
+                'function': 'actualizarPagoGC_GS',
+                'parameters': [datos]
+            }
         });
-        if (response.error) {
-            throw response.error;
+
+        const result = response.result;
+        if (result.error) {
+            throw new Error(result.error.details || 'Error en el script de Google.');
         }
-        return response.response.result;
+        return result.response?.result;
+
     } catch (err) {
-        console.error('Error al llamar a actualizarPagoGC_GS:', err);
-        throw new Error(`Error del cliente al actualizar el pago: ${err.message || err.details}`);
+        const errorMessage = err.result?.error?.message || err.message || 'Error desconocido.';
+        console.error('Error al llamar a actualizarPagoGC_GS:', errorMessage);
+        throw new Error(`Error del cliente al actualizar el pago: ${errorMessage}`);
     }
 }
 
