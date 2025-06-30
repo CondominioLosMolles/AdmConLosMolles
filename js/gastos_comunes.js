@@ -110,7 +110,7 @@ async function cargarGastosComunes() {
             const anioMatch = obj.Periodo.toString().match(/\d{4}/);
             obj.anio = anioMatch ? parseInt(anioMatch[0]) : null;
         }
-        obj.rowNum = index + 2;
+        obj.rowNum = index + 2; // Guardamos el número de fila original en la hoja
         return obj;
     }).filter(p => p.N_Parcela);
 
@@ -518,7 +518,7 @@ async function cargarGastosComunes() {
             saldoConvenioInfo.style.display = 'block';
         }
 
-        // NUEVO: Mostrar saldo a favor
+        // NUEVO: Mostrar saldo a favor (Columna N, índice 13)
         const saldoFavor = res[13] ? parseFloat(res[13]) : 0;
         if (saldoFavor > 0) {
             saldoFavorInfo.textContent = `Saldo a favor: $${saldoFavor.toLocaleString('es-CL')}`;
@@ -602,7 +602,7 @@ async function cargarGastosComunes() {
         if (residenteIdx === -1) throw new Error("No se encontró un 'Contacto Principal' para la parcela.");
         
         const residente = residentes[residenteIdx];
-        const residenteRowInSheet = residenteIdx + 2;
+        const residenteRowInSheet = residenteIdx + 2; // Fila real en la hoja Residentes
         const valorGastoComun = parseFloat(residente[8]);
         const saldoFavorActual = parseFloat(residente[13] || 0);
 
@@ -668,6 +668,7 @@ async function cargarGastosComunes() {
             };
 
             await actualizarPagoGC(datosParaActualizar);
+            // Actualizar el objeto local para reflejar el cambio inmediatamente
             Object.assign(pagoExistente, {
                 'Monto_Pagado': montoPagadoGC, 'Saldo_Pendiente_o_a_favor': saldoTransaccion, 'Deuda_Total': deudaPendienteParaSheet,
                 'Fecha_Pago': fechaDePago, 'Metodo_Pago': metodoPago, 'Estado': estadoPago,
@@ -711,25 +712,27 @@ async function cargarGastosComunes() {
             
             await agregarPagoGC(datosParaSheet);
             
+            // Reflejar el nuevo pago en la data local
             const nuevoPagoObj = {};
             ENCABEZADOS_PAGOS.forEach((encabezado, i) => nuevoPagoObj[encabezado] = datosParaSheet[i]);
             nuevoPagoObj.anio = anioSeleccionado;
-            nuevoPagoObj.rowNum = pagosGC_obj.length + 2; 
+            nuevoPagoObj.rowNum = pagosGC_obj.length + 2; // Estimación, la recarga es más segura
             pagosGC_obj.push(nuevoPagoObj);
             mostrarMensaje('Gasto común nuevo registrado con éxito.', 'success');
         }
         
         // Actualizar el saldo a favor del residente en la hoja de Residentes
         await actualizarSaldoFavorResidente(residenteRowInSheet, nuevoSaldoAFavorResidente);
-        residente[13] = nuevoSaldoAFavorResidente.toString();
+        residente[13] = nuevoSaldoAFavorResidente.toString(); // Actualizar objeto local
 
+        // Actualizar saldo convenio si hubo abono
         if (abonoConvenio > 0) {
             const deudaInicial = parseFloat(residente[11] || 0);
             let saldoPrevio = residente[12] ? parseFloat(residente[12]) : 0;
             if ((!saldoPrevio || saldoPrevio <= 0) && deudaInicial > 0) saldoPrevio = deudaInicial;
             const nuevoSaldo = saldoPrevio - abonoConvenio;
             await actualizarSaldoConvenioEnSheet(residenteRowInSheet, nuevoSaldo);
-            residente[12] = nuevoSaldo.toString();
+            residente[12] = nuevoSaldo.toString(); // Actualizar objeto local
         }
 
         filtrarYRenderizar();
@@ -782,19 +785,17 @@ async function cargarGastosComunes() {
       saldoColor = 'red';
     }
     
-    // El resto de la función de correo permanece igual, ya que la lógica principal de cálculo está fuera.
-    // ... (El cuerpo del correo puede ser ajustado para mostrar el desglose si se desea)
     return `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; border: 1px solid #ddd; padding: 20px;">
         <h2 style="color: #2a7ca3;">Comprobante de Pago - Condominio Los Molles</h2>
         <p>Estimado(a) <strong>${nombreResidente}</strong>,</p>
         <p>Confirmamos la recepción de su pago para el período <strong>${periodoFormateado}</strong>. A continuación el detalle:</p>
         <hr>
-        <table style="width: 100%;">
+        <table style="width: 100%; border-collapse: collapse;">
           <tr><td style="padding: 5px;">Deuda del Período (G.C. + Intereses/Multas):</td><td style="padding: 5px; text-align: right;">$${deudaDelPeriodo.toLocaleString('es-CL')}</td></tr>
           <tr><td style="padding: 5px;">Monto Pagado (transferencia/efectivo):</td><td style="padding: 5px; text-align: right;">$${montoPagado.toLocaleString('es-CL')}</td></tr>
           <tr><td style="padding: 5px;">Saldo a Favor Utilizado:</td><td style="padding: 5px; text-align: right;">$${saldoFavorUsado.toLocaleString('es-CL')}</td></tr>
-          <tr style="font-weight: bold;"><td style="padding: 5px;">Total Abonado al Período:</td><td style="padding: 5px; text-align: right;">$${montoTotalAbonadoGC.toLocaleString('es-CL')}</td></tr>
+          <tr style="font-weight: bold;"><td style="padding: 5px; border-top: 1px solid #eee;">Total Abonado al Período:</td><td style="padding: 5px; text-align: right; border-top: 1px solid #eee;">$${montoTotalAbonadoGC.toLocaleString('es-CL')}</td></tr>
           <tr style="font-weight: bold; color: ${saldoColor}; border-top: 1px solid #ccc;"><td style="padding: 5px;">Resultado de la Transacción:</td><td style="padding: 5px; text-align: right;">${saldoTexto}</td></tr>
         </table>
         <hr>
@@ -913,7 +914,7 @@ async function cargarGastosComunes() {
       
       await enviarCorreo(destinatario, asunto, cuerpo);
       
-      // La función para marcar como enviado debería estar en sheets.js y ser llamada aquí.
+      // Idealmente, esto debería llamar a una función en sheets.js para actualizar la hoja
       // await marcarComprobanteEnviado(pagoSeleccionadoParaEnviar.rowNum);
       pagoSeleccionadoParaEnviar.Comprobante_Enviado = 'SI';
       
