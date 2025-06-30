@@ -25,6 +25,10 @@ const SHEET_ID_MULTAS = 456683145;
 const SHEET_ID_ASAMBLEAS = 791789730;
 const SHEET_ID_COMUNICACIONES = 569621527;
 
+// --- ID DEL PROYECTO DE APPS SCRIPT (AÑADIDO PARA LAS NUEVAS FUNCIONES) ---
+const SCRIPT_ID = 'AKfycbx_hE0-l_f364pe622sX4G9o71sBu4w04nH2d0aDq_e_s8x5LwG0yDq_8yWv7j7bYgV';
+
+
 // -------- FUNCIONES DE GOOGLE DRIVE --------
 async function findFolderId(name, parentId = 'root') {
     const q = `mimeType='application/vnd.google-apps.folder' and name='${name}' and trashed=false and '${parentId}' in parents`;
@@ -49,7 +53,6 @@ async function createFolder(name, parentId = 'root') {
     return response.result.id;
 }
 
-// MODIFICADO: Cambiado el nombre de la función para mayor claridad y consistencia.
 async function buscarOCrearRutaDeComprobantes(nombreCarpetaParcela, nombreMes, anio) {
     const carpetaPrincipalId = await findFolderId(MAIN_DRIVE_FOLDER_NAME);
     if (!carpetaPrincipalId) throw new Error(`No se encontró la carpeta principal de Drive: "${MAIN_DRIVE_FOLDER_NAME}"`);
@@ -124,7 +127,6 @@ async function actualizarConfiguracion(key, value) {
 async function obtenerResidentes() {
     const res = await gapi.client.sheets.spreadsheets.values.get({
         spreadsheetId: SPREADSHEET_ID,
-        // MODIFICADO: Ampliado el rango para incluir la nueva columna N (Saldo a Favor)
         range: `${SHEET_RESIDENTES}!A2:N`
     });
     return res.result.values || [];
@@ -136,7 +138,6 @@ async function agregarResidente(datos) {
     datos[0] = (lastId + 1).toString();
     await gapi.client.sheets.spreadsheets.values.append({
         spreadsheetId: SPREADSHEET_ID,
-        // MODIFICADO: Ampliado el rango para incluir la nueva columna N (Saldo a Favor)
         range: `${SHEET_RESIDENTES}!A:N`,
         valueInputOption: 'USER_ENTERED',
         resource: { values: [datos] }
@@ -150,7 +151,6 @@ async function actualizarResidente(datos) {
     const row = idx + 2;
     await gapi.client.sheets.spreadsheets.values.update({
         spreadsheetId: SPREADSHEET_ID,
-        // MODIFICADO: Ampliado el rango para incluir la nueva columna N (Saldo a Favor)
         range: `${SHEET_RESIDENTES}!A${row}:N${row}`,
         valueInputOption: 'USER_ENTERED',
         resource: { values: [datos] }
@@ -161,40 +161,11 @@ async function actualizarSaldoConvenioEnSheet(rowNumber, nuevoSaldo) {
     if (rowNumber < 2) throw new Error("Número de fila inválido para actualizar.");
     await gapi.client.sheets.spreadsheets.values.update({
         spreadsheetId: SPREADSHEET_ID,
-        range: `${SHEET_RESIDENTES}!M${rowNumber}`, // Columna M para Saldo Convenio
+        range: `${SHEET_RESIDENTES}!M${rowNumber}`,
         valueInputOption: 'USER_ENTERED',
         resource: { values: [[nuevoSaldo]] }
     });
 }
-
-// NUEVA FUNCIÓN: Para actualizar solo la celda de Saldo a Favor del residente
-async function actualizarSaldoFavorResidente(rowNumber, nuevoSaldo) {
-    if (rowNumber < 2) throw new Error("Número de fila inválido para actualizar el saldo a favor.");
-    
-    try {
-        console.log("Ejecutando llamada directa a Apps Script para actualizarSaldoFavorResidente...");
-        const response = await gapi.client.request({
-            'path': `https://script.googleapis.com/v1/scripts/${SCRIPT_ID}:run`,
-            'method': 'POST',
-            'body': {
-                'function': 'actualizarSaldoFavorResidente_GS',
-                'parameters': [rowNumber, nuevoSaldo]
-            }
-        });
-
-        const result = response.result;
-        if (result.error) {
-            throw new Error(result.error.details || 'Error en el script de Google al actualizar saldo a favor.');
-        }
-        return result.response?.result;
-
-    } catch (err) {
-        const errorMessage = err.result?.error?.message || err.message || 'Error desconocido.';
-        console.error('Error al llamar a actualizarSaldoFavorResidente_GS:', errorMessage);
-        throw new Error(`Error del cliente al actualizar saldo a favor: ${errorMessage}`);
-    }
-}
-
 
 async function eliminarResidente(id) {
     const residentes = await obtenerResidentes();
@@ -284,7 +255,6 @@ async function obtenerPagosGC() {
     try {
         const response = await gapi.client.sheets.spreadsheets.values.get({
             spreadsheetId: SPREADSHEET_ID,
-            // MODIFICADO: Ampliado el rango para incluir las nuevas columnas U y V
             range: `${SHEET_PAGOS_GC}!A2:V`
         });
         return response.result.values || [];
@@ -295,8 +265,6 @@ async function obtenerPagosGC() {
 }
 
 async function agregarPagoGC(datos) {
-    // La generación de ID ahora debería hacerse en el backend para evitar duplicados,
-    // pero mantenemos la lógica por consistencia con el código existente.
     const pagos = await obtenerPagosGC();
     const lastIdNum = pagos.reduce((max, p) => {
         const id = p[0] ? parseInt(String(p[0]).replace(/[^0-9]/g, '')) : 0;
@@ -306,7 +274,6 @@ async function agregarPagoGC(datos) {
     
     await gapi.client.sheets.spreadsheets.values.append({
         spreadsheetId: SPREADSHEET_ID,
-        // MODIFICADO: Ampliado el rango para incluir las nuevas columnas U y V
         range: `${SHEET_PAGOS_GC}!A:V`,
         valueInputOption: 'USER_ENTERED',
         resource: { values: [datos] }
@@ -314,10 +281,9 @@ async function agregarPagoGC(datos) {
 }
 
 
-// Reemplaza la función existente en sheets.js con esta
+// ▼▼▼ INICIO FUNCIONES CORREGIDAS ▼▼▼
 async function actualizarPagoGC(datos) {
     try {
-        console.log("Ejecutando llamada directa a Apps Script para actualizarPagoGC...");
         const response = await gapi.client.request({
             'path': `https://script.googleapis.com/v1/scripts/${SCRIPT_ID}:run`,
             'method': 'POST',
@@ -339,6 +305,33 @@ async function actualizarPagoGC(datos) {
         throw new Error(`Error del cliente al actualizar el pago: ${errorMessage}`);
     }
 }
+
+async function actualizarSaldoFavorResidente(rowNumber, nuevoSaldo) {
+    if (rowNumber < 2) throw new Error("Número de fila inválido para actualizar el saldo a favor.");
+
+    try {
+        const response = await gapi.client.request({
+            'path': `https://script.googleapis.com/v1/scripts/${SCRIPT_ID}:run`,
+            'method': 'POST',
+            'body': {
+                'function': 'actualizarSaldoFavorResidente_GS',
+                'parameters': [rowNumber, nuevoSaldo]
+            }
+        });
+
+        const result = response.result;
+        if (result.error) {
+            throw new Error(result.error.details || 'Error en el script de Google al actualizar saldo a favor.');
+        }
+        return result.response?.result;
+
+    } catch (err) {
+        const errorMessage = err.result?.error?.message || err.message || 'Error desconocido.';
+        console.error('Error al llamar a actualizarSaldoFavorResidente_GS:', errorMessage);
+        throw new Error(`Error del cliente al actualizar saldo a favor: ${errorMessage}`);
+    }
+}
+// ▲▲▲ FIN FUNCIONES CORREGIDAS ▲▲▲
 
 
 async function obtenerTIMCs() {
@@ -446,8 +439,6 @@ async function eliminarEgreso(id) {
     });
 }
 // -------- MANTENCIONES / TAREAS --------
-// ... (El resto de las funciones de sheets.js no requieren cambios)
-// --- COPIAR Y PEGAR EL RESTO DE FUNCIONES (MANTENCIONES, MULTAS, ETC.) AQUÍ ---
 async function obtenerTareas() {
     const res = await gapi.client.sheets.spreadsheets.values.get({
         spreadsheetId: SPREADSHEET_ID,
