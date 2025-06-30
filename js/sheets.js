@@ -1,12 +1,10 @@
 // js/sheets.js
 
-
-// ▼▼▼ ID DE TU HOJA DE CÁLCULO ▼▼▼
+// ID de tu Hoja de Cálculo
 const SPREADSHEET_ID = '1bFo5dBC3HM0xupginTBe-hrrUNgkiuUn4fkXXzHide8';
 
-// ▼▼▼ ID DE TU SCRIPT ▼▼▼
+// ID de tu Script
 const SCRIPT_ID = '1p-yBZc1yvgzpnZiYispSjB9MqCUwpiB2s2-MC1lydJ2rneFl_iDi0ttr';
-
 
 
 // --- Nombres de las Hojas ---
@@ -23,7 +21,7 @@ const SHEET_COMUNICACIONES = 'Comunicaciones';
 const SHEET_CONFIGURACION = 'Configuracion';
 const MAIN_DRIVE_FOLDER_NAME = 'Los Molles';
 
-// --- IDs de las Hojas ---
+// --- IDs de las Hojas (para operaciones internas de la API) ---
 const SHEET_ID_RESIDENTES = 1835488459;
 const SHEET_ID_PROVEEDORES = 705052879;
 const SHEET_ID_PAGOS_GC = 1954366455;
@@ -32,9 +30,6 @@ const SHEET_ID_MANTENCIONES = 895242560;
 const SHEET_ID_MULTAS = 456683145;
 const SHEET_ID_ASAMBLEAS = 791789730;
 const SHEET_ID_COMUNICACIONES = 569621527;
-
-// --- ID DEL PROYECTO DE APPS SCRIPT (AÑADIDO PARA LAS NUEVAS FUNCIONES) ---
-const SCRIPT_ID = 'AKfycbx_hE0-l_f364pe622sX4G9o71sBu4w04nH2d0aDq_e_s8x5LwG0yDq_8yWv7j7bYgV';
 
 
 // -------- FUNCIONES DE GOOGLE DRIVE --------
@@ -288,8 +283,6 @@ async function agregarPagoGC(datos) {
     });
 }
 
-
-// ▼▼▼ INICIO FUNCIONES CORREGIDAS ▼▼▼
 async function actualizarPagoGC(datos) {
     try {
         const response = await gapi.client.request({
@@ -339,8 +332,6 @@ async function actualizarSaldoFavorResidente(rowNumber, nuevoSaldo) {
         throw new Error(`Error del cliente al actualizar saldo a favor: ${errorMessage}`);
     }
 }
-// ▲▲▲ FIN FUNCIONES CORREGIDAS ▲▲▲
-
 
 async function obtenerTIMCs() {
     try {
