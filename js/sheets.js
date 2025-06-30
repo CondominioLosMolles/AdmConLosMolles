@@ -1,5 +1,13 @@
 // js/sheets.js
+
+
+// ▼▼▼ ID DE TU HOJA DE CÁLCULO ▼▼▼
 const SPREADSHEET_ID = '1bFo5dBC3HM0xupginTBe-hrrUNgkiuUn4fkXXzHide8';
+
+// ▼▼▼ ID DE TU SCRIPT ▼▼▼
+const SCRIPT_ID = '1p-yBZc1yvgzpnZiYispSjB9MqCUwpiB2s2-MC1lydJ2rneFl_iDi0ttr';
+
+
 
 // --- Nombres de las Hojas ---
 const SHEET_RESIDENTES = 'Residentes';
