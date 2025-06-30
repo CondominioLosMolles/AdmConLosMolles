@@ -324,8 +324,9 @@ async function cargarInformes() {
         });
     }
 
-    // 2. Deuda total general: Se calcula sobre todos los movimientos históricos de la parcela.
+    // 2. Deuda total y saldos: Se calculan sobre todos los datos del residente.
     const deudaTotalConvenio = parseFloat(residenteInfo ? residenteInfo[12] || 0 : 0);
+    const saldoAFavor = parseFloat(residenteInfo ? residenteInfo[13] || 0 : 0);
     const deudaTotalGC = todosLosMovimientos.filter(p => p.Estado === 'Moroso').reduce((sum, p) => sum + parseFloat(p.Deuda_Total || 0), 0);
     
     // 3. Calcular los totales para el pie de página a partir de los movimientos mostrados en la tabla.
@@ -349,10 +350,11 @@ async function cargarInformes() {
             <p><b>Nombre:</b> ${residenteInfo ? residenteInfo[1] : 'N/A'}<br>
                <b>Email:</b> ${residenteInfo ? residenteInfo[5] : 'N/A'}</p>
 
-            <h4>Resumen General de Deudas</h4>
+            <h4>Resumen General de Deudas y Saldos</h4>
             <div style="display:flex; gap: 20px; margin-bottom: 20px; flex-wrap:wrap;">
                 <div style="padding:10px; border-radius:5px; background-color:#fff0f1;"><b>Deuda G.C. Total:</b> <span style="color:red; font-weight:bold;">$${deudaTotalGC.toLocaleString('es-CL')}</span></div>
                 <div style="padding:10px; border-radius:5px; background-color:#fff8e1;"><b>Deuda Convenio:</b> <span style="color:#f57f17; font-weight:bold;">$${deudaTotalConvenio.toLocaleString('es-CL')}</span></div>
+                <div style="padding:10px; border-radius:5px; background-color:#e8f5e9;"><b>Saldo a Favor:</b> <span style="color:#2e7d32; font-weight:bold;">$${saldoAFavor.toLocaleString('es-CL')}</span></div>
             </div>
 
             <h4>Movimientos en el Período Seleccionado</h4>
@@ -406,16 +408,8 @@ async function cargarInformes() {
                 m.Estado
             ])];
         
-        // Agregar fila de totales al exportable de Excel
         dataToExport.push([
-            "", 
-            "Totales:",
-            totalInteres,
-            totalMulta,
-            totalPagadoGC,
-            totalAbonoConvenio,
-            totalDeudaPendiente,
-            ""
+            "", "Totales:", totalInteres, totalMulta, totalPagadoGC, totalAbonoConvenio, totalDeudaPendiente, ""
         ]);
 
         const ws = XLSX.utils.aoa_to_sheet(dataToExport);
@@ -440,6 +434,7 @@ async function cargarInformes() {
                 fechaFin: filtros.fechaFin,
                 deudaGC: deudaTotalGC,
                 deudaConvenio: deudaTotalConvenio,
+                saldoFavor: saldoAFavor, // NUEVO
                 movimientos: movimientosAVisualizar,
                 totalPagadoGC: totalPagadoGC, 
                 totalAbonoConvenio: totalAbonoConvenio,
@@ -690,7 +685,7 @@ async function cargarInformes() {
   function crearCuerpoCorreoEstadoCuenta(datos) {
     const { 
         nombreResidente, numeroParcela, fechaInicio, fechaFin, 
-        deudaGC, deudaConvenio, movimientos, totalPagadoGC, totalAbonoConvenio,
+        deudaGC, deudaConvenio, saldoFavor, movimientos, totalPagadoGC, totalAbonoConvenio,
         nombreAdmin, cargoAdmin
     } = datos;
 
@@ -722,16 +717,20 @@ async function cargarInformes() {
             <p>Estimado(a) <b>${nombreResidente}</b>,</p>
             <p>A continuación, le presentamos su estado de cuenta detallado para la <b>Parcela ${numeroParcela}</b>, ${periodoStr}.</p>
             
-            <h3 style="border-bottom: 2px solid #004a7f; padding-bottom: 5px; margin-top: 30px; font-size: 18px;">Resumen de Deudas</h3>
+            <h3 style="border-bottom: 2px solid #004a7f; padding-bottom: 5px; margin-top: 30px; font-size: 18px;">Resumen de Saldos</h3>
             <table style="width: 100%; margin-top: 15px; border-spacing: 10px; text-align: center;">
                 <tr>
-                    <td style="background-color: #fbe9e7; padding: 15px; border-radius: 8px; width: 50%;">
+                    <td style="background-color: #fbe9e7; padding: 15px; border-radius: 8px;">
                         <span style="font-size: 14px; color: #555;">Deuda Gasto Común Total</span><br>
                         <span style="font-size: 22px; font-weight: bold; color: #d32f2f;">$${deudaGC.toLocaleString('es-CL')}</span>
                     </td>
-                    <td style="background-color: #fff3e0; padding: 15px; border-radius: 8px; width: 50%;">
+                    <td style="background-color: #fff3e0; padding: 15px; border-radius: 8px;">
                         <span style="font-size: 14px; color: #555;">Deuda Convenio de Pago</span><br>
                         <span style="font-size: 22px; font-weight: bold; color: #f57c00;">$${deudaConvenio.toLocaleString('es-CL')}</span>
+                    </td>
+                    <td style="background-color: #e8f5e9; padding: 15px; border-radius: 8px;">
+                        <span style="font-size: 14px; color: #555;">Saldo a Favor</span><br>
+                        <span style="font-size: 22px; font-weight: bold; color: #2e7d32;">$${saldoFavor.toLocaleString('es-CL')}</span>
                     </td>
                 </tr>
             </table>
