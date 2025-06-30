@@ -2,9 +2,8 @@
 
 const CLIENT_ID = '997872453031-5o8s2o6v3qt722fb3p51a2r7bo24ncee.apps.googleusercontent.com';
 
-// --- INICIO CAMBIO: AÑADIR PERMISO Y SCOPE DE GOOGLE DRIVE ---
+// Se agrega el scope para Google Drive y se mantiene el de Sheets y Gmail
 const SCOPES = 'https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/gmail.send https://www.googleapis.com/auth/drive';
-// --- FIN CAMBIO ---
 
 let tokenClient;
 let resolveGapiClientReady;
@@ -28,15 +27,16 @@ function gisLoaded() {
 }
 
 async function initializeGapiClient() {
-    // --- INICIO CAMBIO: AÑADIR DOCUMENTO DE DESCUBRIMIENTO DE DRIVE ---
+    // Se inicializa el cliente de la API de Google
     await gapi.client.init({
         discoveryDocs: [
             "https://sheets.googleapis.com/$discovery/rest?version=v4",
             "https://www.googleapis.com/discovery/v1/apis/gmail/v1/rest",
-            "https://www.googleapis.com/discovery/v1/apis/drive/v3/rest"
+            "https://www.googleapis.com/discovery/v1/apis/drive/v3/rest",
+            // ▼▼▼ ESTA ES LA LÍNEA AGREGADA QUE SOLUCIONA EL ERROR ▼▼▼
+            "https://script.googleapis.com/$discovery/rest?version=v1"
         ],
     });
-    // --- FIN CAMBIO ---
     resolveGapiClientReady();
 }
 
