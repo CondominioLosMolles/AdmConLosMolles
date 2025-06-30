@@ -24,29 +24,27 @@ function gisLoaded() {
     resolveGisAuthReady();
 }
 
-// =======================================================
-// ===== CAMBIO: Usando gapi.client.load para mayor robustez =====
-// =======================================================
 async function initializeGapiClient() {
-    // Inicializa el cliente principal de GAPI
+    console.log("Paso 1: Iniciando initializeGapiClient...");
     await gapi.client.init({});
+    console.log("Paso 2: gapi.client.init() completado.");
     
-    // Carga explícitamente cada API que necesitamos. Esto es más seguro que usar discoveryDocs.
     await Promise.all([
         gapi.client.load('https://sheets.googleapis.com/$discovery/rest?version=v4'),
         gapi.client.load('https://www.googleapis.com/discovery/v1/apis/gmail/v1/rest'),
         gapi.client.load('https://www.googleapis.com/discovery/v1/apis/drive/v3/rest'),
         gapi.client.load('https://script.googleapis.com/$discovery/rest?version=v1')
     ]).catch(err => {
-        console.error("Error crítico al cargar las bibliotecas cliente de GAPI:", err);
+        console.error("Error crítico al cargar bibliotecas cliente de GAPI:", err);
     });
     
+    console.log("Paso 3: Carga de todas las APIs completada.");
     resolveGapiClientReady();
 }
 
 Promise.all([gapiClientReady, gisAuthReady]).then(() => {
     document.getElementById('loginBtn').style.visibility = 'visible';
-    console.log("¡Listo! Las APIs de Google y la Autenticación están preparadas.");
+    console.log("APIs de Google y Autenticación listas para usarse.");
 });
 
 function handleAuthClick() {
@@ -58,12 +56,13 @@ function handleAuthClick() {
 }
 
 async function handleTokenResponse(resp) {
+    console.log("Paso 4: Se recibió respuesta del token.", resp);
     if (resp.error !== undefined) {
         console.error("Error en la respuesta del token:", resp);
         throw (resp);
     }
-    // Línea crítica que comunica el token a GAPI
     gapi.client.setToken(resp);
+    console.log("Paso 5: Token establecido en gapi.client.");
     
     resolveAuthReady();
 }
