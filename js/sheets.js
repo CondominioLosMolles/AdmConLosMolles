@@ -297,9 +297,12 @@ async function agregarPagoGC(datos) {
 }
 
 
-// MODIFICADO: Ahora llama a la función del backend para realizar la actualización.
+// Reemplaza la función existente en sheets.js con esta
 async function actualizarPagoGC(datos) {
     try {
+        console.log("Paso 6: Intentando llamar a actualizarPagoGC. Objeto gapi.client:", gapi.client);
+        console.log("Paso 7: Verificando gapi.client.script:", gapi.client.script);
+
         const response = await gapi.client.script.run({
             'scriptId': 'AKfycbx_hE0-l_f364pe622sX4G9o71sBu4w04nH2d0aDq_e_s8x5LwG0yDq_8yWv7j7bYgV', // Reemplaza con tu Script ID
             'function': 'actualizarPagoGC_GS',
