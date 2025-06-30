@@ -168,9 +168,9 @@ async function cargarGastosComunes() {
           </div>
         </div>
         <div style="margin-top: auto;">
-          <button id="btnAbrirModalGasto" class="btn" style="width: 100%; margin-bottom: 10px;">Agregar Gasto Común</button>
-          <button id="btnAbrirModalComprobante" class="btn secondary" style="width: 100%;">Enviar Comprobante</button>
-        </div>
+  <button id="btnAbrirModalGasto" class="btn" style="margin-bottom: 10px;">Agregar Gasto Común</button>
+  <button id="btnAbrirModalComprobante" class="btn secondary">Enviar Comprobante</button>
+     </div>
       </section>
       <section class="widget" style="flex: 2; min-width: 450px;"><h4 style="margin-top:0;">Configuración de TIMC</h4><div style="display: flex; align-items: flex-end; gap: 16px; margin-bottom: 20px;"><div style="min-width: 120px;"><label for="inputTMC"><b>TIMC (%)</b></label><input type="number" id="inputTMC" step="0.1" placeholder="Ej: 25"></div><div><label for="selectMesTMC"><b>Mes</b></label><select id="selectMesTMC" style="padding: 11px 10px;">${MESES.map((m, i) => `<option value="${i + 1}">${m}</option>`).join('')}</select></div><button id="btnGuardarTMC" class="btn">Guardar en Sheet</button></div><div id="timc-display"><h5 style="margin-top:0; margin-bottom: 10px;">TIMC Guardado para el año seleccionado:</h5><div id="timc-list-horizontal" style="display: flex; flex-wrap: wrap; gap: 15px; background: #e9f1fb; padding: 12px; border-radius: 8px;"></div></div></section>
     </div>
