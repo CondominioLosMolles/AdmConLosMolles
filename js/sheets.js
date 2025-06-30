@@ -170,11 +170,11 @@ async function actualizarSaldoConvenioEnSheet(rowNumber, nuevoSaldo) {
 // NUEVA FUNCIÓN: Para actualizar solo la celda de Saldo a Favor del residente
 async function actualizarSaldoFavorResidente(rowNumber, nuevoSaldo) {
     if (rowNumber < 2) throw new Error("Número de fila inválido para actualizar el saldo a favor.");
-    await gapi.client.sheets.spreadsheets.values.update({
-        spreadsheetId: SPREADSHEET_ID,
-        range: `${SHEET_RESIDENTES}!N${rowNumber}`, // Columna N para Saldo a Favor
-        valueInputOption: 'USER_ENTERED',
-        resource: { values: [[nuevoSaldo]] }
+    // Esta función del lado del cliente llama a la función del lado del servidor (Apps Script)
+    await gapi.client.script.run({
+        'scriptId': 'AKfycbx_hE0-l_f364pe622sX4G9o71sBu4w04nH2d0aDq_e_s8x5LwG0yDq_8yWv7j7bYgV', // Reemplaza con tu Script ID
+        'function': 'actualizarSaldoFavorResidente_GS',
+        'parameters': [rowNumber, nuevoSaldo]
     });
 }
 
@@ -210,7 +210,7 @@ async function obtenerProveedores() {
 }
 
 async function agregarProveedor(datosProveedor) {
-    datosProveedor[0] = `P-${Date.now()}`; 
+    datosProveedor[0] = `P-${Date.now()}`;
     await gapi.client.sheets.spreadsheets.values.append({
         spreadsheetId: SPREADSHEET_ID,
         range: `${SHEET_PROVEEDORES}!A:H`,
@@ -278,9 +278,15 @@ async function obtenerPagosGC() {
 }
 
 async function agregarPagoGC(datos) {
+    // La generación de ID ahora debería hacerse en el backend para evitar duplicados,
+    // pero mantenemos la lógica por consistencia con el código existente.
     const pagos = await obtenerPagosGC();
-    const lastId = pagos.length > 0 && pagos[pagos.length - 1][0] ? parseInt(pagos[pagos.length - 1][0]) : 0;
-    datos[0] = (lastId + 1).toString();
+    const lastIdNum = pagos.reduce((max, p) => {
+        const id = p[0] ? parseInt(String(p[0]).replace(/[^0-9]/g, '')) : 0;
+        return id > max ? id : max;
+    }, 0);
+    datos[0] = `PGC-${lastIdNum + 1}`;
+    
     await gapi.client.sheets.spreadsheets.values.append({
         spreadsheetId: SPREADSHEET_ID,
         // MODIFICADO: Ampliado el rango para incluir las nuevas columnas U y V
@@ -290,39 +296,22 @@ async function agregarPagoGC(datos) {
     });
 }
 
-// MODIFICADO: Ahora actualiza también las nuevas columnas
-async function actualizarPagoGC(datos) {
-    const rowToUpdate = datos.rowNum;
-    if (!rowToUpdate || rowToUpdate < 2) {
-        throw new Error("Número de fila inválido para actualizar.");
-    }
 
-    const dataForUpdate = [
-        { range: `${SHEET_PAGOS_GC}!G${rowToUpdate}`, values: [[datos.montoPagado]] },      // Columna G: Monto_Pagado
-        { range: `${SHEET_PAGOS_GC}!H${rowToUpdate}`, values: [[datos.saldo]] },            // Columna H: Saldo_Pendiente_o_a_favor
-        { range: `${SHEET_PAGOS_GC}!M${rowToUpdate}`, values: [[datos.deudaTotal]] },       // Columna M: Deuda_Total
-        { range: `${SHEET_PAGOS_GC}!N${rowToUpdate}`, values: [[datos.fechaPago]] },        // Columna N: Fecha_Pago
-        { range: `${SHEET_PAGOS_GC}!O${rowToUpdate}`, values: [[datos.metodoPago]] },       // Columna O: Metodo_Pago
-        { range: `${SHEET_PAGOS_GC}!P${rowToUpdate}`, values: [[datos.estado]] },           // Columna P: Estado
-        { range: `${SHEET_PAGOS_GC}!Q${rowToUpdate}`, values: [[datos.idComprobante]] },    // Columna Q: ID_Comprobante_Drive
-        { range: `${SHEET_PAGOS_GC}!R${rowToUpdate}`, values: [[datos.abonoConvenio]] },    // Columna R: Abono_Convenio
-        // NUEVO: Se añaden las columnas U y V para la actualización
-        { range: `${SHEET_PAGOS_GC}!U${rowToUpdate}`, values: [[datos.descripcionPago]] },  // Columna U: Descripcion_Pago
-        { range: `${SHEET_PAGOS_GC}!V${rowToUpdate}`, values: [[datos.saldoFavorUsado]] }   // Columna V: Saldo_Favor_Usado
-    ];
-    
+// MODIFICADO: Ahora llama a la función del backend para realizar la actualización.
+async function actualizarPagoGC(datos) {
     try {
-        await gapi.client.sheets.spreadsheets.values.batchUpdate({
-            spreadsheetId: SPREADSHEET_ID,
-            resource: {
-                valueInputOption: 'USER_ENTERED',
-                data: dataForUpdate.filter(d => d.values[0][0] !== null && d.values[0][0] !== undefined)
-            }
+        const response = await gapi.client.script.run({
+            'scriptId': 'AKfycbx_hE0-l_f364pe622sX4G9o71sBu4w04nH2d0aDq_e_s8x5LwG0yDq_8yWv7j7bYgV', // Reemplaza con tu Script ID
+            'function': 'actualizarPagoGC_GS',
+            'parameters': [datos]
         });
-        return `Fila ${rowToUpdate} actualizada con éxito.`;
-    } catch (e) {
-        console.error('Error en batchUpdate de pago:', e);
-        throw new Error('Error del cliente al actualizar el pago en la hoja: ' + (e.result?.error?.message || e.message));
+        if (response.error) {
+            throw response.error;
+        }
+        return response.response.result;
+    } catch (err) {
+        console.error('Error al llamar a actualizarPagoGC_GS:', err);
+        throw new Error(`Error del cliente al actualizar el pago: ${err.message || err.details}`);
     }
 }
 
@@ -432,6 +421,8 @@ async function eliminarEgreso(id) {
     });
 }
 // -------- MANTENCIONES / TAREAS --------
+// ... (El resto de las funciones de sheets.js no requieren cambios)
+// --- COPIAR Y PEGAR EL RESTO DE FUNCIONES (MANTENCIONES, MULTAS, ETC.) AQUÍ ---
 async function obtenerTareas() {
     const res = await gapi.client.sheets.spreadsheets.values.get({
         spreadsheetId: SPREADSHEET_ID,
