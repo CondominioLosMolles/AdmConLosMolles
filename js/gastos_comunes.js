@@ -306,14 +306,14 @@ async function cargarGastosComunes() {
 
     if (deudaInicialConvenio > 0) {
         widgetConvenio.style.display = 'block';
-
+        
         // --- INICIO DE LA CORRECCIÓN ---
-        // Se calcula el total abonado sumando todos los registros de la hoja Pagos_GC para esa parcela.
-        // Esto es más preciso que depender del valor en la hoja de Residentes.
-        const todosLosAbonos = pagosGC_obj.filter(p => String(p.N_Parcela) === String(parcela));
-        const totalAbonado = todosLosAbonos.reduce((acc, pago) => acc + parseFloat(pago.Abono_Convenio || 0), 0);
+        // 1. Se calcula el total abonado REAL sumando la columna 'Abono_Convenio' de todos los pagos para la parcela.
+        const totalAbonado = pagosGC_obj
+            .filter(p => String(p.N_Parcela) === String(parcela))
+            .reduce((sum, pago) => sum + parseFloat(pago.Abono_Convenio || 0), 0);
 
-        // Se recalcula el saldo pendiente en base al total abonado real.
+        // 2. Se calcula el saldo pendiente a partir del total abonado real.
         const saldoActualConvenio = deudaInicialConvenio - totalAbonado;
         // --- FIN DE LA CORRECCIÓN ---
 
@@ -329,7 +329,6 @@ async function cargarGastosComunes() {
         theadAbonos.innerHTML = `<tr><th>Fecha de Pago</th><th>Monto Abonado</th><th>Comprobante</th></tr>`;
         tbodyAbonos.innerHTML = '';
         if(abonosDelAnio.length > 0) {
-            abonosDelAnio.sort((a,b) => new Date(b.Fecha_Pago.replace(/-/g, '/')) - new Date(a.Fecha_Pago.replace(/-/g, '/'))); // Ordenar por fecha
             abonosDelAnio.forEach(abono => {
                 const linkComprobante = abono.ID_Comprobante_Drive ? `<a href="${abono.ID_Comprobante_Drive}" target="_blank" class="btn small">Ver</a>` : 'N/A';
                 tbodyAbonos.innerHTML += `
@@ -433,7 +432,7 @@ async function cargarGastosComunes() {
             <b>Monto Pagado (transferencia/efectivo):</b> <span style="font-weight:bold; color:green;">$${montoPagadoGC.toLocaleString('es-CL')}</span>
             <b>Saldo a Favor Utilizado:</b> <span style="font-weight:bold; color:purple;">$${saldoFavorUsado.toLocaleString('es-CL')}</span>
             <b>Abono a Convenio:</b> <span style="font-weight:bold; color:${colorAbono};">$${abonoConvenio.toLocaleString('es-CL')}</span>
-            <b>Fecha de Pago:</b>     <span>${new Date(pago.Fecha_Pago.replace(/-/g, '/')).toLocaleDateString('es-CL', {timeZone:'UTC'})}</span>
+            <b>Fecha de Pago:</b>      <span>${new Date(pago.Fecha_Pago.replace(/-/g, '/')).toLocaleDateString('es-CL', {timeZone:'UTC'})}</span>
             <b>Método de Pago:</b>    <span>${pago.Metodo_Pago}</span>
             <b style="font-size:1.1em;">Resultado Saldo G.C.:</b> <span style="font-weight:bold; font-size:1.1em; color:${saldoTransaccion < 0 ? 'red' : 'green'};">${saldoFinalTexto}</span>
             <hr style="grid-column: 1 / -1;">
