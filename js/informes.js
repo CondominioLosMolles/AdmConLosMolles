@@ -302,192 +302,184 @@ async function cargarInformes() {
         };
     }
 
-    function generarInformeEstadoParcela() {
-        const filtros = getFiltros();
-        if (!filtros.parcela) {
-            areaInforme.innerHTML = `<div class="widget"><p style="color:red;">Por favor, seleccione un número de parcela para generar este informe.</p></div>`;
-            return;
-        }
-        
-        const residenteInfo = residentes.find(r => r[3] === filtros.parcela);
-        const todosLosMovimientos = pagosGC_obj.filter(p => p.N_Parcela === filtros.parcela);
-
-        let movimientosAVisualizar = [...todosLosMovimientos];
-        const fechaInicioDate = filtros.fechaInicio ? parseSheetDate(filtros.fechaInicio) : null;
-        const fechaFinDate = filtros.fechaFin ? parseSheetDate(filtros.fechaFin) : null;
-
-        if (fechaInicioDate || fechaFinDate) {
-            movimientosAVisualizar = movimientosAVisualizar.filter(p => {
-                const periodoDate = parsePeriodo(p.Periodo);
-                if (!periodoDate) return false; 
-                const afterStartDate = !fechaInicioDate || periodoDate >= fechaInicioDate;
-                const beforeEndDate = !fechaFinDate || periodoDate <= fechaFinDate;
-                return afterStartDate && beforeEndDate;
-            });
-        }
-
-        const deudaTotalConvenio = parseFloat(residenteInfo ? residenteInfo[12] || 0 : 0);
-        const saldoAFavor = parseFloat(residenteInfo ? residenteInfo[13] || 0 : 0);
-        const deudaTotalGC = todosLosMovimientos.filter(p => p.Estado === 'Moroso').reduce((sum, p) => sum + parseFloat(p.Deuda_Total || 0), 0);
-        
-        // ===== MODIFICADO =====: Se añade 'totalSaldo' al cálculo de totales.
-        const {
-            totalInteres,
-            totalMulta,
-            totalPagadoGC,
-            totalSaldo,
-            totalUsoSaldoFavor,
-            totalAbonoConvenio,
-            totalDeudaPendiente
-        } = movimientosAVisualizar.reduce((acc, m) => {
-            acc.totalInteres += parseFloat(m.Interes || 0);
-            acc.totalMulta += parseFloat(m['Multa_1/4'] || 0);
-            acc.totalPagadoGC += parseFloat(m.Monto_Pagado || 0);
-            acc.totalSaldo += parseFloat(m['Saldo_Pendiente_o_a_favor'] || 0);
-            acc.totalUsoSaldoFavor += parseFloat(m.Saldo_Favor_Usado || 0); 
-            acc.totalAbonoConvenio += parseFloat(m.Abono_Convenio || 0);
-            acc.totalDeudaPendiente += parseFloat(m.Deuda_Total || 0);
-            return acc;
-        }, {
-            totalInteres: 0, totalMulta: 0, totalPagadoGC: 0, totalSaldo: 0,
-            totalUsoSaldoFavor: 0, totalAbonoConvenio: 0, totalDeudaPendiente: 0
-        });
-
-        let html = `
-            <div class="widget">
-                <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
-                    <h3>Estado de Cuenta - Parcela ${filtros.parcela}</h3>
-                    <div>
-                        <button class="btn secondary" id="btnExportar">Exportar Excel</button>
-                        <button class="btn" id="btnEnviarCorreo" style="background-color: #28a745; border-color: #28a745;">✉️ Enviar por Correo</button>
-                    </div>
-                </div>
-                
-                <h4>Información del Residente</h4>
-                <p><b>Nombre:</b> ${residenteInfo ? residenteInfo[1] : 'N/A'}<br>
-                    <b>Email:</b> ${residenteInfo ? residenteInfo[5] : 'N/A'}</p>
-
-                <h4>Resumen General de Deudas y Saldos</h4>
-                <div style="display:flex; gap: 20px; margin-bottom: 20px; flex-wrap:wrap;">
-                    <div style="padding:10px; border-radius:5px; background-color:#fff0f1;"><b>Deuda G.C. Total:</b> <span style="color:red; font-weight:bold;">$${deudaTotalGC.toLocaleString('es-CL')}</span></div>
-                    <div style="padding:10px; border-radius:5px; background-color:#fff8e1;"><b>Deuda Convenio:</b> <span style="color:#f57f17; font-weight:bold;">$${deudaTotalConvenio.toLocaleString('es-CL')}</span></div>
-                    <div style="padding:10px; border-radius:5px; background-color:#e8f5e9;"><b>Saldo a Favor:</b> <span style="color:#2e7d32; font-weight:bold;">$${saldoAFavor.toLocaleString('es-CL')}</span></div>
-                </div>
-
-                <h4>Movimientos en el Período Seleccionado</h4>
-                <table class="table">
-                    // ===== MODIFICADO =====: Se añade la cabecera "Saldo".
-                    <thead><tr><th>Fecha Pago</th><th>Período</th><th>Interés</th><th>Multa</th><th>Monto Pagado G.C.</th><th>Saldo</th><th>Uso Saldo a Favor</th><th>Abono Convenio</th><th>Deuda Pendiente</th><th>Estado</th></tr></thead>
-                    <tbody>
-                        ${movimientosAVisualizar.map(m => {
-                            const deuda = parseFloat(m.Deuda_Total || 0);
-                            const usoSaldo = parseFloat(m.Saldo_Favor_Usado || 0);
-                            // ===== MODIFICADO =====: Se obtiene el valor del saldo para usarlo en la celda.
-                            const saldo = parseFloat(m['Saldo_Pendiente_o_a_favor'] || 0);
-                            return `
-                            <tr>
-                                <td>${m.Fecha_Pago ? new Date(m.Fecha_Pago.replace(/-/g,'/')).toLocaleDateString('es-CL', { timeZone: 'UTC' }) : '---'}</td>
-                                <td>${m.Periodo}</td>
-                                <td>$${parseFloat(m.Interes || 0).toLocaleString('es-CL')}</td>
-                                <td>$${parseFloat(m['Multa_1/4'] || 0).toLocaleString('es-CL')}</td>
-                                <td>$${parseFloat(m.Monto_Pagado || 0).toLocaleString('es-CL')}</td>
-                                // ===== MODIFICADO =====: Se añade la celda 'Saldo' con estilo condicional.
-                                <td style="color:${saldo > 0 ? '#2e7d32' : (saldo < 0 ? 'red' : 'inherit')}; font-weight: ${saldo !== 0 ? 'bold' : 'normal'};">$${saldo.toLocaleString('es-CL')}</td>
-                                <td style="color:#2e7d32; font-weight: ${usoSaldo > 0 ? 'bold' : 'normal'};">$${usoSaldo.toLocaleString('es-CL')}</td>
-                                <td>$${parseFloat(m.Abono_Convenio || 0).toLocaleString('es-CL')}</td>
-                                <td style="${deuda > 0 ? 'color:red; font-weight:bold;' : ''}">$${deuda.toLocaleString('es-CL')}</td>
-                                <td>${m.Estado}</td>
-                            </tr>
-                        `}).join('') || `<tr><td colspan="10" style="text-align:center;">No hay cargos de gastos comunes en el período seleccionado.</td></tr>`}
-                    </tbody>
-                    <tfoot style="font-weight:bold;">
-                        // ===== MODIFICADO =====: Se añade la celda del total para "Saldo".
-                        <tr style="background-color: #f8f9fa; border-top: 2px solid #dee2e6;">
-                            <td style="padding: 0.75rem; text-align:right;" colspan="2">Totales:</td>
-                            <td style="padding: 0.75rem;">$${totalInteres.toLocaleString('es-CL')}</td>
-                            <td style="padding: 0.75rem;">$${totalMulta.toLocaleString('es-CL')}</td>
-                            <td style="padding: 0.75rem;">$${totalPagadoGC.toLocaleString('es-CL')}</td>
-                            <td style="padding: 0.75rem; color:${totalSaldo > 0 ? '#2e7d32' : (totalSaldo < 0 ? 'red' : 'inherit')};">$${totalSaldo.toLocaleString('es-CL')}</td>
-                            <td style="padding: 0.75rem; color:#2e7d32;">$${totalUsoSaldoFavor.toLocaleString('es-CL')}</td>
-                            <td style="padding: 0.75rem;">$${totalAbonoConvenio.toLocaleString('es-CL')}</td>
-                            <td style="padding: 0.75rem; color:red;">$${totalDeudaPendiente.toLocaleString('es-CL')}</td>
-                            <td style="padding: 0.75rem;"></td>
-                        </tr>
-                    </tfoot>
-                </table>
-            </div>`;
-        areaInforme.innerHTML = html;
-        
-        document.getElementById('btnExportar').onclick = () => {
-            const dataToExport = [
-                ["Estado de Cuenta - Parcela", filtros.parcela],
-                ["Nombre Residente", residenteInfo ? residenteInfo[1] : 'N/A'],
-                [],
-                // ===== MODIFICADO =====: Se añade la cabecera "Saldo" al array para exportar.
-                ["Fecha Pago", "Periodo", "Interés", "Multa", "Monto Pagado G.C.", "Saldo", "Uso Saldo a Favor", "Abono Convenio", "Deuda Pendiente", "Estado"],
-                ...movimientosAVisualizar.map(m => [
-                    // ===== MODIFICADO =====: Se añade el dato del saldo al array de la fila.
-                    m.Fecha_Pago ? new Date(m.Fecha_Pago.replace(/-/g,'/')).toLocaleDateString('es-CL', { timeZone: 'UTC' }) : '---',
-                    m.Periodo,
-                    parseFloat(m.Interes || 0),
-                    parseFloat(m['Multa_1/4'] || 0),
-                    parseFloat(m.Monto_Pagado || 0),
-                    parseFloat(m['Saldo_Pendiente_o_a_favor'] || 0),
-                    parseFloat(m.Saldo_Favor_Usado || 0),
-                    parseFloat(m.Abono_Convenio || 0),
-                    parseFloat(m.Deuda_Total || 0),
-                    m.Estado
-                ])];
-            
-            // ===== MODIFICADO =====: Se añade el total del saldo a la fila de totales.
-            dataToExport.push([
-                "", "Totales:", totalInteres, totalMulta, totalPagadoGC, totalSaldo, totalUsoSaldoFavor, totalAbonoConvenio, totalDeudaPendiente, ""
-            ]);
-
-            const ws = XLSX.utils.aoa_to_sheet(dataToExport);
-            const wb = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(wb, ws, `Estado Parcela ${filtros.parcela}`);
-            XLSX.writeFile(wb, `Estado_Parcela_${filtros.parcela}.xlsx`);
-        };
-
-        document.getElementById('btnEnviarCorreo').onclick = async () => {
-            const emailDestino = residenteInfo ? residenteInfo[5] : null;
-            if (!emailDestino) {
-                return mostrarMensaje("El residente no tiene un correo electrónico registrado.", "error");
-            }
-            
-            mostrarSpinner();
-            try {
-                const asunto = `Estado de Cuenta - Parcela ${filtros.parcela}`;
-                // ===== MODIFICADO =====: Se añade 'totalSaldo' a los datos para el correo.
-                const datosParaCorreo = {
-                    nombreResidente: residenteInfo[1],
-                    numeroParcela: filtros.parcela,
-                    fechaInicio: filtros.fechaInicio,
-                    fechaFin: filtros.fechaFin,
-                    deudaGC: deudaTotalGC,
-                    deudaConvenio: deudaTotalConvenio,
-                    saldoFavor: saldoAFavor,
-                    movimientos: movimientosAVisualizar,
-                    totalPagadoGC: totalPagadoGC, 
-                    totalSaldo: totalSaldo,
-                    totalUsoSaldoFavor: totalUsoSaldoFavor,
-                    totalAbonoConvenio: totalAbonoConvenio,
-                    nombreAdmin: "Alex Thiele",
-                    cargoAdmin: "Administrador Condominio Los Molles"
-                };
-                const cuerpoHtml = crearCuerpoCorreoEstadoCuenta(datosParaCorreo);
-                
-                await enviarCorreo(emailDestino, asunto, cuerpoHtml);
-                mostrarMensaje(`Correo enviado con éxito a ${emailDestino}`, 'success');
-
-            } catch (err) {
-                mostrarMensaje("Error al enviar el correo: " + err.message, 'error');
-            } finally {
-                ocultarSpinner();
-            }
-        };
+  // Reemplaza la función existente con esta versión corregida y limpia
+function generarInformeEstadoParcela() {
+    const filtros = getFiltros();
+    if (!filtros.parcela) {
+        areaInforme.innerHTML = `<div class="widget"><p style="color:red;">Por favor, seleccione un número de parcela para generar este informe.</p></div>`;
+        return;
     }
+    
+    const residenteInfo = residentes.find(r => r[3] === filtros.parcela);
+    const todosLosMovimientos = pagosGC_obj.filter(p => p.N_Parcela === filtros.parcela);
+
+    let movimientosAVisualizar = [...todosLosMovimientos];
+    const fechaInicioDate = filtros.fechaInicio ? parseSheetDate(filtros.fechaInicio) : null;
+    const fechaFinDate = filtros.fechaFin ? parseSheetDate(filtros.fechaFin) : null;
+
+    if (fechaInicioDate || fechaFinDate) {
+        movimientosAVisualizar = movimientosAVisualizar.filter(p => {
+            const periodoDate = parsePeriodo(p.Periodo);
+            if (!periodoDate) return false; 
+            const afterStartDate = !fechaInicioDate || periodoDate >= fechaInicioDate;
+            const beforeEndDate = !fechaFinDate || periodoDate <= fechaFinDate;
+            return afterStartDate && beforeEndDate;
+        });
+    }
+
+    const deudaTotalConvenio = parseFloat(residenteInfo ? residenteInfo[12] || 0 : 0);
+    const saldoAFavor = parseFloat(residenteInfo ? residenteInfo[13] || 0 : 0);
+    const deudaTotalGC = todosLosMovimientos.filter(p => p.Estado === 'Moroso').reduce((sum, p) => sum + parseFloat(p.Deuda_Total || 0), 0);
+    
+    const {
+        totalInteres,
+        totalMulta,
+        totalPagadoGC,
+        totalSaldo,
+        totalUsoSaldoFavor,
+        totalAbonoConvenio,
+        totalDeudaPendiente
+    } = movimientosAVisualizar.reduce((acc, m) => {
+        acc.totalInteres += parseFloat(m.Interes || 0);
+        acc.totalMulta += parseFloat(m['Multa_1/4'] || 0);
+        acc.totalPagadoGC += parseFloat(m.Monto_Pagado || 0);
+        acc.totalSaldo += parseFloat(m['Saldo_Pendiente_o_a_favor'] || 0);
+        acc.totalUsoSaldoFavor += parseFloat(m.Saldo_Favor_Usado || 0); 
+        acc.totalAbonoConvenio += parseFloat(m.Abono_Convenio || 0);
+        acc.totalDeudaPendiente += parseFloat(m.Deuda_Total || 0);
+        return acc;
+    }, {
+        totalInteres: 0, totalMulta: 0, totalPagadoGC: 0, totalSaldo: 0,
+        totalUsoSaldoFavor: 0, totalAbonoConvenio: 0, totalDeudaPendiente: 0
+    });
+
+    let html = `
+        <div class="widget">
+            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+                <h3>Estado de Cuenta - Parcela ${filtros.parcela}</h3>
+                <div>
+                    <button class="btn secondary" id="btnExportar">Exportar Excel</button>
+                    <button class="btn" id="btnEnviarCorreo" style="background-color: #28a745; border-color: #28a745;">✉️ Enviar por Correo</button>
+                </div>
+            </div>
+            
+            <h4>Información del Residente</h4>
+            <p><b>Nombre:</b> ${residenteInfo ? residenteInfo[1] : 'N/A'}<br>
+                <b>Email:</b> ${residenteInfo ? residenteInfo[5] : 'N/A'}</p>
+
+            <h4>Resumen General de Deudas y Saldos</h4>
+            <div style="display:flex; gap: 20px; margin-bottom: 20px; flex-wrap:wrap;">
+                <div style="padding:10px; border-radius:5px; background-color:#fff0f1;"><b>Deuda G.C. Total:</b> <span style="color:red; font-weight:bold;">$${deudaTotalGC.toLocaleString('es-CL')}</span></div>
+                <div style="padding:10px; border-radius:5px; background-color:#fff8e1;"><b>Deuda Convenio:</b> <span style="color:#f57f17; font-weight:bold;">$${deudaTotalConvenio.toLocaleString('es-CL')}</span></div>
+                <div style="padding:10px; border-radius:5px; background-color:#e8f5e9;"><b>Saldo a Favor:</b> <span style="color:#2e7d32; font-weight:bold;">$${saldoAFavor.toLocaleString('es-CL')}</span></div>
+            </div>
+
+            <h4>Movimientos en el Período Seleccionado</h4>
+            <table class="table">
+                <thead><tr><th>Fecha Pago</th><th>Período</th><th>Interés</th><th>Multa</th><th>Monto Pagado G.C.</th><th>Saldo</th><th>Uso Saldo a Favor</th><th>Abono Convenio</th><th>Deuda Pendiente</th><th>Estado</th></tr></thead>
+                <tbody>
+                    ${movimientosAVisualizar.map(m => {
+                        const deuda = parseFloat(m.Deuda_Total || 0);
+                        const usoSaldo = parseFloat(m.Saldo_Favor_Usado || 0);
+                        const saldo = parseFloat(m['Saldo_Pendiente_o_a_favor'] || 0);
+                        return `
+                        <tr>
+                            <td>${m.Fecha_Pago ? new Date(m.Fecha_Pago.replace(/-/g,'/')).toLocaleDateString('es-CL', { timeZone: 'UTC' }) : '---'}</td>
+                            <td>${m.Periodo}</td>
+                            <td>$${parseFloat(m.Interes || 0).toLocaleString('es-CL')}</td>
+                            <td>$${parseFloat(m['Multa_1/4'] || 0).toLocaleString('es-CL')}</td>
+                            <td>$${parseFloat(m.Monto_Pagado || 0).toLocaleString('es-CL')}</td>
+                            <td style="color:${saldo > 0 ? '#2e7d32' : (saldo < 0 ? 'red' : 'inherit')}; font-weight: ${saldo !== 0 ? 'bold' : 'normal'};">$${saldo.toLocaleString('es-CL')}</td>
+                            <td style="color:#2e7d32; font-weight: ${usoSaldo > 0 ? 'bold' : 'normal'};">$${usoSaldo.toLocaleString('es-CL')}</td>
+                            <td>$${parseFloat(m.Abono_Convenio || 0).toLocaleString('es-CL')}</td>
+                            <td style="${deuda > 0 ? 'color:red; font-weight:bold;' : ''}">$${deuda.toLocaleString('es-CL')}</td>
+                            <td>${m.Estado}</td>
+                        </tr>
+                    `}).join('') || `<tr><td colspan="10" style="text-align:center;">No hay cargos de gastos comunes en el período seleccionado.</td></tr>`}
+                </tbody>
+                <tfoot style="font-weight:bold;">
+                    <tr style="background-color: #f8f9fa; border-top: 2px solid #dee2e6;">
+                        <td style="padding: 0.75rem; text-align:right;" colspan="2">Totales:</td>
+                        <td style="padding: 0.75rem;">$${totalInteres.toLocaleString('es-CL')}</td>
+                        <td style="padding: 0.75rem;">$${totalMulta.toLocaleString('es-CL')}</td>
+                        <td style="padding: 0.75rem;">$${totalPagadoGC.toLocaleString('es-CL')}</td>
+                        <td style="padding: 0.75rem; color:${totalSaldo > 0 ? '#2e7d32' : (totalSaldo < 0 ? 'red' : 'inherit')};">$${totalSaldo.toLocaleString('es-CL')}</td>
+                        <td style="padding: 0.75rem; color:#2e7d32;">$${totalUsoSaldoFavor.toLocaleString('es-CL')}</td>
+                        <td style="padding: 0.75rem;">$${totalAbonoConvenio.toLocaleString('es-CL')}</td>
+                        <td style="padding: 0.75rem; color:red;">$${totalDeudaPendiente.toLocaleString('es-CL')}</td>
+                        <td style="padding: 0.75rem;"></td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>`;
+    areaInforme.innerHTML = html;
+    
+    document.getElementById('btnExportar').onclick = () => {
+        const dataToExport = [
+            ["Estado de Cuenta - Parcela", filtros.parcela],
+            ["Nombre Residente", residenteInfo ? residenteInfo[1] : 'N/A'],
+            [],
+            ["Fecha Pago", "Periodo", "Interés", "Multa", "Monto Pagado G.C.", "Saldo", "Uso Saldo a Favor", "Abono Convenio", "Deuda Pendiente", "Estado"],
+            ...movimientosAVisualizar.map(m => [
+                m.Fecha_Pago ? new Date(m.Fecha_Pago.replace(/-/g,'/')).toLocaleDateString('es-CL', { timeZone: 'UTC' }) : '---',
+                m.Periodo,
+                parseFloat(m.Interes || 0),
+                parseFloat(m['Multa_1/4'] || 0),
+                parseFloat(m.Monto_Pagado || 0),
+                parseFloat(m['Saldo_Pendiente_o_a_favor'] || 0),
+                parseFloat(m.Saldo_Favor_Usado || 0),
+                parseFloat(m.Abono_Convenio || 0),
+                parseFloat(m.Deuda_Total || 0),
+                m.Estado
+            ])];
+        
+        dataToExport.push([
+            "", "Totales:", totalInteres, totalMulta, totalPagadoGC, totalSaldo, totalUsoSaldoFavor, totalAbonoConvenio, totalDeudaPendiente, ""
+        ]);
+
+        const ws = XLSX.utils.aoa_to_sheet(dataToExport);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, `Estado Parcela ${filtros.parcela}`);
+        XLSX.writeFile(wb, `Estado_Parcela_${filtros.parcela}.xlsx`);
+    };
+
+    document.getElementById('btnEnviarCorreo').onclick = async () => {
+        const emailDestino = residenteInfo ? residenteInfo[5] : null;
+        if (!emailDestino) {
+            return mostrarMensaje("El residente no tiene un correo electrónico registrado.", "error");
+        }
+        
+        mostrarSpinner();
+        try {
+            const asunto = `Estado de Cuenta - Parcela ${filtros.parcela}`;
+            const datosParaCorreo = {
+                nombreResidente: residenteInfo[1],
+                numeroParcela: filtros.parcela,
+                fechaInicio: filtros.fechaInicio,
+                fechaFin: filtros.fechaFin,
+                deudaGC: deudaTotalGC,
+                deudaConvenio: deudaTotalConvenio,
+                saldoFavor: saldoAFavor,
+                movimientos: movimientosAVisualizar,
+                totalPagadoGC: totalPagadoGC, 
+                totalSaldo: totalSaldo,
+                totalUsoSaldoFavor: totalUsoSaldoFavor,
+                totalAbonoConvenio: totalAbonoConvenio,
+                nombreAdmin: "Alex Thiele",
+                cargoAdmin: "Administrador Condominio Los Molles"
+            };
+            const cuerpoHtml = crearCuerpoCorreoEstadoCuenta(datosParaCorreo);
+            
+            await enviarCorreo(emailDestino, asunto, cuerpoHtml);
+            mostrarMensaje(`Correo enviado con éxito a ${emailDestino}`, 'success');
+
+        } catch (err) {
+            mostrarMensaje("Error al enviar el correo: " + err.message, 'error');
+        } finally {
+            ocultarSpinner();
+        }
+    };
+}
 
     function generarInformeHistorialPagos() {
         const filtros = getFiltros();
