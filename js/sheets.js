@@ -1,7 +1,7 @@
 // js/sheets.js
 
 // ID de tu Hoja de Cálculo
-const SPREADSHEET_ID = '1bFo5dBC3HM0xupginTBe-hrrUNgkiuUn4fkXXzHide8';
+const SPREADSHEET_ID = '1qm7npPooqfgYcN_MWgjCAx-7LF1fjxPiDlErpeYg1qk';
 
 // ID de tu Script
 const SCRIPT_ID = '1p-yBZc1yvgzpnZiYispSjB9MqCUwpiB2s2-MC1lydJ2rneFl_iDi0ttr';
