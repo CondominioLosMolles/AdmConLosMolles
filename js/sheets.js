@@ -1,10 +1,10 @@
 // js/sheets.js
 
 // ID de tu Hoja de Cálculo
-const SPREADSHEET_ID = '1qm7npPooqfgYcN_MWgjCAx-7LF1fjxPiDlErpeYg1qk';
+const SPREADSHEET_ID = '1LwA_L8nfAh8TNhyb4xHjiAXetvik_eqxY6HX9jMNU0Y';
 
 // ID de tu Script
-const SCRIPT_ID = '1p-yBZc1yvgzpnZiYispSjB9MqCUwpiB2s2-MC1lydJ2rneFl_iDi0ttr';
+const SCRIPT_ID = 'AKfycbzngLvhmMwTLjv4xRbeaqeF1Chl1PD01cCJQ_-xA9_985n8ExnyuN-lwxLGpfzHeD-m';
 
 
 // --- Nombres de las Hojas ---
