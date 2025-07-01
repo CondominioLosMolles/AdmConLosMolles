@@ -79,15 +79,21 @@ async function cargarInformes() {
     config = configData || {};
     
     // Convertir pagos a un formato de objeto más manejable
+    // NOTA IMPORTANTE: Asegúrate que este array coincida con las columnas de tu Google Sheet.
     const ENCABEZADOS_PAGOS = [
         'ID_Pago', 'Nombre_Residente', 'N_Parcela', 'Valor_Gasto_Comun', 'Periodo',
         'Fecha_Vencimiento', 'Monto_Pagado', 'Saldo_Pendiente_o_a_favor', 'Interes', 'TIMC',
         'Multa_1/4', 'Meses_Inpagos', 'Deuda_Total', 'Fecha_Pago', 'Metodo_Pago', 'Estado',
-        'ID_Comprobante_Drive', 'Abono_Convenio', 'Comprobante_Enviado'
+        'ID_Comprobante_Drive', 'Abono_Convenio', 'Comprobante_Enviado',
+        'Columna_T_Placeholder', 'Columna_U_Placeholder', 'Saldo_Favor_Usado' // Se asume que Saldo_Favor_Usado está en la columna V
     ];
     pagosGC_obj = (pagosData || []).map(fila => {
         let obj = {};
-        ENCABEZADOS_PAGOS.forEach((encabezado, i) => { obj[encabezado] = fila[i]; });
+        ENCABEZADOS_PAGOS.forEach((encabezado, i) => {
+            if (fila[i] !== undefined) {
+                obj[encabezado] = fila[i];
+            }
+        });
         return obj;
     });
 
@@ -305,7 +311,6 @@ async function cargarInformes() {
     const residenteInfo = residentes.find(r => r[3] === filtros.parcela);
     const todosLosMovimientos = pagosGC_obj.filter(p => p.N_Parcela === filtros.parcela);
 
-    // 1. Movimientos a visualizar: Se filtra por el campo 'Periodo' (ej: "Enero 2025")
     let movimientosAVisualizar = [...todosLosMovimientos];
     const fechaInicioDate = filtros.fechaInicio ? parseSheetDate(filtros.fechaInicio) : null;
     const fechaFinDate = filtros.fechaFin ? parseSheetDate(filtros.fechaFin) : null;
@@ -313,68 +318,38 @@ async function cargarInformes() {
     if (fechaInicioDate || fechaFinDate) {
         movimientosAVisualizar = movimientosAVisualizar.filter(p => {
             const periodoDate = parsePeriodo(p.Periodo);
-            if (!periodoDate) {
-                return false; 
-            }
-            
+            if (!periodoDate) return false; 
             const afterStartDate = !fechaInicioDate || periodoDate >= fechaInicioDate;
             const beforeEndDate = !fechaFinDate || periodoDate <= fechaFinDate;
-            
             return afterStartDate && beforeEndDate;
         });
     }
 
-    // 2. Deuda total y saldos: Se calculan sobre todos los datos del residente.
     const deudaTotalConvenio = parseFloat(residenteInfo ? residenteInfo[12] || 0 : 0);
     const saldoAFavor = parseFloat(residenteInfo ? residenteInfo[13] || 0 : 0);
     const deudaTotalGC = todosLosMovimientos.filter(p => p.Estado === 'Moroso').reduce((sum, p) => sum + parseFloat(p.Deuda_Total || 0), 0);
     
     // ================= INICIO DE CAMBIOS =================
-    // 3. Pre-procesar movimientos para calcular el "Uso Saldo a Favor" y preparar para la visualización.
-    const movimientosConSaldo = movimientosAVisualizar.map(m => {
-        const valorGC = parseFloat(m.Valor_Gasto_Comun || 0);
-        const interes = parseFloat(m.Interes || 0);
-        const multa = parseFloat(m['Multa_1/4'] || 0);
-        const montoPagado = parseFloat(m.Monto_Pagado || 0);
-        
-        // Total que se debía pagar por el Gasto Común de ese período (capital + interés + multa)
-        const totalPeriodoAdeudado = valorGC + interes + multa;
-        
-        let usoSaldoFavor = 0;
-        // Si la fila está 'Pagado' y el monto pagado es menor a lo que se debía, la diferencia es el uso del saldo.
-        if (m.Estado === 'Pagado' && montoPagado < totalPeriodoAdeudado) {
-            usoSaldoFavor = totalPeriodoAdeudado - montoPagado;
-        }
-
-        return {
-            ...m, // Copia todas las propiedades originales del movimiento
-            Uso_Saldo_Favor: Math.max(0, usoSaldoFavor) // Agrega la nueva propiedad calculada
-        };
-    });
-
-    // 4. Calcular los totales para el pie de página a partir de los movimientos procesados.
+    // Calcular totales directamente desde los movimientos a visualizar
     const {
         totalInteres,
         totalMulta,
         totalPagadoGC,
-        totalUsoSaldoFavor, // Nuevo total
+        totalUsoSaldoFavor, // Se lee directamente
         totalAbonoConvenio,
         totalDeudaPendiente
-    } = movimientosConSaldo.reduce((acc, m) => {
+    } = movimientosAVisualizar.reduce((acc, m) => {
         acc.totalInteres += parseFloat(m.Interes || 0);
         acc.totalMulta += parseFloat(m['Multa_1/4'] || 0);
         acc.totalPagadoGC += parseFloat(m.Monto_Pagado || 0);
-        acc.totalUsoSaldoFavor += m.Uso_Saldo_Favor; // Sumar el nuevo campo
+        // Lógica corregida: Leer el valor directamente de la propiedad 'Saldo_Favor_Usado'
+        acc.totalUsoSaldoFavor += parseFloat(m.Saldo_Favor_Usado || 0); 
         acc.totalAbonoConvenio += parseFloat(m.Abono_Convenio || 0);
         acc.totalDeudaPendiente += parseFloat(m.Deuda_Total || 0);
         return acc;
     }, {
-        totalInteres: 0,
-        totalMulta: 0,
-        totalPagadoGC: 0,
-        totalUsoSaldoFavor: 0, // Nuevo
-        totalAbonoConvenio: 0,
-        totalDeudaPendiente: 0
+        totalInteres: 0, totalMulta: 0, totalPagadoGC: 0,
+        totalUsoSaldoFavor: 0, totalAbonoConvenio: 0, totalDeudaPendiente: 0
     });
     // ================= FIN DE CAMBIOS =================
 
@@ -401,11 +376,11 @@ async function cargarInformes() {
 
             <h4>Movimientos en el Período Seleccionado</h4>
             <table class="table">
-                {/* Se agrega la nueva columna en el encabezado */}
                 <thead><tr><th>Fecha Pago</th><th>Período</th><th>Interés</th><th>Multa</th><th>Monto Pagado G.C.</th><th>Uso Saldo a Favor</th><th>Abono Convenio</th><th>Deuda Pendiente</th><th>Estado</th></tr></thead>
                 <tbody>
-                    ${movimientosConSaldo.map(m => { // Se itera sobre el nuevo array 'movimientosConSaldo'
+                    ${movimientosAVisualizar.map(m => {
                         const deuda = parseFloat(m.Deuda_Total || 0);
+                        const usoSaldo = parseFloat(m.Saldo_Favor_Usado || 0); // Lógica corregida
                         return `
                         <tr>
                             <td>${m.Fecha_Pago ? new Date(m.Fecha_Pago.replace(/-/g,'/')).toLocaleDateString('es-CL', { timeZone: 'UTC' }) : '---'}</td>
@@ -413,8 +388,7 @@ async function cargarInformes() {
                             <td>$${parseFloat(m.Interes || 0).toLocaleString('es-CL')}</td>
                             <td>$${parseFloat(m['Multa_1/4'] || 0).toLocaleString('es-CL')}</td>
                             <td>$${parseFloat(m.Monto_Pagado || 0).toLocaleString('es-CL')}</td>
-                            {/* Se agrega la nueva celda con el valor calculado */}
-                            <td style="color:#2e7d32;">$${m.Uso_Saldo_Favor.toLocaleString('es-CL')}</td>
+                            <td style="color:#2e7d32; font-weight: ${usoSaldo > 0 ? 'bold' : 'normal'};">$${usoSaldo.toLocaleString('es-CL')}</td>
                             <td>$${parseFloat(m.Abono_Convenio || 0).toLocaleString('es-CL')}</td>
                             <td style="${deuda > 0 ? 'color:red; font-weight:bold;' : ''}">$${deuda.toLocaleString('es-CL')}</td>
                             <td>${m.Estado}</td>
@@ -427,7 +401,6 @@ async function cargarInformes() {
                         <td style="padding: 0.75rem;">$${totalInteres.toLocaleString('es-CL')}</td>
                         <td style="padding: 0.75rem;">$${totalMulta.toLocaleString('es-CL')}</td>
                         <td style="padding: 0.75rem;">$${totalPagadoGC.toLocaleString('es-CL')}</td>
-                        {/* Se agrega la celda para el total del saldo a favor utilizado */}
                         <td style="padding: 0.75rem; color:#2e7d32;">$${totalUsoSaldoFavor.toLocaleString('es-CL')}</td>
                         <td style="padding: 0.75rem;">$${totalAbonoConvenio.toLocaleString('es-CL')}</td>
                         <td style="padding: 0.75rem; color:red;">$${totalDeudaPendiente.toLocaleString('es-CL')}</td>
@@ -439,26 +412,25 @@ async function cargarInformes() {
     areaInforme.innerHTML = html;
     
     document.getElementById('btnExportar').onclick = () => {
-        // Se actualiza la exportación a Excel
         const dataToExport = [
             ["Estado de Cuenta - Parcela", filtros.parcela],
             ["Nombre Residente", residenteInfo ? residenteInfo[1] : 'N/A'],
             [],
             ["Fecha Pago", "Periodo", "Interés", "Multa", "Monto Pagado G.C.", "Uso Saldo a Favor", "Abono Convenio", "Deuda Pendiente", "Estado"],
-            ...movimientosConSaldo.map(m => [ // Se usa 'movimientosConSaldo'
+            ...movimientosAVisualizar.map(m => [
                 m.Fecha_Pago ? new Date(m.Fecha_Pago.replace(/-/g,'/')).toLocaleDateString('es-CL', { timeZone: 'UTC' }) : '---',
                 m.Periodo,
                 parseFloat(m.Interes || 0),
                 parseFloat(m['Multa_1/4'] || 0),
                 parseFloat(m.Monto_Pagado || 0),
-                m.Uso_Saldo_Favor, // Se añade el dato
+                parseFloat(m.Saldo_Favor_Usado || 0), // Lógica corregida
                 parseFloat(m.Abono_Convenio || 0),
                 parseFloat(m.Deuda_Total || 0),
                 m.Estado
             ])];
         
         dataToExport.push([
-            "", "Totales:", totalInteres, totalMulta, totalPagadoGC, totalUsoSaldoFavor, totalAbonoConvenio, totalDeudaPendiente, "" // Se añade el total
+            "", "Totales:", totalInteres, totalMulta, totalPagadoGC, totalUsoSaldoFavor, totalAbonoConvenio, totalDeudaPendiente, ""
         ]);
 
         const ws = XLSX.utils.aoa_to_sheet(dataToExport);
@@ -476,7 +448,6 @@ async function cargarInformes() {
         mostrarSpinner();
         try {
             const asunto = `Estado de Cuenta - Parcela ${filtros.parcela}`;
-            // Se actualizan los datos para el correo
             const datosParaCorreo = {
                 nombreResidente: residenteInfo[1],
                 numeroParcela: filtros.parcela,
@@ -485,9 +456,9 @@ async function cargarInformes() {
                 deudaGC: deudaTotalGC,
                 deudaConvenio: deudaTotalConvenio,
                 saldoFavor: saldoAFavor,
-                movimientos: movimientosConSaldo, // Se envía el array procesado
+                movimientos: movimientosAVisualizar, // Pasa el array original
                 totalPagadoGC: totalPagadoGC, 
-                totalUsoSaldoFavor: totalUsoSaldoFavor, // Se envía el nuevo total
+                totalUsoSaldoFavor: totalUsoSaldoFavor,
                 totalAbonoConvenio: totalAbonoConvenio,
                 nombreAdmin: "Alex Thiele",
                 cargoAdmin: "Administrador Condominio Los Molles"
@@ -733,7 +704,6 @@ async function cargarInformes() {
       };
   }
 
-  // ============== FUNCIÓN DE CORREO ACTUALIZADA ==============
   function crearCuerpoCorreoEstadoCuenta(datos) {
     const { 
         nombreResidente, numeroParcela, fechaInicio, fechaFin, 
@@ -753,8 +723,7 @@ async function cargarInformes() {
                 <td style="padding: 10px; text-align: right;">$${parseFloat(m.Interes || 0).toLocaleString('es-CL')}</td>
                 <td style="padding: 10px; text-align: right;">$${parseFloat(m['Multa_1/4'] || 0).toLocaleString('es-CL')}</td>
                 <td style="padding: 10px; text-align: right;">$${parseFloat(m.Monto_Pagado || 0).toLocaleString('es-CL')}</td>
-                {/* Nueva celda para el correo */}
-                <td style="padding: 10px; text-align: right; color: #2e7d32;">$${(m.Uso_Saldo_Favor || 0).toLocaleString('es-CL')}</td>
+                <td style="padding: 10px; text-align: right; color: #2e7d32;">$${parseFloat(m.Saldo_Favor_Usado || 0).toLocaleString('es-CL')}</td>
                 <td style="padding: 10px; text-align: right;">$${parseFloat(m.Abono_Convenio || 0).toLocaleString('es-CL')}</td>
                 <td style="padding: 10px;">${m.Estado}</td>
             </tr>
@@ -798,7 +767,6 @@ async function cargarInformes() {
                         <th style="padding: 10px; text-align: right;">Interés</th>
                         <th style="padding: 10px; text-align: right;">Multa</th>
                         <th style="padding: 10px; text-align: right;">Pago G.C.</th>
-                        {/* Nuevo encabezado en correo */}
                         <th style="padding: 10px; text-align: right;">Uso Saldo</th>
                         <th style="padding: 10px; text-align: right;">Abono Convenio</th>
                         <th style="padding: 10px;">Estado</th>
@@ -809,7 +777,6 @@ async function cargarInformes() {
                 </tbody>
                 <tfoot>
                     <tr style="background-color: #f4f4f4; font-weight: bold;">
-                        {/* Se ajusta el colspan y se añaden los totales */}
                         <td colspan="4" style="padding: 12px; text-align: right;">Totales Pagados en el Período:</td>
                         <td style="padding: 12px; text-align: right;">$${totalPagadoGC.toLocaleString('es-CL')}</td>
                         <td style="padding: 12px; text-align: right; color:#2e7d32;">$${totalUsoSaldoFavor.toLocaleString('es-CL')}</td>
