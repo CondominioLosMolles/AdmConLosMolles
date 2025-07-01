@@ -709,106 +709,103 @@ function generarInformeEstadoParcela() {
         };
     }
 
-    function crearCuerpoCorreoEstadoCuenta(datos) {
-        // ===== MODIFICADO =====: Se extrae 'totalSaldo' de los datos.
-        const { 
-            nombreResidente, numeroParcela, fechaInicio, fechaFin, 
-            deudaGC, deudaConvenio, saldoFavor, movimientos, totalPagadoGC, totalSaldo, totalUsoSaldoFavor, totalAbonoConvenio,
-            nombreAdmin, cargoAdmin
-        } = datos;
+    // Reemplaza la función existente con esta versión corregida y limpia
+function crearCuerpoCorreoEstadoCuenta(datos) {
+    const { 
+        nombreResidente, numeroParcela, fechaInicio, fechaFin, 
+        deudaGC, deudaConvenio, saldoFavor, movimientos, totalPagadoGC, totalSaldo, totalUsoSaldoFavor, totalAbonoConvenio,
+        nombreAdmin, cargoAdmin
+    } = datos;
 
-        const periodoStr = (fechaInicio && fechaFin) 
-            ? `para el período del <b>${new Date(fechaInicio.replace(/-/g,'/')).toLocaleDateString('es-CL', { timeZone: 'UTC' })}</b> al <b>${new Date(fechaFin.replace(/-/g,'/')).toLocaleDateString('es-CL', { timeZone: 'UTC' })}</b>`
-            : 'a la fecha';
+    const periodoStr = (fechaInicio && fechaFin) 
+        ? `para el período del <b>${new Date(fechaInicio.replace(/-/g,'/')).toLocaleDateString('es-CL', { timeZone: 'UTC' })}</b> al <b>${new Date(fechaFin.replace(/-/g,'/')).toLocaleDateString('es-CL', { timeZone: 'UTC' })}</b>`
+        : 'a la fecha';
 
-        const movimientosHtml = movimientos.length > 0 
-            ? movimientos.map(m => `
-                <tr style="border-bottom: 1px solid #ddd;">
-                    <td style="padding: 10px;">${m.Fecha_Pago ? new Date(m.Fecha_Pago.replace(/-/g,'/')).toLocaleDateString('es-CL', { timeZone: 'UTC' }) : '---'}</td>
-                    <td style="padding: 10px;">${m.Periodo}</td>
-                    <td style="padding: 10px; text-align: right;">$${parseFloat(m.Interes || 0).toLocaleString('es-CL')}</td>
-                    <td style="padding: 10px; text-align: right;">$${parseFloat(m['Multa_1/4'] || 0).toLocaleString('es-CL')}</td>
-                    <td style="padding: 10px; text-align: right;">$${parseFloat(m.Monto_Pagado || 0).toLocaleString('es-CL')}</td>
-                    // ===== MODIFICADO =====: Se añade la celda 'Saldo' al cuerpo del correo.
-                    <td style="padding: 10px; text-align: right;">$${parseFloat(m['Saldo_Pendiente_o_a_favor'] || 0).toLocaleString('es-CL')}</td>
-                    <td style="padding: 10px; text-align: right; color: #2e7d32;">$${parseFloat(m.Saldo_Favor_Usado || 0).toLocaleString('es-CL')}</td>
-                    <td style="padding: 10px; text-align: right;">$${parseFloat(m.Abono_Convenio || 0).toLocaleString('es-CL')}</td>
-                    <td style="padding: 10px;">${m.Estado}</td>
-                </tr>
-            `).join('')
-            : '<tr><td colspan="9" style="padding: 20px; text-align: center; color: #777;">No se registraron movimientos en el período seleccionado.</td></tr>';
+    const movimientosHtml = movimientos.length > 0 
+        ? movimientos.map(m => `
+            <tr style="border-bottom: 1px solid #ddd;">
+                <td style="padding: 10px;">${m.Fecha_Pago ? new Date(m.Fecha_Pago.replace(/-/g,'/')).toLocaleDateString('es-CL', { timeZone: 'UTC' }) : '---'}</td>
+                <td style="padding: 10px;">${m.Periodo}</td>
+                <td style="padding: 10px; text-align: right;">$${parseFloat(m.Interes || 0).toLocaleString('es-CL')}</td>
+                <td style="padding: 10px; text-align: right;">$${parseFloat(m['Multa_1/4'] || 0).toLocaleString('es-CL')}</td>
+                <td style="padding: 10px; text-align: right;">$${parseFloat(m.Monto_Pagado || 0).toLocaleString('es-CL')}</td>
+                <td style="padding: 10px; text-align: right;">$${parseFloat(m['Saldo_Pendiente_o_a_favor'] || 0).toLocaleString('es-CL')}</td>
+                <td style="padding: 10px; text-align: right; color: #2e7d32;">$${parseFloat(m.Saldo_Favor_Usado || 0).toLocaleString('es-CL')}</td>
+                <td style="padding: 10px; text-align: right;">$${parseFloat(m.Abono_Convenio || 0).toLocaleString('es-CL')}</td>
+                <td style="padding: 10px;">${m.Estado}</td>
+            </tr>
+        `).join('')
+        : '<tr><td colspan="9" style="padding: 20px; text-align: center; color: #777;">No se registraron movimientos en el período seleccionado.</td></tr>';
 
-        return `
-            <div style="font-family: Arial, sans-serif; color: #333; max-width: 800px; margin: auto; border: 1px solid #eee; border-radius: 10px; overflow: hidden;">
-                <div style="background-color: #004a7f; color: white; padding: 20px; text-align: center;">
-                    <h1 style="margin: 0; font-size: 24px;">Estado de Cuenta</h1>
-                    <p style="margin: 5px 0 0;">Condominio Los Molles</p>
-                </div>
-                <div style="padding: 25px;">
-                    <p>Estimado(a) <b>${nombreResidente}</b>,</p>
-                    <p>A continuación, le presentamos su estado de cuenta detallado para la <b>Parcela ${numeroParcela}</b>, ${periodoStr}.</p>
-                    
-                    <h3 style="border-bottom: 2px solid #004a7f; padding-bottom: 5px; margin-top: 30px; font-size: 18px;">Resumen de Saldos</h3>
-                    <table style="width: 100%; margin-top: 15px; border-spacing: 10px; text-align: center;">
-                        <tr>
-                            <td style="background-color: #fbe9e7; padding: 15px; border-radius: 8px;">
-                                <span style="font-size: 14px; color: #555;">Deuda Gasto Común Total</span><br>
-                                <span style="font-size: 22px; font-weight: bold; color: #d32f2f;">$${deudaGC.toLocaleString('es-CL')}</span>
-                            </td>
-                            <td style="background-color: #fff3e0; padding: 15px; border-radius: 8px;">
-                                <span style="font-size: 14px; color: #555;">Deuda Convenio de Pago</span><br>
-                                <span style="font-size: 22px; font-weight: bold; color: #f57c00;">$${deudaConvenio.toLocaleString('es-CL')}</span>
-                            </td>
-                            <td style="background-color: #e8f5e9; padding: 15px; border-radius: 8px;">
-                                <span style="font-size: 14px; color: #555;">Saldo a Favor</span><br>
-                                <span style="font-size: 22px; font-weight: bold; color: #2e7d32;">$${saldoFavor.toLocaleString('es-CL')}</span>
-                            </td>
-                        </tr>
-                    </table>
-
-                    <h3 style="border-bottom: 2px solid #004a7f; padding-bottom: 5px; margin-top: 30px; font-size: 18px;">Detalle de Movimientos del Período</h3>
-                    <table style="width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 14px;">
-                        <thead>
-                             // ===== MODIFICADO =====: Se añade la cabecera "Saldo" al correo.
-                            <tr style="background-color: #f4f4f4; text-align: left;">
-                                <th style="padding: 10px;">Fecha Pago</th>
-                                <th style="padding: 10px;">Período</th>
-                                <th style="padding: 10px; text-align: right;">Interés</th>
-                                <th style="padding: 10px; text-align: right;">Multa</th>
-                                <th style="padding: 10px; text-align: right;">Pago G.C.</th>
-                                <th style="padding: 10px; text-align: right;">Saldo</th>
-                                <th style="padding: 10px; text-align: right;">Uso Saldo</th>
-                                <th style="padding: 10px; text-align: right;">Abono Convenio</th>
-                                <th style="padding: 10px;">Estado</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            ${movimientosHtml}
-                        </tbody>
-                        <tfoot>
-                            // ===== MODIFICADO =====: Se añade el total de "Saldo" al pie de página del correo.
-                            <tr style="background-color: #f4f4f4; font-weight: bold;">
-                                <td colspan="4" style="padding: 12px; text-align: right;">Totales del Período:</td>
-                                <td style="padding: 12px; text-align: right;">$${totalPagadoGC.toLocaleString('es-CL')}</td>
-                                <td style="padding: 12px; text-align: right;">$${totalSaldo.toLocaleString('es-CL')}</td>
-                                <td style="padding: 12px; text-align: right; color:#2e7d32;">$${totalUsoSaldoFavor.toLocaleString('es-CL')}</td>
-                                <td style="padding: 12px; text-align: right;">$${totalAbonoConvenio.toLocaleString('es-CL')}</td>
-                                <td style="padding: 12px;"></td>
-                            </tr>
-                        </tfoot>
-                    </table>
-
-                    <p style="margin-top: 30px; font-size: 14px; color: #555;">Si tiene alguna consulta sobre este estado de cuenta, no dude en ponerse en contacto con la administración.</p>
-                    <p style="margin-top: 20px;">Atentamente,</p>
-                    <p style="font-weight: bold; margin: 0;">${nombreAdmin}</p>
-                    <p style="margin: 0; color: #777;">${cargoAdmin}</p>
-                </div>
-                <div style="background-color: #f4f4f4; text-align: center; padding: 15px; font-size: 12px; color: #777;">
-                    Este es un correo electrónico generado automáticamente. 
-                </div>
+    return `
+        <div style="font-family: Arial, sans-serif; color: #333; max-width: 800px; margin: auto; border: 1px solid #eee; border-radius: 10px; overflow: hidden;">
+            <div style="background-color: #004a7f; color: white; padding: 20px; text-align: center;">
+                <h1 style="margin: 0; font-size: 24px;">Estado de Cuenta</h1>
+                <p style="margin: 5px 0 0;">Condominio Los Molles</p>
             </div>
-        `;
-    }
+            <div style="padding: 25px;">
+                <p>Estimado(a) <b>${nombreResidente}</b>,</p>
+                <p>A continuación, le presentamos su estado de cuenta detallado para la <b>Parcela ${numeroParcela}</b>, ${periodoStr}.</p>
+                
+                <h3 style="border-bottom: 2px solid #004a7f; padding-bottom: 5px; margin-top: 30px; font-size: 18px;">Resumen de Saldos</h3>
+                <table style="width: 100%; margin-top: 15px; border-spacing: 10px; text-align: center;">
+                    <tr>
+                        <td style="background-color: #fbe9e7; padding: 15px; border-radius: 8px;">
+                            <span style="font-size: 14px; color: #555;">Deuda Gasto Común Total</span><br>
+                            <span style="font-size: 22px; font-weight: bold; color: #d32f2f;">$${deudaGC.toLocaleString('es-CL')}</span>
+                        </td>
+                        <td style="background-color: #fff3e0; padding: 15px; border-radius: 8px;">
+                            <span style="font-size: 14px; color: #555;">Deuda Convenio de Pago</span><br>
+                            <span style="font-size: 22px; font-weight: bold; color: #f57c00;">$${deudaConvenio.toLocaleString('es-CL')}</span>
+                        </td>
+                        <td style="background-color: #e8f5e9; padding: 15px; border-radius: 8px;">
+                            <span style="font-size: 14px; color: #555;">Saldo a Favor</span><br>
+                            <span style="font-size: 22px; font-weight: bold; color: #2e7d32;">$${saldoFavor.toLocaleString('es-CL')}</span>
+                        </td>
+                    </tr>
+                </table>
+
+                <h3 style="border-bottom: 2px solid #004a7f; padding-bottom: 5px; margin-top: 30px; font-size: 18px;">Detalle de Movimientos del Período</h3>
+                <table style="width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 14px;">
+                    <thead>
+                        <tr style="background-color: #f4f4f4; text-align: left;">
+                            <th style="padding: 10px;">Fecha Pago</th>
+                            <th style="padding: 10px;">Período</th>
+                            <th style="padding: 10px; text-align: right;">Interés</th>
+                            <th style="padding: 10px; text-align: right;">Multa</th>
+                            <th style="padding: 10px; text-align: right;">Pago G.C.</th>
+                            <th style="padding: 10px; text-align: right;">Saldo</th>
+                            <th style="padding: 10px; text-align: right;">Uso Saldo</th>
+                            <th style="padding: 10px; text-align: right;">Abono Convenio</th>
+                            <th style="padding: 10px;">Estado</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${movimientosHtml}
+                    </tbody>
+                    <tfoot>
+                        <tr style="background-color: #f4f4f4; font-weight: bold;">
+                            <td colspan="4" style="padding: 12px; text-align: right;">Totales del Período:</td>
+                            <td style="padding: 12px; text-align: right;">$${totalPagadoGC.toLocaleString('es-CL')}</td>
+                            <td style="padding: 12px; text-align: right;">$${totalSaldo.toLocaleString('es-CL')}</td>
+                            <td style="padding: 12px; text-align: right; color:#2e7d32;">$${totalUsoSaldoFavor.toLocaleString('es-CL')}</td>
+                            <td style="padding: 12px; text-align: right;">$${totalAbonoConvenio.toLocaleString('es-CL')}</td>
+                            <td style="padding: 12px;"></td>
+                        </tr>
+                    </tfoot>
+                </table>
+
+                <p style="margin-top: 30px; font-size: 14px; color: #555;">Si tiene alguna consulta sobre este estado de cuenta, no dude en ponerse en contacto con la administración.</p>
+                <p style="margin-top: 20px;">Atentamente,</p>
+                <p style="font-weight: bold; margin: 0;">${nombreAdmin}</p>
+                <p style="margin: 0; color: #777;">${cargoAdmin}</p>
+            </div>
+            <div style="background-color: #f4f4f4; text-align: center; padding: 15px; font-size: 12px; color: #777;">
+                Este es un correo electrónico generado automáticamente. 
+            </div>
+        </div>
+    `;
+}
     
     ocultarSpinner();
 }
