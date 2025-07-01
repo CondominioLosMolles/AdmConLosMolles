@@ -78,14 +78,20 @@ async function cargarInformes() {
     egresos = egresosData || [];
     config = configData || {};
     
-    // Convertir pagos a un formato de objeto más manejable
-    // NOTA IMPORTANTE: Asegúrate que este array coincida con las columnas de tu Google Sheet.
+    // =================================================================================
+    // ¡IMPORTANTE! Revisa la sección "Guía de Verificación" al final de esta respuesta.
+    // El éxito de la solución depende de que este array sea un reflejo exacto
+    // de las columnas en tu hoja de cálculo "Pagos_GC".
+    // =================================================================================
     const ENCABEZADOS_PAGOS = [
-        'ID_Pago', 'Nombre_Residente', 'N_Parcela', 'Valor_Gasto_Comun', 'Periodo',
-        'Fecha_Vencimiento', 'Monto_Pagado', 'Saldo_Pendiente_o_a_favor', 'Interes', 'TIMC',
-        'Multa_1/4', 'Meses_Inpagos', 'Deuda_Total', 'Fecha_Pago', 'Metodo_Pago', 'Estado',
-        'ID_Comprobante_Drive', 'Abono_Convenio', 'Comprobante_Enviado',
-        'Columna_T_Placeholder', 'Columna_U_Placeholder', 'Saldo_Favor_Usado' // Se asume que Saldo_Favor_Usado está en la columna V
+        /*A*/ 'ID_Pago',            /*B*/ 'Nombre_Residente',   /*C*/ 'N_Parcela', 
+        /*D*/ 'Valor_Gasto_Comun',  /*E*/ 'Periodo',            /*F*/ 'Fecha_Vencimiento', 
+        /*G*/ 'Monto_Pagado',       /*H*/ 'Saldo_Pendiente_o_a_favor', /*I*/ 'Interes', 
+        /*J*/ 'TIMC',               /*K*/ 'Multa_1/4',          /*L*/ 'Meses_Inpagos', 
+        /*M*/ 'Deuda_Total',        /*N*/ 'Fecha_Pago',         /*O*/ 'Metodo_Pago', 
+        /*P*/ 'Estado',             /*Q*/ 'ID_Comprobante_Drive',/*R*/ 'Abono_Convenio', 
+        /*S*/ 'Comprobante_Enviado',/*T*/ 'Placeholder_T',      /*U*/ 'Placeholder_U',
+        /*V*/ 'Saldo_Favor_Usado'
     ];
     pagosGC_obj = (pagosData || []).map(fila => {
         let obj = {};
@@ -96,6 +102,9 @@ async function cargarInformes() {
         });
         return obj;
     });
+
+    // Para depuración: Descomenta la siguiente línea para ver el primer objeto en la consola del navegador.
+    // console.log("Primer objeto de pago procesado:", pagosGC_obj[0]);
 
   } catch (e) {
     ocultarSpinner();
@@ -329,20 +338,17 @@ async function cargarInformes() {
     const saldoAFavor = parseFloat(residenteInfo ? residenteInfo[13] || 0 : 0);
     const deudaTotalGC = todosLosMovimientos.filter(p => p.Estado === 'Moroso').reduce((sum, p) => sum + parseFloat(p.Deuda_Total || 0), 0);
     
-    // ================= INICIO DE CAMBIOS =================
-    // Calcular totales directamente desde los movimientos a visualizar
     const {
         totalInteres,
         totalMulta,
         totalPagadoGC,
-        totalUsoSaldoFavor, // Se lee directamente
+        totalUsoSaldoFavor,
         totalAbonoConvenio,
         totalDeudaPendiente
     } = movimientosAVisualizar.reduce((acc, m) => {
         acc.totalInteres += parseFloat(m.Interes || 0);
         acc.totalMulta += parseFloat(m['Multa_1/4'] || 0);
         acc.totalPagadoGC += parseFloat(m.Monto_Pagado || 0);
-        // Lógica corregida: Leer el valor directamente de la propiedad 'Saldo_Favor_Usado'
         acc.totalUsoSaldoFavor += parseFloat(m.Saldo_Favor_Usado || 0); 
         acc.totalAbonoConvenio += parseFloat(m.Abono_Convenio || 0);
         acc.totalDeudaPendiente += parseFloat(m.Deuda_Total || 0);
@@ -351,7 +357,6 @@ async function cargarInformes() {
         totalInteres: 0, totalMulta: 0, totalPagadoGC: 0,
         totalUsoSaldoFavor: 0, totalAbonoConvenio: 0, totalDeudaPendiente: 0
     });
-    // ================= FIN DE CAMBIOS =================
 
     let html = `
         <div class="widget">
@@ -380,7 +385,7 @@ async function cargarInformes() {
                 <tbody>
                     ${movimientosAVisualizar.map(m => {
                         const deuda = parseFloat(m.Deuda_Total || 0);
-                        const usoSaldo = parseFloat(m.Saldo_Favor_Usado || 0); // Lógica corregida
+                        const usoSaldo = parseFloat(m.Saldo_Favor_Usado || 0);
                         return `
                         <tr>
                             <td>${m.Fecha_Pago ? new Date(m.Fecha_Pago.replace(/-/g,'/')).toLocaleDateString('es-CL', { timeZone: 'UTC' }) : '---'}</td>
@@ -423,7 +428,7 @@ async function cargarInformes() {
                 parseFloat(m.Interes || 0),
                 parseFloat(m['Multa_1/4'] || 0),
                 parseFloat(m.Monto_Pagado || 0),
-                parseFloat(m.Saldo_Favor_Usado || 0), // Lógica corregida
+                parseFloat(m.Saldo_Favor_Usado || 0),
                 parseFloat(m.Abono_Convenio || 0),
                 parseFloat(m.Deuda_Total || 0),
                 m.Estado
@@ -456,7 +461,7 @@ async function cargarInformes() {
                 deudaGC: deudaTotalGC,
                 deudaConvenio: deudaTotalConvenio,
                 saldoFavor: saldoAFavor,
-                movimientos: movimientosAVisualizar, // Pasa el array original
+                movimientos: movimientosAVisualizar,
                 totalPagadoGC: totalPagadoGC, 
                 totalUsoSaldoFavor: totalUsoSaldoFavor,
                 totalAbonoConvenio: totalAbonoConvenio,
