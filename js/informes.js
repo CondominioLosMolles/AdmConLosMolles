@@ -329,12 +329,54 @@ async function cargarInformes() {
     const saldoAFavor = parseFloat(residenteInfo ? residenteInfo[13] || 0 : 0);
     const deudaTotalGC = todosLosMovimientos.filter(p => p.Estado === 'Moroso').reduce((sum, p) => sum + parseFloat(p.Deuda_Total || 0), 0);
     
-    // 3. Calcular los totales para el pie de página a partir de los movimientos mostrados en la tabla.
-    const totalInteres = movimientosAVisualizar.reduce((sum, m) => sum + parseFloat(m.Interes || 0), 0);
-    const totalMulta = movimientosAVisualizar.reduce((sum, m) => sum + parseFloat(m['Multa_1/4'] || 0), 0);
-    const totalPagadoGC = movimientosAVisualizar.reduce((sum, m) => sum + parseFloat(m.Monto_Pagado || 0), 0);
-    const totalAbonoConvenio = movimientosAVisualizar.reduce((sum, m) => sum + parseFloat(m.Abono_Convenio || 0), 0);
-    const totalDeudaPendiente = movimientosAVisualizar.reduce((sum, m) => sum + parseFloat(m.Deuda_Total || 0), 0);
+    // ================= INICIO DE CAMBIOS =================
+    // 3. Pre-procesar movimientos para calcular el "Uso Saldo a Favor" y preparar para la visualización.
+    const movimientosConSaldo = movimientosAVisualizar.map(m => {
+        const valorGC = parseFloat(m.Valor_Gasto_Comun || 0);
+        const interes = parseFloat(m.Interes || 0);
+        const multa = parseFloat(m['Multa_1/4'] || 0);
+        const montoPagado = parseFloat(m.Monto_Pagado || 0);
+        
+        // Total que se debía pagar por el Gasto Común de ese período (capital + interés + multa)
+        const totalPeriodoAdeudado = valorGC + interes + multa;
+        
+        let usoSaldoFavor = 0;
+        // Si la fila está 'Pagado' y el monto pagado es menor a lo que se debía, la diferencia es el uso del saldo.
+        if (m.Estado === 'Pagado' && montoPagado < totalPeriodoAdeudado) {
+            usoSaldoFavor = totalPeriodoAdeudado - montoPagado;
+        }
+
+        return {
+            ...m, // Copia todas las propiedades originales del movimiento
+            Uso_Saldo_Favor: Math.max(0, usoSaldoFavor) // Agrega la nueva propiedad calculada
+        };
+    });
+
+    // 4. Calcular los totales para el pie de página a partir de los movimientos procesados.
+    const {
+        totalInteres,
+        totalMulta,
+        totalPagadoGC,
+        totalUsoSaldoFavor, // Nuevo total
+        totalAbonoConvenio,
+        totalDeudaPendiente
+    } = movimientosConSaldo.reduce((acc, m) => {
+        acc.totalInteres += parseFloat(m.Interes || 0);
+        acc.totalMulta += parseFloat(m['Multa_1/4'] || 0);
+        acc.totalPagadoGC += parseFloat(m.Monto_Pagado || 0);
+        acc.totalUsoSaldoFavor += m.Uso_Saldo_Favor; // Sumar el nuevo campo
+        acc.totalAbonoConvenio += parseFloat(m.Abono_Convenio || 0);
+        acc.totalDeudaPendiente += parseFloat(m.Deuda_Total || 0);
+        return acc;
+    }, {
+        totalInteres: 0,
+        totalMulta: 0,
+        totalPagadoGC: 0,
+        totalUsoSaldoFavor: 0, // Nuevo
+        totalAbonoConvenio: 0,
+        totalDeudaPendiente: 0
+    });
+    // ================= FIN DE CAMBIOS =================
 
     let html = `
         <div class="widget">
@@ -359,9 +401,10 @@ async function cargarInformes() {
 
             <h4>Movimientos en el Período Seleccionado</h4>
             <table class="table">
-                <thead><tr><th>Fecha Pago</th><th>Período</th><th>Interés</th><th>Multa</th><th>Monto Pagado G.C.</th><th>Abono Convenio</th><th>Deuda Pendiente</th><th>Estado</th></tr></thead>
+                {/* Se agrega la nueva columna en el encabezado */}
+                <thead><tr><th>Fecha Pago</th><th>Período</th><th>Interés</th><th>Multa</th><th>Monto Pagado G.C.</th><th>Uso Saldo a Favor</th><th>Abono Convenio</th><th>Deuda Pendiente</th><th>Estado</th></tr></thead>
                 <tbody>
-                    ${movimientosAVisualizar.map(m => {
+                    ${movimientosConSaldo.map(m => { // Se itera sobre el nuevo array 'movimientosConSaldo'
                         const deuda = parseFloat(m.Deuda_Total || 0);
                         return `
                         <tr>
@@ -370,11 +413,13 @@ async function cargarInformes() {
                             <td>$${parseFloat(m.Interes || 0).toLocaleString('es-CL')}</td>
                             <td>$${parseFloat(m['Multa_1/4'] || 0).toLocaleString('es-CL')}</td>
                             <td>$${parseFloat(m.Monto_Pagado || 0).toLocaleString('es-CL')}</td>
+                            {/* Se agrega la nueva celda con el valor calculado */}
+                            <td style="color:#2e7d32;">$${m.Uso_Saldo_Favor.toLocaleString('es-CL')}</td>
                             <td>$${parseFloat(m.Abono_Convenio || 0).toLocaleString('es-CL')}</td>
                             <td style="${deuda > 0 ? 'color:red; font-weight:bold;' : ''}">$${deuda.toLocaleString('es-CL')}</td>
                             <td>${m.Estado}</td>
                         </tr>
-                    `}).join('') || `<tr><td colspan="8" style="text-align:center;">No hay cargos de gastos comunes en el período seleccionado.</td></tr>`}
+                    `}).join('') || `<tr><td colspan="9" style="text-align:center;">No hay cargos de gastos comunes en el período seleccionado.</td></tr>`}
                 </tbody>
                 <tfoot style="font-weight:bold;">
                     <tr style="background-color: #f8f9fa; border-top: 2px solid #dee2e6;">
@@ -382,6 +427,8 @@ async function cargarInformes() {
                         <td style="padding: 0.75rem;">$${totalInteres.toLocaleString('es-CL')}</td>
                         <td style="padding: 0.75rem;">$${totalMulta.toLocaleString('es-CL')}</td>
                         <td style="padding: 0.75rem;">$${totalPagadoGC.toLocaleString('es-CL')}</td>
+                        {/* Se agrega la celda para el total del saldo a favor utilizado */}
+                        <td style="padding: 0.75rem; color:#2e7d32;">$${totalUsoSaldoFavor.toLocaleString('es-CL')}</td>
                         <td style="padding: 0.75rem;">$${totalAbonoConvenio.toLocaleString('es-CL')}</td>
                         <td style="padding: 0.75rem; color:red;">$${totalDeudaPendiente.toLocaleString('es-CL')}</td>
                         <td style="padding: 0.75rem;"></td>
@@ -392,24 +439,26 @@ async function cargarInformes() {
     areaInforme.innerHTML = html;
     
     document.getElementById('btnExportar').onclick = () => {
+        // Se actualiza la exportación a Excel
         const dataToExport = [
             ["Estado de Cuenta - Parcela", filtros.parcela],
             ["Nombre Residente", residenteInfo ? residenteInfo[1] : 'N/A'],
             [],
-            ["Fecha Pago", "Periodo", "Interés", "Multa", "Monto Pagado G.C.", "Abono Convenio", "Deuda Pendiente", "Estado"],
-            ...movimientosAVisualizar.map(m => [
+            ["Fecha Pago", "Periodo", "Interés", "Multa", "Monto Pagado G.C.", "Uso Saldo a Favor", "Abono Convenio", "Deuda Pendiente", "Estado"],
+            ...movimientosConSaldo.map(m => [ // Se usa 'movimientosConSaldo'
                 m.Fecha_Pago ? new Date(m.Fecha_Pago.replace(/-/g,'/')).toLocaleDateString('es-CL', { timeZone: 'UTC' }) : '---',
                 m.Periodo,
                 parseFloat(m.Interes || 0),
                 parseFloat(m['Multa_1/4'] || 0),
                 parseFloat(m.Monto_Pagado || 0),
+                m.Uso_Saldo_Favor, // Se añade el dato
                 parseFloat(m.Abono_Convenio || 0),
                 parseFloat(m.Deuda_Total || 0),
                 m.Estado
             ])];
         
         dataToExport.push([
-            "", "Totales:", totalInteres, totalMulta, totalPagadoGC, totalAbonoConvenio, totalDeudaPendiente, ""
+            "", "Totales:", totalInteres, totalMulta, totalPagadoGC, totalUsoSaldoFavor, totalAbonoConvenio, totalDeudaPendiente, "" // Se añade el total
         ]);
 
         const ws = XLSX.utils.aoa_to_sheet(dataToExport);
@@ -427,6 +476,7 @@ async function cargarInformes() {
         mostrarSpinner();
         try {
             const asunto = `Estado de Cuenta - Parcela ${filtros.parcela}`;
+            // Se actualizan los datos para el correo
             const datosParaCorreo = {
                 nombreResidente: residenteInfo[1],
                 numeroParcela: filtros.parcela,
@@ -434,9 +484,10 @@ async function cargarInformes() {
                 fechaFin: filtros.fechaFin,
                 deudaGC: deudaTotalGC,
                 deudaConvenio: deudaTotalConvenio,
-                saldoFavor: saldoAFavor, // NUEVO
-                movimientos: movimientosAVisualizar,
+                saldoFavor: saldoAFavor,
+                movimientos: movimientosConSaldo, // Se envía el array procesado
                 totalPagadoGC: totalPagadoGC, 
+                totalUsoSaldoFavor: totalUsoSaldoFavor, // Se envía el nuevo total
                 totalAbonoConvenio: totalAbonoConvenio,
                 nombreAdmin: "Alex Thiele",
                 cargoAdmin: "Administrador Condominio Los Molles"
@@ -682,10 +733,11 @@ async function cargarInformes() {
       };
   }
 
+  // ============== FUNCIÓN DE CORREO ACTUALIZADA ==============
   function crearCuerpoCorreoEstadoCuenta(datos) {
     const { 
         nombreResidente, numeroParcela, fechaInicio, fechaFin, 
-        deudaGC, deudaConvenio, saldoFavor, movimientos, totalPagadoGC, totalAbonoConvenio,
+        deudaGC, deudaConvenio, saldoFavor, movimientos, totalPagadoGC, totalUsoSaldoFavor, totalAbonoConvenio,
         nombreAdmin, cargoAdmin
     } = datos;
 
@@ -701,14 +753,16 @@ async function cargarInformes() {
                 <td style="padding: 10px; text-align: right;">$${parseFloat(m.Interes || 0).toLocaleString('es-CL')}</td>
                 <td style="padding: 10px; text-align: right;">$${parseFloat(m['Multa_1/4'] || 0).toLocaleString('es-CL')}</td>
                 <td style="padding: 10px; text-align: right;">$${parseFloat(m.Monto_Pagado || 0).toLocaleString('es-CL')}</td>
+                {/* Nueva celda para el correo */}
+                <td style="padding: 10px; text-align: right; color: #2e7d32;">$${(m.Uso_Saldo_Favor || 0).toLocaleString('es-CL')}</td>
                 <td style="padding: 10px; text-align: right;">$${parseFloat(m.Abono_Convenio || 0).toLocaleString('es-CL')}</td>
                 <td style="padding: 10px;">${m.Estado}</td>
             </tr>
         `).join('')
-        : '<tr><td colspan="7" style="padding: 20px; text-align: center; color: #777;">No se registraron movimientos en el período seleccionado.</td></tr>';
+        : '<tr><td colspan="8" style="padding: 20px; text-align: center; color: #777;">No se registraron movimientos en el período seleccionado.</td></tr>';
 
     return `
-      <div style="font-family: Arial, sans-serif; color: #333; max-width: 700px; margin: auto; border: 1px solid #eee; border-radius: 10px; overflow: hidden;">
+      <div style="font-family: Arial, sans-serif; color: #333; max-width: 800px; margin: auto; border: 1px solid #eee; border-radius: 10px; overflow: hidden;">
         <div style="background-color: #004a7f; color: white; padding: 20px; text-align: center;">
             <h1 style="margin: 0; font-size: 24px;">Estado de Cuenta</h1>
             <p style="margin: 5px 0 0;">Condominio Los Molles</p>
@@ -743,7 +797,9 @@ async function cargarInformes() {
                         <th style="padding: 10px;">Período</th>
                         <th style="padding: 10px; text-align: right;">Interés</th>
                         <th style="padding: 10px; text-align: right;">Multa</th>
-                        <th style="padding: 10px; text-align: right;">Monto G.C.</th>
+                        <th style="padding: 10px; text-align: right;">Pago G.C.</th>
+                        {/* Nuevo encabezado en correo */}
+                        <th style="padding: 10px; text-align: right;">Uso Saldo</th>
                         <th style="padding: 10px; text-align: right;">Abono Convenio</th>
                         <th style="padding: 10px;">Estado</th>
                     </tr>
@@ -753,8 +809,10 @@ async function cargarInformes() {
                 </tbody>
                 <tfoot>
                     <tr style="background-color: #f4f4f4; font-weight: bold;">
+                        {/* Se ajusta el colspan y se añaden los totales */}
                         <td colspan="4" style="padding: 12px; text-align: right;">Totales Pagados en el Período:</td>
                         <td style="padding: 12px; text-align: right;">$${totalPagadoGC.toLocaleString('es-CL')}</td>
+                        <td style="padding: 12px; text-align: right; color:#2e7d32;">$${totalUsoSaldoFavor.toLocaleString('es-CL')}</td>
                         <td style="padding: 12px; text-align: right;">$${totalAbonoConvenio.toLocaleString('es-CL')}</td>
                         <td style="padding: 12px;"></td>
                     </tr>
