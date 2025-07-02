@@ -1,15 +1,14 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <base target="_top">
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>CondominioLosMolles - Administración</title>
   
-  <?!= include('styles'); ?> 
-  
+  <link rel="stylesheet" href="css/styles.css">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+  
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
 </head>
@@ -66,28 +65,27 @@
   </div>
 
 
-  <?!= include('auth'); ?>
-  <?!= include('utils'); ?>
-  <?!= include('sheets'); ?>
-  <?!= include('drive'); ?>
-  <?!= include('gmail'); ?>
-  <?!= include('sheets_api_bridge'); ?> 
-  <?!= include('dashboard'); ?>
-  <?!= include('residentes'); ?>
-  <?!= include('proveedores'); ?>
-  <?!= include('gastos_comunes'); ?>
-  <?!= include('contabilidad'); ?>
-  <?!= include('comunicaciones'); ?>
-  <?!= include('gestordetareas'); ?>
-  <?!= include('multas'); ?>
-  <?!= include('asambleas'); ?>
-  <?!= include('informes'); ?>
+  <script src="js/auth.js"></script>
+  <script src="js/utils.js"></script>
+  <script src="js/sheets.js"></script>
+  <script src="js/drive.js"></script>
+  <script src="js/gmail.js"></script>
+  <script src="js/sheets_api_bridge.js"></script>
+  <script src="js/dashboard.js"></script>
+  <script src="js/residentes.js"></script>
+  <script src="js/proveedores.js"></script>
+  <script src="js/gastos_comunes.js"></script>
+  <script src="js/contabilidad.js"></script>
+  <script src="js/comunicaciones.js"></script>
+  <script src="js/gestordetareas.js"></script>
+  <script src="js/multas.js"></script>
+  <script src="js/asambleas.js"></script>
+  <script src="js/informes.js"></script>
 
   <script async defer src="https://apis.google.com/js/api.js" onload="gapiLoaded()"></script>
   <script async defer src="https://accounts.google.com/gsi/client" onload="gisLoaded()"></script>
-
+  
   <script>
-    // 3. Finalmente, ejecutamos la lógica de la página.
     document.addEventListener('DOMContentLoaded', function() {
       const menuItems = document.querySelectorAll('#sidebar nav ul li[data-module]');
       function activaMenu(modulo) {
