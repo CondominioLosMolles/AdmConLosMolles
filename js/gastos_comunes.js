@@ -845,7 +845,16 @@ function crearCuerpoCorreo(pago, residente) {
     </body>
     </html>`;
 }
-  
+  /**
+ * Llama a la API para ejecutar la función marcarComprobanteEnviado_GS en el script.
+ * @param {number} rowNum El número de la fila a actualizar en la hoja de Pagos_GC.
+ * @returns {Promise<any>}
+ */
+async function marcarComprobanteEnviadoEnSheet(rowNum) {
+    // Asumo que tienes una función genérica `llamarAPI` en otro archivo.
+    // Si tu función se llama diferente (ej: `callApi`, `googleApiCall`), ajústala aquí.
+    return llamarAPI('marcarComprobanteEnviado_GS', [rowNum]);
+}
   inputParcelaComprobante.addEventListener('input', (e) => {
     const parcela = e.target.value;
     const selectorContainer = document.getElementById('periodo-selector-container');
@@ -938,7 +947,8 @@ function crearCuerpoCorreo(pago, residente) {
   });
 
 
-  formComprobante.addEventListener('submit', async (e) => {
+  // Busca esta función en tu código y reemplaza el bloque try...catch...finally
+formComprobante.addEventListener('submit', async (e) => {
     e.preventDefault();
     if (!pagoSeleccionadoParaEnviar) {
         return mostrarMensaje('Debe seleccionar un comprobante para enviar.', 'error');
@@ -951,24 +961,32 @@ function crearCuerpoCorreo(pago, residente) {
     
     mostrarSpinner();
     try {
-      const asunto = document.getElementById('inputAsuntoComprobante').value;
-      const cuerpo = document.getElementById('divCuerpoComprobante').innerHTML;
-      
-      await enviarCorreo(destinatario, asunto, cuerpo);
-      
-      await marcarComprobanteEnviado(pagoSeleccionadoParaEnviar.rowNum);
-      pagoSeleccionadoParaEnviar.Comprobante_Enviado = 'SI';
-      
-      modalComprobante.style.display = 'none';
-      mostrarMensaje(`Correo enviado con éxito a ${destinatario}.`, 'success');
-      filtrarYRenderizar();
+        const asunto = document.getElementById('inputAsuntoComprobante').value;
+        const cuerpo = document.getElementById('divCuerpoComprobante').innerHTML;
+        
+        // Esta función "enviarCorreo" debe existir en tu frontend (probablemente en gmail.js)
+        await enviarCorreo(destinatario, asunto, cuerpo);
+        
+        // =======================================================
+        // ===== AQUÍ ESTÁ LA LÍNEA CORREGIDA ====================
+        // =======================================================
+        // Usamos la nueva función que acabamos de crear para llamar a la API
+        await marcarComprobanteEnviadoEnSheet(pagoSeleccionadoParaEnviar.rowNum);
+        // =======================================================
+
+        pagoSeleccionadoParaEnviar.Comprobante_Enviado = 'SI';
+        
+        modalComprobante.style.display = 'none';
+        mostrarMensaje(`Correo enviado con éxito a ${destinatario}.`, 'success');
+        filtrarYRenderizar();
 
     } catch (err) {
-        mostrarMensaje(`Error al enviar el correo: ${err.message}`, 'error');
+        // El mensaje de error ahora será más específico si falla el envío o el marcado.
+        mostrarMensaje(`Error en el proceso: ${err.message}`, 'error');
     } finally {
-      ocultarSpinner();
+        ocultarSpinner();
     }
-  });
+});
 
   document.getElementById('filtroParcela').addEventListener('input', filtrarYRenderizar);
   document.getElementById('filtroAnio').addEventListener('input', () => {
