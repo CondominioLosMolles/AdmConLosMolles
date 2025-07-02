@@ -17,12 +17,12 @@ async function cargarMultas() {
 
   const main = document.getElementById('main-content');
   main.innerHTML = `
-    <h2>Multas</h2>
-    <div style="margin-bottom:24px;">
+    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; margin-bottom: 24px;">
+      <h2>Multas</h2>
       <button class="btn" id="btnAgregarMulta">Cursar Multa</button>
     </div>
-    <div id="tablaMultas"></div>
-    <div id="modalMulta" style="display:none;"></div>
+    <div id="tablaMultas" class="table-container"></div>
+    <div id="modalMultaContainer"></div>
   `;
 
   // Render tabla
@@ -43,22 +43,27 @@ async function cargarMultas() {
         </thead>
         <tbody>
     `;
-    for (const m of multas) {
-      const residente = residentes.find(r => r[0] === m[1]);
-      html += `<tr>
-        <td>${residente ? residente[1] : '-'}</td>
-        <td>${residente ? residente[3] : '-'}</td>
-        <td>${m[2]}</td>
-        <td>${m[3]}</td>
-        <td>${m[4]}</td>
-        <td>${m[5]}</td>
-        <td>${m[6] || ''}</td>
-        <td>
-          ${m[5] === 'Pendiente' ? `<button class="btn secondary btn-pagar-multa" data-id="${m[0]}">Registrar Pago</button>` : ''}
-          <button class="btn secondary btn-eliminar-multa" data-id="${m[0]}">🗑️</button>
-        </td>
-      </tr>`;
+    if (multas && multas.length > 0) {
+        multas.sort((a,b) => new Date(b[2]) - new Date(a[2])).forEach(m => {
+          const residente = residentes.find(r => r[0] === m[1]);
+          html += `<tr>
+            <td>${residente ? residente[1] : 'N/A'}</td>
+            <td>${residente ? residente[3] : 'N/A'}</td>
+            <td>${m[2] ? new Date(m[2].replace(/-/g, '/')).toLocaleDateString('es-CL') : 'N/A'}</td>
+            <td style="white-space:normal;">${m[3]}</td>
+            <td>$${parseFloat(m[4] || 0).toLocaleString('es-CL')}</td>
+            <td><span class="estado-tag ${m[5] === 'Pagada' ? 'estado-pagado' : 'estado-moroso'}">${m[5]}</span></td>
+            <td>${m[6] ? new Date(m[6].replace(/-/g, '/')).toLocaleDateString('es-CL') : ''}</td>
+            <td>
+              ${m[5] === 'Pendiente' ? `<button class="btn btn-sm secondary btn-pagar-multa" data-id="${m[0]}">Registrar Pago</button>` : ''}
+              <button class="btn btn-sm danger btn-eliminar-multa" data-id="${m[0]}">🗑️</button>
+            </td>
+          </tr>`;
+        });
+    } else {
+        html += `<tr><td colspan="8" style="text-align:center; padding: 20px;">No hay multas registradas.</td></tr>`;
     }
+    
     html += '</tbody></table>';
     document.getElementById('tablaMultas').innerHTML = html;
   }
@@ -68,111 +73,118 @@ async function cargarMultas() {
   document.getElementById('btnAgregarMulta').onclick = () => mostrarModalMulta();
 
   function mostrarModalMulta() {
-    const modal = document.getElementById('modalMulta');
-    modal.style.display = 'flex';
-    modal.innerHTML = `
-      <div>
-        <h3>Cursar Multa</h3>
-        <form id="formMulta">
-          <label>Residente</label>
-          <select name="idResidente" id="selectResidenteMulta" required>
-            <option value="">Seleccione...</option>
-            ${residentes.map(r => `<option value="${r[0]}">${r[1]} (Parcela ${r[3]})</option>`).join('')}
-          </select>
-          <label>Fecha Infracción</label>
-          <input name="fechaInfraccion" required type="date">
-          <label>Descripción</label>
-          <input name="descripcion" required>
-          <label>Monto</label>
-          <input name="monto" required type="number">
-          <div style="margin-top:16px;text-align:right;">
-            <button class="btn" type="submit">Guardar</button>
-            <button class="btn secondary" type="button" id="btnCerrarModalMulta">Cancelar</button>
-          </div>
-        </form>
-      </div>
+    const modalContainer = document.getElementById('modalMultaContainer');
+    const cuerpoHtml = `
+      <form id="formMulta">
+        <label>Residente</label>
+        <select name="idResidente" id="selectResidenteMulta" required>
+          <option value="">Seleccione...</option>
+          ${residentes.map(r => `<option value="${r[0]}">${r[1]} (Parcela ${r[3]})</option>`).join('')}
+        </select>
+        <label>Fecha Infracción</label>
+        <input name="fechaInfraccion" required type="date" value="${new Date().toISOString().split('T')[0]}">
+        <label>Descripción</label>
+        <textarea name="descripcion" required rows="3"></textarea>
+        <label>Monto</label>
+        <input name="monto" required type="number" min="0">
+      </form>
     `;
-    document.getElementById('btnCerrarModalMulta').onclick = () => modal.style.display = 'none';
-    document.getElementById('formMulta').onsubmit = async (e) => {
-      e.preventDefault();
-      const fd = new FormData(e.target);
-      const idResidente = fd.get('idResidente');
-      const residente = residentes.find(r => r[0] === idResidente);
-      if (!residente) {
-        mostrarMensaje('Residente no válido', 'error');
-        return;
-      }
-      const fechaInfraccion = fd.get('fechaInfraccion');
-      const descripcion = fd.get('descripcion');
-      const monto = fd.get('monto');
-      mostrarSpinner();
-      try {
-        await agregarMulta([
-          '', // ID autoincremental
-          idResidente,
-          fechaInfraccion,
-          descripcion,
-          monto,
-          'Pendiente',
-          ''
-        ]);
-        // Notificación automática por Gmail
-        await enviarCorreo(
-          residente[5],
-          'Notificación de Multa',
-          `Estimado/a ${residente[1]},<br>Se le ha cursado una multa por: <b>${descripcion}</b> con fecha ${fechaInfraccion} por un monto de $${monto}.<br>Por favor regularice su situación.`
-        );
-        modal.style.display = 'none';
-        multas = await obtenerMultas();
-        renderTablaMultas();
-        mostrarMensaje('Multa registrada y notificada');
-      } catch (e) {
-        mostrarMensaje('Error al guardar: ' + e.message, 'error');
-      }
-      ocultarSpinner();
+
+    const guardarFn = async () => {
+        const form = document.getElementById('formMulta');
+        if (!form.checkValidity()) {
+            form.reportValidity();
+            return;
+        }
+
+        const fd = new FormData(form);
+        const idResidente = fd.get('idResidente');
+        const residente = residentes.find(r => r[0] === idResidente);
+        if (!residente || !residente[5]) {
+            mostrarMensaje('El residente seleccionado no es válido o no tiene un email registrado.', 'error');
+            return;
+        }
+        
+        const fechaInfraccion = fd.get('fechaInfraccion');
+        const descripcion = fd.get('descripcion');
+        const monto = fd.get('monto');
+        
+        mostrarSpinner();
+        try {
+            await agregarMulta([
+            null, // ID autoincremental
+            idResidente,
+            fechaInfraccion,
+            descripcion,
+            monto,
+            'Pendiente',
+            ''
+            ]);
+            
+            await enviarCorreo(
+            residente[5],
+            'Notificación de Multa - Condominio Los Molles',
+            `<p>Estimado/a ${residente[1]},</p><p>Le informamos que se le ha cursado una multa por el siguiente motivo: <b>${descripcion}</b>.</p><p>La infracción ocurrió con fecha <b>${new Date(fechaInfraccion.replace(/-/g, '/')).toLocaleDateString('es-CL')}</b> y el monto asociado es de <b>$${parseFloat(monto).toLocaleString('es-CL')}</b>.</p><p>Para regularizar esta situación, por favor póngase en contacto con la administración.</p><p>Atentamente,<br>Administración Condominio Los Molles</p>`
+            );
+
+            ocultarModalGlobal();
+            multas = await obtenerMultas();
+            renderTablaMultas();
+            mostrarMensaje('Multa registrada y notificada con éxito.', 'success');
+        } catch (e) {
+            mostrarMensaje('Error al guardar la multa: ' + e.message, 'error');
+        } finally {
+            ocultarSpinner();
+        }
     };
+    
+    mostrarModalGlobal("Cursar Nueva Multa", cuerpoHtml, guardarFn);
   }
 
   // Registrar pago de multa y eliminar multa
   document.getElementById('tablaMultas').onclick = async (e) => {
-    // Pago
-    if (e.target.classList.contains('btn-pagar-multa')) {
-      const id = e.target.dataset.id;
+    const pagarBtn = e.target.closest('.btn-pagar-multa');
+    const eliminarBtn = e.target.closest('.btn-eliminar-multa');
+
+    if (pagarBtn) {
+      const id = pagarBtn.dataset.id;
       const multa = multas.find(m => m[0] === id);
       if (!multa) return;
-      if (confirm('¿Registrar esta multa como pagada?')) {
+
+      if (confirm('¿Está seguro de que desea registrar esta multa como PAGADA?')) {
         mostrarSpinner();
         try {
           multa[5] = 'Pagada';
-          multa[6] = new Date().toISOString().slice(0, 10);
-          await actualizarMulta(multa); // Implementa en sheets.js
-          multas = await obtenerMultas();
+          multa[6] = new Date().toISOString().split('T')[0];
+          await actualizarMulta(multa);
+          multas = await obtenerMultas(); // Recargar datos
           renderTablaMultas();
-        } catch (e) {
-          mostrarMensaje('Error al registrar pago: ' + e.message, 'error');
+          mostrarMensaje('Pago de multa registrado.', 'success');
+        } catch (err) {
+          mostrarMensaje('Error al registrar pago: ' + err.message, 'error');
+        } finally {
+          ocultarSpinner();
         }
-        ocultarSpinner();
       }
     }
-    // Eliminar
-    if (e.target.classList.contains('btn-eliminar-multa')) {
-      const id = e.target.dataset.id;
-      if (confirm('¿Está seguro de que desea eliminar esta multa?')) {
+
+    if (eliminarBtn) {
+      const id = eliminarBtn.dataset.id;
+      if (confirm('¿Está seguro de que desea ELIMINAR esta multa? Esta acción no se puede deshacer.')) {
         mostrarSpinner();
         try {
-          await eliminarMulta(id); // Implementa en sheets.js
-          multas = await obtenerMultas();
+          await eliminarMulta(id);
+          multas = multas.filter(m => m[0] !== id); // Actualizar localmente
           renderTablaMultas();
-        } catch (e) {
-          mostrarMensaje('Error al eliminar: ' + e.message, 'error');
+          mostrarMensaje('Multa eliminada.', 'success');
+        } catch (err) {
+          mostrarMensaje('Error al eliminar: ' + err.message, 'error');
+        } finally {
+          ocultarSpinner();
         }
-        ocultarSpinner();
       }
     }
   };
 
   ocultarSpinner();
 }
-
-// Evento de menú
-document.querySelector('[data-module="multas"]').addEventListener('click', cargarMultas);
