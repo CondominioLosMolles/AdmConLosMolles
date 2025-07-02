@@ -1,7 +1,6 @@
 // js/sheets_api_bridge.js - VERSIÓN FINAL CON FETCH API
 
-// El ID de tu script de Google (lo tomo de tu archivo sheets.js)
-const SCRIPT_ID = 'AKfycbzngLvhmMwTLjv4xRbeaqeF1Chl1PD01cCJQ_-xA9_985n8ExnyuN-lwxLGpfzHeD-m';
+// El ID de tu script de Google ahora se toma desde sheets.js
 const SCRIPT_URL = `https://script.google.com/macros/s/${SCRIPT_ID}/exec`;
 
 /**
