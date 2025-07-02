@@ -307,10 +307,10 @@ async function cargarGastosComunes() {
     if (deudaInicialConvenio > 0) {
         widgetConvenio.style.display = 'block';
         const totalAbonado = pagosGC_obj
-    .filter(p => String(p.N_Parcela) === String(parcela))
-    .reduce((sum, pago) => sum + parseFloat(pago.Abono_Convenio || 0), 0);
+            .filter(p => String(p.N_Parcela) === String(parcela))
+            .reduce((sum, pago) => sum + parseFloat(pago.Abono_Convenio || 0), 0);
 
-const saldoActualConvenio = deudaInicialConvenio - totalAbonado;
+        const saldoActualConvenio = deudaInicialConvenio - totalAbonado;
 
         document.getElementById('convenio-summary-grid').innerHTML = `
             <div>Deuda Inicial<span style="color: #dc3545;">$${deudaInicialConvenio.toLocaleString('es-CL')}</span></div>
@@ -346,47 +346,52 @@ const saldoActualConvenio = deudaInicialConvenio - totalAbonado;
 
     tbodyGastos.innerHTML = '';
     
+    // *** INICIO DE LA LÓGICA CORREGIDA ***
     MESES.forEach((mes, index) => {
+        const fechaVencimiento = new Date(anio, index, 10);
         const pagoExistente = pagosGC_obj.find(p => String(p.N_Parcela) === String(parcela) && p.Periodo && formatearPeriodo(p.Periodo).toLowerCase().startsWith(mes.toLowerCase()) && p.anio == anio);
         
-        let interes = 0, multa = 0, saldo = 0;
-        let estado = 'Pendiente', montoPagado = 0, fechaPago = '---', metodoPago = '---';
-        let deudaPendiente = 0;
-        
-        const fechaVencimiento = new Date(anio, index, 10);
+        // Solo renderizar la fila si el pago existe O si la fecha de vencimiento ya pasó
+        if (pagoExistente || new Date() > fechaVencimiento) {
+            let interes = 0, multa = 0, saldo = 0;
+            let estado = 'Pendiente', montoPagado = 0, fechaPago = '---', metodoPago = '---';
+            let deudaPendiente = 0;
 
-        if (pagoExistente) {
-            estado = pagoExistente.Estado;
-            montoPagado = parseFloat(pagoExistente.Monto_Pagado || 0);
-            saldo = parseFloat(pagoExistente.Saldo_Pendiente_o_a_favor || 0);
-            deudaPendiente = parseFloat(pagoExistente.Deuda_Total || 0);
-            interes = parseFloat(pagoExistente.Interes || 0);
-            multa = parseFloat(pagoExistente['Multa_1/4'] || 0);
-            
-            const fechaPagoStr = pagoExistente.Fecha_Pago;
-            fechaPago = fechaPagoStr ? new Date(fechaPagoStr.replace(/-/g, '/')).toLocaleDateString('es-CL', {timeZone: 'UTC'}) : '---';
-            metodoPago = pagoExistente.Metodo_Pago || '---';
-        }
+            if (pagoExistente) {
+                estado = pagoExistente.Estado;
+                montoPagado = parseFloat(pagoExistente.Monto_Pagado || 0);
+                saldo = parseFloat(pagoExistente.Saldo_Pendiente_o_a_favor || 0);
+                deudaPendiente = parseFloat(pagoExistente.Deuda_Total || 0);
+                interes = parseFloat(pagoExistente.Interes || 0);
+                multa = parseFloat(pagoExistente['Multa_1/4'] || 0);
+                
+                const fechaPagoStr = pagoExistente.Fecha_Pago;
+                fechaPago = fechaPagoStr ? new Date(fechaPagoStr.replace(/-/g, '/')).toLocaleDateString('es-CL', {timeZone: 'UTC'}) : '---';
+                metodoPago = pagoExistente.Metodo_Pago || '---';
+            }
 
-        const tr = document.createElement('tr');
-        if (pagoExistente) {
-            tr.dataset.idPago = pagoExistente.ID_Pago;
-            tr.classList.add('fila-clicable');
+            const tr = document.createElement('tr');
+            if (pagoExistente) {
+                tr.dataset.idPago = pagoExistente.ID_Pago;
+                tr.classList.add('fila-clicable');
+            }
+            const estadoClass = estado.toLowerCase().replace(' ', '-');
+            tr.innerHTML = `
+                <td><b>${mes} ${anio}</b></td>
+                <td>${fechaVencimiento.toLocaleDateString('es-CL', {timeZone: 'UTC'})}</td>
+                <td>$${montoPagado.toLocaleString('es-CL')}</td>
+                <td style="color:${saldo < 0 ? 'red' : 'green'}; font-weight:bold;">$${saldo.toLocaleString('es-CL')}</td>
+                <td>$${interes.toLocaleString('es-CL', {minimumFractionDigits:2, maximumFractionDigits:2})}</td>
+                <td>$${multa.toLocaleString('es-CL')}</td>
+                <td style="font-weight:bold; color: red;">$${deudaPendiente.toLocaleString('es-CL')}</td>
+                <td>${fechaPago}</td>
+                <td>${metodoPago}</td>
+                <td><span class="estado-tag estado-${estadoClass}">${estado}</span></td>`;
+            tbodyGastos.appendChild(tr);
         }
-        const estadoClass = estado.toLowerCase().replace(' ', '-');
-        tr.innerHTML = `
-            <td><b>${mes} ${anio}</b></td>
-            <td>${fechaVencimiento.toLocaleDateString('es-CL', {timeZone: 'UTC'})}</td>
-            <td>$${montoPagado.toLocaleString('es-CL')}</td>
-            <td style="color:${saldo < 0 ? 'red' : 'green'}; font-weight:bold;">$${saldo.toLocaleString('es-CL')}</td>
-            <td>$${interes.toLocaleString('es-CL', {minimumFractionDigits:2, maximumFractionDigits:2})}</td>
-            <td>$${multa.toLocaleString('es-CL')}</td>
-            <td style="font-weight:bold; color: red;">$${deudaPendiente.toLocaleString('es-CL')}</td>
-            <td>${fechaPago}</td>
-            <td>${metodoPago}</td>
-            <td><span class="estado-tag estado-${estadoClass}">${estado}</span></td>`;
-        tbodyGastos.appendChild(tr);
     });
+    // *** FIN DE LA LÓGICA CORREGIDA ***
+
     const tabla = document.getElementById('table-pagos');
     aplicarAnchosGuardados(tabla);
     hacerColumnasRedimensionables(tabla);
