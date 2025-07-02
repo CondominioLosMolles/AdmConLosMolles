@@ -9,13 +9,30 @@ const SCRIPT_URL = `https://script.google.com/macros/s/${SCRIPT_ID}/exec`;
  * @param {Array<any>} args - Un array con los argumentos para la función.
  * @returns {Promise<any>}
  */
+// js/sheets_api_bridge.js -> MODIFICADO
+
 async function runGAS(functionName, ...args) {
-  // Obtenemos el token de acceso para autenticar la llamada
   const token = gapi.client.getToken();
   if (!token) {
     throw new Error("Usuario no autenticado. No se puede llamar al script.");
   }
 
+  // Lógica para manejar la solicitud de verificación (preflight)
+  const preflightResponse = await fetch(SCRIPT_URL, {
+    method: 'OPTIONS',
+    headers: {
+      'Authorization': `Bearer ${token.access_token}`,
+      'Content-Type': 'application/json'
+    },
+    body: 'OPTIONS', // Enviamos un cuerpo simple para ser detectado por Apps Script
+    redirect: 'follow'
+  });
+
+  if (!preflightResponse.ok) {
+     throw new Error(`Error en la verificación CORS: ${preflightResponse.statusText}`);
+  }
+
+  // Si la verificación es exitosa, procedemos con la solicitud POST real
   const response = await fetch(SCRIPT_URL, {
     method: 'POST',
     headers: {
