@@ -88,12 +88,10 @@ function ocultarModalGlobal() {
  * @returns {Promise<any>} - La respuesta del script.
  */
 async function llamarAPI(functionName, parameters = []) {
-    // ⬇️ ⬇️ ⬇️ IMPORTANTE: Reemplaza esto con la URL de tu Web App de Google Apps Script. ⬇️ ⬇️ ⬇️
-    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxD5d0JVZQM24zHUxhWZ4JzhG-0QbofUH5Mg9tria58PUsnMP-4JL5E5LsBwiDda3gKLw/exec";
+    // URL configurada correctamente
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyx05d0JVZQN24ztHUxkhWz4JzH6-OQBofUH5Ng9tria58PUisnMP-43L5E5LsBw1Dda3gKlw/exec";
 
-    if (SCRIPT_URL === "https://script.google.com/macros/s/AKfycbxD5d0JVZQM24zHUxhWZ4JzhG-0QbofUH5Mg9tria58PUsnMP-4JL5E5LsBwiDda3gKLw/exec") {
-        throw new Error("Debes configurar la URL de tu script en la función llamarAPI en utils.js");
-    }
+    // El bloque "if" de seguridad ha sido eliminado.
 
     try {
         const token = gapi.auth.getToken().access_token;
@@ -125,7 +123,6 @@ async function llamarAPI(functionName, parameters = []) {
 
     } catch (error) {
         console.error(`Error llamando a la función '${functionName}':`, error);
-        // Re-lanza el error para que pueda ser capturado por el .catch del código que lo llamó.
         throw error;
     }
 }
