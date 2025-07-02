@@ -1,21 +1,49 @@
-// js/sheets_api_bridge.js
+// js/sheets_api_bridge.js - VERSIÓN FINAL CON FETCH API
+
+// El ID de tu script de Google (lo tomo de tu archivo sheets.js)
+const SCRIPT_ID = 'AKfycbzngLvhmMwTLjv4xRbeaqeF1Chl1PD01cCJQ_-xA9_985n8ExnyuN-lwxLGpfzHeD-m';
+const SCRIPT_URL = `https://script.google.com/macros/s/${SCRIPT_ID}/exec`;
 
 /**
- * Función genérica para manejar las llamadas a google.script.run con Promesas (async/await)
- * @param {string} functionName - El nombre de la función a llamar en el servidor (en Code.gs).
- * @param {...any} args - Los argumentos a pasar a la función del servidor.
+ * Función genérica para llamar al backend de Apps Script usando fetch.
+ * @param {string} functionName - El nombre de la función a llamar en Code.gs.
+ * @param {Array<any>} args - Un array con los argumentos para la función.
  * @returns {Promise<any>}
  */
-function runGAS(functionName, ...args) {
-  return new Promise((resolve, reject) => {
-    google.script.run
-      .withSuccessHandler(resolve)
-      .withFailureHandler(reject)
-      [functionName](...args);
+async function runGAS(functionName, ...args) {
+  // Obtenemos el token de acceso para autenticar la llamada
+  const token = gapi.client.getToken();
+  if (!token) {
+    throw new Error("Usuario no autenticado. No se puede llamar al script.");
+  }
+
+  const response = await fetch(SCRIPT_URL, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${token.access_token}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      functionName: functionName,
+      parameters: args,
+    }),
+    redirect: 'follow'
   });
+
+  if (!response.ok) {
+    const errorResult = await response.json();
+    throw new Error(`Error del servidor: ${errorResult.error?.message || response.statusText}`);
+  }
+
+  const result = await response.json();
+  if (result.error) {
+     throw new Error(`Error en la ejecución del script: ${result.error.message}`);
+  }
+  
+  return result.response;
 }
 
-// --- Definiciones de las funciones que llamará gastos_comunes.js ---
+// --- El resto de las funciones no cambian, ya que usan runGAS ---
 
 async function agregarPagoGC(datosParaSheet) {
   console.log("Enviando datos de nuevo pago al servidor:", datosParaSheet);
@@ -33,6 +61,7 @@ async function actualizarSaldoFavorResidente(rowNumber, nuevoSaldo) {
 
 async function actualizarSaldoConvenioEnSheet(rowNumber, nuevoSaldo) {
     console.log(`Actualizando saldo convenio para fila ${rowNumber} a ${nuevoSaldo}`);
+    // Asegúrate de tener una función "actualizarSaldoConvenio_GS" en tu Code.gs
     return await runGAS('actualizarSaldoConvenio_GS', rowNumber, nuevoSaldo);
 }
 
@@ -46,7 +75,6 @@ async function marcarComprobanteEnviado(rowNum) {
   return await runGAS('marcarComprobanteEnviado_GS', rowNum);
 }
 
-// Las funciones para obtener datos también deben usar este puente
 async function obtenerResidentes() {
     return await runGAS('obtenerDatos_GS', 'Residentes');
 }
