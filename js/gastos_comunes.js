@@ -761,31 +761,36 @@ const saldoActualConvenio = deudaInicialConvenio - totalAbonado;
     modalComprobante.style.display = 'none';
   });
  
+// REEMPLAZA ESTA FUNCIÓN COMPLETA EN TU ARCHIVO JS/GASTOS_COMUNES.JS
+
 function crearCuerpoCorreo(pago, residente) {
     const nombreResidente = residente[1];
     const periodoFormateado = formatearPeriodo(pago.Periodo);
     const montoPagado = parseFloat(pago.Monto_Pagado || 0);
     const saldoFavorUsado = parseFloat(pago.Saldo_Favor_Usado || 0);
     const montoTotalAbonadoGC = montoPagado + saldoFavorUsado;
-    const saldoTransaccion = parseFloat(pago.Saldo_Pendiente_o_a_favor || 0);
-
+    
     // =========================================================================================
-    // ===== [CORRECCIÓN] Se calcula la deuda real sumando los componentes del objeto 'pago' =====
+    // ===== [CORRECCIÓN DEFINITIVA] Se calculan AMBOS valores (deuda y saldo) dinámicamente =====
     // =========================================================================================
+    
+    // 1. Calcular la deuda real del período sumando sus componentes
     const valorGC = parseFloat(pago.Valor_Gasto_Comun || 0);
     const interes = parseFloat(pago.Interes || 0);
-    // Se usa notación de corchetes porque el nombre de la propiedad contiene caracteres especiales
     const multa = parseFloat(pago['Multa_1/4'] || 0);
     const deudaDelPeriodo = valorGC + interes + multa;
+
+    // 2. Recalcular el saldo de la transacción basado en la deuda real y el pago
+    const saldoTransaccion = montoTotalAbonadoGC - deudaDelPeriodo;
     // =========================================================================================
 
     let saldoTexto, saldoColor;
     if (saldoTransaccion >= 0) {
         saldoTexto = `Saldo a favor: $${saldoTransaccion.toLocaleString('es-CL')}`;
-        saldoColor = '#2e7d32';
+        saldoColor = '#2e7d32'; // Verde
     } else {
         saldoTexto = `Saldo pendiente: $${Math.abs(saldoTransaccion).toLocaleString('es-CL')}`;
-        saldoColor = '#d32f2f';
+        saldoColor = '#d32f2f'; // Rojo
     }
    
     return `
