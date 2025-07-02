@@ -76,3 +76,56 @@ function ocultarModalGlobal() {
         document.getElementById('global-modal-body').innerHTML = '';
     }
 }
+
+// =====================================================================================
+// ===== PEGA ESTA FUNCIÓN COMPLETA AL FINAL DE TU ARCHIVO js/utils.js ==============
+// =====================================================================================
+
+/**
+ * Función central para comunicarse con la API de Google Apps Script.
+ * @param {string} functionName - El nombre de la función a ejecutar en el script de Google.
+ * @param {Array} parameters - Un array con los parámetros para la función del script.
+ * @returns {Promise<any>} - La respuesta del script.
+ */
+async function llamarAPI(functionName, parameters = []) {
+    // ⬇️ ⬇️ ⬇️ IMPORTANTE: Reemplaza esto con la URL de tu Web App de Google Apps Script. ⬇️ ⬇️ ⬇️
+    const SCRIPT_URL = "AQUÍ_VA_LA_URL_DE_DESPLIEGUE_DE_TU_SCRIPT";
+
+    if (SCRIPT_URL === "AQUÍ_VA_LA_URL_DE_DESPLIEGUE_DE_TU_SCRIPT") {
+        throw new Error("Debes configurar la URL de tu script en la función llamarAPI en utils.js");
+    }
+
+    try {
+        const token = gapi.auth.getToken().access_token;
+        const res = await fetch(SCRIPT_URL, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({
+                functionName: functionName,
+                parameters: parameters
+            }),
+        });
+
+        if (!res.ok) {
+            const errorBody = await res.text();
+            throw new Error(`Error en la respuesta del servidor (HTTP ${res.status}): ${errorBody}`);
+        }
+
+        const jsonResponse = await res.json();
+
+        if (jsonResponse.error) {
+            console.error('Error devuelto por la API:', jsonResponse.error);
+            throw new Error(jsonResponse.error.message || 'Ocurrió un error en el script de Google.');
+        }
+
+        return jsonResponse.response;
+
+    } catch (error) {
+        console.error(`Error llamando a la función '${functionName}':`, error);
+        // Re-lanza el error para que pueda ser capturado por el .catch del código que lo llamó.
+        throw error;
+    }
+}
