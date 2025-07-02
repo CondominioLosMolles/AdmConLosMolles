@@ -89,9 +89,9 @@ function ocultarModalGlobal() {
  */
 async function llamarAPI(functionName, parameters = []) {
     // ⬇️ ⬇️ ⬇️ IMPORTANTE: Reemplaza esto con la URL de tu Web App de Google Apps Script. ⬇️ ⬇️ ⬇️
-    const SCRIPT_URL = "AQUÍ_VA_LA_URL_DE_DESPLIEGUE_DE_TU_SCRIPT";
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxD5d0JVZQM24zHUxhWZ4JzhG-0QbofUH5Mg9tria58PUsnMP-4JL5E5LsBwiDda3gKLw/exec";
 
-    if (SCRIPT_URL === "AQUÍ_VA_LA_URL_DE_DESPLIEGUE_DE_TU_SCRIPT") {
+    if (SCRIPT_URL === "https://script.google.com/macros/s/AKfycbxD5d0JVZQM24zHUxhWZ4JzhG-0QbofUH5Mg9tria58PUsnMP-4JL5E5LsBwiDda3gKLw/exec") {
         throw new Error("Debes configurar la URL de tu script en la función llamarAPI en utils.js");
     }
 
