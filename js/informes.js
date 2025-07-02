@@ -269,26 +269,28 @@ async function cargarInformes() {
                     <button class="btn secondary" id="btnExportar">Exportar Excel</button>
                 </div>
                 <p>Mostrando ${morososArray.length} parcelas con deuda en el período seleccionado.</p>
-                <table class="table">
-                    <thead><tr><th>Parcela</th><th>Residente</th><th>Email</th><th>Períodos Adeudados</th><th>Deuda Total</th></tr></thead>
-                    <tbody>
-                        ${morososArray.map(m => `
+                <div class="table-container">
+                    <table class="table">
+                        <thead><tr><th>Parcela</th><th>Residente</th><th>Email</th><th>Períodos Adeudados</th><th>Deuda Total</th></tr></thead>
+                        <tbody>
+                            ${morososArray.map(m => `
+                                <tr>
+                                    <td>${m.parcela}</td>
+                                    <td>${m.nombre}</td>
+                                    <td>${m.email}</td>
+                                    <td>${m.periodos.join(', ')}</td>
+                                    <td style="color:red; font-weight:bold;">$${m.deuda.toLocaleString('es-CL')}</td>
+                                </tr>`).join('') || `<tr><td colspan="5" style="text-align:center;">No hay morosos en el período seleccionado.</td></tr>`
+                            }
+                        </tbody>
+                        <tfoot>
                             <tr>
-                                <td>${m.parcela}</td>
-                                <td>${m.nombre}</td>
-                                <td>${m.email}</td>
-                                <td>${m.periodos.join(', ')}</td>
-                                <td style="color:red; font-weight:bold;">$${m.deuda.toLocaleString('es-CL')}</td>
-                            </tr>`).join('') || `<tr><td colspan="5" style="text-align:center;">No hay morosos en el período seleccionado.</td></tr>`
-                        }
-                    </tbody>
-                    <tfoot>
-                        <tr>
-                            <td colspan="4" style="text-align:right; font-weight:bold;">Deuda Total General:</td>
-                            <td style="font-weight:bold; font-size:1.2em;">$${deudaTotalGeneral.toLocaleString('es-CL')}</td>
-                        </tr>
-                    </tfoot>
-                </table>
+                                <td colspan="4" style="text-align:right; font-weight:bold;">Deuda Total General:</td>
+                                <td style="font-weight:bold; font-size:1.2em;">$${deudaTotalGeneral.toLocaleString('es-CL')}</td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
             </div>`;
         areaInforme.innerHTML = html;
         
@@ -302,8 +304,7 @@ async function cargarInformes() {
         };
     }
 
-  // Reemplaza la función existente con esta versión corregida y limpia
-function generarInformeEstadoParcela() {
+  function generarInformeEstadoParcela() {
     const filtros = getFiltros();
     if (!filtros.parcela) {
         areaInforme.innerHTML = `<div class="widget"><p style="color:red;">Por favor, seleccione un número de parcela para generar este informe.</p></div>`;
@@ -375,42 +376,44 @@ function generarInformeEstadoParcela() {
             </div>
 
             <h4>Movimientos en el Período Seleccionado</h4>
-            <table class="table">
-                <thead><tr><th>Fecha Pago</th><th>Período</th><th>Interés</th><th>Multa</th><th>Monto Pagado G.C.</th><th>Saldo</th><th>Uso Saldo a Favor</th><th>Abono Convenio</th><th>Deuda Pendiente</th><th>Estado</th></tr></thead>
-                <tbody>
-                    ${movimientosAVisualizar.map(m => {
-                        const deuda = parseFloat(m.Deuda_Total || 0);
-                        const usoSaldo = parseFloat(m.Saldo_Favor_Usado || 0);
-                        const saldo = parseFloat(m['Saldo_Pendiente_o_a_favor'] || 0);
-                        return `
-                        <tr>
-                            <td>${m.Fecha_Pago ? new Date(m.Fecha_Pago.replace(/-/g,'/')).toLocaleDateString('es-CL', { timeZone: 'UTC' }) : '---'}</td>
-                            <td>${m.Periodo}</td>
-                            <td>$${parseFloat(m.Interes || 0).toLocaleString('es-CL')}</td>
-                            <td>$${parseFloat(m['Multa_1/4'] || 0).toLocaleString('es-CL')}</td>
-                            <td>$${parseFloat(m.Monto_Pagado || 0).toLocaleString('es-CL')}</td>
-                            <td style="color:${saldo > 0 ? '#2e7d32' : (saldo < 0 ? 'red' : 'inherit')}; font-weight: ${saldo !== 0 ? 'bold' : 'normal'};">$${saldo.toLocaleString('es-CL')}</td>
-                            <td style="color:#2e7d32; font-weight: ${usoSaldo > 0 ? 'bold' : 'normal'};">$${usoSaldo.toLocaleString('es-CL')}</td>
-                            <td>$${parseFloat(m.Abono_Convenio || 0).toLocaleString('es-CL')}</td>
-                            <td style="${deuda > 0 ? 'color:red; font-weight:bold;' : ''}">$${deuda.toLocaleString('es-CL')}</td>
-                            <td>${m.Estado}</td>
+            <div class="table-container">
+                <table class="table">
+                    <thead><tr><th>Fecha Pago</th><th>Período</th><th>Interés</th><th>Multa</th><th>Monto Pagado G.C.</th><th>Saldo</th><th>Uso Saldo a Favor</th><th>Abono Convenio</th><th>Deuda Pendiente</th><th>Estado</th></tr></thead>
+                    <tbody>
+                        ${movimientosAVisualizar.map(m => {
+                            const deuda = parseFloat(m.Deuda_Total || 0);
+                            const usoSaldo = parseFloat(m.Saldo_Favor_Usado || 0);
+                            const saldo = parseFloat(m['Saldo_Pendiente_o_a_favor'] || 0);
+                            return `
+                            <tr>
+                                <td>${m.Fecha_Pago ? new Date(m.Fecha_Pago.replace(/-/g,'/')).toLocaleDateString('es-CL', { timeZone: 'UTC' }) : '---'}</td>
+                                <td>${m.Periodo}</td>
+                                <td>$${parseFloat(m.Interes || 0).toLocaleString('es-CL')}</td>
+                                <td>$${parseFloat(m['Multa_1/4'] || 0).toLocaleString('es-CL')}</td>
+                                <td>$${parseFloat(m.Monto_Pagado || 0).toLocaleString('es-CL')}</td>
+                                <td style="color:${saldo > 0 ? '#2e7d32' : (saldo < 0 ? 'red' : 'inherit')}; font-weight: ${saldo !== 0 ? 'bold' : 'normal'};">$${saldo.toLocaleString('es-CL')}</td>
+                                <td style="color:#2e7d32; font-weight: ${usoSaldo > 0 ? 'bold' : 'normal'};">$${usoSaldo.toLocaleString('es-CL')}</td>
+                                <td>$${parseFloat(m.Abono_Convenio || 0).toLocaleString('es-CL')}</td>
+                                <td style="${deuda > 0 ? 'color:red; font-weight:bold;' : ''}">$${deuda.toLocaleString('es-CL')}</td>
+                                <td>${m.Estado}</td>
+                            </tr>
+                        `}).join('') || `<tr><td colspan="10" style="text-align:center;">No hay cargos de gastos comunes en el período seleccionado.</td></tr>`}
+                    </tbody>
+                    <tfoot style="font-weight:bold;">
+                        <tr style="background-color: #f8f9fa; border-top: 2px solid #dee2e6;">
+                            <td style="padding: 0.75rem; text-align:right;" colspan="2">Totales:</td>
+                            <td style="padding: 0.75rem;">$${totalInteres.toLocaleString('es-CL')}</td>
+                            <td style="padding: 0.75rem;">$${totalMulta.toLocaleString('es-CL')}</td>
+                            <td style="padding: 0.75rem;">$${totalPagadoGC.toLocaleString('es-CL')}</td>
+                            <td style="padding: 0.75rem; color:${totalSaldo > 0 ? '#2e7d32' : (totalSaldo < 0 ? 'red' : 'inherit')};">$${totalSaldo.toLocaleString('es-CL')}</td>
+                            <td style="padding: 0.75rem; color:#2e7d32;">$${totalUsoSaldoFavor.toLocaleString('es-CL')}</td>
+                            <td style="padding: 0.75rem;">$${totalAbonoConvenio.toLocaleString('es-CL')}</td>
+                            <td style="padding: 0.75rem; color:red;">$${totalDeudaPendiente.toLocaleString('es-CL')}</td>
+                            <td style="padding: 0.75rem;"></td>
                         </tr>
-                    `}).join('') || `<tr><td colspan="10" style="text-align:center;">No hay cargos de gastos comunes en el período seleccionado.</td></tr>`}
-                </tbody>
-                <tfoot style="font-weight:bold;">
-                    <tr style="background-color: #f8f9fa; border-top: 2px solid #dee2e6;">
-                        <td style="padding: 0.75rem; text-align:right;" colspan="2">Totales:</td>
-                        <td style="padding: 0.75rem;">$${totalInteres.toLocaleString('es-CL')}</td>
-                        <td style="padding: 0.75rem;">$${totalMulta.toLocaleString('es-CL')}</td>
-                        <td style="padding: 0.75rem;">$${totalPagadoGC.toLocaleString('es-CL')}</td>
-                        <td style="padding: 0.75rem; color:${totalSaldo > 0 ? '#2e7d32' : (totalSaldo < 0 ? 'red' : 'inherit')};">$${totalSaldo.toLocaleString('es-CL')}</td>
-                        <td style="padding: 0.75rem; color:#2e7d32;">$${totalUsoSaldoFavor.toLocaleString('es-CL')}</td>
-                        <td style="padding: 0.75rem;">$${totalAbonoConvenio.toLocaleString('es-CL')}</td>
-                        <td style="padding: 0.75rem; color:red;">$${totalDeudaPendiente.toLocaleString('es-CL')}</td>
-                        <td style="padding: 0.75rem;"></td>
-                    </tr>
-                </tfoot>
-            </table>
+                    </tfoot>
+                </table>
+            </div>
         </div>`;
     areaInforme.innerHTML = html;
     
@@ -511,20 +514,22 @@ function generarInformeEstadoParcela() {
                     <h3>Historial de Pagos</h3>
                     <button class="btn secondary" id="btnExportar">Exportar Excel</button>
                 </div>
-                <table class="table">
-                    <thead><tr><th>Fecha Pago</th><th>Parcela</th><th>Residente</th><th>Período</th><th>Monto Pagado</th><th>Estado</th></tr></thead>
-                    <tbody>
-                        ${pagosFiltrados.map(p => `
-                            <tr>
-                                <td>${new Date(p.Fecha_Pago.replace(/-/g,'/')).toLocaleDateString('es-CL', { timeZone: 'UTC' })}</td>
-                                <td>${p.N_Parcela}</td>
-                                <td>${p.Nombre_Residente}</td>
-                                <td>${p.Periodo}</td>
-                                <td>$${(parseFloat(p.Monto_Pagado || 0) + parseFloat(p.Abono_Convenio || 0)).toLocaleString('es-CL')}</td>
-                                <td>${p.Estado}</td>
-                            </tr>`).join('') || `<tr><td colspan="6" style="text-align:center;">No se encontraron pagos con los filtros seleccionados.</td></tr>`}
-                    </tbody>
-                </table>
+                <div class="table-container">
+                    <table class="table">
+                        <thead><tr><th>Fecha Pago</th><th>Parcela</th><th>Residente</th><th>Período</th><th>Monto Pagado</th><th>Estado</th></tr></thead>
+                        <tbody>
+                            ${pagosFiltrados.map(p => `
+                                <tr>
+                                    <td>${new Date(p.Fecha_Pago.replace(/-/g,'/')).toLocaleDateString('es-CL', { timeZone: 'UTC' })}</td>
+                                    <td>${p.N_Parcela}</td>
+                                    <td>${p.Nombre_Residente}</td>
+                                    <td>${p.Periodo}</td>
+                                    <td>$${(parseFloat(p.Monto_Pagado || 0) + parseFloat(p.Abono_Convenio || 0)).toLocaleString('es-CL')}</td>
+                                    <td>${p.Estado}</td>
+                                </tr>`).join('') || `<tr><td colspan="6" style="text-align:center;">No se encontraron pagos con los filtros seleccionados.</td></tr>`}
+                        </tbody>
+                    </table>
+                </div>
             </div>`;
         areaInforme.innerHTML = html;
         
@@ -585,24 +590,26 @@ function generarInformeEstadoParcela() {
                     </div>
                     <div style="flex-grow:1; min-width:300px;">
                         <h4>Detalle de Egresos</h4>
-                        <table class="table">
-                            <thead><tr><th>Categoría</th><th>Monto</th><th>% del Total</th></tr></thead>
-                            <tbody>
-                            ${Object.entries(categorias).map(([cat, monto]) => `
-                                <tr>
-                                    <td>${cat}</td>
-                                    <td>$${monto.toLocaleString('es-CL')}</td>
-                                    <td>${totalEgresos > 0 ? ((monto/totalEgresos)*100).toFixed(2) : 0}%</td>
-                                </tr>`).join('') || `<tr><td colspan="3" style="text-align:center;">No hay egresos en el período.</td></tr>`}
-                            </tbody>
-                            <tfoot>
-                                 <tr>
-                                    <td style="font-weight:bold;">Total</td>
-                                    <td style="font-weight:bold;">$${totalEgresos.toLocaleString('es-CL')}</td>
-                                    <td></td>
-                                 </tr>
-                            </tfoot>
-                        </table>
+                        <div class="table-container">
+                            <table class="table">
+                                <thead><tr><th>Categoría</th><th>Monto</th><th>% del Total</th></tr></thead>
+                                <tbody>
+                                ${Object.entries(categorias).map(([cat, monto]) => `
+                                    <tr>
+                                        <td>${cat}</td>
+                                        <td>$${monto.toLocaleString('es-CL')}</td>
+                                        <td>${totalEgresos > 0 ? ((monto/totalEgresos)*100).toFixed(2) : 0}%</td>
+                                    </tr>`).join('') || `<tr><td colspan="3" style="text-align:center;">No hay egresos en el período.</td></tr>`}
+                                </tbody>
+                                <tfoot>
+                                     <tr>
+                                        <td style="font-weight:bold;">Total</td>
+                                        <td style="font-weight:bold;">$${totalEgresos.toLocaleString('es-CL')}</td>
+                                        <td></td>
+                                     </tr>
+                                </tfoot>
+                            </table>
+                        </div>
                     </div>
                 </div>
             </div>`;
@@ -675,21 +682,23 @@ function generarInformeEstadoParcela() {
                     <button class="btn secondary" id="btnExportar">Exportar Excel</button>
                 </div>
                 <p>Mostrando resultados para el período seleccionado.</p>
-                <table class="table">
-                    <tbody>
-                        <tr><th colspan="2" style="background-color:#e9f1fb;">INGRESOS</th></tr>
-                        <tr><td>Ingresos por Gastos Comunes</td><td style="text-align:right;">$${ingresosGC.toLocaleString('es-CL')}</td></tr>
-                        <tr><td>Ingresos por Abonos a Convenio</td><td style="text-align:right;">$${ingresosConvenio.toLocaleString('es-CL')}</td></tr>
-                        <tr style="font-weight:bold;"><td style="color:green;">Total Ingresos</td><td style="text-align:right; color:green;">$${totalIngresos.toLocaleString('es-CL')}</td></tr>
-                        
-                        <tr><th colspan="2" style="background-color:#e9f1fb; padding-top:20px;">EGRESOS</th></tr>
-                        <tr><td>Total Egresos</td><td style="text-align:right;">$${totalEgresos.toLocaleString('es-CL')}</td></tr>
-                        <tr style="font-weight:bold;"><td style="color:red;">Total Egresos</td><td style="text-align:right; color:red;">$${totalEgresos.toLocaleString('es-CL')}</td></tr>
+                <div class="table-container">
+                    <table class="table">
+                        <tbody>
+                            <tr><th colspan="2" style="background-color:#e9f1fb;">INGRESOS</th></tr>
+                            <tr><td>Ingresos por Gastos Comunes</td><td style="text-align:right;">$${ingresosGC.toLocaleString('es-CL')}</td></tr>
+                            <tr><td>Ingresos por Abonos a Convenio</td><td style="text-align:right;">$${ingresosConvenio.toLocaleString('es-CL')}</td></tr>
+                            <tr style="font-weight:bold;"><td style="color:green;">Total Ingresos</td><td style="text-align:right; color:green;">$${totalIngresos.toLocaleString('es-CL')}</td></tr>
+                            
+                            <tr><th colspan="2" style="background-color:#e9f1fb; padding-top:20px;">EGRESOS</th></tr>
+                            <tr><td>Total Egresos</td><td style="text-align:right;">$${totalEgresos.toLocaleString('es-CL')}</td></tr>
+                            <tr style="font-weight:bold;"><td style="color:red;">Total Egresos</td><td style="text-align:right; color:red;">$${totalEgresos.toLocaleString('es-CL')}</td></tr>
 
-                        <tr><th colspan="2" style="background-color:#e9f1fb; padding-top:20px;">RESULTADO</th></tr>
-                        <tr style="font-weight:bold; font-size:1.2em;"><td>Saldo Final del Período</td><td style="text-align:right;">$${saldoFinal.toLocaleString('es-CL')}</td></tr>
-                    </tbody>
-                </table>
+                            <tr><th colspan="2" style="background-color:#e9f1fb; padding-top:20px;">RESULTADO</th></tr>
+                            <tr style="font-weight:bold; font-size:1.2em;"><td>Saldo Final del Período</td><td style="text-align:right;">$${saldoFinal.toLocaleString('es-CL')}</td></tr>
+                        </tbody>
+                    </table>
+                </div>
             </div>`;
         areaInforme.innerHTML = html;
 
@@ -709,7 +718,6 @@ function generarInformeEstadoParcela() {
         };
     }
 
-    // Reemplaza la función existente con esta versión corregida y limpia
 function crearCuerpoCorreoEstadoCuenta(datos) {
     const { 
         nombreResidente, numeroParcela, fechaInicio, fechaFin, 
@@ -723,88 +731,113 @@ function crearCuerpoCorreoEstadoCuenta(datos) {
 
     const movimientosHtml = movimientos.length > 0 
         ? movimientos.map(m => `
-            <tr style="border-bottom: 1px solid #ddd;">
-                <td style="padding: 10px;">${m.Fecha_Pago ? new Date(m.Fecha_Pago.replace(/-/g,'/')).toLocaleDateString('es-CL', { timeZone: 'UTC' }) : '---'}</td>
-                <td style="padding: 10px;">${m.Periodo}</td>
-                <td style="padding: 10px; text-align: right;">$${parseFloat(m.Interes || 0).toLocaleString('es-CL')}</td>
-                <td style="padding: 10px; text-align: right;">$${parseFloat(m['Multa_1/4'] || 0).toLocaleString('es-CL')}</td>
-                <td style="padding: 10px; text-align: right;">$${parseFloat(m.Monto_Pagado || 0).toLocaleString('es-CL')}</td>
-                <td style="padding: 10px; text-align: right;">$${parseFloat(m['Saldo_Pendiente_o_a_favor'] || 0).toLocaleString('es-CL')}</td>
-                <td style="padding: 10px; text-align: right; color: #2e7d32;">$${parseFloat(m.Saldo_Favor_Usado || 0).toLocaleString('es-CL')}</td>
-                <td style="padding: 10px; text-align: right;">$${parseFloat(m.Abono_Convenio || 0).toLocaleString('es-CL')}</td>
-                <td style="padding: 10px;">${m.Estado}</td>
+            <tr style="border-bottom: 1px solid #dddddd;">
+                <td style="padding: 10px; font-size: 14px;">${m.Fecha_Pago ? new Date(m.Fecha_Pago.replace(/-/g,'/')).toLocaleDateString('es-CL', { timeZone: 'UTC' }) : '---'}</td>
+                <td style="padding: 10px; font-size: 14px;">${m.Periodo}</td>
+                <td style="padding: 10px; font-size: 14px; text-align: right;">$${parseFloat(m.Monto_Pagado || 0).toLocaleString('es-CL')}</td>
+                <td style="padding: 10px; font-size: 14px; text-align: right; color: #2e7d32;">$${parseFloat(m.Saldo_Favor_Usado || 0).toLocaleString('es-CL')}</td>
+                <td style="padding: 10px; font-size: 14px; text-align: right;">$${parseFloat(m.Abono_Convenio || 0).toLocaleString('es-CL')}</td>
+                <td style="padding: 10px; font-size: 14px;">${m.Estado}</td>
             </tr>
         `).join('')
-        : '<tr><td colspan="9" style="padding: 20px; text-align: center; color: #777;">No se registraron movimientos en el período seleccionado.</td></tr>';
+        : '<tr><td colspan="6" style="padding: 20px; text-align: center; color: #777777;">No se registraron movimientos en el período seleccionado.</td></tr>';
 
     return `
-        <div style="font-family: Arial, sans-serif; color: #333; max-width: 800px; margin: auto; border: 1px solid #eee; border-radius: 10px; overflow: hidden;">
-            <div style="background-color: #004a7f; color: white; padding: 20px; text-align: center;">
-                <h1 style="margin: 0; font-size: 24px;">Estado de Cuenta</h1>
-                <p style="margin: 5px 0 0;">Condominio Los Molles</p>
-            </div>
-            <div style="padding: 25px;">
-                <p>Estimado(a) <b>${nombreResidente}</b>,</p>
-                <p>A continuación, le presentamos su estado de cuenta detallado para la <b>Parcela ${numeroParcela}</b>, ${periodoStr}.</p>
-                
-                <h3 style="border-bottom: 2px solid #004a7f; padding-bottom: 5px; margin-top: 30px; font-size: 18px;">Resumen de Saldos</h3>
-                <table style="width: 100%; margin-top: 15px; border-spacing: 10px; text-align: center;">
-                    <tr>
-                        <td style="background-color: #fbe9e7; padding: 15px; border-radius: 8px;">
-                            <span style="font-size: 14px; color: #555;">Deuda Gasto Común Total</span><br>
-                            <span style="font-size: 22px; font-weight: bold; color: #d32f2f;">$${deudaGC.toLocaleString('es-CL')}</span>
-                        </td>
-                        <td style="background-color: #fff3e0; padding: 15px; border-radius: 8px;">
-                            <span style="font-size: 14px; color: #555;">Deuda Convenio de Pago</span><br>
-                            <span style="font-size: 22px; font-weight: bold; color: #f57c00;">$${deudaConvenio.toLocaleString('es-CL')}</span>
-                        </td>
-                        <td style="background-color: #e8f5e9; padding: 15px; border-radius: 8px;">
-                            <span style="font-size: 14px; color: #555;">Saldo a Favor</span><br>
-                            <span style="font-size: 22px; font-weight: bold; color: #2e7d32;">$${saldoFavor.toLocaleString('es-CL')}</span>
-                        </td>
-                    </tr>
-                </table>
-
-                <h3 style="border-bottom: 2px solid #004a7f; padding-bottom: 5px; margin-top: 30px; font-size: 18px;">Detalle de Movimientos del Período</h3>
-                <table style="width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 14px;">
-                    <thead>
-                        <tr style="background-color: #f4f4f4; text-align: left;">
-                            <th style="padding: 10px;">Fecha Pago</th>
-                            <th style="padding: 10px;">Período</th>
-                            <th style="padding: 10px; text-align: right;">Interés</th>
-                            <th style="padding: 10px; text-align: right;">Multa</th>
-                            <th style="padding: 10px; text-align: right;">Pago G.C.</th>
-                            <th style="padding: 10px; text-align: right;">Saldo</th>
-                            <th style="padding: 10px; text-align: right;">Uso Saldo</th>
-                            <th style="padding: 10px; text-align: right;">Abono Convenio</th>
-                            <th style="padding: 10px;">Estado</th>
+    <!DOCTYPE html>
+    <html lang="es">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Estado de Cuenta</title>
+        <style>
+            body, table, td, p, h1, h3 { font-family: Arial, sans-serif; color: #333333; }
+            .container { width: 100%; max-width: 640px; margin: 0 auto; }
+            .summary-table { border-spacing: 10px; margin: 15px -5px; }
+            .summary-box { padding: 15px; border-radius: 8px; text-align: center; width: 33.3%; }
+            @media screen and (max-width: 600px) {
+                .container { width: 100% !important; }
+                .summary-box { display: block !important; width: 100% !important; box-sizing: border-box; margin-bottom: 10px; }
+                .details-table { font-size: 12px; }
+            }
+        </style>
+    </head>
+    <body style="margin: 0; padding: 0;">
+        <table class="container" align="center" border="0" cellpadding="0" cellspacing="0" width="640" style="border-collapse: collapse;">
+            <tr>
+                <td style="padding: 20px 0;">
+                    <table width="100%" align="center" border="0" cellpadding="0" cellspacing="0" style="border-collapse: collapse; border: 1px solid #eeeeee;">
+                        <tr>
+                            <td align="center" bgcolor="#004a7f" style="padding: 20px; color: #ffffff;">
+                                <h1 style="margin: 0; font-size: 24px;">Estado de Cuenta</h1>
+                                <p style="margin: 5px 0 0;">Condominio Los Molles</p>
+                            </td>
                         </tr>
-                    </thead>
-                    <tbody>
-                        ${movimientosHtml}
-                    </tbody>
-                    <tfoot>
-                        <tr style="background-color: #f4f4f4; font-weight: bold;">
-                            <td colspan="4" style="padding: 12px; text-align: right;">Totales del Período:</td>
-                            <td style="padding: 12px; text-align: right;">$${totalPagadoGC.toLocaleString('es-CL')}</td>
-                            <td style="padding: 12px; text-align: right;">$${totalSaldo.toLocaleString('es-CL')}</td>
-                            <td style="padding: 12px; text-align: right; color:#2e7d32;">$${totalUsoSaldoFavor.toLocaleString('es-CL')}</td>
-                            <td style="padding: 12px; text-align: right;">$${totalAbonoConvenio.toLocaleString('es-CL')}</td>
-                            <td style="padding: 12px;"></td>
-                        </tr>
-                    </tfoot>
-                </table>
+                        <tr>
+                            <td style="padding: 25px 20px;">
+                                <p>Estimado(a) <b>${nombreResidente}</b>,</p>
+                                <p>A continuación, le presentamos su estado de cuenta para la <b>Parcela ${numeroParcela}</b>, ${periodoStr}.</p>
+                                
+                                <h3 style="border-bottom: 2px solid #004a7f; padding-bottom: 5px; margin-top: 30px; font-size: 18px;">Resumen de Saldos</h3>
+                                <table class="summary-table" border="0" cellpadding="0" cellspacing="0" width="100%">
+                                    <tr>
+                                        <td class="summary-box" bgcolor="#fbe9e7">
+                                            <span style="font-size: 14px; color: #555555;">Deuda G. Común Total</span><br>
+                                            <span style="font-size: 22px; font-weight: bold; color: #d32f2f;">$${deudaGC.toLocaleString('es-CL')}</span>
+                                        </td>
+                                        <td class="summary-box" bgcolor="#fff3e0">
+                                            <span style="font-size: 14px; color: #555555;">Deuda Convenio</span><br>
+                                            <span style="font-size: 22px; font-weight: bold; color: #f57c00;">$${deudaConvenio.toLocaleString('es-CL')}</span>
+                                        </td>
+                                        <td class="summary-box" bgcolor="#e8f5e9">
+                                            <span style="font-size: 14px; color: #555555;">Saldo a Favor</span><br>
+                                            <span style="font-size: 22px; font-weight: bold; color: #2e7d32;">$${saldoFavor.toLocaleString('es-CL')}</span>
+                                        </td>
+                                    </tr>
+                                </table>
 
-                <p style="margin-top: 30px; font-size: 14px; color: #555;">Si tiene alguna consulta sobre este estado de cuenta, no dude en ponerse en contacto con la administración.</p>
-                <p style="margin-top: 20px;">Atentamente,</p>
-                <p style="font-weight: bold; margin: 0;">${nombreAdmin}</p>
-                <p style="margin: 0; color: #777;">${cargoAdmin}</p>
-            </div>
-            <div style="background-color: #f4f4f4; text-align: center; padding: 15px; font-size: 12px; color: #777;">
-                Este es un correo electrónico generado automáticamente. 
-            </div>
-        </div>
-    `;
+                                <h3 style="border-bottom: 2px solid #004a7f; padding-bottom: 5px; margin-top: 30px; font-size: 18px;">Detalle de Movimientos del Período</h3>
+                                <div style="width:100%; overflow-x:auto;">
+                                    <table class="details-table" width="100%" border="0" cellpadding="0" cellspacing="0" style="border-collapse: collapse; margin-top: 15px;">
+                                        <thead>
+                                            <tr bgcolor="#f4f4f4">
+                                                <th style="padding: 10px; text-align: left;">Fecha Pago</th>
+                                                <th style="padding: 10px; text-align: left;">Período</th>
+                                                <th style="padding: 10px; text-align: right;">Pago G.C.</th>
+                                                <th style="padding: 10px; text-align: right;">Uso Saldo</th>
+                                                <th style="padding: 10px; text-align: right;">Abono Convenio</th>
+                                                <th style="padding: 10px; text-align: left;">Estado</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>${movimientosHtml}</tbody>
+                                        <tfoot>
+                                            <tr style="background-color: #f4f4f4; font-weight: bold;">
+                                                <td colspan="2" style="padding: 12px; text-align: right;">Totales del Período:</td>
+                                                <td style="padding: 12px; text-align: right;">$${totalPagadoGC.toLocaleString('es-CL')}</td>
+                                                <td style="padding: 12px; text-align: right; color:#2e7d32;">$${totalUsoSaldoFavor.toLocaleString('es-CL')}</td>
+                                                <td style="padding: 12px; text-align: right;">$${totalAbonoConvenio.toLocaleString('es-CL')}</td>
+                                                <td style="padding: 12px;"></td>
+                                            </tr>
+                                        </tfoot>
+                                    </table>
+                                </div>
+                                
+                                <p style="margin-top: 30px; font-size: 14px; color: #555555;">Si tiene alguna consulta, no dude en contactar a la administración.</p>
+                                <p style="margin-top: 20px;">Atentamente,</p>
+                                <p style="font-weight: bold; margin: 0;">${nombreAdmin}</p>
+                                <p style="margin: 0; color: #777777;">${cargoAdmin}</p>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td bgcolor="#f4f4f4" style="text-align: center; padding: 15px; font-size: 12px; color: #777777;">
+                                Este es un correo electrónico generado automáticamente.
+                            </td>
+                        </tr>
+                    </table>
+                </td>
+            </tr>
+        </table>
+    </body>
+    </html>`;
 }
     
     ocultarSpinner();
