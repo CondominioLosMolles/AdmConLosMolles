@@ -855,9 +855,7 @@ async function marcarComprobanteEnviadoEnSheet(rowNum) {
     // Si tu función se llama diferente (ej: `callApi`, `googleApiCall`), ajústala aquí.
     return llamarAPI('marcarComprobanteEnviado_GS', [rowNum]);
 }
-  // EN: js/gastos_comunes.js
-// REEMPLAZA EL EVENT LISTENER PARA 'inputNParcelaComprobante'
-
+ // Reemplaza tu listener actual con este bloque completo
 inputParcelaComprobante.addEventListener('input', (e) => {
     const parcela = e.target.value;
     const selectorContainer = document.getElementById('periodo-selector-container');
@@ -867,7 +865,7 @@ inputParcelaComprobante.addEventListener('input', (e) => {
     const asuntoInput = document.getElementById('inputAsuntoComprobante');
     const cuerpoDiv = document.getElementById('divCuerpoComprobante');
 
-    // Resetear todo
+    // --- Inicio del bloque de reseteo ---
     nombreInput.value = '';
     emailInput.value = '';
     asuntoInput.value = '';
@@ -875,6 +873,7 @@ inputParcelaComprobante.addEventListener('input', (e) => {
     selectorContainer.style.display = 'none';
     selector.innerHTML = '';
     pagoSeleccionadoParaEnviar = null;
+    // --- Fin del bloque de reseteo ---
 
     if (!parcela) return;
    
@@ -898,7 +897,6 @@ inputParcelaComprobante.addEventListener('input', (e) => {
         return;
     }
     
-    // Poblar el selector y/o mostrar la vista previa
     selector.innerHTML = '<option value="">-- Seleccione un comprobante --</option>';
     pagosDeLaParcela.forEach(pago => {
         const fechaPagoFmt = new Date(pago.Fecha_Pago.replace(/-/g, '/')).toLocaleDateString('es-CL', { timeZone: 'UTC' });
@@ -908,10 +906,10 @@ inputParcelaComprobante.addEventListener('input', (e) => {
         selector.appendChild(option);
     });
     
-    // Seleccionar el más reciente por defecto y actualizar la vista previa
+    // --- Líneas clave para mostrar la vista previa inicial ---
     selector.value = pagosDeLaParcela[0].ID_Pago;
     selectorContainer.style.display = 'block';
-    actualizarVistaPreviaComprobante(pagosDeLaParcela[0]);
+    actualizarVistaPreviaComprobante(pagosDeLaParcela[0]); // Esta línea genera la vista previa.
 });
 
 
