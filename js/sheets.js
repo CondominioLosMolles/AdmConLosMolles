@@ -73,6 +73,34 @@ async function buscarOCrearRutaDeComprobantes(nombreCarpetaParcela, nombreMes, a
     return carpetaMesId;
 }
 
+async function buscarOCrearRutaDeEgreso(nombreMes, anio) {
+    // 1. Busca la carpeta principal "Los Molles"
+    const carpetaPrincipalId = await findFolderId(MAIN_DRIVE_FOLDER_NAME);
+    if (!carpetaPrincipalId) {
+        throw new Error(`No se encontró la carpeta principal de Drive: "${MAIN_DRIVE_FOLDER_NAME}"`);
+    }
+
+    // 2. Busca o crea la carpeta "Egresos" dentro de la principal
+    let carpetaEgresosId = await findFolderId('Egresos', carpetaPrincipalId);
+    if (!carpetaEgresosId) {
+        carpetaEgresosId = await createFolder('Egresos', carpetaPrincipalId);
+    }
+
+    // 3. Busca o crea la carpeta para el AÑO dentro de "Egresos"
+    let carpetaAnioId = await findFolderId(anio.toString(), carpetaEgresosId);
+    if (!carpetaAnioId) {
+        carpetaAnioId = await createFolder(anio.toString(), carpetaEgresosId);
+    }
+
+    // 4. Busca o crea la carpeta para el MES dentro del AÑO
+    let carpetaMesId = await findFolderId(nombreMes, carpetaAnioId);
+    if (!carpetaMesId) {
+        carpetaMesId = await createFolder(nombreMes, carpetaAnioId);
+    }
+
+    // 5. Devuelve el ID de la carpeta final del mes
+    return carpetaMesId;
+}
 
 async function subirComprobante(file, folderId) {
     const metadata = {
