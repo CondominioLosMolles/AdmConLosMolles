@@ -31,6 +31,27 @@ function formatearPeriodo(periodo) {
   return periodo;
 }
 
+// EN: js/gastos_comunes.js
+// AGREGA ESTA FUNCIÓN NUEVA
+
+function actualizarVistaPreviaComprobante(pago) {
+    pagoSeleccionadoParaEnviar = pago; // Variable global para el envío
+    
+    const parcela = document.getElementById('inputNParcelaComprobante').value;
+    const asuntoInput = document.getElementById('inputAsuntoComprobante');
+    const cuerpoDiv = document.getElementById('divCuerpoComprobante');
+
+    const allResidentsForParcela = residentes.filter(r => String(r[3]) === String(parcela));
+    const residentNames = allResidentsForParcela.map(r => r[1]).join(' y ');
+    const representativeResident = allResidentsForParcela.find(r => r[9] && r[9].trim().toUpperCase() === 'SI') || allResidentsForParcela[0];
+    const aEnviar = {...representativeResident};
+    aEnviar[1] = residentNames;
+
+    const periodoFormateado = formatearPeriodo(pago.Periodo);
+    asuntoInput.value = `Comprobante pago Gasto Común ${periodoFormateado} Parcela ${parcela}`;
+    cuerpoDiv.innerHTML = crearCuerpoCorreo(pago, aEnviar);
+}
+
 function aplicarAnchosGuardados(table) {
     const savedWidthsJSON = localStorage.getItem('tablaPagosColumnWidths');
     if (savedWidthsJSON) {
@@ -761,25 +782,21 @@ const saldoActualConvenio = deudaInicialConvenio - totalAbonado;
     modalComprobante.style.display = 'none';
   });
  
-// EN TU ARCHIVO: js/gastos_comunes.js
-// REEMPLAZA LA FUNCIÓN EXISTENTE CON ESTA:
+// EN: js/gastos_comunes.js
+// REEMPLAZA ESTA FUNCIÓN
 
 function crearCuerpoCorreo(pago, residente) {
-    // --- INICIO DE LA CORRECCIÓN ---
-    // Nos aseguramos de que todos los datos vengan del objeto 'pago' seleccionado
     const nombreResidente = residente[1];
-    const periodoFormateado = formatearPeriodo(pago.Periodo); // Usa el periodo del pago seleccionado
+    const periodoFormateado = formatearPeriodo(pago.Periodo);
     const montoPagado = parseFloat(pago.Monto_Pagado || 0);
     const saldoFavorUsado = parseFloat(pago.Saldo_Favor_Usado || 0);
     const montoTotalAbonadoGC = montoPagado + saldoFavorUsado;
     
-    // Recalculamos la deuda y el saldo de la transacción para máxima precisión
     const valorGC = parseFloat(pago.Valor_Gasto_Comun || 0);
     const interes = parseFloat(pago.Interes || 0);
     const multa = parseFloat(pago['Multa_1/4'] || 0);
     const deudaDelPeriodo = valorGC + interes + multa;
     const saldoTransaccion = montoTotalAbonadoGC - deudaDelPeriodo;
-    // --- FIN DE LA CORRECCIÓN ---
 
     let saldoTexto, saldoColor;
     if (saldoTransaccion >= 0) {
@@ -790,72 +807,40 @@ function crearCuerpoCorreo(pago, residente) {
         saldoColor = '#d32f2f'; // Rojo
     }
    
+    // El resto del código HTML del correo no cambia...
     return `
     <!DOCTYPE html>
     <html lang="es">
     <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Comprobante de Pago</title>
-    <style>
-        body, table, td, p, h2 { font-family: Arial, sans-serif; color: #333333; }
-        .container { width: 100%; max-width: 600px; margin: 0 auto; }
-        @media screen and (max-width: 600px) {
-            .container { width: 100% !important; }
-        }
-    </style>
     </head>
-    <body style="margin: 0; padding: 0; background-color: #f4f4f4;">
-        <table class="container" align="center" border="0" cellpadding="0" cellspacing="0" width="600" style="border-collapse: collapse;">
+    <body style="margin: 0; padding: 0; background-color: #f4f4f4; font-family: Arial, sans-serif;">
+        <table align="center" border="0" cellpadding="0" cellspacing="0" width="600" style="border-collapse: collapse; background-color: #ffffff; margin: 20px auto; border: 1px solid #dddddd;">
             <tr>
-                <td align="center" style="padding: 20px 0;">
-                    <table width="100%" align="center" border="0" cellpadding="0" cellspacing="0" style="border-collapse: collapse; background-color: #ffffff; border: 1px solid #dddddd;">
-                        <tr>
-                            <td align="center" bgcolor="#2a7ca3" style="padding: 20px; color: #ffffff;">
-                                <h2 style="margin: 0; color: #ffffff;">Comprobante de Pago</h2>
-                                <p style="margin: 5px 0 0; color: #ffffff;">Condominio Los Molles</p>
-                            </td>
-                        </tr>
-                        <tr>
-                            <td style="padding: 25px 20px;">
-                                <p>Estimado(a) <strong>${nombreResidente}</strong>,</p>
-                                <p>Confirmamos la recepción de su pago para el período <strong>${periodoFormateado}</strong>. A continuación el detalle:</p>
-                                <hr style="border: 0; border-top: 1px solid #eeeeee;">
-                                <table width="100%" cellpadding="5" cellspacing="0" style="border-collapse: collapse;">
-                                    <tr>
-                                        <td style="padding: 8px 0;">Deuda del Período (G.C. + cargos):</td>
-                                        <td style="padding: 8px 0; text-align: right;">$${deudaDelPeriodo.toLocaleString('es-CL')}</td>
-                                    </tr>
-                                    <tr>
-                                        <td style="padding: 8px 0;">Monto Pagado (transferencia/efectivo):</td>
-                                        <td style="padding: 8px 0; text-align: right;">$${montoPagado.toLocaleString('es-CL')}</td>
-                                    </tr>
-                                    <tr>
-                                        <td style="padding: 8px 0;">Saldo a Favor Utilizado:</td>
-                                        <td style="padding: 8px 0; text-align: right;">$${saldoFavorUsado.toLocaleString('es-CL')}</td>
-                                    </tr>
-                                    <tr style="font-weight: bold;">
-                                        <td style="padding: 8px 0; border-top: 1px solid #eeeeee;">Total Abonado al Período:</td>
-                                        <td style="padding: 8px 0; text-align: right; border-top: 1px solid #eeeeee;">$${montoTotalAbonadoGC.toLocaleString('es-CL')}</td>
-                                    </tr>
-                                    <tr style="font-weight: bold; border-top: 2px solid #cccccc;">
-                                        <td style="padding: 10px 0; color: ${saldoColor};">Resultado Transacción:</td>
-                                        <td style="padding: 10px 0; text-align: right; color: ${saldoColor};">${saldoTexto}</td>
-                                    </tr>
-                                </table>
-                                <hr style="border: 0; border-top: 1px solid #eeeeee; margin-top: 20px;">
-                                <p>Gracias por su compromiso.</p>
-                                <p style="margin-top: 20px;">Atentamente,<br><strong>Alex Thiele</strong><br>Administrador</p>
-                            </td>
-                        </tr>
-                        <tr>
-                            <td bgcolor="#f4f4f4" style="text-align: center; padding: 15px; font-size: 12px; color: #777777;">
-                                Este es un correo electrónico generado automáticamente.
-                            </td>
-                        </tr>
-                    </table>
+                <td align="center" bgcolor="#2a7ca3" style="padding: 20px; color: #ffffff;">
+                    <h2 style="margin: 0;">Comprobante de Pago</h2>
+                    <p style="margin: 5px 0 0;">Condominio Los Molles</p>
                 </td>
             </tr>
+            <tr>
+                <td style="padding: 25px 20px;">
+                    <p>Estimado(a) <strong>${nombreResidente}</strong>,</p>
+                    <p>Confirmamos la recepción de su pago para el período <strong>${periodoFormateado}</strong>. A continuación el detalle:</p>
+                    <hr style="border: 0; border-top: 1px solid #eeeeee;">
+                    <table width="100%" cellpadding="5" cellspacing="0" style="border-collapse: collapse;">
+                        <tr><td style="padding: 8px 0;">Deuda del Período (G.C. + cargos):</td><td style="padding: 8px 0; text-align: right;">$${deudaDelPeriodo.toLocaleString('es-CL')}</td></tr>
+                        <tr><td style="padding: 8px 0;">Monto Pagado (transferencia/efectivo):</td><td style="padding: 8px 0; text-align: right;">$${montoPagado.toLocaleString('es-CL')}</td></tr>
+                        <tr><td style="padding: 8px 0;">Saldo a Favor Utilizado:</td><td style="padding: 8px 0; text-align: right;">$${saldoFavorUsado.toLocaleString('es-CL')}</td></tr>
+                        <tr style="font-weight: bold;"><td style="padding: 8px 0; border-top: 1px solid #eeeeee;">Total Abonado al Período:</td><td style="padding: 8px 0; text-align: right; border-top: 1px solid #eeeeee;">$${montoTotalAbonadoGC.toLocaleString('es-CL')}</td></tr>
+                        <tr style="font-weight: bold; border-top: 2px solid #cccccc;"><td style="padding: 10px 0; color: ${saldoColor};">Resultado Transacción:</td><td style="padding: 10px 0; text-align: right; color: ${saldoColor};">${saldoTexto}</td></tr>
+                    </table>
+                    <hr style="border: 0; border-top: 1px solid #eeeeee; margin-top: 20px;">
+                    <p>Gracias por su compromiso.</p>
+                    <p style="margin-top: 20px;">Atentamente,<br><strong>Alex Thiele</strong><br>Administrador</p>
+                </td>
+            </tr>
+            <tr><td bgcolor="#f4f4f4" style="text-align: center; padding: 15px; font-size: 12px; color: #777777;">Este es un correo electrónico generado automáticamente.</td></tr>
         </table>
     </body>
     </html>`;
@@ -870,7 +855,10 @@ async function marcarComprobanteEnviadoEnSheet(rowNum) {
     // Si tu función se llama diferente (ej: `callApi`, `googleApiCall`), ajústala aquí.
     return llamarAPI('marcarComprobanteEnviado_GS', [rowNum]);
 }
-  inputParcelaComprobante.addEventListener('input', (e) => {
+  // EN: js/gastos_comunes.js
+// REEMPLAZA EL EVENT LISTENER PARA 'inputNParcelaComprobante'
+
+inputParcelaComprobante.addEventListener('input', (e) => {
     const parcela = e.target.value;
     const selectorContainer = document.getElementById('periodo-selector-container');
     const selector = document.getElementById('selectPeriodoComprobante');
@@ -879,6 +867,7 @@ async function marcarComprobanteEnviadoEnSheet(rowNum) {
     const asuntoInput = document.getElementById('inputAsuntoComprobante');
     const cuerpoDiv = document.getElementById('divCuerpoComprobante');
 
+    // Resetear todo
     nombreInput.value = '';
     emailInput.value = '';
     asuntoInput.value = '';
@@ -908,32 +897,41 @@ async function marcarComprobanteEnviadoEnSheet(rowNum) {
         cuerpoDiv.innerHTML = `<span style="color: #dc3545;">No se encontraron pagos registrados para esta parcela.</span>`;
         return;
     }
-   
-    const representativeResident = allResidentsForParcela.find(r => r[9] && r[9].trim().toUpperCase() === 'SI') || allResidentsForParcela[0];
-    const aEnviar = {...representativeResident};
-    aEnviar[1] = residentNames;
+    
+    // Poblar el selector y/o mostrar la vista previa
+    selector.innerHTML = '<option value="">-- Seleccione un comprobante --</option>';
+    pagosDeLaParcela.forEach(pago => {
+        const fechaPagoFmt = new Date(pago.Fecha_Pago.replace(/-/g, '/')).toLocaleDateString('es-CL', { timeZone: 'UTC' });
+        const option = document.createElement('option');
+        option.value = pago.ID_Pago;
+        option.textContent = `${formatearPeriodo(pago.Periodo)} (Pagado el ${fechaPagoFmt})`;
+        selector.appendChild(option);
+    });
+    
+    // Seleccionar el más reciente por defecto y actualizar la vista previa
+    selector.value = pagosDeLaParcela[0].ID_Pago;
+    selectorContainer.style.display = 'block';
+    actualizarVistaPreviaComprobante(pagosDeLaParcela[0]);
+});
 
-    function generarVistaPrevia(pago) {
-        pagoSeleccionadoParaEnviar = pago;
-        const periodoFormateado = formatearPeriodo(pago.Periodo);
-        asuntoInput.value = `Comprobante pago Gasto Común ${periodoFormateado} Parcela ${parcela}`;
-        cuerpoDiv.innerHTML = crearCuerpoCorreo(pago, aEnviar);
-    }
 
-    if (pagosDeLaParcela.length === 1) {
-        generarVistaPrevia(pagosDeLaParcela[0]);
-    } else {
-        selectorContainer.style.display = 'block';
-        selector.innerHTML = '<option value="">-- Seleccione un comprobante --</option>';
-        pagosDeLaParcela.forEach(pago => {
-            const fechaPagoFmt = new Date(pago.Fecha_Pago.replace(/-/g, '/')).toLocaleDateString('es-CL', { timeZone: 'UTC' });
-            const option = document.createElement('option');
-            option.value = pago.ID_Pago;
-            option.textContent = `${formatearPeriodo(pago.Periodo)} (Pagado el ${fechaPagoFmt})`;
-            selector.appendChild(option);
-        });
+// EN: js/gastos_comunes.js
+// REEMPLAZA EL EVENT LISTENER PARA 'selectPeriodoComprobante'
+
+document.getElementById('selectPeriodoComprobante').addEventListener('change', (e) => {
+    const pagoId = e.target.value;
+    if (!pagoId) {
+        pagoSeleccionadoParaEnviar = null;
+        document.getElementById('inputAsuntoComprobante').value = '';
+        document.getElementById('divCuerpoComprobante').innerHTML = `<span style="color: #6c757d;">Seleccione un período para generar la previsualización.</span>`;
+        return;
     }
-  });
+    
+    const pagoSeleccionado = pagosGC_obj.find(p => p.ID_Pago == pagoId);
+    if (pagoSeleccionado) {
+        actualizarVistaPreviaComprobante(pagoSeleccionado);
+    }
+});
 
   document.getElementById('selectPeriodoComprobante').addEventListener('change', (e) => {
       const pagoId = e.target.value;
