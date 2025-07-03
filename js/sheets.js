@@ -268,13 +268,14 @@ async function obtenerPagosGC() {
 }
 
 async function agregarPagoGC(datos) {
-    const pagos = await obtenerPagosGC();
-    const lastIdNum = pagos.reduce((max, p) => {
-        const id = p[0] ? parseInt(String(p[0]).replace(/[^0-9]/g, '')) : 0;
-        return id > max ? id : max;
-    }, 0);
-    datos[0] = `PGC-${lastIdNum + 1}`;
+    // Se genera un ID único combinando la fecha y hora exacta (en milisegundos)
+    // con una cadena de caracteres aleatoria. Esto hace casi imposible que se repita.
+    const uniqueId = `PGC-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
     
+    // Asigna el nuevo ID único al registro que se va a guardar.
+    datos[0] = uniqueId;
+    
+    // Envía los datos a la hoja de cálculo.
     await gapi.client.sheets.spreadsheets.values.append({
         spreadsheetId: SPREADSHEET_ID,
         range: `${SHEET_PAGOS_GC}!A:V`,
