@@ -761,28 +761,25 @@ const saldoActualConvenio = deudaInicialConvenio - totalAbonado;
     modalComprobante.style.display = 'none';
   });
  
-// REEMPLAZA ESTA FUNCIÓN COMPLETA EN TU ARCHIVO JS/GASTOS_COMUNES.JS
+// EN TU ARCHIVO: js/gastos_comunes.js
+// REEMPLAZA LA FUNCIÓN EXISTENTE CON ESTA:
 
 function crearCuerpoCorreo(pago, residente) {
+    // --- INICIO DE LA CORRECCIÓN ---
+    // Nos aseguramos de que todos los datos vengan del objeto 'pago' seleccionado
     const nombreResidente = residente[1];
-    const periodoFormateado = formatearPeriodo(pago.Periodo);
+    const periodoFormateado = formatearPeriodo(pago.Periodo); // Usa el periodo del pago seleccionado
     const montoPagado = parseFloat(pago.Monto_Pagado || 0);
     const saldoFavorUsado = parseFloat(pago.Saldo_Favor_Usado || 0);
     const montoTotalAbonadoGC = montoPagado + saldoFavorUsado;
     
-    // =========================================================================================
-    // ===== [CORRECCIÓN DEFINITIVA] Se calculan AMBOS valores (deuda y saldo) dinámicamente =====
-    // =========================================================================================
-    
-    // 1. Calcular la deuda real del período sumando sus componentes
+    // Recalculamos la deuda y el saldo de la transacción para máxima precisión
     const valorGC = parseFloat(pago.Valor_Gasto_Comun || 0);
     const interes = parseFloat(pago.Interes || 0);
     const multa = parseFloat(pago['Multa_1/4'] || 0);
     const deudaDelPeriodo = valorGC + interes + multa;
-
-    // 2. Recalcular el saldo de la transacción basado en la deuda real y el pago
     const saldoTransaccion = montoTotalAbonadoGC - deudaDelPeriodo;
-    // =========================================================================================
+    // --- FIN DE LA CORRECCIÓN ---
 
     let saldoTexto, saldoColor;
     if (saldoTransaccion >= 0) {
