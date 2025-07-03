@@ -193,9 +193,8 @@ async function cargarContabilidad() {
     </div>
 
     <div id="modalEgreso" class="modal" style="display:none;">
-      <div>
-        <h3>Agregar Nuevo Egreso</h3>
-        <form id="formEgreso" style="display:flex; flex-wrap:wrap; gap:15px;">
+      <div class="modal-content"> <h3>Agregar Nuevo Egreso</h3>
+         <form id="formEgreso" style="display:flex; flex-wrap:wrap; gap:15px;">
             <div style="flex: 1 1 180px;"><label>Fecha</label><input type="date" name="fecha" required></div>
             <div style="flex: 1 1 180px;"><label>Categoría</label>
                 <select name="categoria" required>
