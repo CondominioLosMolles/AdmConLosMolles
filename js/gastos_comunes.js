@@ -932,34 +932,7 @@ document.getElementById('selectPeriodoComprobante').addEventListener('change', (
         actualizarVistaPreviaComprobante(pagoSeleccionado);
     }
 });
-
-  document.getElementById('selectPeriodoComprobante').addEventListener('change', (e) => {
-      const pagoId = e.target.value;
-      pagoSeleccionadoParaEnviar = null;
-      const parcela = document.getElementById('inputNParcelaComprobante').value;
-      const asuntoInput = document.getElementById('inputAsuntoComprobante');
-      const cuerpoDiv = document.getElementById('divCuerpoComprobante');
-     
-      if (!pagoId) {
-          asuntoInput.value = '';
-          cuerpoDiv.innerHTML = `<span style="color: #6c757d;">Seleccione un período para generar la previsualización.</span>`;
-          return;
-      }
-     
-      const pagoSeleccionado = pagosGC_obj.find(p => p.ID_Pago == pagoId);
-      pagoSeleccionadoParaEnviar = pagoSeleccionado;
-      const allResidentsForParcela = residentes.filter(r => String(r[3]) === String(parcela));
-      const residentNames = allResidentsForParcela.map(r => r[1]).join(' y ');
-      const representativeResident = allResidentsForParcela.find(r => r[9] && r[9].trim().toUpperCase() === 'SI') || allResidentsForParcela[0];
-      const aEnviar = {...representativeResident};
-      aEnviar[1] = residentNames;
-     
-      const periodoFormateado = formatearPeriodo(pagoSeleccionado.Periodo);
-      asuntoInput.value = `Comprobante pago Gasto Común ${periodoFormateado} Parcela ${parcela}`;
-      cuerpoDiv.innerHTML = crearCuerpoCorreo(pagoSeleccionado, aEnviar);
-  });
-
-
+  
   // Busca esta función en tu código y reemplaza el bloque try...catch...finally
 formComprobante.addEventListener('submit', async (e) => {
     e.preventDefault();
