@@ -104,23 +104,28 @@ async function cargarGastosComunes() {
     function crearCuerpoCorreo(pago, residente) {
         const nombreResidente = residente[1];
         const periodoFormateado = formatearPeriodo(pago.Periodo);
+        
+        // Desglose del pago
         const montoPagado = parseFloat(pago.Monto_Pagado || 0);
         const saldoFavorUsado = parseFloat(pago.Saldo_Favor_Usado || 0);
+        const abonoConvenio = parseFloat(pago.Abono_Convenio || 0);
         const montoTotalAbonadoGC = montoPagado + saldoFavorUsado;
         
+        // Desglose de la deuda del período
         const valorGC = parseFloat(pago.Valor_Gasto_Comun || 0);
         const interes = parseFloat(pago.Interes || 0);
         const multa = parseFloat(pago['Multa_1/4'] || 0);
         const deudaDelPeriodo = valorGC + interes + multa;
+        
         const saldoTransaccion = montoTotalAbonadoGC - deudaDelPeriodo;
 
         let saldoTexto, saldoColor;
         if (saldoTransaccion >= 0) {
             saldoTexto = `Saldo a favor: $${saldoTransaccion.toLocaleString('es-CL')}`;
-            saldoColor = '#2e7d32';
+            saldoColor = '#2e7d32'; // Verde
         } else {
             saldoTexto = `Saldo pendiente: $${Math.abs(saldoTransaccion).toLocaleString('es-CL')}`;
-            saldoColor = '#d32f2f';
+            saldoColor = '#d32f2f'; // Rojo
         }
         
         return `
@@ -142,14 +147,24 @@ async function cargarGastosComunes() {
                     <td style="padding: 25px 20px;">
                         <p>Estimado(a) <strong>${nombreResidente}</strong>,</p>
                         <p>Confirmamos la recepción de su pago para el período <strong>${periodoFormateado}</strong>. A continuación el detalle:</p>
-                        <hr style="border: 0; border-top: 1px solid #eeeeee;">
-                        <table width="100%" cellpadding="5" cellspacing="0" style="border-collapse: collapse;">
-                            <tr><td style="padding: 8px 0;">Deuda del Período (G.C. + cargos):</td><td style="padding: 8px 0; text-align: right;">$${deudaDelPeriodo.toLocaleString('es-CL')}</td></tr>
-                            <tr><td style="padding: 8px 0;">Monto Pagado (transferencia/efectivo):</td><td style="padding: 8px 0; text-align: right;">$${montoPagado.toLocaleString('es-CL')}</td></tr>
-                            <tr><td style="padding: 8px 0;">Saldo a Favor Utilizado:</td><td style="padding: 8px 0; text-align: right;">$${saldoFavorUsado.toLocaleString('es-CL')}</td></tr>
-                            <tr style="font-weight: bold;"><td style="padding: 8px 0; border-top: 1px solid #eeeeee;">Total Abonado al Período:</td><td style="padding: 8px 0; text-align: right; border-top: 1px solid #eeeeee;">$${montoTotalAbonadoGC.toLocaleString('es-CL')}</td></tr>
-                            <tr style="font-weight: bold; border-top: 2px solid #cccccc;"><td style="padding: 10px 0; color: ${saldoColor};">Resultado Transacción:</td><td style="padding: 10px 0; text-align: right; color: ${saldoColor};">${saldoTexto}</td></tr>
+                        
+                        <h4 style="color: #333; margin-bottom: 5px; margin-top: 15px; border-bottom: 1px solid #eee; padding-bottom: 5px;">Detalle Deuda del Período</h4>
+                        <table width="100%" cellpadding="4" cellspacing="0" style="border-collapse: collapse; font-size: 14px;">
+                            <tr><td style="padding: 5px 0;">Gasto Común Ordinario:</td><td style="padding: 5px 0; text-align: right;">$${valorGC.toLocaleString('es-CL')}</td></tr>
+                            <tr><td style="padding: 5px 0;">Intereses por mora:</td><td style="padding: 5px 0; text-align: right;">$${interes.toLocaleString('es-CL')}</td></tr>
+                            <tr><td style="padding: 5px 0;">Multas del período:</td><td style="padding: 5px 0; text-align: right;">$${multa.toLocaleString('es-CL')}</td></tr>
+                            <tr style="font-weight: bold; border-top: 1px solid #dddddd;"><td style="padding: 8px 0;">Deuda Total del Período:</td><td style="padding: 8px 0; text-align: right;">$${deudaDelPeriodo.toLocaleString('es-CL')}</td></tr>
                         </table>
+
+                        <h4 style="color: #333; margin-bottom: 5px; margin-top: 15px; border-bottom: 1px solid #eee; padding-bottom: 5px;">Detalle de su Pago</h4>
+                        <table width="100%" cellpadding="4" cellspacing="0" style="border-collapse: collapse; font-size: 14px;">
+                            <tr><td style="padding: 8px 0;">Monto Pagado (transferencia/efectivo):</td><td style="padding: 8px 0; text-align: right;">$${montoPagado.toLocaleString('es-CL')}</td></tr>
+                            ${abonoConvenio > 0 ? `<tr><td style="padding: 8px 0;">Abono a Convenio de Deuda:</td><td style="padding: 8px 0; text-align: right;">$${abonoConvenio.toLocaleString('es-CL')}</td></tr>` : ''}
+                            <tr><td style="padding: 8px 0;">Saldo a Favor Utilizado:</td><td style="padding: 8px 0; text-align: right;">$${saldoFavorUsado.toLocaleString('es-CL')}</td></tr>
+                            <tr style="font-weight: bold;"><td style="padding: 8px 0; border-top: 1px solid #eeeeee;">Total Abonado al Período (G.C.):</td><td style="padding: 8px 0; text-align: right; border-top: 1px solid #eeeeee;">$${montoTotalAbonadoGC.toLocaleString('es-CL')}</td></tr>
+                            <tr style="font-weight: bold; border-top: 2px solid #cccccc;"><td style="padding: 10px 0; color: ${saldoColor};">Resultado Transacción G.C.:</td><td style="padding: 10px 0; text-align: right; color: ${saldoColor};">${saldoTexto}</td></tr>
+                        </table>
+
                         <hr style="border: 0; border-top: 1px solid #eeeeee; margin-top: 20px;">
                         <p>Gracias por su compromiso.</p>
                         <p style="margin-top: 20px;">Atentamente,<br><strong>Alex Thiele</strong><br>Administrador</p>
@@ -381,7 +396,17 @@ async function cargarGastosComunes() {
                 <div>Deuda Inicial<span style="color: #dc3545;">$${deudaInicialConvenio.toLocaleString('es-CL')}</span></div>
                 <div>Total Abonado<span style="color: #198754;">$${totalAbonado.toLocaleString('es-CL')}</span></div>
                 <div>Saldo Pendiente<span style="color: #ffc107;">$${saldoActualConvenio.toLocaleString('es-CL')}</span></div>
+                <div style="grid-column: 1 / -1; margin-top: 10px;">
+                    <button id="btnEnviarCorreoConvenio" class="btn secondary small">Enviar Acuerdo de Convenio por Correo</button>
+                </div>
             `;
+            
+            document.getElementById('btnEnviarCorreoConvenio').addEventListener('click', () => {
+                enviarAcuerdoConvenio(residente, {
+                    deudaInicial: deudaInicialConvenio,
+                    saldoActual: saldoActualConvenio
+                });
+            });
 
             const abonosDelAnio = pagosGC_obj.filter(p => String(p.N_Parcela) === String(parcela) && p.anio == anio && parseFloat(p.Abono_Convenio || 0) > 0);
             const theadAbonos = document.getElementById('thead-abonos');
@@ -405,9 +430,10 @@ async function cargarGastosComunes() {
         } else {
             widgetConvenio.style.display = 'none';
         }
-
-        document.querySelector('#detalle-gastos h3').textContent = `Detalle Anual de Gastos Comunes para ${residente[1]} (Parcela ${parcela})`;
-        // ▼ MODIFICADO: Se añade la columna "Comprobante" al encabezado de la tabla.
+        
+        const tieneConvenio = parseFloat(residente[11] || 0) > 0;
+        const nombreResidenteConConvenio = `${residente[1]} ${tieneConvenio ? '<span title="Este residente tiene un convenio de pago activo" style="cursor:help;">📜</span>' : ''}`;
+        document.querySelector('#detalle-gastos h3').textContent = `Detalle Anual de Gastos Comunes para ${nombreResidenteConConvenio} (Parcela ${parcela})`;
         theadGastos.innerHTML = `<tr><th>Período</th><th>Fecha Vencimiento</th><th>Monto Pagado</th><th>Saldo Transacción</th><th>Interés</th><th>Multa</th><th>Deuda Pendiente</th><th>Fecha Pago</th><th>Método Pago</th><th>Estado</th><th>Comprobante</th></tr>`;
 
         tbodyGastos.innerHTML = '';
@@ -418,7 +444,6 @@ async function cargarGastosComunes() {
             let interes = 0, multa = 0, saldo = 0;
             let estado = 'Pendiente', montoPagado = 0, fechaPago = '---', metodoPago = '---';
             let deudaPendiente = 0;
-            // ▼ MODIFICADO: Se inicializa la variable para el estado del comprobante.
             let comprobanteEnviado = '';
             
             const fechaVencimiento = new Date(anio, index, 10);
@@ -434,7 +459,6 @@ async function cargarGastosComunes() {
                 const fechaPagoStr = pagoExistente.Fecha_Pago;
                 fechaPago = fechaPagoStr ? new Date(fechaPagoStr.replace(/-/g, '/')).toLocaleDateString('es-CL', {timeZone: 'UTC'}) : '---';
                 metodoPago = pagoExistente.Metodo_Pago || '---';
-                // ▼ MODIFICADO: Se asigna el valor del estado del comprobante para mostrar el check.
                 comprobanteEnviado = pagoExistente.Comprobante_Enviado === 'SI' ? '<span class="comprobante-enviado">✓</span>' : '';
             }
 
@@ -444,7 +468,6 @@ async function cargarGastosComunes() {
                 tr.classList.add('fila-clicable');
             }
             const estadoClass = estado.toLowerCase().replace(' ', '-');
-            // ▼ MODIFICADO: Se añade la celda final (td) con el estado del comprobante.
             tr.innerHTML = `
                 <td><b>${mes} ${anio}</b></td>
                 <td>${fechaVencimiento.toLocaleDateString('es-CL', {timeZone: 'UTC'})}</td>
@@ -463,6 +486,37 @@ async function cargarGastosComunes() {
         aplicarAnchosGuardados(tabla);
         hacerColumnasRedimensionables(tabla);
     }
+    
+    async function enviarAcuerdoConvenio(residente, datosConvenio) {
+        const emailResidente = residente[5];
+        if (!emailResidente || !emailResidente.includes('@')) {
+            mostrarMensaje('El residente no tiene un correo electrónico válido registrado.', 'error');
+            return;
+        }
+
+        const confirmacion = confirm(`¿Está seguro que desea enviar el correo de acuerdo de convenio de pago a ${residente[1]} (${emailResidente})?`);
+        if (!confirmacion) return;
+
+        mostrarSpinner();
+        try {
+            // Se necesita una nueva función en el script para manejar esto
+            await gapi.client.request({
+                'path': `https://script.googleapis.com/v1/scripts/${SCRIPT_ID}:run`,
+                'method': 'POST',
+                'body': {
+                    'function': 'enviarCorreoConvenio_GS',
+                    'parameters': [residente, datosConvenio]
+                }
+            });
+            mostrarMensaje('Correo de acuerdo de convenio enviado exitosamente.', 'success');
+        } catch (err) {
+            const errorMessage = err.result?.error?.message || err.message || 'Error desconocido.';
+            mostrarMensaje(`Error al enviar el correo de convenio: ${errorMessage}`, 'error');
+        } finally {
+            ocultarSpinner();
+        }
+    }
+
 
     function abrirModalDetalle(idPago) {
         const pago = pagosGC_obj.find(p => p.ID_Pago == idPago);
@@ -488,7 +542,7 @@ async function cargarGastosComunes() {
         const descripcionPago = pago.Descripcion_Pago || 'Sin descripción.';
 
         let filaComprobante = pago.ID_Comprobante_Drive 
-            ? `<b>Comprobante:</b> <span><a href="${pago.ID_Comprobante_Drive}" target="_blank" class="btn small">Ver Documento</a></span>`
+            ? `<b>Comprobante:</b> <span><a href="${pago.ID_Comprobante_Drive}" target="_blank" class="btn small" style="display: inline-block; text-decoration: none;">Ver Documento</a></span>`
             : '<b>Comprobante:</b> <span>No adjunto</span>';
 
         contenido.innerHTML = `
@@ -508,7 +562,8 @@ async function cargarGastosComunes() {
                 <hr style="grid-column: 1 / -1;">
                 <b>Estado del pago:</b>    <span>${pago.Estado}</span>
                 ${filaComprobante}
-                <b>Descripción:</b> <span style="white-space: pre-wrap;">${descripcionPago}</span>
+                <b style="grid-column: 1 / -1; text-align: left; margin-bottom: -5px; margin-top: 10px;">Descripción:</b>
+                <div style="grid-column: 1 / -1; white-space: pre-wrap; word-wrap: break-word; background: #f8f9fa; padding: 8px 12px; border-radius: 4px; border: 1px solid #eee; min-height: 40px;">${descripcionPago}</div>
             </div>
         `;
         modal.style.display = 'flex';
@@ -841,10 +896,8 @@ async function cargarGastosComunes() {
             const cuerpo = document.getElementById('divCuerpoComprobante').innerHTML;
             await enviarCorreo(destinatario, asunto, cuerpo);
             
-            // ▼ MODIFICADO: Se llama a la función para guardar el estado en la hoja de cálculo.
             await marcarComprobanteEnviado(pagoSeleccionadoParaEnviar.rowNum);
             
-            // Se actualiza el objeto local para que la UI se refresque inmediatamente.
             pagoSeleccionadoParaEnviar.Comprobante_Enviado = 'SI';
             
             modalComprobante.style.display = 'none';
