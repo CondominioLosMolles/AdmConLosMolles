@@ -407,7 +407,8 @@ async function cargarGastosComunes() {
         }
 
         document.querySelector('#detalle-gastos h3').textContent = `Detalle Anual de Gastos Comunes para ${residente[1]} (Parcela ${parcela})`;
-        theadGastos.innerHTML = `<tr><th>Período</th><th>Fecha Vencimiento</th><th>Monto Pagado</th><th>Saldo Transacción</th><th>Interés</th><th>Multa</th><th>Deuda Pendiente</th><th>Fecha Pago</th><th>Método Pago</th><th>Estado</th></tr>`;
+        // ▼ MODIFICADO: Se añade la columna "Comprobante" al encabezado de la tabla.
+        theadGastos.innerHTML = `<tr><th>Período</th><th>Fecha Vencimiento</th><th>Monto Pagado</th><th>Saldo Transacción</th><th>Interés</th><th>Multa</th><th>Deuda Pendiente</th><th>Fecha Pago</th><th>Método Pago</th><th>Estado</th><th>Comprobante</th></tr>`;
 
         tbodyGastos.innerHTML = '';
         
@@ -417,6 +418,8 @@ async function cargarGastosComunes() {
             let interes = 0, multa = 0, saldo = 0;
             let estado = 'Pendiente', montoPagado = 0, fechaPago = '---', metodoPago = '---';
             let deudaPendiente = 0;
+            // ▼ MODIFICADO: Se inicializa la variable para el estado del comprobante.
+            let comprobanteEnviado = '';
             
             const fechaVencimiento = new Date(anio, index, 10);
 
@@ -431,6 +434,8 @@ async function cargarGastosComunes() {
                 const fechaPagoStr = pagoExistente.Fecha_Pago;
                 fechaPago = fechaPagoStr ? new Date(fechaPagoStr.replace(/-/g, '/')).toLocaleDateString('es-CL', {timeZone: 'UTC'}) : '---';
                 metodoPago = pagoExistente.Metodo_Pago || '---';
+                // ▼ MODIFICADO: Se asigna el valor del estado del comprobante para mostrar el check.
+                comprobanteEnviado = pagoExistente.Comprobante_Enviado === 'SI' ? '<span class="comprobante-enviado">✓</span>' : '';
             }
 
             const tr = document.createElement('tr');
@@ -439,6 +444,7 @@ async function cargarGastosComunes() {
                 tr.classList.add('fila-clicable');
             }
             const estadoClass = estado.toLowerCase().replace(' ', '-');
+            // ▼ MODIFICADO: Se añade la celda final (td) con el estado del comprobante.
             tr.innerHTML = `
                 <td><b>${mes} ${anio}</b></td>
                 <td>${fechaVencimiento.toLocaleDateString('es-CL', {timeZone: 'UTC'})}</td>
@@ -449,7 +455,8 @@ async function cargarGastosComunes() {
                 <td style="font-weight:bold; color: red;">$${deudaPendiente.toLocaleString('es-CL')}</td>
                 <td>${fechaPago}</td>
                 <td>${metodoPago}</td>
-                <td><span class="estado-tag estado-${estadoClass}">${estado}</span></td>`;
+                <td><span class="estado-tag estado-${estadoClass}">${estado}</span></td>
+                <td>${comprobanteEnviado}</td>`;
             tbodyGastos.appendChild(tr);
         });
         const tabla = document.getElementById('table-pagos');
@@ -833,9 +840,13 @@ async function cargarGastosComunes() {
             const asunto = document.getElementById('inputAsuntoComprobante').value;
             const cuerpo = document.getElementById('divCuerpoComprobante').innerHTML;
             await enviarCorreo(destinatario, asunto, cuerpo);
-            // La función para marcar el comprobante como enviado debe existir. Asumo que se llama 'marcarComprobanteEnviadoEnSheet'.
-            // await marcarComprobanteEnviadoEnSheet(pagoSeleccionadoParaEnviar.rowNum);
+            
+            // ▼ MODIFICADO: Se llama a la función para guardar el estado en la hoja de cálculo.
+            await marcarComprobanteEnviado(pagoSeleccionadoParaEnviar.rowNum);
+            
+            // Se actualiza el objeto local para que la UI se refresque inmediatamente.
             pagoSeleccionadoParaEnviar.Comprobante_Enviado = 'SI';
+            
             modalComprobante.style.display = 'none';
             mostrarMensaje(`Correo enviado con éxito a ${destinatario}.`, 'success');
             filtrarYRenderizar();
