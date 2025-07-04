@@ -455,6 +455,7 @@ async function cargarInformes() {
         mostrarSpinner();
         try {
             const asunto = `Estado de Cuenta - Parcela ${filtros.parcela}`;
+            // ▼ MODIFICADO: Se pasan todos los totales a la función del correo.
             const datosParaCorreo = {
                 nombreResidente: residenteInfo[1],
                 numeroParcela: filtros.parcela,
@@ -464,10 +465,13 @@ async function cargarInformes() {
                 deudaConvenio: deudaTotalConvenio,
                 saldoFavor: saldoAFavor,
                 movimientos: movimientosAVisualizar,
+                totalInteres: totalInteres,
+                totalMulta: totalMulta,
                 totalPagadoGC: totalPagadoGC, 
                 totalSaldo: totalSaldo,
                 totalUsoSaldoFavor: totalUsoSaldoFavor,
                 totalAbonoConvenio: totalAbonoConvenio,
+                totalDeudaPendiente: totalDeudaPendiente,
                 nombreAdmin: "Alex Thiele",
                 cargoAdmin: "Administrador Condominio Los Molles"
             };
@@ -718,10 +722,12 @@ async function cargarInformes() {
         };
     }
 
+// ▼ MODIFICADO: Esta función ahora genera una tabla de correo mucho más detallada.
 function crearCuerpoCorreoEstadoCuenta(datos) {
     const { 
         nombreResidente, numeroParcela, fechaInicio, fechaFin, 
-        deudaGC, deudaConvenio, saldoFavor, movimientos, totalPagadoGC, totalSaldo, totalUsoSaldoFavor, totalAbonoConvenio,
+        deudaGC, deudaConvenio, saldoFavor, movimientos, 
+        totalInteres, totalMulta, totalPagadoGC, totalSaldo, totalUsoSaldoFavor, totalAbonoConvenio, totalDeudaPendiente,
         nombreAdmin, cargoAdmin
     } = datos;
 
@@ -730,17 +736,26 @@ function crearCuerpoCorreoEstadoCuenta(datos) {
         : 'a la fecha';
 
     const movimientosHtml = movimientos.length > 0 
-        ? movimientos.map(m => `
+        ? movimientos.map(m => {
+            const deuda = parseFloat(m.Deuda_Total || 0);
+            const saldo = parseFloat(m['Saldo_Pendiente_o_a_favor'] || 0);
+            const saldoColor = saldo > 0 ? '#2e7d32' : (saldo < 0 ? '#d32f2f' : '#333333');
+
+            return `
             <tr style="border-bottom: 1px solid #dddddd;">
-                <td style="padding: 10px; font-size: 14px;">${m.Fecha_Pago ? new Date(m.Fecha_Pago.replace(/-/g,'/')).toLocaleDateString('es-CL', { timeZone: 'UTC' }) : '---'}</td>
-                <td style="padding: 10px; font-size: 14px;">${m.Periodo}</td>
+                <td style="padding: 10px; font-size: 14px; text-align: left;">${m.Fecha_Pago ? new Date(m.Fecha_Pago.replace(/-/g,'/')).toLocaleDateString('es-CL', { timeZone: 'UTC' }) : '---'}</td>
+                <td style="padding: 10px; font-size: 14px; text-align: left;">${m.Periodo}</td>
+                <td style="padding: 10px; font-size: 14px; text-align: right;">$${parseFloat(m.Interes || 0).toLocaleString('es-CL')}</td>
+                <td style="padding: 10px; font-size: 14px; text-align: right;">$${parseFloat(m['Multa_1/4'] || 0).toLocaleString('es-CL')}</td>
                 <td style="padding: 10px; font-size: 14px; text-align: right;">$${parseFloat(m.Monto_Pagado || 0).toLocaleString('es-CL')}</td>
+                <td style="padding: 10px; font-size: 14px; text-align: right; color: ${saldoColor};">$${saldo.toLocaleString('es-CL')}</td>
                 <td style="padding: 10px; font-size: 14px; text-align: right; color: #2e7d32;">$${parseFloat(m.Saldo_Favor_Usado || 0).toLocaleString('es-CL')}</td>
                 <td style="padding: 10px; font-size: 14px; text-align: right;">$${parseFloat(m.Abono_Convenio || 0).toLocaleString('es-CL')}</td>
-                <td style="padding: 10px; font-size: 14px;">${m.Estado}</td>
+                <td style="padding: 10px; font-size: 14px; text-align: right; font-weight: ${deuda > 0 ? 'bold' : 'normal'}; color: ${deuda > 0 ? '#d32f2f' : '#333333'};">$${deuda.toLocaleString('es-CL')}</td>
+                <td style="padding: 10px; font-size: 14px; text-align: left;">${m.Estado}</td>
             </tr>
-        `).join('')
-        : '<tr><td colspan="6" style="padding: 20px; text-align: center; color: #777777;">No se registraron movimientos en el período seleccionado.</td></tr>';
+        `}).join('')
+        : '<tr><td colspan="10" style="padding: 20px; text-align: center; color: #777777;">No se registraron movimientos en el período seleccionado.</td></tr>';
 
     return `
     <!DOCTYPE html>
@@ -751,18 +766,18 @@ function crearCuerpoCorreoEstadoCuenta(datos) {
         <title>Estado de Cuenta</title>
         <style>
             body, table, td, p, h1, h3 { font-family: Arial, sans-serif; color: #333333; }
-            .container { width: 100%; max-width: 640px; margin: 0 auto; }
+            .container { width: 100%; max-width: 800px; margin: 0 auto; } /* Ancho aumentado para la tabla detallada */
             .summary-table { border-spacing: 10px; margin: 15px -5px; }
             .summary-box { padding: 15px; border-radius: 8px; text-align: center; width: 33.3%; }
             @media screen and (max-width: 600px) {
                 .container { width: 100% !important; }
                 .summary-box { display: block !important; width: 100% !important; box-sizing: border-box; margin-bottom: 10px; }
-                .details-table { font-size: 12px; }
+                .details-table th, .details-table td { font-size: 11px !important; padding: 6px !important; }
             }
         </style>
     </head>
     <body style="margin: 0; padding: 0;">
-        <table class="container" align="center" border="0" cellpadding="0" cellspacing="0" width="640" style="border-collapse: collapse;">
+        <table class="container" align="center" border="0" cellpadding="0" cellspacing="0" style="border-collapse: collapse;">
             <tr>
                 <td style="padding: 20px 0;">
                     <table width="100%" align="center" border="0" cellpadding="0" cellspacing="0" style="border-collapse: collapse; border: 1px solid #eeeeee;">
@@ -800,21 +815,29 @@ function crearCuerpoCorreoEstadoCuenta(datos) {
                                     <table class="details-table" width="100%" border="0" cellpadding="0" cellspacing="0" style="border-collapse: collapse; margin-top: 15px;">
                                         <thead>
                                             <tr bgcolor="#f4f4f4">
-                                                <th style="padding: 10px; text-align: left;">Fecha Pago</th>
-                                                <th style="padding: 10px; text-align: left;">Período</th>
-                                                <th style="padding: 10px; text-align: right;">Pago G.C.</th>
-                                                <th style="padding: 10px; text-align: right;">Uso Saldo</th>
-                                                <th style="padding: 10px; text-align: right;">Abono Convenio</th>
-                                                <th style="padding: 10px; text-align: left;">Estado</th>
+                                                <th style="padding: 10px; text-align: left; font-size:12px;">Fecha Pago</th>
+                                                <th style="padding: 10px; text-align: left; font-size:12px;">Período</th>
+                                                <th style="padding: 10px; text-align: right; font-size:12px;">Interés</th>
+                                                <th style="padding: 10px; text-align: right; font-size:12px;">Multa</th>
+                                                <th style="padding: 10px; text-align: right; font-size:12px;">Monto Pagado G.C.</th>
+                                                <th style="padding: 10px; text-align: right; font-size:12px;">Saldo</th>
+                                                <th style="padding: 10px; text-align: right; font-size:12px;">Uso Saldo Favor</th>
+                                                <th style="padding: 10px; text-align: right; font-size:12px;">Abono Convenio</th>
+                                                <th style="padding: 10px; text-align: right; font-size:12px;">Deuda Pendiente</th>
+                                                <th style="padding: 10px; text-align: left; font-size:12px;">Estado</th>
                                             </tr>
                                         </thead>
                                         <tbody>${movimientosHtml}</tbody>
-                                        <tfoot>
-                                            <tr style="background-color: #f4f4f4; font-weight: bold;">
-                                                <td colspan="2" style="padding: 12px; text-align: right;">Totales del Período:</td>
-                                                <td style="padding: 12px; text-align: right;">$${totalPagadoGC.toLocaleString('es-CL')}</td>
-                                                <td style="padding: 12px; text-align: right; color:#2e7d32;">$${totalUsoSaldoFavor.toLocaleString('es-CL')}</td>
-                                                <td style="padding: 12px; text-align: right;">$${totalAbonoConvenio.toLocaleString('es-CL')}</td>
+                                        <tfoot style="font-weight: bold;">
+                                            <tr style="background-color: #f4f4f4; border-top: 2px solid #cccccc;">
+                                                <td colspan="2" style="padding: 12px; text-align: right; font-size: 14px;">Totales:</td>
+                                                <td style="padding: 12px; text-align: right; font-size: 14px;">$${totalInteres.toLocaleString('es-CL')}</td>
+                                                <td style="padding: 12px; text-align: right; font-size: 14px;">$${totalMulta.toLocaleString('es-CL')}</td>
+                                                <td style="padding: 12px; text-align: right; font-size: 14px;">$${totalPagadoGC.toLocaleString('es-CL')}</td>
+                                                <td style="padding: 12px; text-align: right; font-size: 14px; color: ${totalSaldo > 0 ? '#2e7d32' : (totalSaldo < 0 ? '#d32f2f' : '#333333')};">$${totalSaldo.toLocaleString('es-CL')}</td>
+                                                <td style="padding: 12px; text-align: right; font-size: 14px; color: #2e7d32;">$${totalUsoSaldoFavor.toLocaleString('es-CL')}</td>
+                                                <td style="padding: 12px; text-align: right; font-size: 14px;">$${totalAbonoConvenio.toLocaleString('es-CL')}</td>
+                                                <td style="padding: 12px; text-align: right; font-size: 14px; color: #d32f2f;">$${totalDeudaPendiente.toLocaleString('es-CL')}</td>
                                                 <td style="padding: 12px;"></td>
                                             </tr>
                                         </tfoot>
@@ -841,4 +864,6 @@ function crearCuerpoCorreoEstadoCuenta(datos) {
 }
     
     ocultarSpinner();
+}
+
 }
