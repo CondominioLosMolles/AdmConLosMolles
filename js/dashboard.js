@@ -25,33 +25,27 @@ async function cargarDashboard() {
 
   // --- CÁLCULOS PRINCIPALES ---
   const activos = residentes.filter(r => r && r[7] === 'Activo').length;
-  const totalParcelas = 26;
-  const tasaOcupacion = totalParcelas > 0 ? ((activos / totalParcelas) * 100).toFixed(1) : 0;
   
   const saldoInicial = parseFloat(config.Saldo_Inicial_Caja || 0);
   
-  // ▼ INICIO: MODIFICACIÓN PARA FILTRAR POR FECHA DE SALDO INICIAL ▼
-  const fechaSaldoString = config.Fecha_Saldo_Inicial; // Ej: "01-08-2024"
+  const fechaSaldoString = config.Fecha_Saldo_Inicial;
   let pagosFiltrados = pagos;
   let egresosFiltrados = egresos;
   
   if (fechaSaldoString) {
       const parts = fechaSaldoString.split('-');
       if (parts.length === 3) {
-          // Se crea la fecha como UTC para evitar problemas de zona horaria. new Date(YYYY, MM-1, DD)
           const fechaSaldoDate = new Date(Date.UTC(parts[2], parts[1] - 1, parts[0]));
           
           pagosFiltrados = pagos.filter(p => {
-              if (!p || !p[13]) return false; // p[13] es Fecha_Pago
-              // Se parsea la fecha del pago como UTC para una comparación correcta
+              if (!p || !p[13]) return false;
               const fechaPagoParts = p[13].split('-');
               const fechaPago = new Date(Date.UTC(fechaPagoParts[0], fechaPagoParts[1] - 1, fechaPagoParts[2]));
               return fechaPago >= fechaSaldoDate;
           });
 
           egresosFiltrados = egresos.filter(e => {
-              if (!e || !e[1]) return false; // e[1] es Fecha
-              // Se parsea la fecha del egreso como UTC
+              if (!e || !e[1]) return false;
               const fechaEgresoParts = e[1].split('-');
                const fechaEgreso = new Date(Date.UTC(fechaEgresoParts[0], fechaEgresoParts[1] - 1, fechaEgresoParts[2]));
               return fechaEgreso >= fechaSaldoDate;
@@ -59,21 +53,18 @@ async function cargarDashboard() {
       }
   }
 
-  // Se usan los arreglos filtrados para calcular los totales
   const totalIngresos = pagosFiltrados.reduce((a,b) => a + Number(b[6]||0) + Number(b[17]||0), 0);
   const totalEgresos = egresosFiltrados.reduce((a,b) => a + Number(b[6]||0), 0);
   const saldoCaja = saldoInicial + totalIngresos - totalEgresos;
-  // ▲ FIN: MODIFICACIÓN ▲
 
   const tareasAbiertas = tareas.filter(t => t && t[6] && t[6] !== 'Finalizado' && t[6] !== 'Cancelado').length;
 
-  // --- CÁLCULO DE MOROSIDAD (Usa todos los pagos para un estado de deuda real) ---
   const morososData = {};
   residentes.forEach(r => {
     if(!r || !r[3]) return;
     morososData[r[3]] = { deudaTotal: 0 };
   });
-  pagos.forEach(p => { // La morosidad sí debe considerar el historial completo
+  pagos.forEach(p => {
     if (p && p[2] && morososData[p[2]]) {
       const deuda = parseFloat(p[12] || 0);
       if (deuda > 0) {
@@ -85,7 +76,6 @@ async function cargarDashboard() {
   const parcelasMorosas = morosos.map(([parcela, _]) => parcela);
   const deudaTotalMorosos = morosos.reduce((sum, [_, data]) => sum + data.deudaTotal, 0);
 
-  // CÁLCULO DE TIEMPO PROMEDIO DE PAGO
   const pagosRealizados = pagos.filter(p => p && p[5] && p[13]);
   let totalDiasTardios = 0;
   pagosRealizados.forEach(p => {
@@ -99,7 +89,6 @@ async function cargarDashboard() {
   });
   const tiempoPromedioPago = pagosRealizados.length > 0 ? (totalDiasTardios / pagosRealizados.length).toFixed(1) : 0;
 
-  // CÁLCULO DE GASTOS POR CATEGORÍA
   const gastosPorCategoria = egresos.reduce((acc, egreso) => {
     if (!egreso || !egreso[2]) return acc;
     const categoria = egreso[2];
@@ -112,11 +101,21 @@ async function cargarDashboard() {
   main.innerHTML = `
     <style>
       .dashboard-grid-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 24px; margin-bottom: 32px; }
-      .dashboard-grid-main { display: grid; grid-template-columns: repeat(2, 1fr); gap: 24px; }
-      .widget { padding: 24px; text-align: center; display: flex; flex-direction: column; justify-content: center; }
+      .dashboard-grid-main { display: grid; grid-template-columns: 2fr 1fr; gap: 24px; }
+      .widget { 
+        padding: 24px; 
+        text-align: center; 
+        display: flex; 
+        flex-direction: column; 
+        justify-content: center;
+        background-color: #fff; /* ▼ MODIFICADO: Fondo blanco explícito */
+        border: 1px solid #e3e6f0; /* ▼ MODIFICADO: Borde sutil añadido */
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+      }
       .widget-value { font-size: 2.2em; font-weight: 700; color: #2a7ca3; line-height: 1.1; }
       .widget-label { margin-top: 8px; font-size: 0.95em; color: #6c757d; }
-      .widget.widget-large { grid-column: 1 / -1; }
+      .widget.widget-full { grid-column: 1 / -1; }
       .widget h4 { margin-top: 0; margin-bottom: 24px; text-align: left; width: 100%; }
       .summary-item { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #f0f0f0; text-align: left; }
       .summary-item:last-child { border-bottom: none; }
@@ -127,7 +126,6 @@ async function cargarDashboard() {
       .summary-item-list div { font-weight: bold; color: #333; word-break: break-word; }
       @media (max-width: 992px) { .dashboard-grid-main { grid-template-columns: 1fr; } }
     </style>
-
     <h2>Dashboard</h2>
     <div class="dashboard-grid-cards">
       <div class="widget">
@@ -136,11 +134,11 @@ async function cargarDashboard() {
       </div>
       <div class="widget">
           <div class="widget-value">$${totalIngresos.toLocaleString('es-CL')}</div>
-          <div class="widget-label">Ingresos (desde ${fechaSaldoString || 'inicio'})</div>
+          <div class="widget-label">Ingresos Acumulados</div>
       </div>
       <div class="widget">
           <div class="widget-value">$${totalEgresos.toLocaleString('es-CL')}</div>
-          <div class="widget-label">Egresos (desde ${fechaSaldoString || 'inicio'})</div>
+          <div class="widget-label">Egresos Acumulados</div>
       </div>
       <div class="widget">
           <div class="widget-value">${tareasAbiertas}</div>
@@ -151,13 +149,13 @@ async function cargarDashboard() {
           <div class="widget-label">Tiempo Promedio de Pago</div>
       </div>
        <div class="widget">
-          <div class="widget-value">${activos} <span style="font-size:0.6em; color:#6c757d;">(${tasaOcupacion}%)</span></div>
+          <div class="widget-value">${activos}</div>
           <div class="widget-label">Residentes Activos</div>
       </div>
     </div>
 
     <div class="dashboard-grid-main">
-      <div class="widget widget-large">
+      <div class="widget widget-full">
         <h4>Ingresos vs. Egresos (Últimos 12 Meses)</h4>
         <canvas id="graficoIngresosEgresos" style="width:100%; height:320px;"></canvas>
       </div>
@@ -176,7 +174,6 @@ async function cargarDashboard() {
     </div>
   `;
 
-  // Lógica para renderizar los gráficos (sin cambios)
   const labels = [];
   const meses = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
   const ingresosPorMes = [];
@@ -188,12 +185,12 @@ async function cargarDashboard() {
     const anio = d.getFullYear();
     labels.push(`${mesNombre} ${anio}`);
     const periodo = d.toISOString().slice(0,7);
-    // Los gráficos mensuales siguen funcionando igual, no se ven afectados por el filtro de saldo inicial
     ingresosPorMes.push(pagos.filter(p => p && p[13] && p[13].startsWith(periodo)).reduce((a,b) => a + Number(b[6]||0) + Number(b[17]||0), 0));
     egresosPorMes.push(egresos.filter(e => e && e[1] && e[1].startsWith(periodo)).reduce((a,b) => a + Number(b[6]||0), 0));
   }
 
   setTimeout(() => {
+    // Gráfico de Barras
     new Chart(document.getElementById('graficoIngresosEgresos'), {
       type: 'bar',
       data: {
@@ -207,10 +204,17 @@ async function cargarDashboard() {
         responsive: true,
         maintainAspectRatio: false,
         plugins: { legend: { position: 'top' } },
-        scales: { y: { ticks: { callback: value => '$' + value.toLocaleString('es-CL') } } }
+        scales: { 
+            y: { 
+                // ▼ MODIFICADO: Se añade beginAtZero para anclar el gráfico
+                beginAtZero: true,
+                ticks: { callback: value => '$' + value.toLocaleString('es-CL') } 
+            } 
+        }
       }
     });
 
+    // Lógica para renderizar el gráfico de pastel
     const dataGastos = Object.values(gastosPorCategoria);
     const labelsGastos = Object.keys(gastosPorCategoria);
     const graficoGastosCanvas = document.getElementById('graficoGastosCategoria');
