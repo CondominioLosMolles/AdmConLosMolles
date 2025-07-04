@@ -51,11 +51,9 @@ async function cargarDashboard() {
 
   const totalIngresos = pagosFiltrados.reduce((a,b) => a + Number(b[6]||0) + Number(b[17]||0), 0);
   const totalEgresos = egresosFiltrados.reduce((a,b) => a + Number(b[6]||0), 0);
-  
-  // ▼ MODIFICADO: El cálculo de saldo ahora es solo Ingresos - Egresos.
   const saldoCaja = totalIngresos - totalEgresos;
 
-  // --- CÁLCULOS SECUNDARIOS (NO SE MUESTRAN EN TARJETAS PERO PUEDEN SER ÚTILES A FUTURO) ---
+  // --- CÁLCULOS SECUNDARIOS ---
   const morososData = {};
   residentes.forEach(r => {
     if(!r || !r[3]) return;
@@ -85,7 +83,8 @@ async function cargarDashboard() {
   main.innerHTML = `
     <style>
       .dashboard-grid-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 24px; margin-bottom: 32px; }
-      .dashboard-grid-main { display: grid; grid-template-columns: 1fr; gap: 24px; }
+      /* ▼ MODIFICADO: Se restaura la grilla de 2 columnas */
+      .dashboard-grid-main { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
       .widget { 
         padding: 24px; 
         text-align: center; 
@@ -100,7 +99,8 @@ async function cargarDashboard() {
       .widget-value { font-size: 2.5em; font-weight: 700; color: #2a7ca3; line-height: 1.1; }
       .widget-label { margin-top: 8px; font-size: 1em; color: #6c757d; }
       .widget h4 { margin-top: 0; margin-bottom: 24px; text-align: left; width: 100%; }
-      /* ▼ NUEVO: Estilo para destacar la tarjeta de Saldo de Caja */
+      /* ▼ MODIFICADO: Clase para que un widget ocupe todo el ancho */
+      .widget-full { grid-column: 1 / -1; }
       .widget-highlight {
         background-color: #e7f3fe;
         border-color: #2a7ca3;
@@ -109,13 +109,24 @@ async function cargarDashboard() {
         color: #004a7f;
         font-size: 2.8em;
       }
+      .summary-item { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #f0f0f0; text-align: left; }
+      .summary-item:last-child { border-bottom: none; }
+      .summary-item span { color: #555; }
+      .summary-item b { color: #333; }
+      .summary-item-list { padding: 10px 0; text-align: left; }
+      .summary-item-list span { display: block; margin-bottom: 5px; color: #555;}
+      .summary-item-list div { font-weight: bold; color: #333; word-break: break-word; }
+      @media (max-width: 992px) { 
+        .dashboard-grid-main { grid-template-columns: 1fr; }
+        .widget-full { grid-column: 1 / 1; }
+      }
     </style>
 
     <h2>Dashboard</h2>
     <div class="dashboard-grid-cards">
       <div class="widget widget-highlight">
           <div class="widget-value">$${saldoCaja.toLocaleString('es-CL')}</div>
-          <div class="widget-label">Saldo Real de Caja</div>
+          <div class="widget-label">Saldo de Caja</div>
       </div>
       <div class="widget">
           <div class="widget-value">$${totalIngresos.toLocaleString('es-CL')}</div>
@@ -128,16 +139,30 @@ async function cargarDashboard() {
     </div>
 
     <div class="dashboard-grid-main">
-       <div class="widget">
+      <div class="widget widget-full">
         <h4>Ingresos vs. Egresos (Últimos 12 Meses)</h4>
         <div class="chart-container" style="position: relative; height: 350px; width: 100%;">
             <canvas id="graficoIngresosEgresos"></canvas>
         </div>
       </div>
+      <div class="widget">
+        <h4>Resumen de Morosidad</h4>
+        <div style="width:100%;">
+            <div class="summary-item"><span>Parcelas con Deuda:</span> <b>${morosos.length}</b></div>
+            <div class="summary-item"><span>Deuda Total:</span> <b style="color: #dc3545;">$${deudaTotalMorosos.toLocaleString('es-CL')}</b></div>
+            <div class="summary-item-list"><span>Parcelas Morosas:</span> <div>${parcelasMorosas.join(', ') || '-'}</div></div>
+        </div>
+      </div>
+      <div class="widget">
+        <h4>Distribución de Egresos</h4>
+        <div class="chart-container" style="position: relative; height: 280px; width: 100%;">
+             <canvas id="graficoGastosCategoria"></canvas>
+        </div>
+      </div>
     </div>
   `;
 
-  // Lógica para renderizar el gráfico de Ingresos vs Egresos
+  // Lógica para renderizar los gráficos
   const labels = [];
   const meses = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
   const ingresosPorMes = [];
@@ -177,6 +202,32 @@ async function cargarDashboard() {
             }
           }
         });
+    }
+
+    const dataGastos = Object.values(gastosPorCategoria);
+    const labelsGastos = Object.keys(gastosPorCategoria);
+    const graficoGastosCanvas = document.getElementById('graficoGastosCategoria');
+    if(dataGastos.length > 0 && graficoGastosCanvas) {
+      new Chart(graficoGastosCanvas, {
+        type: 'doughnut',
+        data: {
+          labels: labelsGastos,
+          datasets: [{
+            label: 'Gastos',
+            data: dataGastos,
+            backgroundColor: ['#7fd6c2', '#f6c23e', '#e74a3b', '#858796', '#5a5c69', '#f8f9fc', '#4e73df', '#36b9cc', '#1cc88a'],
+            hoverOffset: 4
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { position: 'right' } }
+        }
+      });
+    } else if (graficoGastosCanvas) {
+        graficoGastosCanvas.parentElement.innerHTML += '<div style="margin:auto; text-align:center; color:#6c757d;">No hay datos para mostrar.</div>';
+        graficoGastosCanvas.remove();
     }
   }, 100);
 
