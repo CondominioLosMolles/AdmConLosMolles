@@ -362,6 +362,31 @@ async function actualizarSaldoFavorResidente(rowNumber, nuevoSaldo) {
     }
 }
 
+/**
+ * ▼ NUEVA FUNCIÓN AÑADIDA ▼
+ * Marca un comprobante de pago como 'Enviado' en la hoja de Pagos_GC.
+ * @param {number} rowNum - El número de la fila a actualizar en la hoja de cálculo (ej: 2, 3, 4...).
+ */
+async function marcarComprobanteEnviado(rowNum) {
+    if (!rowNum || rowNum < 2) {
+        throw new Error("Se requiere un número de fila válido para actualizar.");
+    }
+    try {
+        await gapi.client.sheets.spreadsheets.values.update({
+            spreadsheetId: SPREADSHEET_ID,
+            range: `${SHEET_PAGOS_GC}!S${rowNum}`, // Columna S es 'Comprobante_Enviado'
+            valueInputOption: 'USER_ENTERED',
+            resource: {
+                values: [['SI']] // El valor a escribir
+            }
+        });
+    } catch (err) {
+        console.error("Error al marcar el comprobante como enviado en Google Sheets:", err);
+        throw new Error("No se pudo actualizar el estado del comprobante en la hoja de cálculo.");
+    }
+}
+
+
 async function obtenerTIMCs() {
     try {
         const res = await gapi.client.sheets.spreadsheets.values.get({
