@@ -83,7 +83,6 @@ async function cargarDashboard() {
   main.innerHTML = `
     <style>
       .dashboard-grid-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 24px; margin-bottom: 32px; }
-      /* ▼ MODIFICADO: Se restaura la grilla de 2 columnas */
       .dashboard-grid-main { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
       .widget { 
         padding: 24px; 
@@ -99,7 +98,6 @@ async function cargarDashboard() {
       .widget-value { font-size: 2.5em; font-weight: 700; color: #2a7ca3; line-height: 1.1; }
       .widget-label { margin-top: 8px; font-size: 1em; color: #6c757d; }
       .widget h4 { margin-top: 0; margin-bottom: 24px; text-align: left; width: 100%; }
-      /* ▼ MODIFICADO: Clase para que un widget ocupe todo el ancho */
       .widget-full { grid-column: 1 / -1; }
       .widget-highlight {
         background-color: #e7f3fe;
@@ -215,14 +213,30 @@ async function cargarDashboard() {
           datasets: [{
             label: 'Gastos',
             data: dataGastos,
-            backgroundColor: ['#7fd6c2', '#f6c23e', '#e74a3b', '#858796', '#5a5c69', '#f8f9fc', '#4e73df', '#36b9cc', '#1cc88a'],
+            // ▼ MODIFICADO: Se reemplaza el color blanco por un morado
+            backgroundColor: ['#7fd6c2', '#f6c23e', '#e74a3b', '#858796', '#5a5c69', '#6f42c1', '#4e73df', '#36b9cc', '#1cc88a'],
             hoverOffset: 4
           }]
         },
         options: {
           responsive: true,
           maintainAspectRatio: false,
-          plugins: { legend: { position: 'right' } }
+          plugins: { 
+            legend: { position: 'right' },
+            // ▼ NUEVO: Se añade la configuración del tooltip para mostrar porcentajes
+            tooltip: {
+              callbacks: {
+                label: function(context) {
+                  const label = context.label || '';
+                  const value = context.raw || 0;
+                  const total = context.chart.data.datasets[0].data.reduce((acc, current) => acc + current, 0);
+                  const percentage = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
+                  const formattedValue = typeof value === 'number' ? value.toLocaleString('es-CL') : value;
+                  return `${label}: $${formattedValue} (${percentage}%)`;
+                }
+              }
+            }
+          }
         }
       });
     } else if (graficoGastosCanvas) {
