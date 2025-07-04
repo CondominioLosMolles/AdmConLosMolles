@@ -4,7 +4,7 @@
 const SPREADSHEET_ID = '1LwA_L8nfAh8TNhyb4xHjiAXetvik_eqxY6HX9jMNU0Y';
 
 // ID de tu Script
-const SCRIPT_ID = 'AKfycbyDPG3LGZBT4m1-XUockOWLz96SfXRqFZx2732D4F4W5YsXMIbGLd_1cQ1TBzph7XFs3g';
+const SCRIPT_ID = 'AKfycbyEJ5WQm1OCrEk2jOwHBKWKVvl7M62U5_jAq_TSZPK70TVlzdZwgLRBhILZhFBNyPdmwA';
 
 
 // --- Nombres de las Hojas ---
@@ -156,10 +156,13 @@ async function actualizarConfiguracion(key, value) {
 }
 // -------- RESIDENTES --------
 async function obtenerResidentes() {
+    // ▼ INICIO: CÓDIGO ACTUALIZADO ▼
+    // Se expande el rango de N a T para leer las nuevas columnas del convenio.
     const res = await gapi.client.sheets.spreadsheets.values.get({
         spreadsheetId: SPREADSHEET_ID,
-        range: `${SHEET_RESIDENTES}!A2:N`
+        range: `${SHEET_RESIDENTES}!A2:T`
     });
+    // ▲ FIN: CÓDIGO ACTUALIZADO ▲
     return res.result.values || [];
 }
 
@@ -167,12 +170,15 @@ async function agregarResidente(datos) {
     const residentes = await obtenerResidentes();
     const lastId = residentes.length > 0 && residentes[residentes.length - 1][0] ? parseInt(residentes[residentes.length - 1][0]) : 0;
     datos[0] = (lastId + 1).toString();
+    // ▼ INICIO: CÓDIGO ACTUALIZADO ▼
+    // Se expande el rango de N a T para escribir en las nuevas columnas del convenio.
     await gapi.client.sheets.spreadsheets.values.append({
         spreadsheetId: SPREADSHEET_ID,
-        range: `${SHEET_RESIDENTES}!A:N`,
+        range: `${SHEET_RESIDENTES}!A:T`,
         valueInputOption: 'USER_ENTERED',
         resource: { values: [datos] }
     });
+    // ▲ FIN: CÓDIGO ACTUALIZADO ▲
 }
 
 async function actualizarResidente(datos) {
@@ -180,12 +186,15 @@ async function actualizarResidente(datos) {
     const idx = residentes.findIndex(r => r[0] === datos[0]);
     if (idx === -1) throw new Error('Residente no encontrado');
     const row = idx + 2;
+    // ▼ INICIO: CÓDIGO ACTUALIZADO ▼
+    // Se expande el rango de N a T para actualizar las nuevas columnas del convenio.
     await gapi.client.sheets.spreadsheets.values.update({
         spreadsheetId: SPREADSHEET_ID,
-        range: `${SHEET_RESIDENTES}!A${row}:N${row}`,
+        range: `${SHEET_RESIDENTES}!A${row}:T${row}`,
         valueInputOption: 'USER_ENTERED',
         resource: { values: [datos] }
     });
+    // ▲ FIN: CÓDIGO ACTUALIZADO ▲
 }
 
 async function actualizarSaldoConvenioEnSheet(rowNumber, nuevoSaldo) {
@@ -296,14 +305,8 @@ async function obtenerPagosGC() {
 }
 
 async function agregarPagoGC(datos) {
-    // Se genera un ID único combinando la fecha y hora exacta (en milisegundos)
-    // con una cadena de caracteres aleatoria. Esto hace casi imposible que se repita.
     const uniqueId = `PGC-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
-    
-    // Asigna el nuevo ID único al registro que se va a guardar.
     datos[0] = uniqueId;
-    
-    // Envía los datos a la hoja de cálculo.
     await gapi.client.sheets.spreadsheets.values.append({
         spreadsheetId: SPREADSHEET_ID,
         range: `${SHEET_PAGOS_GC}!A:V`,
@@ -362,11 +365,6 @@ async function actualizarSaldoFavorResidente(rowNumber, nuevoSaldo) {
     }
 }
 
-/**
- * ▼ NUEVA FUNCIÓN AÑADIDA ▼
- * Marca un comprobante de pago como 'Enviado' en la hoja de Pagos_GC.
- * @param {number} rowNum - El número de la fila a actualizar en la hoja de cálculo (ej: 2, 3, 4...).
- */
 async function marcarComprobanteEnviado(rowNum) {
     if (!rowNum || rowNum < 2) {
         throw new Error("Se requiere un número de fila válido para actualizar.");
@@ -377,7 +375,7 @@ async function marcarComprobanteEnviado(rowNum) {
             range: `${SHEET_PAGOS_GC}!S${rowNum}`, // Columna S es 'Comprobante_Enviado'
             valueInputOption: 'USER_ENTERED',
             resource: {
-                values: [['SI']] // El valor a escribir
+                values: [['SI']]
             }
         });
     } catch (err) {
@@ -385,7 +383,6 @@ async function marcarComprobanteEnviado(rowNum) {
         throw new Error("No se pudo actualizar el estado del comprobante en la hoja de cálculo.");
     }
 }
-
 
 async function obtenerTIMCs() {
     try {
