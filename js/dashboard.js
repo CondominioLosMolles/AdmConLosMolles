@@ -24,10 +24,6 @@ async function cargarDashboard() {
   }
 
   // --- CÁLCULOS PRINCIPALES ---
-  const activos = residentes.filter(r => r && r[7] === 'Activo').length;
-  
-  const saldoInicial = parseFloat(config.Saldo_Inicial_Caja || 0);
-  
   const fechaSaldoString = config.Fecha_Saldo_Inicial;
   let pagosFiltrados = pagos;
   let egresosFiltrados = egresos;
@@ -55,10 +51,11 @@ async function cargarDashboard() {
 
   const totalIngresos = pagosFiltrados.reduce((a,b) => a + Number(b[6]||0) + Number(b[17]||0), 0);
   const totalEgresos = egresosFiltrados.reduce((a,b) => a + Number(b[6]||0), 0);
-  const saldoCaja = saldoInicial + totalIngresos - totalEgresos;
+  
+  // ▼ MODIFICADO: El cálculo de saldo ahora es solo Ingresos - Egresos.
+  const saldoCaja = totalIngresos - totalEgresos;
 
-  const tareasAbiertas = tareas.filter(t => t && t[6] && t[6] !== 'Finalizado' && t[6] !== 'Cancelado').length;
-
+  // --- CÁLCULOS SECUNDARIOS (NO SE MUESTRAN EN TARJETAS PERO PUEDEN SER ÚTILES A FUTURO) ---
   const morososData = {};
   residentes.forEach(r => {
     if(!r || !r[3]) return;
@@ -76,19 +73,6 @@ async function cargarDashboard() {
   const parcelasMorosas = morosos.map(([parcela, _]) => parcela);
   const deudaTotalMorosos = morosos.reduce((sum, [_, data]) => sum + data.deudaTotal, 0);
 
-  const pagosRealizados = pagos.filter(p => p && p[5] && p[13]);
-  let totalDiasTardios = 0;
-  pagosRealizados.forEach(p => {
-    const fechaVencimiento = new Date(p[5].replace(/-/g, '/'));
-    const fechaPago = new Date(p[13].replace(/-/g, '/'));
-    if (fechaPago > fechaVencimiento) {
-      const diffTime = Math.abs(fechaPago - fechaVencimiento);
-      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-      totalDiasTardios += diffDays;
-    }
-  });
-  const tiempoPromedioPago = pagosRealizados.length > 0 ? (totalDiasTardios / pagosRealizados.length).toFixed(1) : 0;
-
   const gastosPorCategoria = egresos.reduce((acc, egreso) => {
     if (!egreso || !egreso[2]) return acc;
     const categoria = egreso[2];
@@ -100,35 +84,36 @@ async function cargarDashboard() {
   const main = document.getElementById('main-content');
   main.innerHTML = `
     <style>
-      .dashboard-grid-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 24px; margin-bottom: 32px; }
-      .dashboard-grid-main { display: grid; grid-template-columns: 2fr 1fr; gap: 24px; }
+      .dashboard-grid-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 24px; margin-bottom: 32px; }
+      .dashboard-grid-main { display: grid; grid-template-columns: 1fr; gap: 24px; }
       .widget { 
         padding: 24px; 
         text-align: center; 
         display: flex; 
         flex-direction: column; 
         justify-content: center;
-        background-color: #fff; /* ▼ MODIFICADO: Fondo blanco explícito */
-        border: 1px solid #e3e6f0; /* ▼ MODIFICADO: Borde sutil añadido */
+        background-color: #fff;
+        border: 1px solid #e3e6f0;
         border-radius: 8px;
         box-shadow: 0 2px 4px rgba(0,0,0,0.02);
       }
-      .widget-value { font-size: 2.2em; font-weight: 700; color: #2a7ca3; line-height: 1.1; }
-      .widget-label { margin-top: 8px; font-size: 0.95em; color: #6c757d; }
-      .widget.widget-full { grid-column: 1 / -1; }
+      .widget-value { font-size: 2.5em; font-weight: 700; color: #2a7ca3; line-height: 1.1; }
+      .widget-label { margin-top: 8px; font-size: 1em; color: #6c757d; }
       .widget h4 { margin-top: 0; margin-bottom: 24px; text-align: left; width: 100%; }
-      .summary-item { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #f0f0f0; text-align: left; }
-      .summary-item:last-child { border-bottom: none; }
-      .summary-item span { color: #555; }
-      .summary-item b { color: #333; }
-      .summary-item-list { padding: 10px 0; text-align: left; }
-      .summary-item-list span { display: block; margin-bottom: 5px; color: #555;}
-      .summary-item-list div { font-weight: bold; color: #333; word-break: break-word; }
-      @media (max-width: 992px) { .dashboard-grid-main { grid-template-columns: 1fr; } }
+      /* ▼ NUEVO: Estilo para destacar la tarjeta de Saldo de Caja */
+      .widget-highlight {
+        background-color: #e7f3fe;
+        border-color: #2a7ca3;
+      }
+      .widget-highlight .widget-value {
+        color: #004a7f;
+        font-size: 2.8em;
+      }
     </style>
+
     <h2>Dashboard</h2>
     <div class="dashboard-grid-cards">
-      <div class="widget">
+      <div class="widget widget-highlight">
           <div class="widget-value">$${saldoCaja.toLocaleString('es-CL')}</div>
           <div class="widget-label">Saldo Real de Caja</div>
       </div>
@@ -140,40 +125,19 @@ async function cargarDashboard() {
           <div class="widget-value">$${totalEgresos.toLocaleString('es-CL')}</div>
           <div class="widget-label">Egresos Acumulados</div>
       </div>
-      <div class="widget">
-          <div class="widget-value">${tareasAbiertas}</div>
-          <div class="widget-label">Tareas Abiertas</div>
-      </div>
-      <div class="widget">
-          <div class="widget-value">${tiempoPromedioPago} días</div>
-          <div class="widget-label">Tiempo Promedio de Pago</div>
-      </div>
-       <div class="widget">
-          <div class="widget-value">${activos}</div>
-          <div class="widget-label">Residentes Activos</div>
-      </div>
     </div>
 
     <div class="dashboard-grid-main">
-      <div class="widget widget-full">
+       <div class="widget">
         <h4>Ingresos vs. Egresos (Últimos 12 Meses)</h4>
-        <canvas id="graficoIngresosEgresos" style="width:100%; height:320px;"></canvas>
-      </div>
-      <div class="widget">
-        <h4>Resumen de Morosidad</h4>
-        <div style="width:100%;">
-            <div class="summary-item"><span>Parcelas con Deuda:</span> <b>${morosos.length}</b></div>
-            <div class="summary-item"><span>Deuda Total:</span> <b style="color: #dc3545;">$${deudaTotalMorosos.toLocaleString('es-CL')}</b></div>
-            <div class="summary-item-list"><span>Parcelas Morosas:</span> <div>${parcelasMorosas.join(', ') || '-'}</div></div>
+        <div class="chart-container" style="position: relative; height: 350px; width: 100%;">
+            <canvas id="graficoIngresosEgresos"></canvas>
         </div>
-      </div>
-      <div class="widget">
-        <h4>Distribución de Egresos</h4>
-        <canvas id="graficoGastosCategoria" style="width:100%; max-height: 280px; margin: auto;"></canvas>
       </div>
     </div>
   `;
 
+  // Lógica para renderizar el gráfico de Ingresos vs Egresos
   const labels = [];
   const meses = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
   const ingresosPorMes = [];
@@ -190,55 +154,29 @@ async function cargarDashboard() {
   }
 
   setTimeout(() => {
-    // Gráfico de Barras
-    new Chart(document.getElementById('graficoIngresosEgresos'), {
-      type: 'bar',
-      data: {
-        labels,
-        datasets: [
-          { label: 'Ingresos', data: ingresosPorMes, backgroundColor:'#4e91f9' },
-          { label: 'Egresos', data: egresosPorMes, backgroundColor:'#7fd6c2' }
-        ]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: { legend: { position: 'top' } },
-        scales: { 
-            y: { 
-                // ▼ MODIFICADO: Se añade beginAtZero para anclar el gráfico
-                beginAtZero: true,
-                ticks: { callback: value => '$' + value.toLocaleString('es-CL') } 
-            } 
-        }
-      }
-    });
-
-    // Lógica para renderizar el gráfico de pastel
-    const dataGastos = Object.values(gastosPorCategoria);
-    const labelsGastos = Object.keys(gastosPorCategoria);
-    const graficoGastosCanvas = document.getElementById('graficoGastosCategoria');
-    if(dataGastos.length > 0 && graficoGastosCanvas) {
-      new Chart(graficoGastosCanvas, {
-        type: 'doughnut',
-        data: {
-          labels: labelsGastos,
-          datasets: [{
-            label: 'Gastos',
-            data: dataGastos,
-            backgroundColor: ['#7fd6c2', '#f6c23e', '#e74a3b', '#858796', '#5a5c69', '#f8f9fc', '#4e73df', '#36b9cc', '#1cc88a'],
-            hoverOffset: 4
-          }]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: { legend: { position: 'right' } }
-        }
-      });
-    } else if (graficoGastosCanvas) {
-        graficoGastosCanvas.parentElement.innerHTML += '<div style="margin:auto; text-align:center; color:#6c757d;">No hay datos de egresos para mostrar.</div>';
-        graficoGastosCanvas.remove();
+    const graficoCanvas = document.getElementById('graficoIngresosEgresos');
+    if (graficoCanvas) {
+        new Chart(graficoCanvas, {
+          type: 'bar',
+          data: {
+            labels,
+            datasets: [
+              { label: 'Ingresos', data: ingresosPorMes, backgroundColor:'#4e91f9' },
+              { label: 'Egresos', data: egresosPorMes, backgroundColor:'#7fd6c2' }
+            ]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { position: 'top' } },
+            scales: { 
+                y: { 
+                    beginAtZero: true,
+                    ticks: { callback: value => '$' + value.toLocaleString('es-CL') } 
+                } 
+            }
+          }
+        });
     }
   }, 100);
 
