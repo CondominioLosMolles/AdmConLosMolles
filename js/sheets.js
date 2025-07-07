@@ -372,7 +372,7 @@ async function marcarComprobanteEnviado(rowNum) {
     try {
         await gapi.client.sheets.spreadsheets.values.update({
             spreadsheetId: SPREADSHEET_ID,
-            range: `${SHEET_PAGOS_GC}!S${rowNum}`, // Columna S es 'Comprobante_Enviado'
+            range: `${SHEET_PAGOS_GC}!S${rowNum}`,
             valueInputOption: 'USER_ENTERED',
             resource: {
                 values: [['SI']]
@@ -383,6 +383,7 @@ async function marcarComprobanteEnviado(rowNum) {
         throw new Error("No se pudo actualizar el estado del comprobante en la hoja de cálculo.");
     }
 }
+
 
 async function obtenerTIMCs() {
     try {
