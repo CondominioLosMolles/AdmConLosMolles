@@ -1,5 +1,5 @@
 // js/comunicaciones.js
-// --- VERSIÓN CORREGIDA ---
+// --- VERSIÓN CORREGIDA Y OPTIMIZADA ---
 
 async function cargarComunicaciones() {
     limpiarMainContent();
@@ -65,8 +65,8 @@ async function cargarComunicaciones() {
           <label for="textareaMensaje"><b>Mensaje</b></label>
           <textarea id="textareaMensaje" name="mensaje" rows="8" class="form-control" style="margin-bottom: 1rem;" required></textarea>
 
-          <label for="inputAdjuntos"><b>Adjuntar Archivos</b></label>
-          <input type="file" id="inputAdjuntos" class="form-control" multiple>
+          <label for="inputAdjuntos"><b>Adjuntar Archivos (Funcionalidad futura)</b></label>
+          <input type="file" id="inputAdjuntos" class="form-control" multiple disabled>
 
           <div style="text-align: right; margin-top: 1.5rem;">
             <button type="submit" class="btn">Enviar Comunicación</button>
@@ -97,7 +97,7 @@ async function cargarComunicaciones() {
                 html += `<tr>
                     <td>${new Date(c[5]).toLocaleString('es-CL')}</td>
                     <td>${c[6]}</td>
-                    <td>${c[3] === 'Comunidad' ? 'Toda la Comunidad' : c[3]}</td>
+                    <td>${c[3]}</td>
                 </tr>`;
             });
         } else {
@@ -139,58 +139,106 @@ async function cargarComunicaciones() {
         }
     });
 
+    // --- EVENTO DE ENVÍO DEL FORMULARIO (LÓGICA ACTUALIZADA) ---
     formComunicacion.addEventListener('submit', async (e) => {
         e.preventDefault();
         mostrarSpinner();
+        
         const formData = new FormData(e.target);
         const asunto = formData.get('asunto');
-        let mensajeBase = formData.get('mensaje');
-        let destinatarios = [];
-        if (selectDestinatarioTipo.value === 'todos') {
-            destinatarios = residentes;
+        const mensajeBase = formData.get('mensaje');
+        
+        let destinatariosSeleccionados = [];
+        const tipoDestinatario = selectDestinatarioTipo.value;
+
+        if (tipoDestinatario === 'todos') {
+            destinatariosSeleccionados = residentes;
         } else {
             const idsSeleccionados = Array.from(document.querySelectorAll('.residente-checkbox:checked')).map(cb => cb.value);
-            destinatarios = residentes.filter(r => idsSeleccionados.includes(r[0]));
-        }
-        if (destinatarios.length === 0) {
-            ocultarSpinner();
-            return mostrarMensaje('Debe seleccionar al menos un destinatario.', 'error');
-        }
-        try {
-            // Lógica de envío simplificada para registrar el evento
-            const esEnvioMasivo = selectDestinatarioTipo.value === 'todos';
-            
-            if (esEnvioMasivo) {
-                // Para envíos masivos, se puede registrar un solo evento
-                await agregarComunicacion([ null, 'TODOS', 'N/A', 'Comunidad', 'N/A', new Date().toISOString(), asunto, mensajeBase ]);
+            if (idsSeleccionados.length === 0) {
+                ocultarSpinner();
+                return mostrarMensaje('Debe seleccionar al menos un destinatario.', 'error');
             }
+            destinatariosSeleccionados = residentes.filter(r => idsSeleccionados.includes(r[0]));
+        }
 
-            for (const res of destinatarios) {
-                const email = res[5];
-                let mensajePersonalizado = mensajeBase.replace(/{nombre_residente}/g, res[1]).replace(/{n_parcela}/g, res[3]);
-                
-                // Si no es masivo, se registra individualmente
-                if (!esEnvioMasivo) {
-                    await agregarComunicacion([ null, res[0], res[3], res[1], email, new Date().toISOString(), asunto, mensajePersonalizado ]);
-                }
-                
-                // Aquí iría la lógica de envío de correo real
-                // await enviarCorreo(email, asunto, mensajePersonalizado);
-            }
+        try {
+            // 1. Extraer correos para el envío. El email está en el índice 5 (columna F) del array de residente.
+            const correosParaEnviar = destinatariosSeleccionados.map(r => r[5]);
+
+            // 2. Enviar UN solo correo eficiente usando BCC (Copia Oculta).
+            await enviarCorreoBCC(correosParaEnviar, asunto, mensajeBase);
+
+            // 3. Registrar UN solo evento de comunicación en la hoja de cálculo.
+            const registroDestinatario = tipoDestinatario === 'todos' 
+                ? 'Toda la Comunidad' 
+                : `Grupo seleccionado (${destinatariosSeleccionados.length} residentes)`;
             
+            await agregarComunicacion([
+                null, // El ID se autogenera en la función agregarComunicacion
+                'SISTEMA',
+                'N/A',
+                registroDestinatario,
+                'N/A',
+                new Date().toISOString(),
+                asunto,
+                mensajeBase
+            ]);
+
+            // 4. Actualizar la interfaz de usuario.
             comunicaciones = await obtenerComunicaciones();
             renderTablaComunicaciones();
-            mostrarMensaje(`Comunicación registrada para ${destinatarios.length} residente(s) con éxito.`);
+            mostrarMensaje(`Comunicación enviada a ${destinatariosSeleccionados.length} residente(s) con éxito.`);
+            
+            // 5. Limpiar completamente el formulario.
             formComunicacion.reset();
+            selectPlantilla.value = "";
             document.querySelectorAll('.residente-checkbox:checked').forEach(cb => cb.checked = false);
             destinatariosContainer.style.display = 'none';
             selectDestinatarioTipo.value = 'todos';
+
         } catch (error) {
-            mostrarMensaje('Error al registrar la comunicación: ' + error.message, 'error');
+            mostrarMensaje('Error al enviar la comunicación: ' + error.message, 'error');
         } finally {
             ocultarSpinner();
         }
     });
+
+    /**
+     * Envía un correo a múltiples destinatarios usando el campo BCC para proteger la privacidad.
+     * Utiliza una codificación Base64 robusta para soportar caracteres especiales.
+     * NOTA: Esta función asume que gapi.client.gmail está cargado y listo.
+     * @param {string[]} destinatarios Array de direcciones de correo electrónico.
+     * @param {string} asunto El asunto del correo.
+     * @param {string} mensaje El cuerpo del correo en formato HTML o texto plano.
+     */
+    async function enviarCorreoBCC(destinatarios, asunto, mensaje) {
+        if (!destinatarios || destinatarios.length === 0) {
+            throw new Error("No se proporcionaron destinatarios para el envío del correo.");
+        }
+        
+        const bccField = destinatarios.join(',');
+        
+        // La API de Gmail requiere un campo "To". Usamos una dirección genérica que no revela información.
+        const email =
+            `To: "Comunidad" <no-responder@tu-sistema.com>\r\n` +
+            `Bcc: ${bccField}\r\n` +
+            `Subject: ${asunto}\r\n` +
+            `Content-Type: text/html; charset=UTF-8\r\n\r\n` +
+            `${mensaje}`;
+
+        // Codificación robusta que SÍ funciona con tildes, 'ñ' y otros caracteres especiales.
+        const base64EncodedEmail = btoa(unescape(encodeURIComponent(email)))
+            .replace(/\+/g, '-')
+            .replace(/\//g, '_');
+
+        await gapi.client.gmail.users.messages.send({
+            userId: 'me',
+            resource: {
+                raw: base64EncodedEmail
+            }
+        });
+    }
 
     renderTablaComunicaciones();
     ocultarSpinner();
