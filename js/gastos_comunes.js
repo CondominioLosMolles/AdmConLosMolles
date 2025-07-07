@@ -492,7 +492,7 @@ async function cargarGastosComunes() {
         hacerColumnasRedimensionables(tabla);
     }
 
-    // ▼ INICIO: CÓDIGO ACTUALIZADO/NUEVO ▼
+   // ▼ INICIO: CÓDIGO ACTUALIZADO/NUEVO ▼
     function renderizarTablaResidente(parcela, anio) {
         const residente = residentes.find(r => String(r[3]) === String(parcela));
         if (!residente) { 
@@ -503,11 +503,11 @@ async function cargarGastosComunes() {
 
         const widgetConvenio = document.getElementById('widget-convenio');
         // Usamos la nueva columna CONVENIO_ACTIVO para decidir si mostrar el widget
-        const convenioActivo = residente[15] === 'SI'; // Columna P = Convenio_Activo
+        const convenioActivo = residente[15] === 'SI'; [cite_start]// Columna P = Convenio_Activo [cite: 14]
 
         if (convenioActivo) {
             widgetConvenio.style.display = 'block';
-            const deudaConvenioInicial = parseFloat(residente[19] || 0); // Columna T
+            const deudaConvenioInicial = parseFloat(residente[19] || 0); [cite_start]// Columna T [cite: 14]
             const totalAbonado = pagosGC_obj
                 .filter(p => String(p.N_Parcela) === String(parcela))
                 .reduce((sum, pago) => sum + parseFloat(pago.Abono_Convenio || 0), 0);
@@ -525,7 +525,20 @@ async function cargarGastosComunes() {
             `;
             
             document.getElementById('btnAdministrarConvenio').addEventListener('click', () => abrirModalConvenio(parcela, residente));
-            document.getElementById('btnEnviarCorreoConvenio').addEventListener('click', () => enviarAcuerdoConvenio(residente, { deudaInicial: deudaConvenioInicial }));
+            
+            // --- INICIO DE MODIFICACIÓN CLAVE ---
+            document.getElementById('btnEnviarCorreoConvenio').addEventListener('click', () => {
+                // Se recopilan todos los datos del convenio desde el objeto 'residente'
+                const datosConvenio = {
+                    [cite_start]deudaInicial: parseFloat(residente[19] || 0), // Columna T (Convenio Deuda Inicial) [cite: 14]
+                    [cite_start]cuotas: parseInt(residente[16] || 0),         // Columna Q (Convenio Cuotas) [cite: 14]
+                    [cite_start]valorCuota: parseFloat(residente[17] || 0),   // Columna R (Convenio Valor Cuota) [cite: 14]
+                    fechaInicio: residente[18] || [cite_start]''              // Columna S (Convenio Fecha Inicio) [cite: 14]
+                };
+                enviarAcuerdoConvenio(residente, datosConvenio);
+            });
+            // --- FIN DE MODIFICACIÓN CLAVE ---
+
             document.getElementById('btnFormalizarConvenio').addEventListener('click', () => formalizarConvenio(parcela, residente[1]));
             
             // Lógica para mostrar abonos (sin cambios)
