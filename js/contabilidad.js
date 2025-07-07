@@ -387,7 +387,7 @@ async function cargarContabilidad() {
                 tipo: 'Gasto Común',
                 detalle: `Res: ${p[1]} / Par: ${p[2]}`,
                 monto: parseFloat(p[6] || 0) + parseFloat(p[17] || 0),
-                comprobante: p[14] || '' // Se asume que el comprobante de pago GC está en la columna 15 (índice 14)
+                comprobante: p[16] || '' // Se asume que el comprobante de pago GC está en la columna 15 (índice 14)
             });
         });
 
