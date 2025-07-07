@@ -104,55 +104,80 @@ async function cargarGastosComunes() {
     }
     
     function crearCuerpoCorreo(pago, residente) {
-        const nombreResidente = residente[1];
-        const periodoFormateado = formatearPeriodo(pago.Periodo);
-        const montoPagado = parseFloat(pago.Monto_Pagado || 0);
-        const saldoFavorUsado = parseFloat(pago.Saldo_Favor_Usado || 0);
-        const abonoConvenio = parseFloat(pago.Abono_Convenio || 0);
-        const montoTotalAbonadoGC = montoPagado + saldoFavorUsado;
-        const valorGC = parseFloat(pago.Valor_Gasto_Comun || 0);
-        const interes = parseFloat(pago.Interes || 0);
-        const multa = parseFloat(pago['Multa_1/4'] || 0);
-        const deudaDelPeriodo = valorGC + interes + multa;
-        const saldoTransaccion = montoTotalAbonadoGC - deudaDelPeriodo;
-        let saldoTexto, saldoColor;
-        if (saldoTransaccion >= 0) {
-            saldoTexto = `Saldo a favor: $${saldoTransaccion.toLocaleString('es-CL')}`;
-            saldoColor = '#2e7d32';
-        } else {
-            saldoTexto = `Saldo pendiente: $${Math.abs(saldoTransaccion).toLocaleString('es-CL')}`;
-            saldoColor = '#d32f2f';
+    const nombreResidente = residente[1];
+    const periodoFormateado = formatearPeriodo(pago.Periodo);
+    const montoPagado = parseFloat(pago.Monto_Pagado || 0);
+    const saldoFavorUsado = parseFloat(pago.Saldo_Favor_Usado || 0);
+    const abonoConvenio = parseFloat(pago.Abono_Convenio || 0);
+    const montoTotalAbonadoGC = montoPagado + saldoFavorUsado;
+    const valorGC = parseFloat(pago.Valor_Gasto_Comun || 0);
+    const interes = parseFloat(pago.Interes || 0);
+    const multa = parseFloat(pago['Multa_1/4'] || 0);
+    const deudaDelPeriodo = valorGC + interes + multa;
+    const saldoTransaccion = montoTotalAbonadoGC - deudaDelPeriodo;
+
+    // ▼ INICIO: CÓDIGO MODIFICADO ▼
+    // Se crea una variable para el resultado final, que será más clara.
+    let resultadoHtml;
+
+    if (saldoTransaccion >= 0) {
+        // El período está pagado.
+        resultadoHtml = `
+            <tr style="font-weight:bold; border-top:2px solid #2e7d32;">
+                <td style="padding:10px 0; color:#2e7d32; font-size:1.1em;">Estado del Período:</td>
+                <td style="padding:10px 0; text-align:right; color:#2e7d32; font-size:1.1em;">PAGADO</td>
+            </tr>
+        `;
+        // Solo se muestra el saldo a favor si es mayor que cero.
+        if (saldoTransaccion > 0) {
+            resultadoHtml += `
+                <tr>
+                    <td style="padding:5px 0;">Saldo a favor generado en esta transacción:</td>
+                    <td style="padding:5px 0; text-align:right; font-weight:bold;">$${saldoTransaccion.toLocaleString('es-CL')}</td>
+                </tr>
+            `;
         }
-        return `
-        <!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><title>Comprobante de Pago</title></head>
-        <body style="margin:0;padding:0;background-color:#f4f4f4;font-family:Arial,sans-serif;">
-            <table align="center" border="0" cellpadding="0" cellspacing="0" width="600" style="border-collapse:collapse;background-color:#ffffff;margin:20px auto;border:1px solid #dddddd;">
-                <tr><td align="center" bgcolor="#2a7ca3" style="padding:20px;color:#ffffff;"><h2 style="margin:0;">Comprobante de Pago</h2><p style="margin:5px 0 0;">Condominio Los Molles</p></td></tr>
-                <tr><td style="padding:25px 20px;">
-                    <p>Estimado(a) <strong>${nombreResidente}</strong>,</p>
-                    <p>Confirmamos la recepción de su pago para el período <strong>${periodoFormateado}</strong>. A continuación el detalle:</p>
-                    <h4 style="color:#333;margin-bottom:5px;margin-top:15px;border-bottom:1px solid #eee;padding-bottom:5px;">Detalle Deuda del Período</h4>
-                    <table width="100%" cellpadding="4" cellspacing="0" style="border-collapse:collapse;font-size:14px;">
-                        <tr><td style="padding:5px 0;">Gasto Común Ordinario:</td><td style="padding:5px 0;text-align:right;">$${valorGC.toLocaleString('es-CL')}</td></tr>
-                        <tr><td style="padding:5px 0;">Intereses por mora:</td><td style="padding:5px 0;text-align:right;">$${interes.toLocaleString('es-CL')}</td></tr>
-                        <tr><td style="padding:5px 0;">Multas del período:</td><td style="padding:5px 0;text-align:right;">$${multa.toLocaleString('es-CL')}</td></tr>
-                        <tr style="font-weight:bold;border-top:1px solid #dddddd;"><td style="padding:8px 0;">Deuda Total del Período:</td><td style="padding:8px 0;text-align:right;">$${deudaDelPeriodo.toLocaleString('es-CL')}</td></tr>
-                    </table>
-                    <h4 style="color:#333;margin-bottom:5px;margin-top:15px;border-bottom:1px solid #eee;padding-bottom:5px;">Detalle de su Pago</h4>
-                    <table width="100%" cellpadding="4" cellspacing="0" style="border-collapse:collapse;font-size:14px;">
-                        <tr><td style="padding:8px 0;">Monto Pagado (transferencia/efectivo):</td><td style="padding:8px 0;text-align:right;">$${montoPagado.toLocaleString('es-CL')}</td></tr>
-                        ${abonoConvenio > 0 ? `<tr><td style="padding:8px 0;">Abono a Convenio de Deuda:</td><td style="padding:8px 0;text-align:right;">$${abonoConvenio.toLocaleString('es-CL')}</td></tr>` : ''}
-                        <tr><td style="padding:8px 0;">Saldo a Favor Utilizado:</td><td style="padding:8px 0;text-align:right;">$${saldoFavorUsado.toLocaleString('es-CL')}</td></tr>
-                        <tr style="font-weight:bold;"><td style="padding:8px 0;border-top:1px solid #eeeeee;">Total Abonado al Período (G.C.):</td><td style="padding:8px 0;text-align:right;border-top:1px solid #eeeeee;">$${montoTotalAbonadoGC.toLocaleString('es-CL')}</td></tr>
-                        <tr style="font-weight:bold;border-top:2px solid #cccccc;"><td style="padding:10px 0;color:${saldoColor};">Resultado Transacción G.C.:</td><td style="padding:10px 0;text-align:right;color:${saldoColor};">${saldoTexto}</td></tr>
-                    </table>
-                    <hr style="border:0;border-top:1px solid #eeeeee;margin-top:20px;">
-                    <p>Gracias por su compromiso.</p><p style="margin-top:20px;">Atentamente,<br><strong>Alex Thiele</strong><br>Administrador</p>
-                </td></tr>
-                <tr><td bgcolor="#f4f4f4" style="text-align:center;padding:15px;font-size:12px;color:#777777;">Este es un correo electrónico generado automáticamente.</td></tr>
-            </table>
-        </body></html>`;
+    } else {
+        // El período queda con deuda.
+        resultadoHtml = `
+            <tr style="font-weight:bold; border-top:2px solid #cccccc;">
+                <td style="padding:10px 0; color:#d32f2f;">Saldo pendiente del Período:</td>
+                <td style="padding:10px 0; text-align:right; color:#d32f2f;">$${Math.abs(saldoTransaccion).toLocaleString('es-CL')}</td>
+            </tr>
+        `;
     }
+    // ▲ FIN: CÓDIGO MODIFICADO ▲
+
+    return `
+    <!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><title>Comprobante de Pago</title></head>
+    <body style="margin:0;padding:0;background-color:#f4f4f4;font-family:Arial,sans-serif;">
+        <table align="center" border="0" cellpadding="0" cellspacing="0" width="600" style="border-collapse:collapse;background-color:#ffffff;margin:20px auto;border:1px solid #dddddd;">
+            <tr><td align="center" bgcolor="#2a7ca3" style="padding:20px;color:#ffffff;"><h2 style="margin:0;">Comprobante de Pago</h2><p style="margin:5px 0 0;">Condominio Los Molles</p></td></tr>
+            <tr><td style="padding:25px 20px;">
+                <p>Estimado(a) <strong>${nombreResidente}</strong>,</p>
+                <p>Confirmamos la recepción de su pago para el período <strong>${periodoFormateado}</strong>. A continuación el detalle:</p>
+                <h4 style="color:#333;margin-bottom:5px;margin-top:15px;border-bottom:1px solid #eee;padding-bottom:5px;">Detalle Deuda del Período</h4>
+                <table width="100%" cellpadding="4" cellspacing="0" style="border-collapse:collapse;font-size:14px;">
+                    <tr><td style="padding:5px 0;">Gasto Común Ordinario:</td><td style="padding:5px 0;text-align:right;">$${valorGC.toLocaleString('es-CL')}</td></tr>
+                    <tr><td style="padding:5px 0;">Intereses por mora:</td><td style="padding:5px 0;text-align:right;">$${interes.toLocaleString('es-CL')}</td></tr>
+                    <tr><td style="padding:5px 0;">Multas del período:</td><td style="padding:5px 0;text-align:right;">$${multa.toLocaleString('es-CL')}</td></tr>
+                    <tr style="font-weight:bold;border-top:1px solid #dddddd;"><td style="padding:8px 0;">Deuda Total del Período:</td><td style="padding:8px 0;text-align:right;">$${deudaDelPeriodo.toLocaleString('es-CL')}</td></tr>
+                </table>
+                <h4 style="color:#333;margin-bottom:5px;margin-top:15px;border-bottom:1px solid #eee;padding-bottom:5px;">Detalle de su Pago</h4>
+                <table width="100%" cellpadding="4" cellspacing="0" style="border-collapse:collapse;font-size:14px;">
+                    <tr><td style="padding:8px 0;">Monto Pagado (transferencia/efectivo):</td><td style="padding:8px 0;text-align:right;">$${montoPagado.toLocaleString('es-CL')}</td></tr>
+                    ${abonoConvenio > 0 ? `<tr><td style="padding:8px 0;">Abono a Convenio de Deuda:</td><td style="padding:8px 0;text-align:right;">$${abonoConvenio.toLocaleString('es-CL')}</td></tr>` : ''}
+                    <tr><td style="padding:8px 0;">Saldo a Favor Utilizado:</td><td style="padding:8px 0;text-align:right;">$${saldoFavorUsado.toLocaleString('es-CL')}</td></tr>
+                    <tr style="font-weight:bold;"><td style="padding:8px 0;border-top:1px solid #eeeeee;">Total Abonado al Período (G.C.):</td><td style="padding:8px 0;text-align:right;border-top:1px solid #eeeeee;">$${montoTotalAbonadoGC.toLocaleString('es-CL')}</td></tr>
+                    ${resultadoHtml}
+                    </table>
+                <hr style="border:0;border-top:1px solid #eeeeee;margin-top:20px;">
+                <p>Gracias por su compromiso.</p><p style="margin-top:20px;">Atentamente,<br><strong>Alex Thiele</strong><br>Administrador</p>
+            </td></tr>
+            <tr><td bgcolor="#f4f4f4" style="text-align:center;padding:15px;font-size:12px;color:#777777;">Este es un correo electrónico generado automáticamente.</td></tr>
+        </table>
+    </body></html>`;
+}
 
     async function guardarConvenio(nParcela, datosConvenio) {
       mostrarSpinner();
