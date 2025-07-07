@@ -13,6 +13,7 @@ const SHEET_PROVEEDORES = 'Proveedores';
 const SHEET_PAGOS_GC = 'Pagos_GC';
 const SHEET_CONFIG_TIMC = 'Config_TIMC';
 const SHEET_EGRESOS = 'Egresos';
+const SHEET_INGRESOS_EXTRA = 'Ingresos_Extra'; // <-- NUEVA HOJA
 const SHEET_CATEGORIAS_EGRESOS = 'Categorias_Egresos';
 const SHEET_MANTENCIONES = 'Mantenciones';
 const SHEET_MULTAS = 'Multas';
@@ -59,7 +60,7 @@ async function createFolder(name, parentId = 'root') {
 async function buscarOCrearRutaDeComprobantes(nombreCarpetaParcela, nombreMes, anio) {
     const carpetaPrincipalId = await findFolderId(MAIN_DRIVE_FOLDER_NAME);
     if (!carpetaPrincipalId) throw new Error(`No se encontró la carpeta principal de Drive: "${MAIN_DRIVE_FOLDER_NAME}"`);
-    
+
     let carpetaPagosId = await findFolderId('Pagos', carpetaPrincipalId);
     if (!carpetaPagosId) carpetaPagosId = await createFolder('Pagos', carpetaPrincipalId);
 
@@ -69,7 +70,7 @@ async function buscarOCrearRutaDeComprobantes(nombreCarpetaParcela, nombreMes, a
     const nombreCarpetaMes = `${nombreMes} ${anio}`;
     let carpetaMesId = await findFolderId(nombreCarpetaMes, carpetaParcelaId);
     if (!carpetaMesId) carpetaMesId = await createFolder(nombreCarpetaMes, carpetaParcelaId);
-    
+
     return carpetaMesId;
 }
 
@@ -89,7 +90,7 @@ async function buscarOCrearRutaDeEgreso(nombreMes, anio) {
     // 3. Busca o crea la carpeta para el AÑO dentro de "Egresos"
     let carpetaAnioId = await findFolderId(anio.toString(), carpetaEgresosId);
     if (!carpetaAnioId) {
-        carpetaAnioId = await createFolder(anio.toString(), carpetaEgresosId);
+        carpetaAnioId = await createFolder(anio.toString(), carpetaAnioId);
     }
 
     // 4. Busca o crea la carpeta para el MES dentro del AÑO
@@ -108,11 +109,15 @@ async function subirComprobante(file, folderId) {
         parents: [folderId]
     };
     const formData = new FormData();
-    formData.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
+    formData.append('metadata', new Blob([JSON.stringify(metadata)], {
+        type: 'application/json'
+    }));
     formData.append('file', file);
     const response = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,webViewLink', {
         method: 'POST',
-        headers: new Headers({ 'Authorization': 'Bearer ' + gapi.auth.getToken().access_token }),
+        headers: new Headers({
+            'Authorization': 'Bearer ' + gapi.auth.getToken().access_token
+        }),
         body: formData,
     });
     return response.json();
@@ -143,14 +148,22 @@ async function actualizarConfiguracion(key, value) {
             spreadsheetId: SPREADSHEET_ID,
             range: `${SHEET_CONFIGURACION}!A:B`,
             valueInputOption: 'USER_ENTERED',
-            resource: { values: [[key, value]] }
+            resource: {
+                values: [
+                    [key, value]
+                ]
+            }
         });
     } else {
         await gapi.client.sheets.spreadsheets.values.update({
             spreadsheetId: SPREADSHEET_ID,
             range: `${SHEET_CONFIGURACION}!B${rowIndex + 1}`,
             valueInputOption: 'USER_ENTERED',
-            resource: { values: [[value]] }
+            resource: {
+                values: [
+                    [value]
+                ]
+            }
         });
     }
 }
@@ -176,7 +189,9 @@ async function agregarResidente(datos) {
         spreadsheetId: SPREADSHEET_ID,
         range: `${SHEET_RESIDENTES}!A:T`,
         valueInputOption: 'USER_ENTERED',
-        resource: { values: [datos] }
+        resource: {
+            values: [datos]
+        }
     });
     // ▲ FIN: CÓDIGO ACTUALIZADO ▲
 }
@@ -192,7 +207,9 @@ async function actualizarResidente(datos) {
         spreadsheetId: SPREADSHEET_ID,
         range: `${SHEET_RESIDENTES}!A${row}:T${row}`,
         valueInputOption: 'USER_ENTERED',
-        resource: { values: [datos] }
+        resource: {
+            values: [datos]
+        }
     });
     // ▲ FIN: CÓDIGO ACTUALIZADO ▲
 }
@@ -203,7 +220,11 @@ async function actualizarSaldoConvenioEnSheet(rowNumber, nuevoSaldo) {
         spreadsheetId: SPREADSHEET_ID,
         range: `${SHEET_RESIDENTES}!M${rowNumber}`,
         valueInputOption: 'USER_ENTERED',
-        resource: { values: [[nuevoSaldo]] }
+        resource: {
+            values: [
+                [nuevoSaldo]
+            ]
+        }
     });
 }
 
@@ -243,7 +264,9 @@ async function agregarProveedor(datosProveedor) {
         spreadsheetId: SPREADSHEET_ID,
         range: `${SHEET_PROVEEDORES}!A:H`,
         valueInputOption: 'USER_ENTERED',
-        resource: { values: [datosProveedor] }
+        resource: {
+            values: [datosProveedor]
+        }
     });
 }
 
@@ -261,14 +284,16 @@ async function actualizarProveedor(datosProveedor) {
         spreadsheetId: SPREADSHEET_ID,
         range: `${SHEET_PROVEEDORES}!A${rowToUpdate}:H${rowToUpdate}`,
         valueInputOption: 'USER_ENTERED',
-        resource: { values: [datosProveedor] }
+        resource: {
+            values: [datosProveedor]
+        }
     });
 }
 
 async function eliminarProveedor(id) {
     const proveedores = await obtenerProveedores();
     const rowIndex = proveedores.findIndex(p => p[0] === id);
-    
+
     if (rowIndex === -1) {
         throw new Error('Proveedor no encontrado para eliminar.');
     }
@@ -311,7 +336,9 @@ async function agregarPagoGC(datos) {
         spreadsheetId: SPREADSHEET_ID,
         range: `${SHEET_PAGOS_GC}!A:V`,
         valueInputOption: 'USER_ENTERED',
-        resource: { values: [datos] }
+        resource: {
+            values: [datos]
+        }
     });
 }
 
@@ -375,7 +402,9 @@ async function marcarComprobanteEnviado(rowNum) {
             range: `${SHEET_PAGOS_GC}!S${rowNum}`,
             valueInputOption: 'USER_ENTERED',
             resource: {
-                values: [['SI']]
+                values: [
+                    ['SI']
+                ]
             }
         });
     } catch (err) {
@@ -407,14 +436,22 @@ async function guardarTIMC(anio, mes, valor) {
                 spreadsheetId: SPREADSHEET_ID,
                 range: `${SHEET_CONFIG_TIMC}!C${idx + 2}`,
                 valueInputOption: 'USER_ENTERED',
-                resource: { values: [[valor]] }
+                resource: {
+                    values: [
+                        [valor]
+                    ]
+                }
             });
         } else {
             await gapi.client.sheets.spreadsheets.values.append({
                 spreadsheetId: SPREADSHEET_ID,
                 range: `${SHEET_CONFIG_TIMC}!A:C`,
                 valueInputOption: 'USER_ENTERED',
-                resource: { values: [[anio, mes, valor]] }
+                resource: {
+                    values: [
+                        [anio, mes, valor]
+                    ]
+                }
             });
         }
     } catch (err) {
@@ -438,7 +475,38 @@ async function obtenerEstadoDeCuenta(parcela) {
             fechaVencimiento: p[5]
         }));
 }
-// -------- CONTABILIDAD (EGRESOS) --------
+
+// -------- CONTABILIDAD (INGRESOS Y EGRESOS) --------
+
+// ▼▼▼ INICIO: CÓDIGO NUEVO AÑADIDO ▼▼▼
+async function obtenerIngresosExtra() {
+    try {
+        const res = await gapi.client.sheets.spreadsheets.values.get({
+            spreadsheetId: SPREADSHEET_ID,
+            range: `${SHEET_INGRESOS_EXTRA}!A2:D` // Columnas: ID, Fecha, Concepto, Monto
+        });
+        return res.result.values || [];
+    } catch (err) {
+        console.error("Error al obtener ingresos extra. Asegúrate que la hoja 'Ingresos_Extra' existe.", err);
+        return []; // Retorna vacío para no detener la aplicación
+    }
+}
+
+async function agregarIngresoExtra(datos) {
+    // Genera un ID único para el ingreso extra
+    const id = `IE-${Date.now()}`;
+    const datosConId = [id, ...datos]; // [ID, Fecha, Concepto, Monto]
+    await gapi.client.sheets.spreadsheets.values.append({
+        spreadsheetId: SPREADSHEET_ID,
+        range: `${SHEET_INGRESOS_EXTRA}!A:D`,
+        valueInputOption: 'USER_ENTERED',
+        resource: {
+            values: [datosConId]
+        }
+    });
+}
+// ▲▲▲ FIN: CÓDIGO NUEVO AÑADIDO ▲▲▲
+
 async function obtenerCategoriasEgresos() {
     const res = await gapi.client.sheets.spreadsheets.values.get({
         spreadsheetId: SPREADSHEET_ID,
@@ -464,7 +532,9 @@ async function agregarEgreso(datos) {
         spreadsheetId: SPREADSHEET_ID,
         range: `${SHEET_EGRESOS}!A:J`,
         valueInputOption: 'USER_ENTERED',
-        resource: { values: [datos] }
+        resource: {
+            values: [datos]
+        }
     });
 }
 
@@ -506,7 +576,9 @@ async function agregarTarea(datos) {
         spreadsheetId: SPREADSHEET_ID,
         range: `${SHEET_MANTENCIONES}!A:H`,
         valueInputOption: 'USER_ENTERED',
-        resource: { values: [datos] }
+        resource: {
+            values: [datos]
+        }
     });
 }
 
@@ -519,7 +591,9 @@ async function actualizarTarea(datos) {
         spreadsheetId: SPREADSHEET_ID,
         range: `${SHEET_MANTENCIONES}!A${rowToUpdate}:H${rowToUpdate}`,
         valueInputOption: 'USER_ENTERED',
-        resource: { values: [datos] }
+        resource: {
+            values: [datos]
+        }
     });
 }
 
@@ -561,7 +635,9 @@ async function agregarMulta(datos) {
         spreadsheetId: SPREADSHEET_ID,
         range: `${SHEET_MULTAS}!A:G`,
         valueInputOption: 'USER_ENTERED',
-        resource: { values: [datos] }
+        resource: {
+            values: [datos]
+        }
     });
 }
 
@@ -574,7 +650,9 @@ async function actualizarMulta(datos) {
         spreadsheetId: SPREADSHEET_ID,
         range: `${SHEET_MULTAS}!A${row}:G${row}`,
         valueInputOption: 'USER_ENTERED',
-        resource: { values: [datos] }
+        resource: {
+            values: [datos]
+        }
     });
 }
 
@@ -616,7 +694,9 @@ async function agregarAsamblea(datos) {
         spreadsheetId: SPREADSHEET_ID,
         range: `${SHEET_ASAMBLEAS}!A:F`,
         valueInputOption: 'USER_ENTERED',
-        resource: { values: [datos] }
+        resource: {
+            values: [datos]
+        }
     });
 }
 
@@ -659,7 +739,9 @@ async function agregarComunicacion(datos) {
         spreadsheetId: SPREADSHEET_ID,
         range: `${SHEET_COMUNICACIONES}!A:H`,
         valueInputOption: 'USER_ENTERED',
-        resource: { values: [datos] }
+        resource: {
+            values: [datos]
+        }
     });
 }
 // -------- FUNCIONES DE CORREO --------
@@ -675,6 +757,8 @@ async function enviarCorreo(destinatarios, asunto, mensaje) {
         .replace(/\//g, '_');
     await gapi.client.gmail.users.messages.send({
         userId: 'me',
-        resource: { raw: base64EncodedEmail }
+        resource: {
+            raw: base64EncodedEmail
+        }
     });
 }
