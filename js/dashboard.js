@@ -3,7 +3,6 @@ async function cargarDashboard() {
   limpiarMainContent();
   mostrarSpinner();
   
-  // <-- MODIFICADO: Se añade "ingresosExtraData" para recibir los nuevos datos.
   let residentes = [], pagos = [], egresos = [], tareas = [], config = {}, ingresosExtra = [];
   try {
     const [residentesData, pagosData, egresosData, tareasData, configData, ingresosExtraData] = await Promise.all([
@@ -12,14 +11,14 @@ async function cargarDashboard() {
         obtenerEgresos(),
         obtenerTareas(), 
         obtenerConfiguracion(),
-        obtenerIngresosExtra() // <-- MODIFICADO: Se llama a la nueva función.
+        obtenerIngresosExtra()
     ]);
     residentes = residentesData || [];
     pagos = pagosData || [];
     egresos = egresosData || [];
     tareas = tareasData || [];
     config = configData || {};
-    ingresosExtra = ingresosExtraData || []; // <-- MODIFICADO: Se asignan los datos a la variable.
+    ingresosExtra = ingresosExtraData || [];
   } catch (e) {
     ocultarSpinner();
     mostrarMensaje('Error al cargar datos del dashboard: ' + e.message, 'error');
@@ -27,47 +26,14 @@ async function cargarDashboard() {
   }
 
   // --- CÁLCULOS PRINCIPALES ---
-  const fechaSaldoString = config.Fecha_Saldo_Inicial;
-  let pagosFiltrados = pagos;
-  let egresosFiltrados = egresos;
-  let ingresosExtraFiltrados = ingresosExtra; // <-- MODIFICADO: Se inicializa la variable para los ingresos extra filtrados.
-  
-  if (fechaSaldoString) {
-      const parts = fechaSaldoString.split('-');
-      if (parts.length === 3) {
-          // Se asume que la fecha en la configuración es AAAA-MM-DD
-          const fechaSaldoDate = new Date(Date.UTC(parts[0], parts[1] - 1, parts[2]));
-          
-          pagosFiltrados = pagos.filter(p => {
-              if (!p || !p[13]) return false;
-              const fechaPagoParts = p[13].split('-');
-              const fechaPago = new Date(Date.UTC(fechaPagoParts[0], fechaPagoParts[1] - 1, fechaPagoParts[2]));
-              return fechaPago >= fechaSaldoDate;
-          });
+  // <-- MODIFICADO: Se ha eliminado el bloque de código que filtraba por "Fecha_Saldo_Inicial".
+  // Ahora los cálculos usan los arrays completos ("pagos", "egresos", "ingresosExtra").
 
-          egresosFiltrados = egresos.filter(e => {
-              if (!e || !e[1]) return false;
-              const fechaEgresoParts = e[1].split('-');
-                const fechaEgreso = new Date(Date.UTC(fechaEgresoParts[0], fechaEgresoParts[1] - 1, fechaEgresoParts[2]));
-              return fechaEgreso >= fechaSaldoDate;
-          });
-
-          // <-- MODIFICADO: Se añade el filtro para los ingresos extra, usando la misma lógica.
-          ingresosExtraFiltrados = ingresosExtra.filter(i => {
-              if (!i || !i[1]) return false;
-              const fechaIngresoParts = i[1].split('-');
-              const fechaIngreso = new Date(Date.UTC(fechaIngresoParts[0], fechaIngresoParts[1] - 1, fechaIngresoParts[2]));
-              return fechaIngreso >= fechaSaldoDate;
-          });
-      }
-  }
-
-  // <-- MODIFICADO: Se calcula el total de ingresos sumando ambas fuentes.
-  const totalIngresosGC = pagosFiltrados.reduce((a,b) => a + Number(b[6]||0) + Number(b[17]||0), 0);
-  const totalIngresosExtra = ingresosExtraFiltrados.reduce((a,b) => a + Number(b[3]||0), 0); // El monto está en la columna D (índice 3).
+  const totalIngresosGC = pagos.reduce((a,b) => a + Number(b[6]||0) + Number(b[17]||0), 0);
+  const totalIngresosExtra = ingresosExtra.reduce((a,b) => a + Number(b[3]||0), 0);
   const totalIngresos = totalIngresosGC + totalIngresosExtra;
 
-  const totalEgresos = egresosFiltrados.reduce((a,b) => a + Number(b[6]||0), 0);
+  const totalEgresos = egresos.reduce((a,b) => a + Number(b[6]||0), 0);
   const saldoCaja = totalIngresos - totalEgresos;
 
   // --- CÁLCULOS SECUNDARIOS (Sin cambios en esta sección) ---
@@ -178,7 +144,7 @@ async function cargarDashboard() {
     </div>
   `;
 
-  // --- Lógica para renderizar los gráficos ---
+  // --- Lógica para renderizar los gráficos (Sin cambios) ---
   const labels = [];
   const meses = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
   const ingresosPorMes = [];
@@ -191,16 +157,13 @@ async function cargarDashboard() {
     labels.push(`${mesNombre} ${anio}`);
     const periodo = d.toISOString().slice(0,7);
 
-    // <-- MODIFICADO: Se suman los ingresos de ambas fuentes para cada mes del gráfico.
     const ingresosGCPorMes = pagos.filter(p => p && p[13] && p[13].startsWith(periodo)).reduce((a,b) => a + Number(b[6]||0) + Number(b[17]||0), 0);
     const ingresosExtraPorMes = ingresosExtra.filter(i => i && i[1] && i[1].startsWith(periodo)).reduce((a,b) => a + Number(b[3]||0), 0);
     ingresosPorMes.push(ingresosGCPorMes + ingresosExtraPorMes);
 
-    // El cálculo de egresos se mantiene original
     egresosPorMes.push(egresos.filter(e => e && e[1] && e[1].startsWith(periodo)).reduce((a,b) => a + Number(b[6]||0), 0));
   }
 
-  // El renderizado de los gráficos se mantiene 100% original
   setTimeout(() => {
     const graficoCanvas = document.getElementById('graficoIngresosEgresos');
     if (graficoCanvas) {
