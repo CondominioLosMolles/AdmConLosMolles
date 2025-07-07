@@ -205,7 +205,7 @@ async function cargarContabilidad() {
         <div class="summary-card"><h4>Egresos del Período</h4><div id="egresos-periodo" class="amount text-danger">$0</div></div>
         <div class="summary-card"><h4>Saldo Final Período</h4><div id="saldo-final-periodo" class="amount text-primary">$0</div></div>
     </div>
-    
+   
     <div style="display:flex; flex-wrap:wrap; gap: 24px; margin-top:2rem;">
         <div id="chart-container-ingresos" class="widget" style="flex:1; min-width: 300px;">
             <h4 style="margin-top:0;">Ingresos por Concepto</h4>
@@ -239,8 +239,8 @@ async function cargarContabilidad() {
             <div style="display:flex; justify-content: space-between; align-items: center;">
                 <h4>Egresos</h4>
                 <div>
-                  <button class="btn" id="btnAgregarEgreso">Agregar Egreso</button>
-                  <button class="btn secondary btn-sm" id="btnExportarEgresos">Exportar a Excel</button>
+                    <button class="btn" id="btnAgregarEgreso">Agregar Egreso</button>
+                    <button class="btn secondary btn-sm" id="btnExportarEgresos">Exportar a Excel</button>
                 </div>
             </div>
             <div id="tablaEgresos" style="overflow-x:auto; margin-top:0.5rem;"></div>
@@ -249,7 +249,7 @@ async function cargarContabilidad() {
 
     <div id="modalIngresoExtra" class="modal" style="display:none;">
       <div class="modal-content"> <h3>Agregar Otro Ingreso</h3>
-         <form id="formIngresoExtra" style="display:flex; flex-wrap:wrap; gap:15px;">
+          <form id="formIngresoExtra" style="display:flex; flex-wrap:wrap; gap:15px;">
             <div style="flex: 1 1 180px;"><label>Fecha</label><input type="date" name="fecha" required></div>
             <div style="flex: 1 1 180px;"><label>Mes de Ingreso</label>
                 <select name="mes_ingreso" required>
@@ -270,8 +270,8 @@ async function cargarContabilidad() {
             </div>
             <div style="flex: 1 1 100%;"><label>Concepto / Descripción</label><input type="text" name="concepto" required></div>
             <div style="flex: 1 1 180px;"><label>Monto</label><input type="number" name="monto" min="0" step="1" required></div>
-            <div style="flex: 1 1 180px;"><label>Método de Cobro</label>
-                <select name="metodo_cobro" required>
+            <div style="flex: 1 1 180px;"><label>Método ingreso</label>
+                <select name="metodo_ingreso" required>
                     <option value="Transferencia">Transferencia</option>
                     <option value="Efectivo">Efectivo</option>
                     <option value="Webpay">Webpay</option>
@@ -288,7 +288,7 @@ async function cargarContabilidad() {
 
     <div id="modalEgreso" class="modal" style="display:none;">
       <div class="modal-content"> <h3>Agregar Nuevo Egreso</h3>
-         <form id="formEgreso" style="display:flex; flex-wrap:wrap; gap:15px;">
+          <form id="formEgreso" style="display:flex; flex-wrap:wrap; gap:15px;">
             <div style="flex: 1 1 180px;"><label>Fecha</label><input type="date" name="fecha" required></div>
             <div style="flex: 1 1 180px;"><label>Categoría</label>
                 <select name="categoria" required>
@@ -641,7 +641,7 @@ async function cargarContabilidad() {
                     linksComprobantes.push(resultadoSubida.webViewLink);
                 }
             }
-            
+           
             // Estructura de datos para la hoja "Ingresos_Extra"
             const datosIngreso = [
                 null, // ID (columna A)
@@ -649,10 +649,10 @@ async function cargarContabilidad() {
                 formData.get('concepto'), // (columna C)
                 formData.get('monto'), // (columna D)
                 linksComprobantes.join(','), // (columna E)
-                formData.get('metodo_cobro'), // (columna F)
+                formData.get('metodo_ingreso'), // (columna F)
                 formData.get('mes_ingreso') // (columna G)
             ];
-            
+           
             // Asumimos que tienes una función 'agregarIngresoExtra' que añade la fila a tu Google Sheet.
             await agregarIngresoExtra(datosIngreso);
             mostrarMensaje("Ingreso agregado con éxito.", "success");
@@ -679,7 +679,7 @@ async function cargarContabilidad() {
         const vista = e.target.value;
         const ingresosContainer = document.getElementById('tablaIngresosContainer');
         const egresosContainer = document.getElementById('tablaEgresosContainer');
-        
+       
         ingresosContainer.style.display = (vista === 'ingresos') ? 'block' : 'none';
         egresosContainer.style.display = (vista === 'egresos') ? 'block' : 'none';
     });
