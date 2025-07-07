@@ -35,7 +35,7 @@ function inicializarColumnasAjustables() {
     });
 }
 
-// ▼▼▼ INICIO: CÓDIGO NUEVO AÑADIDO PARA TABLA INGRESOS ▼▼▼
+// --- Funciones para ancho de columnas persistente (Ingresos) ---
 const ANCHOS_INGRESOS_STORAGE_KEY = 'ingresosColumnWidths';
 
 function guardarAnchosDeColumnaIngresos() {
@@ -67,13 +67,11 @@ function inicializarColumnasAjustablesIngresos() {
     const headers = document.querySelectorAll('#tabla-ingresos-export th');
     if (headers.length > 0) {
         headers.forEach(th => {
-            // Asegurarse de que el listener se añade solo una vez si la función es llamada múltiples veces
             th.removeEventListener('mouseup', guardarAnchosDeColumnaIngresos);
             th.addEventListener('mouseup', guardarAnchosDeColumnaIngresos);
         });
     }
 }
-// ▲▲▲ FIN: CÓDIGO NUEVO AÑADIDO PARA TABLA INGRESOS ▲▲▲
 
 
 // --- Utilidad para exportar a Excel ---
@@ -110,8 +108,6 @@ async function cargarContabilidad() {
     limpiarMainContent();
     mostrarSpinner();
 
-    // ▼▼▼ INICIO: CÓDIGO MODIFICADO ▼▼▼
-    // Se añade 'allIngresosExtra' a la carga de datos inicial
     let allPagos = [],
         allEgresos = [],
         config = {},
@@ -125,9 +121,8 @@ async function cargarContabilidad() {
             obtenerConfiguracion(),
             obtenerProveedores(),
             obtenerCategoriasEgresos(),
-            obtenerIngresosExtra() // Se obtiene los nuevos ingresos
+            obtenerIngresosExtra()
         ]);
-        // ▲▲▲ FIN: CÓDIGO MODIFICADO ▲▲▲
     } catch (e) {
         ocultarSpinner();
         mostrarMensaje('Error al cargar datos: ' + e.message, 'error');
@@ -149,8 +144,8 @@ async function cargarContabilidad() {
     const main = document.getElementById('main-content');
     const fechaSaldoInicial = config.Fecha_Saldo_Inicial ? new Date(config.Fecha_Saldo_Inicial.replace(/-/g, '/')).toLocaleDateString('es-CL') : 'No establecida';
 
-    // ▼▼▼ INICIO: CÓDIGO MODIFICADO ▼▼▼
-    // Se añade el nuevo botón "Agregar Otro Ingreso" y el modal correspondiente
+    // ▼▼▼ INICIO: CÓDIGO HTML MODIFICADO ▼▼▼
+    // Se actualiza el modal de "Agregar Otro Ingreso" para que sea completo, incluyendo el campo para adjuntar archivos.
     main.innerHTML = `
     <style>
       .summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 2rem; }
@@ -165,8 +160,8 @@ async function cargarContabilidad() {
       .suggestion-item { padding: 8px 12px; cursor: pointer; border-bottom: 1px solid #eee; background: white; }
       .suggestion-item:hover, .suggestion-item.active { background-color: #e9f1fb; }
       .suggestion-item:last-child { border-bottom: none; }
-      #tabla-egresos-export th, #tabla-ingresos-export th { position: relative; resize: horizontal; overflow: auto; } /* Se añade #tabla-ingresos-export */
-      #tabla-egresos-export th:not(:last-child), #tabla-ingresos-export th:not(:last-child) { border-right: 1px solid #ccc; } /* Se añade #tabla-ingresos-export */
+      #tabla-egresos-export th, #tabla-ingresos-export th { position: relative; resize: horizontal; overflow: auto; }
+      #tabla-egresos-export th:not(:last-child), #tabla-ingresos-export th:not(:last-child) { border-right: 1px solid #ccc; }
       #tabla-egresos-export th:nth-child(1), #tabla-egresos-export td:nth-child(1),
       #tabla-egresos-export th:nth-child(2), #tabla-egresos-export td:nth-child(2),
       #tabla-egresos-export th:nth-child(4), #tabla-egresos-export td:nth-child(4),
@@ -256,8 +251,33 @@ async function cargarContabilidad() {
       <div class="modal-content"> <h3>Agregar Otro Ingreso</h3>
          <form id="formIngresoExtra" style="display:flex; flex-wrap:wrap; gap:15px;">
             <div style="flex: 1 1 180px;"><label>Fecha</label><input type="date" name="fecha" required></div>
-            <div style="flex: 1 1 180px;"><label>Monto</label><input type="number" name="monto" min="0" step="1" required></div>
+            <div style="flex: 1 1 180px;"><label>Mes de Ingreso</label>
+                <select name="mes_ingreso" required>
+                    <option value="" disabled selected>-- Seleccione mes --</option>
+                    <option value="Enero">Enero</option>
+                    <option value="Febrero">Febrero</option>
+                    <option value="Marzo">Marzo</option>
+                    <option value="Abril">Abril</option>
+                    <option value="Mayo">Mayo</option>
+                    <option value="Junio">Junio</option>
+                    <option value="Julio">Julio</option>
+                    <option value="Agosto">Agosto</option>
+                    <option value="Septiembre">Septiembre</option>
+                    <option value="Octubre">Octubre</option>
+                    <option value="Noviembre">Noviembre</option>
+                    <option value="Diciembre">Diciembre</option>
+                </select>
+            </div>
             <div style="flex: 1 1 100%;"><label>Concepto / Descripción</label><input type="text" name="concepto" required></div>
+            <div style="flex: 1 1 180px;"><label>Monto</label><input type="number" name="monto" min="0" step="1" required></div>
+            <div style="flex: 1 1 180px;"><label>Método de Cobro</label>
+                <select name="metodo_cobro" required>
+                    <option value="Transferencia">Transferencia</option>
+                    <option value="Efectivo">Efectivo</option>
+                    <option value="Webpay">Webpay</option>
+                </select>
+            </div>
+            <div style="flex: 1 1 100%;"><label>Comprobante(s)</label><input type="file" name="comprobante" multiple></div>
             <div style="flex: 1 1 100%; text-align: right; margin-top: 20px;">
                 <button class="btn secondary" type="button" id="btnCerrarModalIngresoExtra">Cancelar</button>
                 <button class="btn" type="submit">Guardar Ingreso</button>
@@ -319,13 +339,13 @@ async function cargarContabilidad() {
       </div>
     </div>
   `;
-    // ▲▲▲ FIN: CÓDIGO MODIFICADO ▲▲▲
+    // ▲▲▲ FIN: CÓDIGO HTML MODIFICADO ▲▲▲
 
     let chartIngresosInstance = null;
     let chartEgresosInstance = null;
 
-    // ▼▼▼ INICIO: CÓDIGO MODIFICADO ▼▼▼
-    // La función ahora recibe `ingresosExtra` y los procesa para los totales, la tabla y el gráfico.
+    // ▼▼▼ INICIO: CÓDIGO DE RENDERIZADO MODIFICADO ▼▼▼
+    // Se actualiza la función para incluir la columna y los datos del comprobante en la tabla de ingresos.
     function renderizarContabilidad(pagos, egresos, ingresosExtra, saldoInicialGlobal) {
         const fechaInicioFiltro = document.getElementById('fechaInicio').valueAsDate;
         let saldoInicialPeriodo = saldoInicialGlobal;
@@ -366,35 +386,45 @@ async function cargarContabilidad() {
                 fecha: new Date(p[13].replace(/-/g, '/')),
                 tipo: 'Gasto Común',
                 detalle: `Res: ${p[1]} / Par: ${p[2]}`,
-                monto: parseFloat(p[6] || 0) + parseFloat(p[17] || 0)
+                monto: parseFloat(p[6] || 0) + parseFloat(p[17] || 0),
+                comprobante: p[14] || '' // Se asume que el comprobante de pago GC está en la columna 15 (índice 14)
             });
         });
 
         ingresosExtra.forEach(i => {
             allIngresosCombinados.push({
                 fecha: new Date(i[1].replace(/-/g, '/')),
-                tipo: i[2], // Concepto
-                detalle: 'Ingreso General',
-                monto: parseFloat(i[3] || 0)
+                tipo: 'Ingreso Extra',
+                detalle: i[2], // Concepto
+                monto: parseFloat(i[3] || 0),
+                comprobante: i[4] || '' // Se asume que el comprobante de Ingreso Extra está en la columna E (índice 4)
             });
         });
 
-        allIngresosCombinados.sort((a, b) => a.fecha - b.fecha);
+        allIngresosCombinados.sort((a, b) => b.fecha - a.fecha);
 
         tablaIngresosDiv.innerHTML = '<p>No hay ingresos en el período seleccionado.</p>';
         if (allIngresosCombinados.length > 0) {
-            let ingresosHTML = '<table id="tabla-ingresos-export" class="table"><thead><tr><th>Fecha</th><th>Tipo de Ingreso</th><th>Detalle</th><th>Monto</th></tr></thead><tbody>';
+            // Se añade la cabecera 'Comprobante'
+            let ingresosHTML = '<table id="tabla-ingresos-export" class="table"><thead><tr><th>Fecha</th><th>Tipo de Ingreso</th><th>Detalle</th><th>Monto</th><th>Comprobante</th></tr></thead><tbody>';
             allIngresosCombinados.forEach(i => {
+                // Lógica para renderizar los links de los comprobantes
+                let linksHtml = "N/A";
+                if (i.comprobante) {
+                    const links = i.comprobante.split(',');
+                    linksHtml = links.map((link, index) => `<a href="${link.trim()}" target="_blank" class="btn small">Ver ${index + 1}</a>`).join(' ');
+                }
+
                 ingresosHTML += `<tr>
                     <td>${i.fecha.toLocaleDateString('es-CL')}</td>
                     <td>${i.tipo}</td>
                     <td>${i.detalle}</td>
                     <td>$${i.monto.toLocaleString('es-CL')}</td>
+                    <td>${linksHtml}</td>
                 </tr>`;
             });
             ingresosHTML += '</tbody></table>';
             tablaIngresosDiv.innerHTML = ingresosHTML;
-            // Se aplican los anchos de columna guardados y se inicializa el ajuste
             aplicarAnchosDeColumnaGuardadosIngresos();
             inicializarColumnasAjustablesIngresos();
         }
@@ -404,7 +434,7 @@ async function cargarContabilidad() {
         tablaEgresosDiv.innerHTML = '<p>No hay egresos en el período seleccionado.</p>';
         if (egresos.length > 0) {
             let egresosHTML = '<table id="tabla-egresos-export" class="table"><thead><tr><th>Fecha</th><th>Mes Pago</th><th>Proveedor</th><th>RUT</th><th>Categoría</th><th>Monto</th><th>Método Pago</th><th>Comprobante</th></tr></thead><tbody>';
-            egresos.sort((a, b) => new Date(a[1]) - new Date(b[1])).forEach(e => {
+            egresos.sort((a, b) => new Date(b[1]) - new Date(a[1])).forEach(e => {
                 let linksHtml = "N/A";
                 if (e[7]) {
                     const links = e[7].split(',');
@@ -428,14 +458,11 @@ async function cargarContabilidad() {
             inicializarColumnasAjustables();
         }
 
-        const ingresosPorConcepto = pagos.reduce((acc, p) => {
-            acc['Gastos Comunes'] = (acc['Gastos Comunes'] || 0) + parseFloat(p[6] || 0);
-            if (parseFloat(p[17] || 0) > 0) acc['Abonos Convenio'] = (acc['Abonos Convenio'] || 0) + parseFloat(p[17] || 0);
+        const ingresosPorConcepto = allIngresosCombinados.reduce((acc, i) => {
+            const concepto = i.tipo === 'Gasto Común' ? 'Gastos Comunes' : (i.detalle || 'Ingreso Extra');
+            acc[concepto] = (acc[concepto] || 0) + i.monto;
             return acc;
         }, {});
-        if (totalIngresosExtra > 0) {
-            ingresosPorConcepto['Otros Ingresos'] = totalIngresosExtra;
-        }
 
         const chartIngresosContainer = document.getElementById('chart-container-ingresos');
         const canvasIngresos = document.getElementById('graficoIngresos');
@@ -451,7 +478,7 @@ async function cargarContabilidad() {
                     labels: Object.keys(ingresosPorConcepto),
                     datasets: [{
                         data: Object.values(ingresosPorConcepto),
-                        backgroundColor: ['#4e91f9', '#f6d743', '#28a745']
+                        backgroundColor: ['#4e91f9', '#f6d743', '#28a745', '#dc3545', '#ffc107']
                     }]
                 },
                 options: {
@@ -506,11 +533,9 @@ async function cargarContabilidad() {
             if (!chartEgresosContainer.querySelector('p')) chartEgresosContainer.insertAdjacentHTML('beforeend', '<p>No hay datos de egresos para graficar.</p>');
         }
     }
-    // ▲▲▲ FIN: CÓDIGO MODIFICADO ▲▲▲
+    // ▲▲▲ FIN: CÓDIGO DE RENDERIZADO MODIFICADO ▲▲▲
 
 
-    // ▼▼▼ INICIO: CÓDIGO MODIFICADO ▼▼▼
-    // Se añaden los ingresos extra al filtrado
     function filtrarYRenderizar() {
         let fechaInicio = document.getElementById('fechaInicio').value;
         let fechaFin = document.getElementById('fechaFin').value;
@@ -524,7 +549,7 @@ async function cargarContabilidad() {
         const egresosFiltrados = allEgresos.filter(e => {
             const fechaEgreso = e[1];
             if (!fechaEgreso) return false;
-            return (!fechaInicio || fechaEgreso >= fechaEgreso) && (!fechaFin || fechaEgreso <= fechaFin);
+            return (!fechaInicio || fechaEgreso >= fechaInicio) && (!fechaFin || fechaEgreso <= fechaFin);
         });
         const ingresosExtraFiltrados = allIngresosExtra.filter(i => {
             const fechaIngreso = i[1];
@@ -534,7 +559,6 @@ async function cargarContabilidad() {
 
         renderizarContabilidad(pagosFiltrados, egresosFiltrados, ingresosExtraFiltrados, saldoInicialGlobal);
     }
-    // ▲▲▲ FIN: CÓDIGO MODIFICADO ▲▲▲
 
     document.getElementById('btnFiltrar').addEventListener('click', filtrarYRenderizar);
     document.getElementById('btnGuardarSaldo').addEventListener('click', async () => {
@@ -582,8 +606,8 @@ async function cargarContabilidad() {
     document.getElementById('btnExportarEgresos').addEventListener('click', () => exportarTablaAExcel('tabla-egresos-export', 'Egresos'));
 
 
-    // ▼▼▼ INICIO: CÓDIGO NUEVO AÑADIDO ▼▼▼
-    // Lógica para el nuevo modal de Ingresos Extra
+    // ▼▼▼ INICIO: LÓGICA DE FORMULARIO DE INGRESO MODIFICADA ▼▼▼
+    // Se añade la lógica completa para el modal de Ingresos Extra, incluyendo la subida de archivos.
     const modalIngresoExtra = document.getElementById('modalIngresoExtra');
     const formIngresoExtra = document.getElementById('formIngresoExtra');
     document.getElementById('btnAgregarIngresoExtra').addEventListener('click', () => {
@@ -594,27 +618,54 @@ async function cargarContabilidad() {
     document.getElementById('btnCerrarModalIngresoExtra').addEventListener('click', () => {
         modalIngresoExtra.style.display = 'none';
     });
+
     formIngresoExtra.addEventListener('submit', async (e) => {
         e.preventDefault();
         mostrarSpinner();
         try {
             const formData = new FormData(e.target);
+            const archivos = formData.getAll('comprobante');
+            const linksComprobantes = [];
+
+            if (archivos && archivos.length > 0 && archivos[0].size > 0) {
+                // Asumimos que tienes una función 'buscarOCrearRutaDeIngreso' en tu Apps Script, similar a la de egresos.
+                if (typeof buscarOCrearRutaDeIngreso !== 'function') {
+                    throw new Error("La función de Google Drive 'buscarOCrearRutaDeIngreso' no está disponible.");
+                }
+                const nombreMes = formData.get('mes_ingreso');
+                const anio = formData.get('fecha').split('-')[0];
+                const carpetaId = await buscarOCrearRutaDeIngreso(nombreMes, anio);
+
+                for (const archivo of archivos) {
+                    const resultadoSubida = await subirComprobante(archivo, carpetaId);
+                    linksComprobantes.push(resultadoSubida.webViewLink);
+                }
+            }
+            
+            // Estructura de datos para la hoja "Ingresos_Extra"
             const datosIngreso = [
-                formData.get('fecha'),
-                formData.get('concepto'),
-                formData.get('monto')
+                null, // ID (columna A)
+                formData.get('fecha'), // (columna B)
+                formData.get('concepto'), // (columna C)
+                formData.get('monto'), // (columna D)
+                linksComprobantes.join(','), // (columna E)
+                formData.get('metodo_cobro'), // (columna F)
+                formData.get('mes_ingreso') // (columna G)
             ];
+            
+            // Asumimos que tienes una función 'agregarIngresoExtra' que añade la fila a tu Google Sheet.
             await agregarIngresoExtra(datosIngreso);
             mostrarMensaje("Ingreso agregado con éxito.", "success");
             modalIngresoExtra.style.display = 'none';
-            cargarContabilidad(); // Recarga todo el módulo para reflejar cambios
+            cargarContabilidad();
         } catch (err) {
             mostrarMensaje("Error al guardar el ingreso: " + err.message, "error");
         } finally {
             ocultarSpinner();
         }
     });
-    // ▲▲▲ FIN: CÓDIGO NUEVO AÑADIDO ▲▲▲
+    // ▲▲▲ FIN: LÓGICA DE FORMULARIO DE INGRESO MODIFICADA ▲▲▲
+
 
     const modalEgreso = document.getElementById('modalEgreso');
     const formEgreso = document.getElementById('formEgreso');
@@ -624,31 +675,14 @@ async function cargarContabilidad() {
         formEgreso.reset();
     });
 
-    // ▼▼▼ INICIO: CÓDIGO MODIFICADO ▼▼▼
-    // Se añade la lógica para mostrar/ocultar el nuevo botón de ingresos.
     document.getElementById('detalle-view-toggle').addEventListener('change', (e) => {
         const vista = e.target.value;
         const ingresosContainer = document.getElementById('tablaIngresosContainer');
         const egresosContainer = document.getElementById('tablaEgresosContainer');
-        const btnAgregarIngreso = document.getElementById('btnAgregarIngresoExtra');
-        const btnAgregarEgreso = document.getElementById('btnAgregarEgreso');
-
-        if (vista === 'ingresos') {
-            ingresosContainer.style.display = 'block';
-            egresosContainer.style.display = 'none';
-            btnAgregarIngreso.style.display = 'inline-block';
-            btnAgregarEgreso.style.display = 'none';
-        } else if (vista === 'egresos') {
-            ingresosContainer.style.display = 'none';
-            egresosContainer.style.display = 'block';
-            btnAgregarIngreso.style.display = 'none';
-            btnAgregarEgreso.style.display = 'inline-block';
-        } else {
-            ingresosContainer.style.display = 'block';
-            egresosContainer.style.display = 'block';
-        }
+        
+        ingresosContainer.style.display = (vista === 'ingresos') ? 'block' : 'none';
+        egresosContainer.style.display = (vista === 'egresos') ? 'block' : 'none';
     });
-    // ▲▲▲ FIN: CÓDIGO MODIFICADO ▲▲▲
 
     formEgreso.addEventListener('submit', async (e) => {
         e.preventDefault();
