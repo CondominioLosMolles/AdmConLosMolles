@@ -1,5 +1,5 @@
 // =================================================================================
-// ===== GASTOS_COMUNES.JS - CÓDIGO COMPLETO CON GESTIÓN DE CONVENIOS ==============
+// ===== GASTOS_COMUNES.JS - CÓDIGO COMPLETO Y FINAL (CON TODAS LAS CORRECCIONES) =====
 // =================================================================================
 
 // Constantes globales para el módulo
@@ -103,7 +103,6 @@ async function cargarGastosComunes() {
         cuerpoDiv.innerHTML = crearCuerpoCorreo(pago, aEnviar);
     }
     
-    // ▼ INICIO: CÓDIGO ACTUALIZADO/NUEVO ▼
     function crearCuerpoCorreo(pago, residente) {
         const nombreResidente = residente[1];
         const periodoFormateado = formatearPeriodo(pago.Periodo);
@@ -244,7 +243,6 @@ async function cargarGastosComunes() {
             ocultarSpinner();
         }
     }
-    // ▲ FIN: CÓDIGO ACTUALIZADO/NUEVO ▲
     
     // =======================================================
     // RENDERIZADO DEL HTML PRINCIPAL
@@ -489,8 +487,8 @@ async function cargarGastosComunes() {
         aplicarAnchosGuardados(tabla);
         hacerColumnasRedimensionables(tabla);
     }
-
-    // ▼ INICIO: CÓDIGO ACTUALIZADO/NUEVO ▼
+    
+    // ▼ INICIO: FUNCIÓN COMPLETAMENTE ACTUALIZADA ▼
     function renderizarTablaResidente(parcela, anio) {
         const residente = residentes.find(r => String(r[3]) === String(parcela));
         if (!residente) { 
@@ -500,7 +498,9 @@ async function cargarGastosComunes() {
         }
 
         const widgetConvenio = document.getElementById('widget-convenio');
-        const convenioActivo = residente[15] === 'SI'; // Columna P = Convenio_Activo
+        
+        // 1. La verificación ahora es más robusta: ignora mayúsculas/minúsculas y espacios.
+        const convenioActivo = (residente[15] || '').trim().toUpperCase() === 'SI';
 
         if (convenioActivo) {
             widgetConvenio.style.display = 'block';
@@ -523,18 +523,15 @@ async function cargarGastosComunes() {
             
             document.getElementById('btnAdministrarConvenio').addEventListener('click', () => abrirModalConvenio(parcela, residente));
             
-            // --- INICIO DE MODIFICACIÓN CLAVE ---
             document.getElementById('btnEnviarCorreoConvenio').addEventListener('click', () => {
-                // Se recopilan todos los datos del convenio desde el objeto 'residente'
                 const datosConvenio = {
-                    deudaInicial: parseFloat(residente[19] || 0), // Columna T (Convenio Deuda Inicial)
-                    cuotas: parseInt(residente[16] || 0),         // Columna Q (Convenio Cuotas)
-                    valorCuota: parseFloat(residente[17] || 0),   // Columna R (Convenio Valor Cuota)
-                    fechaInicio: residente[18] || ''              // Columna S (Convenio Fecha Inicio)
+                    deudaInicial: parseFloat(residente[19] || 0),
+                    cuotas: parseInt(residente[16] || 0),
+                    valorCuota: parseFloat(residente[17] || 0),
+                    fechaInicio: residente[18] || ''
                 };
                 enviarAcuerdoConvenio(residente, datosConvenio);
             });
-            // --- FIN DE MODIFICACIÓN CLAVE ---
 
             document.getElementById('btnFormalizarConvenio').addEventListener('click', () => formalizarConvenio(parcela, residente[1]));
             
@@ -551,16 +548,14 @@ async function cargarGastosComunes() {
                 tbodyAbonos.innerHTML = `<tr><td colspan="3" style="text-align:center;">No hay abonos a convenio registrados para este año.</td></tr>`;
             }
         } else {
-            widgetConvenio.style.display = 'block';
-            document.getElementById('convenio-summary-grid').innerHTML = `<p>Este residente no tiene un convenio de pago activo.</p><button id="btnAdministrarConvenio" class="btn">Crear Convenio de Pago</button>`;
-            document.getElementById('thead-abonos').innerHTML = '';
-            document.getElementById('tbody-abonos').innerHTML = '';
-            document.getElementById('btnAdministrarConvenio').addEventListener('click', () => abrirModalConvenio(parcela, residente));
+            // Se oculta el widget si no hay convenio activo
+            widgetConvenio.style.display = 'none';
         }
         
-        const tieneConvenio = residente[15] === 'SI';
-        const nombreResidenteConConvenio = `${residente[1]} ${tieneConvenio ? '<span title="Este residente tiene un convenio de pago activo" style="cursor:help;">📜</span>' : ''}`;
-        document.querySelector('#detalle-gastos h3').textContent = `Detalle Anual de Gastos Comunes para ${nombreResidenteConConvenio} (Parcela ${parcela})`;
+        // 2. Se usa 'convenioActivo' (la variable corregida) y se cambia .textContent por .innerHTML para que el ícono se muestre correctamente.
+        const nombreResidenteConConvenio = `${residente[1]} ${convenioActivo ? '<span title="Este residente tiene un convenio de pago activo" style="cursor:help;">📜</span>' : ''}`;
+        document.querySelector('#detalle-gastos h3').innerHTML = `Detalle Anual de Gastos Comunes para ${nombreResidenteConConvenio} (Parcela ${parcela})`;
+        
         theadGastos.innerHTML = `<tr><th>Período</th><th>Fecha Vencimiento</th><th>Monto Pagado</th><th>Saldo Transacción</th><th>Interés</th><th>Multa</th><th>Deuda Pendiente</th><th>Fecha Pago</th><th>Método Pago</th><th>Estado</th><th>Comprobante</th></tr>`;
         tbodyGastos.innerHTML = '';
         
@@ -601,13 +596,13 @@ async function cargarGastosComunes() {
             tbodyGastos.appendChild(tr);
         });
     }
+    // ▲ FIN: FUNCIÓN COMPLETAMENTE ACTUALIZADA ▲
 
     function abrirModalConvenio(nParcela, residente) {
         const modal = document.getElementById('modalConvenio');
         document.getElementById('formConvenio').reset();
         document.getElementById('convenioNParcela').value = nParcela;
         
-        // Precargar datos si ya existen en el objeto 'residente'
         document.getElementById('convenioDeudaTotal').value = residente[19] || 0; // Columna T
         document.getElementById('convenioCuotas').value = residente[16] || 1; // Columna Q
         const fecha = residente[18]; // Columna S
@@ -668,7 +663,6 @@ async function cargarGastosComunes() {
             </div>`;
         modal.style.display = 'flex';
     }
-    // ▲ FIN: CÓDIGO ACTUALIZADO/NUEVO ▲
 
     function filtrarYRenderizar() {
         const parcela = document.getElementById('filtroParcela').value;
@@ -1032,8 +1026,6 @@ async function cargarGastosComunes() {
         document.getElementById('modalDetallePago').style.display = 'none';
     });
     
-    // ▼ INICIO: CÓDIGO ACTUALIZADO/NUEVO ▼
-    // Event listeners para el nuevo modal de convenios
     document.getElementById('btnCerrarModalConvenio').addEventListener('click', () => {
         document.getElementById('modalConvenio').style.display = 'none';
     });
@@ -1053,8 +1045,6 @@ async function cargarGastosComunes() {
         document.getElementById('modalConvenio').style.display = 'none';
         guardarConvenio(nParcela, datosConvenio);
     });
-    // ▲ FIN: CÓDIGO ACTUALIZADO/NUEVO ▲
-
 
     // =======================================================
     // EJECUCIÓN INICIAL
