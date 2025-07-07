@@ -1,17 +1,17 @@
 // js/contabilidad.js
 
-// --- Funciones para ancho de columnas persistente ---
-const ANCHOS_STORAGE_KEY = 'egresosColumnWidths';
+// --- Funciones para ancho de columnas persistente (Egresos) ---
+const ANCHOS_EGRESOS_STORAGE_KEY = 'egresosColumnWidths';
 
 function guardarAnchosDeColumna() {
     const headers = document.querySelectorAll('#tabla-egresos-export th');
     if (headers.length === 0) return;
     const widths = Array.from(headers).map(th => th.offsetWidth);
-    localStorage.setItem(ANCHOS_STORAGE_KEY, JSON.stringify(widths));
+    localStorage.setItem(ANCHOS_EGRESOS_STORAGE_KEY, JSON.stringify(widths));
 }
 
 function aplicarAnchosDeColumnaGuardados() {
-    const savedWidths = localStorage.getItem(ANCHOS_STORAGE_KEY);
+    const savedWidths = localStorage.getItem(ANCHOS_EGRESOS_STORAGE_KEY);
     if (savedWidths) {
         try {
             const widths = JSON.parse(savedWidths);
@@ -23,7 +23,7 @@ function aplicarAnchosDeColumnaGuardados() {
             }
         } catch (e) {
             console.error("Error al aplicar anchos de columna:", e);
-            localStorage.removeItem(ANCHOS_STORAGE_KEY);
+            localStorage.removeItem(ANCHOS_EGRESOS_STORAGE_KEY);
         }
     }
 }
@@ -35,26 +35,69 @@ function inicializarColumnasAjustables() {
     });
 }
 
+// ▼▼▼ INICIO: CÓDIGO NUEVO AÑADIDO PARA TABLA INGRESOS ▼▼▼
+const ANCHOS_INGRESOS_STORAGE_KEY = 'ingresosColumnWidths';
+
+function guardarAnchosDeColumnaIngresos() {
+    const headers = document.querySelectorAll('#tabla-ingresos-export th');
+    if (headers.length === 0) return;
+    const widths = Array.from(headers).map(th => th.offsetWidth);
+    localStorage.setItem(ANCHOS_INGRESOS_STORAGE_KEY, JSON.stringify(widths));
+}
+
+function aplicarAnchosDeColumnaGuardadosIngresos() {
+    const savedWidths = localStorage.getItem(ANCHOS_INGRESOS_STORAGE_KEY);
+    if (savedWidths) {
+        try {
+            const widths = JSON.parse(savedWidths);
+            const headers = document.querySelectorAll('#tabla-ingresos-export th');
+            if (headers.length === widths.length) {
+                headers.forEach((th, index) => {
+                    th.style.width = `${widths[index]}px`;
+                });
+            }
+        } catch (e) {
+            console.error("Error al aplicar anchos de columna de ingresos:", e);
+            localStorage.removeItem(ANCHOS_INGRESOS_STORAGE_KEY);
+        }
+    }
+}
+
+function inicializarColumnasAjustablesIngresos() {
+    const headers = document.querySelectorAll('#tabla-ingresos-export th');
+    if (headers.length > 0) {
+        headers.forEach(th => {
+            // Asegurarse de que el listener se añade solo una vez si la función es llamada múltiples veces
+            th.removeEventListener('mouseup', guardarAnchosDeColumnaIngresos);
+            th.addEventListener('mouseup', guardarAnchosDeColumnaIngresos);
+        });
+    }
+}
+// ▲▲▲ FIN: CÓDIGO NUEVO AÑADIDO PARA TABLA INGRESOS ▲▲▲
+
+
 // --- Utilidad para exportar a Excel ---
-function exportarTablaAExcel(tableID, filename = ''){
+function exportarTablaAExcel(tableID, filename = '') {
     let downloadLink;
     const dataType = 'application/vnd.ms-excel';
     const tableSelect = document.getElementById(tableID);
-    if(!tableSelect) {
+    if (!tableSelect) {
         return mostrarMensaje('No se encontró la tabla para exportar.', 'error');
     }
     const tableHTML = tableSelect.outerHTML.replace(/ /g, '%20');
-    
-    filename = filename?filename+'.xls':'excel_data.xls';
-    
+
+    filename = filename ? filename + '.xls' : 'excel_data.xls';
+
     downloadLink = document.createElement("a");
-    
+
     document.body.appendChild(downloadLink);
-    
-    if(navigator.msSaveOrOpenBlob){
-        const blob = new Blob(['\ufeff', tableHTML], { type: dataType });
-        navigator.msSaveOrOpenBlob( blob, filename);
-    }else{
+
+    if (navigator.msSaveOrOpenBlob) {
+        const blob = new Blob(['\ufeff', tableHTML], {
+            type: dataType
+        });
+        navigator.msSaveOrOpenBlob(blob, filename);
+    } else {
         downloadLink.href = 'data:' + dataType + ', ' + tableHTML;
         downloadLink.download = filename;
         downloadLink.click();
@@ -64,37 +107,51 @@ function exportarTablaAExcel(tableID, filename = ''){
 
 // --- Función principal del módulo ---
 async function cargarContabilidad() {
-  limpiarMainContent();
-  mostrarSpinner();
+    limpiarMainContent();
+    mostrarSpinner();
 
-  let allPagos = [], allEgresos = [], config = {}, proveedores = [], categoriasEgresos = [];
-  try {
-    [allPagos, allEgresos, config, proveedores, categoriasEgresos] = await Promise.all([
-        obtenerPagosGC(),
-        obtenerEgresos(),
-        obtenerConfiguracion(),
-        obtenerProveedores(),
-        obtenerCategoriasEgresos()
-    ]);
-  } catch (e) {
-    ocultarSpinner();
-    mostrarMensaje('Error al cargar datos: ' + e.message, 'error');
-    return;
-  }
-  
-  const proveedoresUnicos = proveedores.reduce((acc, p) => {
-    const nombre = p[1]; // Columna B: Nombre_Empresa
-    const rut = p[2];    // Columna C: RUT_Empresa
-    if (nombre) {
-      acc[nombre.toLowerCase().trim()] = { nombre: nombre.trim(), rut: rut || '' };
+    // ▼▼▼ INICIO: CÓDIGO MODIFICADO ▼▼▼
+    // Se añade 'allIngresosExtra' a la carga de datos inicial
+    let allPagos = [],
+        allEgresos = [],
+        config = {},
+        proveedores = [],
+        categoriasEgresos = [],
+        allIngresosExtra = [];
+    try {
+        [allPagos, allEgresos, config, proveedores, categoriasEgresos, allIngresosExtra] = await Promise.all([
+            obtenerPagosGC(),
+            obtenerEgresos(),
+            obtenerConfiguracion(),
+            obtenerProveedores(),
+            obtenerCategoriasEgresos(),
+            obtenerIngresosExtra() // Se obtiene los nuevos ingresos
+        ]);
+        // ▲▲▲ FIN: CÓDIGO MODIFICADO ▲▲▲
+    } catch (e) {
+        ocultarSpinner();
+        mostrarMensaje('Error al cargar datos: ' + e.message, 'error');
+        return;
     }
-    return acc;
-  }, {});
 
-  const main = document.getElementById('main-content');
-  const fechaSaldoInicial = config.Fecha_Saldo_Inicial ? new Date(config.Fecha_Saldo_Inicial.replace(/-/g, '/')).toLocaleDateString('es-CL') : 'No establecida';
+    const proveedoresUnicos = proveedores.reduce((acc, p) => {
+        const nombre = p[1]; // Columna B: Nombre_Empresa
+        const rut = p[2]; // Columna C: RUT_Empresa
+        if (nombre) {
+            acc[nombre.toLowerCase().trim()] = {
+                nombre: nombre.trim(),
+                rut: rut || ''
+            };
+        }
+        return acc;
+    }, {});
 
-  main.innerHTML = `
+    const main = document.getElementById('main-content');
+    const fechaSaldoInicial = config.Fecha_Saldo_Inicial ? new Date(config.Fecha_Saldo_Inicial.replace(/-/g, '/')).toLocaleDateString('es-CL') : 'No establecida';
+
+    // ▼▼▼ INICIO: CÓDIGO MODIFICADO ▼▼▼
+    // Se añade el nuevo botón "Agregar Otro Ingreso" y el modal correspondiente
+    main.innerHTML = `
     <style>
       .summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 2rem; }
       .summary-card { background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
@@ -108,8 +165,8 @@ async function cargarContabilidad() {
       .suggestion-item { padding: 8px 12px; cursor: pointer; border-bottom: 1px solid #eee; background: white; }
       .suggestion-item:hover, .suggestion-item.active { background-color: #e9f1fb; }
       .suggestion-item:last-child { border-bottom: none; }
-      #tabla-egresos-export th { position: relative; resize: horizontal; overflow: auto; }
-      #tabla-egresos-export th:not(:last-child) { border-right: 1px solid #ccc; }
+      #tabla-egresos-export th, #tabla-ingresos-export th { position: relative; resize: horizontal; overflow: auto; } /* Se añade #tabla-ingresos-export */
+      #tabla-egresos-export th:not(:last-child), #tabla-ingresos-export th:not(:last-child) { border-right: 1px solid #ccc; } /* Se añade #tabla-ingresos-export */
       #tabla-egresos-export th:nth-child(1), #tabla-egresos-export td:nth-child(1),
       #tabla-egresos-export th:nth-child(2), #tabla-egresos-export td:nth-child(2),
       #tabla-egresos-export th:nth-child(4), #tabla-egresos-export td:nth-child(4),
@@ -176,7 +233,10 @@ async function cargarContabilidad() {
         <div id="tablaIngresosContainer">
             <div style="display:flex; justify-content: space-between; align-items: center;">
                 <h4>Ingresos</h4>
-                <button class="btn secondary btn-sm" id="btnExportarIngresos">Exportar a Excel</button>
+                <div>
+                  <button class="btn" id="btnAgregarIngresoExtra">Agregar Otro Ingreso</button>
+                  <button class="btn secondary btn-sm" id="btnExportarIngresos">Exportar a Excel</button>
+                </div>
             </div>
             <div id="tablaIngresos" style="overflow-x:auto; margin-top:0.5rem;"></div>
         </div>
@@ -190,6 +250,20 @@ async function cargarContabilidad() {
             </div>
             <div id="tablaEgresos" style="overflow-x:auto; margin-top:0.5rem;"></div>
         </div>
+    </div>
+
+    <div id="modalIngresoExtra" class="modal" style="display:none;">
+      <div class="modal-content"> <h3>Agregar Otro Ingreso</h3>
+         <form id="formIngresoExtra" style="display:flex; flex-wrap:wrap; gap:15px;">
+            <div style="flex: 1 1 180px;"><label>Fecha</label><input type="date" name="fecha" required></div>
+            <div style="flex: 1 1 180px;"><label>Monto</label><input type="number" name="monto" min="0" step="1" required></div>
+            <div style="flex: 1 1 100%;"><label>Concepto / Descripción</label><input type="text" name="concepto" required></div>
+            <div style="flex: 1 1 100%; text-align: right; margin-top: 20px;">
+                <button class="btn secondary" type="button" id="btnCerrarModalIngresoExtra">Cancelar</button>
+                <button class="btn" type="submit">Guardar Ingreso</button>
+            </div>
+        </form>
+      </div>
     </div>
 
     <div id="modalEgreso" class="modal" style="display:none;">
@@ -245,25 +319,37 @@ async function cargarContabilidad() {
       </div>
     </div>
   `;
+    // ▲▲▲ FIN: CÓDIGO MODIFICADO ▲▲▲
 
     let chartIngresosInstance = null;
     let chartEgresosInstance = null;
 
-    function renderizarContabilidad(pagos, egresos, saldoInicialGlobal) {
+    // ▼▼▼ INICIO: CÓDIGO MODIFICADO ▼▼▼
+    // La función ahora recibe `ingresosExtra` y los procesa para los totales, la tabla y el gráfico.
+    function renderizarContabilidad(pagos, egresos, ingresosExtra, saldoInicialGlobal) {
         const fechaInicioFiltro = document.getElementById('fechaInicio').valueAsDate;
         let saldoInicialPeriodo = saldoInicialGlobal;
-        if(fechaInicioFiltro) {
-            fechaInicioFiltro.setHours(0,0,0,0);
-            const ingresosPrevios = allPagos
+        if (fechaInicioFiltro) {
+            fechaInicioFiltro.setHours(0, 0, 0, 0);
+
+            const ingresosGCPrevios = allPagos
                 .filter(p => p[13] && new Date(p[13].replace(/-/g, '/')) < fechaInicioFiltro)
                 .reduce((sum, p) => sum + parseFloat(p[6] || 0) + parseFloat(p[17] || 0), 0);
+
+            const ingresosExtraPrevios = allIngresosExtra
+                .filter(i => i[1] && new Date(i[1].replace(/-/g, '/')) < fechaInicioFiltro)
+                .reduce((sum, i) => sum + parseFloat(i[3] || 0), 0);
+
             const egresosPrevios = allEgresos
                 .filter(e => e[1] && new Date(e[1].replace(/-/g, '/')) < fechaInicioFiltro)
                 .reduce((sum, e) => sum + parseFloat(e[6] || 0), 0);
-            saldoInicialPeriodo = saldoInicialGlobal + ingresosPrevios - egresosPrevios;
+
+            saldoInicialPeriodo = saldoInicialGlobal + ingresosGCPrevios + ingresosExtraPrevios - egresosPrevios;
         }
 
-        const totalIngresos = pagos.reduce((sum, p) => sum + parseFloat(p[6] || 0) + parseFloat(p[17] || 0), 0);
+        const totalIngresosGC = pagos.reduce((sum, p) => sum + parseFloat(p[6] || 0) + parseFloat(p[17] || 0), 0);
+        const totalIngresosExtra = ingresosExtra.reduce((sum, i) => sum + parseFloat(i[3] || 0), 0);
+        const totalIngresos = totalIngresosGC + totalIngresosExtra;
         const totalEgresos = egresos.reduce((sum, e) => sum + parseFloat(e[6] || 0), 0);
         const saldoFinalPeriodo = saldoInicialPeriodo + totalIngresos - totalEgresos;
 
@@ -273,21 +359,52 @@ async function cargarContabilidad() {
         document.getElementById('saldo-final-periodo').textContent = `$${saldoFinalPeriodo.toLocaleString('es-CL')}`;
 
         const tablaIngresosDiv = document.getElementById('tablaIngresos');
+        const allIngresosCombinados = [];
+
+        pagos.forEach(p => {
+            allIngresosCombinados.push({
+                fecha: new Date(p[13].replace(/-/g, '/')),
+                tipo: 'Gasto Común',
+                detalle: `Res: ${p[1]} / Par: ${p[2]}`,
+                monto: parseFloat(p[6] || 0) + parseFloat(p[17] || 0)
+            });
+        });
+
+        ingresosExtra.forEach(i => {
+            allIngresosCombinados.push({
+                fecha: new Date(i[1].replace(/-/g, '/')),
+                tipo: i[2], // Concepto
+                detalle: 'Ingreso General',
+                monto: parseFloat(i[3] || 0)
+            });
+        });
+
+        allIngresosCombinados.sort((a, b) => a.fecha - b.fecha);
+
         tablaIngresosDiv.innerHTML = '<p>No hay ingresos en el período seleccionado.</p>';
-        if (pagos.length > 0) {
-            let ingresosHTML = '<table id="tabla-ingresos-export" class="table"><thead><tr><th>Fecha</th><th>Residente</th><th>Parcela</th><th>Período</th><th>Monto G.C.</th><th>Abono Convenio</th></tr></thead><tbody>';
-            pagos.sort((a,b) => new Date(a[13]) - new Date(b[13])).forEach(p => {
-                ingresosHTML += `<tr><td>${new Date(p[13].replace(/-/g, '/')).toLocaleDateString('es-CL')}</td><td>${p[1]}</td><td>${p[2]}</td><td>${p[4]}</td><td>$${parseFloat(p[6] || 0).toLocaleString('es-CL')}</td><td>$${parseFloat(p[17] || 0).toLocaleString('es-CL')}</td></tr>`;
+        if (allIngresosCombinados.length > 0) {
+            let ingresosHTML = '<table id="tabla-ingresos-export" class="table"><thead><tr><th>Fecha</th><th>Tipo de Ingreso</th><th>Detalle</th><th>Monto</th></tr></thead><tbody>';
+            allIngresosCombinados.forEach(i => {
+                ingresosHTML += `<tr>
+                    <td>${i.fecha.toLocaleDateString('es-CL')}</td>
+                    <td>${i.tipo}</td>
+                    <td>${i.detalle}</td>
+                    <td>$${i.monto.toLocaleString('es-CL')}</td>
+                </tr>`;
             });
             ingresosHTML += '</tbody></table>';
             tablaIngresosDiv.innerHTML = ingresosHTML;
+            // Se aplican los anchos de columna guardados y se inicializa el ajuste
+            aplicarAnchosDeColumnaGuardadosIngresos();
+            inicializarColumnasAjustablesIngresos();
         }
+
 
         const tablaEgresosDiv = document.getElementById('tablaEgresos');
         tablaEgresosDiv.innerHTML = '<p>No hay egresos en el período seleccionado.</p>';
         if (egresos.length > 0) {
             let egresosHTML = '<table id="tabla-egresos-export" class="table"><thead><tr><th>Fecha</th><th>Mes Pago</th><th>Proveedor</th><th>RUT</th><th>Categoría</th><th>Monto</th><th>Método Pago</th><th>Comprobante</th></tr></thead><tbody>';
-            egresos.sort((a,b) => new Date(a[1]) - new Date(b[1])).forEach(e => {
+            egresos.sort((a, b) => new Date(a[1]) - new Date(b[1])).forEach(e => {
                 let linksHtml = "N/A";
                 if (e[7]) {
                     const links = e[7].split(',');
@@ -310,23 +427,41 @@ async function cargarContabilidad() {
             aplicarAnchosDeColumnaGuardados();
             inicializarColumnasAjustables();
         }
-        
+
         const ingresosPorConcepto = pagos.reduce((acc, p) => {
             acc['Gastos Comunes'] = (acc['Gastos Comunes'] || 0) + parseFloat(p[6] || 0);
-            if(parseFloat(p[17] || 0) > 0) acc['Abonos Convenio'] = (acc['Abonos Convenio'] || 0) + parseFloat(p[17] || 0);
+            if (parseFloat(p[17] || 0) > 0) acc['Abonos Convenio'] = (acc['Abonos Convenio'] || 0) + parseFloat(p[17] || 0);
             return acc;
         }, {});
-        
+        if (totalIngresosExtra > 0) {
+            ingresosPorConcepto['Otros Ingresos'] = totalIngresosExtra;
+        }
+
         const chartIngresosContainer = document.getElementById('chart-container-ingresos');
         const canvasIngresos = document.getElementById('graficoIngresos');
         if (chartIngresosInstance) chartIngresosInstance.destroy();
         const noDataIngresos = chartIngresosContainer.querySelector('p');
-        if(noDataIngresos) noDataIngresos.remove();
-        
-        if(Object.values(ingresosPorConcepto).some(v => v > 0)){
+        if (noDataIngresos) noDataIngresos.remove();
+
+        if (Object.values(ingresosPorConcepto).some(v => v > 0)) {
             canvasIngresos.style.display = 'block';
             chartIngresosInstance = new Chart(canvasIngresos.getContext('2d'), {
-                type: 'pie', data: { labels: Object.keys(ingresosPorConcepto), datasets: [{ data: Object.values(ingresosPorConcepto), backgroundColor: ['#4e91f9', '#f6d743'] }] }, options: { responsive: true, plugins: { legend: { position: 'right' } } }
+                type: 'pie',
+                data: {
+                    labels: Object.keys(ingresosPorConcepto),
+                    datasets: [{
+                        data: Object.values(ingresosPorConcepto),
+                        backgroundColor: ['#4e91f9', '#f6d743', '#28a745']
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            position: 'right'
+                        }
+                    }
+                }
             });
         } else {
             canvasIngresos.style.display = 'none';
@@ -345,18 +480,37 @@ async function cargarContabilidad() {
         if (chartEgresosInstance) chartEgresosInstance.destroy();
         const noDataMessage = chartEgresosContainer.querySelector('p');
         if (noDataMessage) noDataMessage.remove();
-        
+
         if (Object.keys(egresosPorCategoria).length > 0) {
             canvasEgresos.style.display = 'block';
             chartEgresosInstance = new Chart(canvasEgresos.getContext('2d'), {
-                type: 'pie', data: { labels: Object.keys(egresosPorCategoria), datasets: [{ data: Object.values(egresosPorCategoria), backgroundColor: ['#dc3545', '#fd7e14', '#ffc107', '#20c997', '#0dcaf0', '#6f42c1'] }] }, options: { responsive: true, plugins: { legend: { position: 'right' } } }
+                type: 'pie',
+                data: {
+                    labels: Object.keys(egresosPorCategoria),
+                    datasets: [{
+                        data: Object.values(egresosPorCategoria),
+                        backgroundColor: ['#dc3545', '#fd7e14', '#ffc107', '#20c997', '#0dcaf0', '#6f42c1']
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            position: 'right'
+                        }
+                    }
+                }
             });
         } else {
-             canvasEgresos.style.display = 'none';
-             if (!chartEgresosContainer.querySelector('p')) chartEgresosContainer.insertAdjacentHTML('beforeend', '<p>No hay datos de egresos para graficar.</p>');
+            canvasEgresos.style.display = 'none';
+            if (!chartEgresosContainer.querySelector('p')) chartEgresosContainer.insertAdjacentHTML('beforeend', '<p>No hay datos de egresos para graficar.</p>');
         }
     }
+    // ▲▲▲ FIN: CÓDIGO MODIFICADO ▲▲▲
 
+
+    // ▼▼▼ INICIO: CÓDIGO MODIFICADO ▼▼▼
+    // Se añaden los ingresos extra al filtrado
     function filtrarYRenderizar() {
         let fechaInicio = document.getElementById('fechaInicio').value;
         let fechaFin = document.getElementById('fechaFin').value;
@@ -372,10 +526,16 @@ async function cargarContabilidad() {
             if (!fechaEgreso) return false;
             return (!fechaInicio || fechaEgreso >= fechaEgreso) && (!fechaFin || fechaEgreso <= fechaFin);
         });
+        const ingresosExtraFiltrados = allIngresosExtra.filter(i => {
+            const fechaIngreso = i[1];
+            if (!fechaIngreso) return false;
+            return (!fechaInicio || fechaIngreso >= fechaInicio) && (!fechaFin || fechaIngreso <= fechaFin);
+        });
 
-        renderizarContabilidad(pagosFiltrados, egresosFiltrados, saldoInicialGlobal);
+        renderizarContabilidad(pagosFiltrados, egresosFiltrados, ingresosExtraFiltrados, saldoInicialGlobal);
     }
-    
+    // ▲▲▲ FIN: CÓDIGO MODIFICADO ▲▲▲
+
     document.getElementById('btnFiltrar').addEventListener('click', filtrarYRenderizar);
     document.getElementById('btnGuardarSaldo').addEventListener('click', async () => {
         const saldoInput = document.getElementById('inputSaldoInicial');
@@ -393,17 +553,17 @@ async function cargarContabilidad() {
             ]);
             config.Saldo_Inicial_Caja = nuevoSaldo;
             config.Fecha_Saldo_Inicial = nuevaFecha;
-            
+
             saldoInput.disabled = true;
             fechaInput.style.display = 'none';
             document.getElementById('fecha-saldo-display').textContent = new Date(nuevaFecha.replace(/-/g, '/')).toLocaleDateString('es-CL');
             document.getElementById('fecha-saldo-display').style.display = 'inline-block';
             document.getElementById('btnGuardarSaldo').style.display = 'none';
             document.getElementById('btnEditarSaldo').style.display = 'inline-block';
-            
+
             filtrarYRenderizar();
             mostrarMensaje("Saldo inicial actualizado con éxito.", "success");
-        } catch(e) {
+        } catch (e) {
             mostrarMensaje("Error al guardar el saldo: " + e.message, "error");
         } finally {
             ocultarSpinner();
@@ -421,6 +581,41 @@ async function cargarContabilidad() {
     document.getElementById('btnExportarIngresos').addEventListener('click', () => exportarTablaAExcel('tabla-ingresos-export', 'Ingresos'));
     document.getElementById('btnExportarEgresos').addEventListener('click', () => exportarTablaAExcel('tabla-egresos-export', 'Egresos'));
 
+
+    // ▼▼▼ INICIO: CÓDIGO NUEVO AÑADIDO ▼▼▼
+    // Lógica para el nuevo modal de Ingresos Extra
+    const modalIngresoExtra = document.getElementById('modalIngresoExtra');
+    const formIngresoExtra = document.getElementById('formIngresoExtra');
+    document.getElementById('btnAgregarIngresoExtra').addEventListener('click', () => {
+        formIngresoExtra.reset();
+        formIngresoExtra.querySelector('input[name="fecha"]').valueAsDate = new Date();
+        modalIngresoExtra.style.display = 'flex';
+    });
+    document.getElementById('btnCerrarModalIngresoExtra').addEventListener('click', () => {
+        modalIngresoExtra.style.display = 'none';
+    });
+    formIngresoExtra.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        mostrarSpinner();
+        try {
+            const formData = new FormData(e.target);
+            const datosIngreso = [
+                formData.get('fecha'),
+                formData.get('concepto'),
+                formData.get('monto')
+            ];
+            await agregarIngresoExtra(datosIngreso);
+            mostrarMensaje("Ingreso agregado con éxito.", "success");
+            modalIngresoExtra.style.display = 'none';
+            cargarContabilidad(); // Recarga todo el módulo para reflejar cambios
+        } catch (err) {
+            mostrarMensaje("Error al guardar el ingreso: " + err.message, "error");
+        } finally {
+            ocultarSpinner();
+        }
+    });
+    // ▲▲▲ FIN: CÓDIGO NUEVO AÑADIDO ▲▲▲
+
     const modalEgreso = document.getElementById('modalEgreso');
     const formEgreso = document.getElementById('formEgreso');
     document.getElementById('btnAgregarEgreso').addEventListener('click', () => modalEgreso.style.display = 'flex');
@@ -428,15 +623,32 @@ async function cargarContabilidad() {
         modalEgreso.style.display = 'none';
         formEgreso.reset();
     });
-    
+
+    // ▼▼▼ INICIO: CÓDIGO MODIFICADO ▼▼▼
+    // Se añade la lógica para mostrar/ocultar el nuevo botón de ingresos.
     document.getElementById('detalle-view-toggle').addEventListener('change', (e) => {
         const vista = e.target.value;
         const ingresosContainer = document.getElementById('tablaIngresosContainer');
         const egresosContainer = document.getElementById('tablaEgresosContainer');
-        if (vista === 'ingresos') { ingresosContainer.style.display = 'block'; egresosContainer.style.display = 'none'; } 
-        else if (vista === 'egresos') { ingresosContainer.style.display = 'none'; egresosContainer.style.display = 'block'; } 
-        else { ingresosContainer.style.display = 'block'; egresosContainer.style.display = 'block'; }
+        const btnAgregarIngreso = document.getElementById('btnAgregarIngresoExtra');
+        const btnAgregarEgreso = document.getElementById('btnAgregarEgreso');
+
+        if (vista === 'ingresos') {
+            ingresosContainer.style.display = 'block';
+            egresosContainer.style.display = 'none';
+            btnAgregarIngreso.style.display = 'inline-block';
+            btnAgregarEgreso.style.display = 'none';
+        } else if (vista === 'egresos') {
+            ingresosContainer.style.display = 'none';
+            egresosContainer.style.display = 'block';
+            btnAgregarIngreso.style.display = 'none';
+            btnAgregarEgreso.style.display = 'inline-block';
+        } else {
+            ingresosContainer.style.display = 'block';
+            egresosContainer.style.display = 'block';
+        }
     });
+    // ▲▲▲ FIN: CÓDIGO MODIFICADO ▲▲▲
 
     formEgreso.addEventListener('submit', async (e) => {
         e.preventDefault();
@@ -453,13 +665,13 @@ async function cargarContabilidad() {
                 const nombreMes = formData.get('mes_pago');
                 const anio = formData.get('fecha').split('-')[0];
                 const carpetaId = await buscarOCrearRutaDeEgreso(nombreMes, anio);
-                
+
                 for (const archivo of archivos) {
                     const resultadoSubida = await subirComprobante(archivo, carpetaId);
                     linksComprobantes.push(resultadoSubida.webViewLink);
                 }
             }
-            
+
             const datosEgreso = [
                 null, // ID
                 formData.get('fecha'),
@@ -472,7 +684,7 @@ async function cargarContabilidad() {
                 formData.get('metodo_pago'),
                 formData.get('mes_pago')
             ];
-            
+
             await agregarEgreso(datosEgreso);
             mostrarMensaje("Egreso agregado con éxito.", "success");
             formEgreso.reset();
@@ -485,7 +697,7 @@ async function cargarContabilidad() {
             ocultarSpinner();
         }
     });
-    
+
     const proveedorInput = document.querySelector('#formEgreso input[name="proveedor"]');
     const rutInput = document.querySelector('#formEgreso input[name="rut_proveedor"]');
     const suggestionsContainer = document.getElementById('proveedor-suggestions');
@@ -550,14 +762,16 @@ async function cargarContabilidad() {
             suggestionsContainer.style.display = 'none';
         }
     });
-    
+
     const hoy = new Date();
     const primerDiaMes = new Date(hoy.getFullYear(), hoy.getMonth(), 1).toISOString().split('T')[0];
     const ultimoDiaMes = new Date(hoy.getFullYear(), hoy.getMonth() + 1, 0).toISOString().split('T')[0];
     document.getElementById('fechaInicio').value = primerDiaMes;
     document.getElementById('fechaFin').value = ultimoDiaMes;
     filtrarYRenderizar();
-    document.getElementById('verIngresos').dispatchEvent(new Event('change', { bubbles: true }));
+    document.getElementById('verIngresos').dispatchEvent(new Event('change', {
+        bubbles: true
+    }));
 
     ocultarSpinner();
 }
