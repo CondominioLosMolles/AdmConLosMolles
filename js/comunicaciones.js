@@ -63,7 +63,7 @@ class ComunicacionesAI {
     async getSecureAPIKey() {
         // En producción, esto debería venir de un servicio seguro
         // Por ahora, simularemos que está disponible
-        return 'YOUR_SECURE_API_KEY';
+        return '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';
     }
 
     // === FUNCIONALIDADES DE IA ===
