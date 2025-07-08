@@ -1,31 +1,23 @@
 // js/comunicaciones.js
-// --- VERSIÓN FINAL (CON FORMATO Y AUTENTICACIÓN CORREGIDOS) ---
+// --- VERSIÓN FINAL CORREGIDA Y FUNCIONAL ---
 
 async function cargarComunicaciones() {
     limpiarMainContent();
     mostrarSpinner();
 
-    // --- VERIFICACIÓN DE AUTENTICACIÓN ---
-    // Se verifica el email del remitente al inicio para evitar errores posteriores.
+    // --- OBTENCIÓN DE EMAIL SIN USAR gapi.auth2 ---
+    // Se usa gapi.client, que ya está autenticado en tu flujo, para obtener el email del remitente.
     let senderEmail;
     try {
-        const authInstance = gapi.auth2.getAuthInstance();
-        if (!authInstance) {
-            throw new Error("La librería de autenticación de Google (gapi.auth2) no se ha inicializado. Esto puede ocurrir si la página no ha cargado completamente o hay un problema de configuración.");
-        }
-        const user = authInstance.currentUser.get();
-        if (!user || !user.isSignedIn()) {
-            throw new Error("No se ha detectado un usuario autenticado. Por favor, asegúrese de haber iniciado sesión correctamente.");
-        }
-        senderEmail = user.getBasicProfile().getEmail();
+        const profile = await gapi.client.gmail.users.getProfile({ userId: 'me' });
+        senderEmail = profile.result.emailAddress;
         if (!senderEmail) {
-            throw new Error("No se pudo obtener la dirección de correo del perfil del usuario.");
+            throw new Error("No se pudo obtener la dirección de email desde el perfil de Gmail.");
         }
     } catch (e) {
         ocultarSpinner();
-        // Muestra un error claro y detiene la ejecución de la función.
-        mostrarMensaje('Error Crítico de Autenticación: ' + e.message, 'error');
-        return; 
+        mostrarMensaje('Error Crítico al obtener perfil de Gmail: ' + e.message, 'error');
+        return;
     }
 
     let residentes = [], comunicaciones = [];
@@ -191,7 +183,7 @@ async function cargarComunicaciones() {
                  throw new Error("Los destinatarios seleccionados no tienen correos electrónicos registrados.");
             }
 
-            // Se utiliza la variable 'senderEmail' obtenida al inicio.
+            // Se utiliza la variable 'senderEmail' obtenida al inicio con gapi.client
             await enviarCorreoBCC(senderEmail, correosParaEnviar, asunto, mensajeBase);
 
             const registroDestinatario = tipoDestinatario === 'todos' 
@@ -221,9 +213,7 @@ async function cargarComunicaciones() {
     });
     
     function crearCuerpoCorreoHTML(asunto, mensaje) {
-        // Convierte los saltos de línea de texto plano (\n) a etiquetas <br> de HTML.
         const mensajeHtml = mensaje.replace(/\n/g, '<br>');
-
         return `
         <!DOCTYPE html>
         <html lang="es">
@@ -234,7 +224,7 @@ async function cargarComunicaciones() {
           <style>
             body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; margin: 0; padding: 0; background-color: #f4f4f4; }
             .container { max-width: 600px; margin: 20px auto; background-color: #ffffff; border: 1px solid #e0e0e0; border-radius: 8px; overflow: hidden; }
-            .header { background-color: #2c3e50; /* Azul oscuro corporativo */ color: #ffffff; padding: 24px; text-align: center; }
+            .header { background-color: #2c3e50; color: #ffffff; padding: 24px; text-align: center; }
             .header h1 { margin: 0; font-size: 24px; }
             .content { padding: 30px; color: #333333; line-height: 1.6; font-size: 16px; }
             .content h2 { color: #2c3e50; font-size: 20px; margin-top:0; }
