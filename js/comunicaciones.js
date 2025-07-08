@@ -1,9 +1,32 @@
 // js/comunicaciones.js
-// --- VERSIÓN CORREGIDA Y OPTIMIZADA ---
+// --- VERSIÓN FINAL (CON FORMATO Y AUTENTICACIÓN CORREGIDOS) ---
 
 async function cargarComunicaciones() {
     limpiarMainContent();
     mostrarSpinner();
+
+    // --- VERIFICACIÓN DE AUTENTICACIÓN ---
+    // Se verifica el email del remitente al inicio para evitar errores posteriores.
+    let senderEmail;
+    try {
+        const authInstance = gapi.auth2.getAuthInstance();
+        if (!authInstance) {
+            throw new Error("La librería de autenticación de Google (gapi.auth2) no se ha inicializado. Esto puede ocurrir si la página no ha cargado completamente o hay un problema de configuración.");
+        }
+        const user = authInstance.currentUser.get();
+        if (!user || !user.isSignedIn()) {
+            throw new Error("No se ha detectado un usuario autenticado. Por favor, asegúrese de haber iniciado sesión correctamente.");
+        }
+        senderEmail = user.getBasicProfile().getEmail();
+        if (!senderEmail) {
+            throw new Error("No se pudo obtener la dirección de correo del perfil del usuario.");
+        }
+    } catch (e) {
+        ocultarSpinner();
+        // Muestra un error claro y detiene la ejecución de la función.
+        mostrarMensaje('Error Crítico de Autenticación: ' + e.message, 'error');
+        return; 
+    }
 
     let residentes = [], comunicaciones = [];
     try {
@@ -13,7 +36,7 @@ async function cargarComunicaciones() {
         ]);
     } catch (e) {
         ocultarSpinner();
-        mostrarMensaje('Error al cargar datos: ' + e.message, 'error');
+        mostrarMensaje('Error al cargar datos del sistema: ' + e.message, 'error');
         return;
     }
 
@@ -139,23 +162,10 @@ async function cargarComunicaciones() {
         }
     });
 
-    // --- EVENTO DE ENVÍO DEL FORMULARIO (LÓGICA ACTUALIZADA Y MEJORADA) ---
     formComunicacion.addEventListener('submit', async (e) => {
         e.preventDefault();
         mostrarSpinner();
         
-        // **NUEVO:** Obtener el email del usuario autenticado para usarlo como remitente/destinatario principal.
-        let senderEmail;
-        try {
-            // Esta es la forma estándar de obtener el email del usuario logueado con la API de Google.
-            senderEmail = gapi.auth2.getAuthInstance().currentUser.get().getBasicProfile().getEmail();
-            if (!senderEmail) throw new Error("No se pudo obtener el email del usuario. Asegúrese de que el usuario esté logueado.");
-        } catch (error) {
-            ocultarSpinner();
-            mostrarMensaje('Error de autenticación: ' + error.message, 'error');
-            return;
-        }
-
         const formData = new FormData(e.target);
         const asunto = formData.get('asunto');
         const mensajeBase = formData.get('mensaje');
@@ -175,38 +185,28 @@ async function cargarComunicaciones() {
         }
 
         try {
-            // 1. Extraer correos para el envío (el email está en el índice 5 del array de residente).
-            const correosParaEnviar = destinatariosSeleccionados.map(r => r[5]).filter(Boolean); // Se añade filter(Boolean) para omitir residentes sin email.
+            const correosParaEnviar = destinatariosSeleccionados.map(r => r[5]).filter(Boolean);
 
             if (correosParaEnviar.length === 0) {
                  throw new Error("Los destinatarios seleccionados no tienen correos electrónicos registrados.");
             }
 
-            // 2. Enviar UN solo correo eficiente usando BCC, con formato HTML y codificación correcta.
+            // Se utiliza la variable 'senderEmail' obtenida al inicio.
             await enviarCorreoBCC(senderEmail, correosParaEnviar, asunto, mensajeBase);
 
-            // 3. Registrar UN solo evento de comunicación en la hoja de cálculo.
             const registroDestinatario = tipoDestinatario === 'todos' 
                 ? 'Toda la Comunidad' 
                 : `Grupo seleccionado (${destinatariosSeleccionados.length} residentes)`;
             
             await agregarComunicacion([
-                null, // El ID se autogenera en la función agregarComunicacion
-                'SISTEMA',
-                'N/A',
-                registroDestinatario,
-                'N/A',
-                new Date().toISOString(),
-                asunto,
-                mensajeBase
+                null, 'SISTEMA', 'N/A', registroDestinatario, 'N/A', 
+                new Date().toISOString(), asunto, mensajeBase
             ]);
 
-            // 4. Actualizar la interfaz de usuario.
             comunicaciones = await obtenerComunicaciones();
             renderTablaComunicaciones();
             mostrarMensaje(`Comunicación enviada a ${destinatariosSeleccionados.length} residente(s) con éxito.`);
             
-            // 5. Limpiar completamente el formulario.
             formComunicacion.reset();
             selectPlantilla.value = "";
             document.querySelectorAll('.residente-checkbox:checked').forEach(cb => cb.checked = false);
@@ -220,12 +220,6 @@ async function cargarComunicaciones() {
         }
     });
     
-    /**
-     * **NUEVA FUNCIÓN:** Crea un cuerpo de correo electrónico con formato HTML profesional.
-     * @param {string} asunto El asunto del mensaje.
-     * @param {string} mensaje El contenido principal del mensaje (puede contener saltos de línea).
-     * @returns {string} El cuerpo del correo en formato HTML.
-     */
     function crearCuerpoCorreoHTML(asunto, mensaje) {
         // Convierte los saltos de línea de texto plano (\n) a etiquetas <br> de HTML.
         const mensajeHtml = mensaje.replace(/\n/g, '<br>');
@@ -268,47 +262,21 @@ async function cargarComunicaciones() {
       `;
     }
 
-    /**
-     * **NUEVA FUNCIÓN:** Codifica el asunto del correo según el estándar RFC 2047 para soportar caracteres UTF-8.
-     * @param {string} subject El asunto a codificar.
-     * @returns {string} El asunto codificado para el encabezado del correo.
-     */
     function encodeSubjectRFC2047(subject) {
-        // Si el asunto solo contiene caracteres ASCII, no necesita codificación.
-        if (/^[\x00-\x7F]*$/.test(subject)) {
-            return subject;
-        }
-        // Codifica el string a UTF-8, luego a Base64, y finalmente al formato RFC 2047.
+        if (/^[\x00-\x7F]*$/.test(subject)) return subject;
         const utf8Subject = unescape(encodeURIComponent(subject));
         const base64Subject = btoa(utf8Subject);
         return `=?UTF-8?B?${base64Subject}?=`;
     }
 
-    /**
-     * Envía un correo a múltiples destinatarios usando BCC con formato HTML y lógica mejorada.
-     * NOTA: Esta función asume que gapi.client.gmail está cargado y listo.
-     * @param {string} senderEmail Email del administrador que envía, se usará en el campo 'To'.
-     * @param {string[]} destinatarios Array de direcciones de correo electrónico para el campo 'Bcc'.
-     * @param {string} asunto El asunto del correo (sin codificar).
-     * @param {string} mensaje El cuerpo del correo en texto plano.
-     */
     async function enviarCorreoBCC(senderEmail, destinatarios, asunto, mensaje) {
-        if (!destinatarios || destinatarios.length === 0) {
-            throw new Error("No se proporcionaron destinatarios para el envío del correo.");
-        }
-         if (!senderEmail) {
-            throw new Error("No se pudo determinar la dirección del remitente.");
-        }
+        if (!destinatarios || destinatarios.length === 0) throw new Error("No se proporcionaron destinatarios.");
+        if (!senderEmail) throw new Error("La dirección del remitente es inválida.");
         
         const bccField = destinatarios.join(',');
-        
-        // --- MEJORAS CLAVE ---
-        // 1. Codificar el asunto para caracteres especiales (ñ, tildes).
         const encodedSubject = encodeSubjectRFC2047(asunto);
-        // 2. Crear un cuerpo de correo con formato HTML profesional.
         const htmlBody = crearCuerpoCorreoHTML(asunto, mensaje);
-        // 3. Usar el email del propio administrador como destinatario principal ('To').
-        //    Esto evita los rebotes por dominios inexistentes y le deja un registro en su bandeja de entrada.
+        
         const email =
             `To: ${senderEmail}\r\n` +
             `Bcc: ${bccField}\r\n` +
@@ -317,16 +285,11 @@ async function cargarComunicaciones() {
             `Content-Transfer-Encoding: 8bit\r\n\r\n` +
             `${htmlBody}`;
 
-        // Codificación del mensaje completo a Base64URL.
-        const base64EncodedEmail = btoa(unescape(encodeURIComponent(email)))
-            .replace(/\+/g, '-')
-            .replace(/\//g, '_');
+        const base64EncodedEmail = btoa(unescape(encodeURIComponent(email))).replace(/\+/g, '-').replace(/\//g, '_');
 
         await gapi.client.gmail.users.messages.send({
             userId: 'me',
-            resource: {
-                raw: base64EncodedEmail
-            }
+            resource: { raw: base64EncodedEmail }
         });
     }
 
