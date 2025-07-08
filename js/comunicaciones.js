@@ -139,11 +139,23 @@ async function cargarComunicaciones() {
         }
     });
 
-    // --- EVENTO DE ENVÍO DEL FORMULARIO (LÓGICA ACTUALIZADA) ---
+    // --- EVENTO DE ENVÍO DEL FORMULARIO (LÓGICA ACTUALIZADA Y MEJORADA) ---
     formComunicacion.addEventListener('submit', async (e) => {
         e.preventDefault();
         mostrarSpinner();
         
+        // **NUEVO:** Obtener el email del usuario autenticado para usarlo como remitente/destinatario principal.
+        let senderEmail;
+        try {
+            // Esta es la forma estándar de obtener el email del usuario logueado con la API de Google.
+            senderEmail = gapi.auth2.getAuthInstance().currentUser.get().getBasicProfile().getEmail();
+            if (!senderEmail) throw new Error("No se pudo obtener el email del usuario. Asegúrese de que el usuario esté logueado.");
+        } catch (error) {
+            ocultarSpinner();
+            mostrarMensaje('Error de autenticación: ' + error.message, 'error');
+            return;
+        }
+
         const formData = new FormData(e.target);
         const asunto = formData.get('asunto');
         const mensajeBase = formData.get('mensaje');
@@ -163,11 +175,15 @@ async function cargarComunicaciones() {
         }
 
         try {
-            // 1. Extraer correos para el envío. El email está en el índice 5 (columna F) del array de residente.
-            const correosParaEnviar = destinatariosSeleccionados.map(r => r[5]);
+            // 1. Extraer correos para el envío (el email está en el índice 5 del array de residente).
+            const correosParaEnviar = destinatariosSeleccionados.map(r => r[5]).filter(Boolean); // Se añade filter(Boolean) para omitir residentes sin email.
 
-            // 2. Enviar UN solo correo eficiente usando BCC (Copia Oculta).
-            await enviarCorreoBCC(correosParaEnviar, asunto, mensajeBase);
+            if (correosParaEnviar.length === 0) {
+                 throw new Error("Los destinatarios seleccionados no tienen correos electrónicos registrados.");
+            }
+
+            // 2. Enviar UN solo correo eficiente usando BCC, con formato HTML y codificación correcta.
+            await enviarCorreoBCC(senderEmail, correosParaEnviar, asunto, mensajeBase);
 
             // 3. Registrar UN solo evento de comunicación en la hoja de cálculo.
             const registroDestinatario = tipoDestinatario === 'todos' 
@@ -203,31 +219,105 @@ async function cargarComunicaciones() {
             ocultarSpinner();
         }
     });
+    
+    /**
+     * **NUEVA FUNCIÓN:** Crea un cuerpo de correo electrónico con formato HTML profesional.
+     * @param {string} asunto El asunto del mensaje.
+     * @param {string} mensaje El contenido principal del mensaje (puede contener saltos de línea).
+     * @returns {string} El cuerpo del correo en formato HTML.
+     */
+    function crearCuerpoCorreoHTML(asunto, mensaje) {
+        // Convierte los saltos de línea de texto plano (\n) a etiquetas <br> de HTML.
+        const mensajeHtml = mensaje.replace(/\n/g, '<br>');
+
+        return `
+        <!DOCTYPE html>
+        <html lang="es">
+        <head>
+          <meta charset="UTF-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>${asunto}</title>
+          <style>
+            body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; margin: 0; padding: 0; background-color: #f4f4f4; }
+            .container { max-width: 600px; margin: 20px auto; background-color: #ffffff; border: 1px solid #e0e0e0; border-radius: 8px; overflow: hidden; }
+            .header { background-color: #2c3e50; /* Azul oscuro corporativo */ color: #ffffff; padding: 24px; text-align: center; }
+            .header h1 { margin: 0; font-size: 24px; }
+            .content { padding: 30px; color: #333333; line-height: 1.6; font-size: 16px; }
+            .content h2 { color: #2c3e50; font-size: 20px; margin-top:0; }
+            .content p { margin-bottom: 1em; }
+            .footer { background-color: #f8f9fa; color: #888888; padding: 20px; text-align: center; font-size: 12px; border-top: 1px solid #e0e0e0;}
+            .footer p { margin: 0; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <h1>Condominio Los Molles</h1>
+            </div>
+            <div class="content">
+              <h2>${asunto}</h2>
+              <p>${mensajeHtml}</p>
+            </div>
+            <div class="footer">
+              <p>Este es un correo electrónico generado automáticamente por el sistema de administración.</p>
+              <p>Por favor, no responda directamente a este mensaje.</p>
+            </div>
+          </div>
+        </body>
+        </html>
+      `;
+    }
 
     /**
-     * Envía un correo a múltiples destinatarios usando el campo BCC para proteger la privacidad.
-     * Utiliza una codificación Base64 robusta para soportar caracteres especiales.
-     * NOTA: Esta función asume que gapi.client.gmail está cargado y listo.
-     * @param {string[]} destinatarios Array de direcciones de correo electrónico.
-     * @param {string} asunto El asunto del correo.
-     * @param {string} mensaje El cuerpo del correo en formato HTML o texto plano.
+     * **NUEVA FUNCIÓN:** Codifica el asunto del correo según el estándar RFC 2047 para soportar caracteres UTF-8.
+     * @param {string} subject El asunto a codificar.
+     * @returns {string} El asunto codificado para el encabezado del correo.
      */
-    async function enviarCorreoBCC(destinatarios, asunto, mensaje) {
+    function encodeSubjectRFC2047(subject) {
+        // Si el asunto solo contiene caracteres ASCII, no necesita codificación.
+        if (/^[\x00-\x7F]*$/.test(subject)) {
+            return subject;
+        }
+        // Codifica el string a UTF-8, luego a Base64, y finalmente al formato RFC 2047.
+        const utf8Subject = unescape(encodeURIComponent(subject));
+        const base64Subject = btoa(utf8Subject);
+        return `=?UTF-8?B?${base64Subject}?=`;
+    }
+
+    /**
+     * Envía un correo a múltiples destinatarios usando BCC con formato HTML y lógica mejorada.
+     * NOTA: Esta función asume que gapi.client.gmail está cargado y listo.
+     * @param {string} senderEmail Email del administrador que envía, se usará en el campo 'To'.
+     * @param {string[]} destinatarios Array de direcciones de correo electrónico para el campo 'Bcc'.
+     * @param {string} asunto El asunto del correo (sin codificar).
+     * @param {string} mensaje El cuerpo del correo en texto plano.
+     */
+    async function enviarCorreoBCC(senderEmail, destinatarios, asunto, mensaje) {
         if (!destinatarios || destinatarios.length === 0) {
             throw new Error("No se proporcionaron destinatarios para el envío del correo.");
+        }
+         if (!senderEmail) {
+            throw new Error("No se pudo determinar la dirección del remitente.");
         }
         
         const bccField = destinatarios.join(',');
         
-        // La API de Gmail requiere un campo "To". Usamos una dirección genérica que no revela información.
+        // --- MEJORAS CLAVE ---
+        // 1. Codificar el asunto para caracteres especiales (ñ, tildes).
+        const encodedSubject = encodeSubjectRFC2047(asunto);
+        // 2. Crear un cuerpo de correo con formato HTML profesional.
+        const htmlBody = crearCuerpoCorreoHTML(asunto, mensaje);
+        // 3. Usar el email del propio administrador como destinatario principal ('To').
+        //    Esto evita los rebotes por dominios inexistentes y le deja un registro en su bandeja de entrada.
         const email =
-            `To: "Comunidad" <no-responder@tu-sistema.com>\r\n` +
+            `To: ${senderEmail}\r\n` +
             `Bcc: ${bccField}\r\n` +
-            `Subject: ${asunto}\r\n` +
-            `Content-Type: text/html; charset=UTF-8\r\n\r\n` +
-            `${mensaje}`;
+            `Subject: ${encodedSubject}\r\n` +
+            `Content-Type: text/html; charset=UTF-8\r\n` +
+            `Content-Transfer-Encoding: 8bit\r\n\r\n` +
+            `${htmlBody}`;
 
-        // Codificación robusta que SÍ funciona con tildes, 'ñ' y otros caracteres especiales.
+        // Codificación del mensaje completo a Base64URL.
         const base64EncodedEmail = btoa(unescape(encodeURIComponent(email)))
             .replace(/\+/g, '-')
             .replace(/\//g, '_');
