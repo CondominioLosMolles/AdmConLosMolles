@@ -929,124 +929,32 @@ La Administración`
         });
 
         return `
-        <!DOCTYPE html>
-        <html lang="es">
-        <head>
-            <meta charset="UTF-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>${asunto}</title>
-            <style>
-                body { 
-                    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; 
-                    margin: 0; 
-                    padding: 0; 
-                    background-color: #f5f5f5; 
-                    line-height: 1.6;
-                }
-                .container { 
-                    max-width: 600px; 
-                    margin: 20px auto; 
-                    background-color: #ffffff; 
-                    border-radius: 12px; 
-                    overflow: hidden; 
-                    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-                }
-                .header { 
-                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
-                    color: #ffffff; 
-                    padding: 30px; 
-                    text-align: center; 
-                }
-                .header h1 { 
-                    margin: 0; 
-                    font-size: 28px; 
-                    font-weight: 300;
-                }
-                .header .subtitle {
-                    margin-top: 8px;
-                    font-size: 14px;
-                    opacity: 0.9;
-                }
-                .content { 
-                    padding: 40px 30px; 
-                    color: #333333; 
-                    font-size: 16px; 
-                }
-                .content h2 { 
-                    color: #2c3e50; 
-                    font-size: 24px; 
-                    margin-top: 0; 
-                    margin-bottom: 20px;
-                    border-bottom: 2px solid #667eea;
-                    padding-bottom: 10px;
-                }
-                .content p { 
-                    margin-bottom: 16px; 
-                }
-                .highlight {
-                    background: linear-gradient(120deg, #a8edea 0%, #fed6e3 100%);
-                    padding: 20px;
-                    border-radius: 8px;
-                    margin: 20px 0;
-                    border-left: 4px solid #667eea;
-                }
-                .footer { 
-                    background-color: #f8f9fa; 
-                    color: #6c757d; 
-                    padding: 25px 30px; 
-                    text-align: center; 
-                    font-size: 13px; 
-                    border-top: 1px solid #dee2e6;
-                }
-                .footer p { 
-                    margin: 8px 0; 
-                }
-                .footer .date {
-                    font-weight: 600;
-                    color: #495057;
-                }
-                .ai-badge {
-                    display: inline-block;
-                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                    color: white;
-                    padding: 4px 8px;
-                    border-radius: 12px;
-                    font-size: 10px;
-                    font-weight: 600;
-                    margin-left: 8px;
-                }
-                @media (max-width: 600px) {
-                    .container { margin: 10px; }
-                    .header, .content, .footer { padding: 20px; }
-                    .content h2 { font-size: 20px; }
-                    .content { font-size: 14px; }
-                }
-            </style>
-        </head>
-        <body>
-            <div class="container">
-                <div class="header">
-                    <h1>🏢 Condominio Los Molles</h1>
-                    <div class="subtitle">Sistema de Comunicaciones Inteligente</div>
-                </div>
-                <div class="content">
-                    <h2>${asunto} <span class="ai-badge">🤖 AI</span></h2>
-                    <div class="highlight">
-                        <p>${mensajeHtml}</p>
-                    </div>
-                </div>
-                <div class="footer">
-                    <p class="date">📅 ${fechaEnvio}</p>
-                    <p>Este correo fue generado automáticamente por nuestro sistema de comunicaciones con IA.</p>
-                    <p>Para consultas, contacte a la administración.</p>
-                    <p style="margin-top: 15px; font-size: 11px; opacity: 0.7;">
-                        🔒 Comunicación segura y cifrada • 🤖 Optimizado con Inteligencia Artificial
-                    </p>
-                </div>
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    ...
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🏢 Condominio Los Molles</h1>
+            <div class="subtitle">Comunicado Oficial</div>
+        </div>
+        <div class="content">
+            <h2>${asunto}</h2>
+            <div class="highlight">
+                <p>${mensajeHtml}</p>
             </div>
-        </body>
-        </html>
-        `;
+        </div>
+        <div class="footer">
+            <p class="date">📅 ${fechaEnvio}</p>
+            <p>Este es un correo generado automáticamente por el sistema de administración.</p>
+            <p>Para consultas, contacte a la administración.</p>
+        </div>
+    </div>
+</body>
+</html>
+`;
     }
 
     encodeSubjectRFC2047(subject) {
