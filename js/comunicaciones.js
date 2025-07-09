@@ -206,23 +206,7 @@ class ComunicacionesAI {
         }
     }
 
-    // === FUNCIONES PRINCIPALES ===
-    async cargarComunicaciones() {
-        this.limpiarMainContent();
-        this.mostrarSpinner();
-
-        try {
-            await this.initializeUserData();
-            await this.loadData();
-            this.renderUI();
-            this.setupEventListeners();
-        } catch (error) {
-            this.mostrarMensaje('Error crítico: ' + error.message, 'error');
-        } finally {
-            this.ocultarSpinner();
-        }
-    }
-
+    
     async initializeUserData() {
         try {
             const profile = await gapi.client.gmail.users.getProfile({ userId: 'me' });
@@ -1276,6 +1260,23 @@ La Administración`
             console.error("La función global 'agregarComunicacion' no está definida en tu sistema.");
             this.mostrarMensaje("Error: La función para registrar la comunicación no existe.", "error");
             return false;
+        }
+    }
+    
+    // === FUNCIONES PRINCIPALES ===
+    async cargarComunicaciones() {
+        this.limpiarMainContent();
+        this.mostrarSpinner();
+
+        try {
+            await this.initializeUserData();
+            await this.loadData();
+            this.renderUI();
+            this.setupEventListeners();
+        } catch (error) {
+            this.mostrarMensaje('Error crítico: ' + error.message, 'error');
+        } finally {
+            this.ocultarSpinner();
         }
     }
 
