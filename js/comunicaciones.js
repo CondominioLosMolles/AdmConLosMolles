@@ -106,49 +106,36 @@ class ComunicacionesAI {
         }
     }
 
-    async generateSmartTemplate(context) {
-    if (!this.aiProvider) return null;
-
+   // REEMPLAZA TU MÉTODO generateSmartTemplate CON ESTE
+async generateSmartTemplate(context) {
     try {
-        const response = await fetch(this.aiProvider.endpoint, {
-            method: 'POST',
-            headers: this.aiProvider.headers,
-            body: JSON.stringify({
-                model: this.aiProvider.model,
-                messages: [{
-                    role: 'system',
-                    content: `Genera una plantilla de comunicación para condominio basada en el contexto proporcionado.
-                    Debe ser profesional, clara y cumplir con normativas chilenas de condominios.
-                    Incluye asunto y cuerpo del mensaje.
-                    Responde en formato JSON con campos: subject, body.`
-                }, {
-                    role: 'user',
-                    content: `Contexto: ${context}`
-                }],
-                temperature: 0.5,
-                max_tokens: 800
-            })
-        });
-
-        if (!response.ok) {
-            // Si la respuesta es 401 (no autorizado) o cualquier otro error, lo muestra.
-            const errorData = await response.json();
-            throw new Error(`Error de la API de OpenAI: ${errorData.error.message}`);
+        // Verifica que la clave de Google exista
+        if (typeof GOOGLE_API_KEY === 'undefined') {
+            throw new Error("API Key de Google no encontrada en config.js");
         }
 
-        const data = await response.json();
+        // Crea una instancia del cliente de Google AI
+        const genAI = new google.generativeai.GoogleGenerativeAI(GOOGLE_API_KEY);
+        
+        // Selecciona el modelo a usar (gemini-pro es excelente y tiene capa gratuita)
+        const model = genAI.getGenerativeModel({ model: "gemini-pro" });
 
-        // Verificación de seguridad para evitar el error 'Cannot read properties of undefined'
-        if (data.choices && data.choices.length > 0 && data.choices[0].message && data.choices[0].message.content) {
-            return JSON.parse(data.choices[0].message.content);
-        } else {
-            throw new Error("La respuesta de la IA no tuvo el formato esperado.");
-        }
+        // El prompt es similar, pero ajustado para asegurar la respuesta JSON
+        const prompt = `Basado en el siguiente contexto: "${context}", genera una plantilla de comunicación para un condominio en Chile. La respuesta DEBE ser un objeto JSON válido con los campos "subject" y "body". Ejemplo de formato: {"subject": "Asunto del Correo", "body": "Cuerpo del mensaje..."}`;
+
+        const result = await model.generateContent(prompt);
+        const response = await result.response;
+        const text = response.text();
+
+        // Intenta limpiar y parsear la respuesta JSON
+        // A veces la IA envuelve la respuesta en ```json ... ```
+        const cleanJsonText = text.replace('```json', '').replace('```', '').trim();
+        
+        return JSON.parse(cleanJsonText);
 
     } catch (error) {
-        console.error('Error generando template:', error);
-        // Muestra un mensaje de error claro al usuario
-        this.mostrarMensaje(error.message, 'error');
+        console.error('Error generando template con Google AI:', error);
+        this.mostrarMensaje('Error al generar plantilla con IA.', 'error');
         return null;
     }
 }
