@@ -371,7 +371,7 @@ class ComunicacionesAI {
                     <h2>📧 Central de Comunicaciones IA</h2>
                     
                     <div class="ai-suggestions">
-                        <h4> Asistente IA</h4>
+                        <h4>🤖 Asistente IA</h4>
                         <div id="aiSuggestions">
                             <p>Escribe tu mensaje y obtén sugerencias inteligentes...</p>
                         </div>
@@ -382,7 +382,7 @@ class ComunicacionesAI {
                             <label><strong>Plantilla Inteligente</strong></label>
                             <select id="selectPlantillaAI" class="form-control">
                                 <option value="">Seleccionar plantilla...</option>
-                                <option value="generate"> Generar con IA</option>
+                                <option value="generate">🤖 Generar con IA</option>
                                 <option value="citacion_asamblea">📋 Citación Asamblea</option>
                                 <option value="aviso_corte">⚠️ Aviso de Corte</option>
                                 <option value="emergencia">🚨 Emergencia</option>
@@ -998,7 +998,7 @@ La Administración`
                     <div class="subtitle">Sistema de Comunicaciones Inteligente</div>
                 </div>
                 <div class="content">
-                    <h2>${asunto} <span class="ai-badge"> AI</span></h2>
+                    <h2>${asunto} <span class="ai-badge">🤖 AI</span></h2>
                     <div class="highlight">
                         <p>${mensajeHtml}</p>
                     </div>
@@ -1008,7 +1008,7 @@ La Administración`
                     <p>Este correo fue generado automáticamente por nuestro sistema de comunicaciones con IA.</p>
                     <p>Para consultas, contacte a la administración.</p>
                     <p style="margin-top: 15px; font-size: 11px; opacity: 0.7;">
-                        🔒 Comunicación segura y cifrada • Optimizado con Inteligencia Artificial
+                        🔒 Comunicación segura y cifrada • 🤖 Optimizado con Inteligencia Artificial
                     </p>
                 </div>
             </div>
@@ -1232,69 +1232,30 @@ La Administración`
         setTimeout(() => toast.remove(), 4000);
     }
 
-   // ==============================================================================
-    // === IMPLEMENTACIÓN DE FUNCIONES DE DATOS (CONECTADAS A TU SISTEMA)         ===
-    // ==============================================================================
-
-    /**
-     * Obtiene la lista de residentes desde tu sistema.
-     * Esta función llama a la función global `obtenerResidentes()` que ya tienes operativa.
-     */
+    // Estas funciones deberían existir en tu código base
     async obtenerResidentes() {
-        if (typeof window.obtenerResidentes === 'function') {
-            return await window.obtenerResidentes();
-        } else {
-            console.error("La función global 'obtenerResidentes' no está definida en tu sistema.");
-            this.mostrarMensaje("Error: La función para cargar residentes no existe.", "error");
-            return []; // Devuelve un array vacío para evitar que el resto del script falle
-        }
+        // Implementar según tu sistema actual
+        return [];
     }
 
-    /**
-     * Obtiene el historial de comunicaciones desde tu sistema.
-     * Esta función llama a la función global `obtenerComunicaciones()` que ya tienes operativa.
-     */
     async obtenerComunicaciones() {
-        if (typeof window.obtenerComunicaciones === 'function') {
-            return await window.obtenerComunicaciones();
-        } else {
-            console.error("La función global 'obtenerComunicaciones' no está definida en tu sistema.");
-            this.mostrarMensaje("Error: La función para cargar el historial no existe.", "error");
-            return []; // Devuelve un array vacío para evitar que el resto del script falle
-        }
+        // Implementar según tu sistema actual
+        return [];
     }
 
-    /**
-     * Guarda un nuevo registro de comunicación en tu sistema.
-     * Esta función llama a la función global `agregarComunicacion(data)` que ya tienes operativa.
-     * @param {Array} comunicacion - Un array con los datos de la comunicación a registrar.
-     */
     async agregarComunicacion(comunicacion) {
-        if (typeof window.agregarComunicacion === 'function') {
-            return await window.agregarComunicacion(comunicacion);
-        } else {
-            console.error("La función global 'agregarComunicacion' no está definida en tu sistema.");
-            this.mostrarMensaje("Error: La función para registrar la comunicación no existe.", "error");
-            return false;
-        }
+        // Implementar según tu sistema actual
+        return true;
     }
-
-// ==============================================================================
-// === INICIALIZACIÓN Y PUNTO DE ENTRADA (ESTA ES LA PARTE CLAVE) ===
-// ==============================================================================
-
-// 1. Se crea una instancia única de la clase.
-//    Esto asegura que todos los datos (residentes, historial, etc.) se gestionen en un solo lugar.
-const comunicacionesAI_instance = new ComunicacionesAI();
-
-// 2. Se declara la ÚNICA función global que tu sistema debe llamar.
-//    Esta función actúa como un "puente" hacia el método de la clase.
-//    De esta forma, no tienes que cambiar la forma en que tu sistema llama a esta funcionalidad.
-async function cargarComunicaciones() {
-    // Llama al método .cargarComunicaciones() que está DENTRO de la instancia que acabamos de crear.
-    await comunicacionesAI_instance.cargarComunicaciones();
 }
 
-// 3. (Opcional pero recomendado) Se asigna la instancia a `window` para poder depurar desde la consola del navegador.
-//    Puedes abrir la consola y escribir `comunicacionesAI_instance` para inspeccionar el estado del objeto.
-window.comunicacionesAI_instance = comunicacionesAI_instance;
+// === INICIALIZACIÓN ===
+const comunicacionesAI = new ComunicacionesAI();
+
+// Función principal para integrar con tu sistema actual
+async function cargarComunicaciones() {
+    await comunicacionesAI.cargarComunicaciones();
+}
+
+// Exportar para uso global
+window.comunicacionesAI = comunicacionesAI;
