@@ -1251,22 +1251,25 @@ async obtenerComunicaciones() {
     return res.result.values || [];
 }
 
-   async agregarComunicacion(datos) {
-    const comunicaciones = await obtenerComunicaciones();
-    const lastId = comunicaciones.length > 0 && comunicaciones[comunicaciones.length - 1][0] ? parseInt(comunicaciones[comunicaciones.length - 1][0]) : 0;
-    datos[0] = (lastId + 1).toString(); // Asigna el nuevo ID
-    await gapi.client.sheets.spreadsheets.values.append({
-        spreadsheetId: SPREADSHEET_ID,
-        range: `${SHEET_COMUNICACIONES}!A:H`,
-        valueInputOption: 'USER_ENTERED',
-        resource: {
-            values: [datos]
-        }
-    });
-}
+   // Este es el final de tu método 'agregarComunicacion'
+    async agregarComunicacion(datos) {
+        const comunicaciones = await this.obtenerComunicaciones();
+        const lastId = comunicaciones.length > 0 && comunicaciones[comunicaciones.length - 1][0] ? parseInt(comunicaciones[comunicaciones.length - 1][0]) : 0;
+        datos[0] = (lastId + 1).toString(); // Asigna el nuevo ID
+        await gapi.client.sheets.spreadsheets.values.append({
+            spreadsheetId: SPREADSHEET_ID,
+            range: `${SHEET_COMUNICACIONES}!A:H`,
+            valueInputOption: 'USER_ENTERED',
+            resource: {
+                values: [datos]
+            }
+        });
     }
 
+} // <-- AGREGA ESTA LLAVE DE CIERRE AQUÍ (en la línea 1268)
+
 // === INICIALIZACIÓN ===
+// Ahora este bloque está fuera de la clase, que es lo correcto.
 const comunicacionesAI = new ComunicacionesAI();
 
 // Función principal para integrar con tu sistema actual
@@ -1276,4 +1279,4 @@ async function cargarComunicaciones() {
 
 // Exportar para uso global
 window.comunicacionesAI = comunicacionesAI;
-    window.cargarComunicaciones = cargarComunicaciones;
+window.cargarComunicaciones = cargarComunicaciones;
