@@ -1279,17 +1279,22 @@ La Administración`
         }
     }
 
-// === INICIALIZACIÓN Y PUNTO DE ENTRADA ===
+// ==============================================================================
+// === INICIALIZACIÓN Y PUNTO DE ENTRADA (ESTA ES LA PARTE CLAVE) ===
+// ==============================================================================
 
 // 1. Se crea una instancia única de la clase.
-const comunicacionesAI = new ComunicacionesAI();
+//    Esto asegura que todos los datos (residentes, historial, etc.) se gestionen en un solo lugar.
+const comunicacionesAI_instance = new ComunicacionesAI();
 
 // 2. Se declara la ÚNICA función global que tu sistema debe llamar.
-//    Esta función usa el método de la clase para hacer todo el trabajo.
+//    Esta función actúa como un "puente" hacia el método de la clase.
+//    De esta forma, no tienes que cambiar la forma en que tu sistema llama a esta funcionalidad.
 async function cargarComunicaciones() {
-    // Llama al método .cargarComunicaciones() que está DENTRO de la instancia que creamos.
-    await comunicacionesAI.cargarComunicaciones();
+    // Llama al método .cargarComunicaciones() que está DENTRO de la instancia que acabamos de crear.
+    await comunicacionesAI_instance.cargarComunicaciones();
 }
 
-// 3. (Opcional pero recomendado) Se asigna la instancia a window para poder depurar desde la consola.
-window.comunicacionesAI = comunicacionesAI;
+// 3. (Opcional pero recomendado) Se asigna la instancia a `window` para poder depurar desde la consola del navegador.
+//    Puedes abrir la consola y escribir `comunicacionesAI_instance` para inspeccionar el estado del objeto.
+window.comunicacionesAI_instance = comunicacionesAI_instance;
