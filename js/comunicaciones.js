@@ -63,7 +63,7 @@ class ComunicacionesAI {
     async getSecureAPIKey() {
         // En producción, esto debería venir de un servicio seguro
         // Por ahora, simularemos que está disponible
-        return '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';
+        return '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';
     }
 
     // === FUNCIONALIDADES DE IA ===
