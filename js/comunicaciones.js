@@ -1275,3 +1275,4 @@ async function cargarComunicaciones() {
 
 // Exportar para uso global
 window.comunicacionesAI = comunicacionesAI;
+    window.cargarComunicaciones = cargarComunicaciones;
