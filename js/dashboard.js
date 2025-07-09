@@ -31,7 +31,11 @@ async function cargarDashboard() {
   // --- CÁLCULOS PRINCIPALES ---
   
   // Calcula el total de cada fuente de ingreso por separado
-  const saldoInicial = Number(config[1] || 0); // <-- NUEVO: Asumiendo que el valor está en la columna B (índice 1) de tu hoja de Configuración.
+    // Se ha ajustado el nombre para que coincida con tu hoja de cálculo: "Saldo_Inicial_Caja"
+  const textoSaldo = config['Saldo_Inicial_Caja'] || '0'; 
+
+  // Esta línea limpia el valor (quita '$', '.' y otros símbolos) para convertirlo en número.
+  const saldoInicial = Number(String(textoSaldo).replace(/\D/g, ''));
   const totalIngresosGC = pagos.reduce((a,b) => a + Number(b[6]||0) + Number(b[17]||0), 0);
   const totalIngresosExtra = ingresosExtra.reduce((a,b) => a + Number(b[3]||0), 0);
   const totalMultas = multas.reduce((a,b) => a + Number(b[4]||0), 0); // <-- NUEVO: Suma la columna E (índice 4) de la hoja Multas.
