@@ -103,36 +103,51 @@ class ComunicacionesAI {
     }
 
     async generateSmartTemplate(context) {
-        if (!this.aiProvider) return null;
+    if (!this.aiProvider) return null;
 
-        try {
-            const response = await fetch(this.aiProvider.endpoint, {
-                method: 'POST',
-                headers: this.aiProvider.headers,
-                body: JSON.stringify({
-                    model: this.aiProvider.model,
-                    messages: [{
-                        role: 'system',
-                        content: `Genera una plantilla de comunicación para condominio basada en el contexto proporcionado. 
-                        Debe ser profesional, clara y cumplir con normativas chilenas de condominios.
-                        Incluye asunto y cuerpo del mensaje.
-                        Responde en formato JSON con campos: subject, body, tone, urgency.`
-                    }, {
-                        role: 'user',
-                        content: `Contexto: ${context}`
-                    }],
-                    temperature: 0.5,
-                    max_tokens: 800
-                })
-            });
+    try {
+        const response = await fetch(this.aiProvider.endpoint, {
+            method: 'POST',
+            headers: this.aiProvider.headers,
+            body: JSON.stringify({
+                model: this.aiProvider.model,
+                messages: [{
+                    role: 'system',
+                    content: `Genera una plantilla de comunicación para condominio basada en el contexto proporcionado.
+                    Debe ser profesional, clara y cumplir con normativas chilenas de condominios.
+                    Incluye asunto y cuerpo del mensaje.
+                    Responde en formato JSON con campos: subject, body.`
+                }, {
+                    role: 'user',
+                    content: `Contexto: ${context}`
+                }],
+                temperature: 0.5,
+                max_tokens: 800
+            })
+        });
 
-            const data = await response.json();
-            return JSON.parse(data.choices[0].message.content);
-        } catch (error) {
-            console.error('Error generando template:', error);
-            return null;
+        if (!response.ok) {
+            // Si la respuesta es 401 (no autorizado) o cualquier otro error, lo muestra.
+            const errorData = await response.json();
+            throw new Error(`Error de la API de OpenAI: ${errorData.error.message}`);
         }
+
+        const data = await response.json();
+
+        // Verificación de seguridad para evitar el error 'Cannot read properties of undefined'
+        if (data.choices && data.choices.length > 0 && data.choices[0].message && data.choices[0].message.content) {
+            return JSON.parse(data.choices[0].message.content);
+        } else {
+            throw new Error("La respuesta de la IA no tuvo el formato esperado.");
+        }
+
+    } catch (error) {
+        console.error('Error generando template:', error);
+        // Muestra un mensaje de error claro al usuario
+        this.mostrarMensaje(error.message, 'error');
+        return null;
     }
+}
 
     async personalizeMessage(baseMessage, resident) {
         if (!this.aiProvider) return baseMessage;
@@ -683,21 +698,38 @@ La Administración`
     }
 
     renderDestinatariosCustom() {
-        const container = document.getElementById('destinatariosAI');
-        const residentesHtml = this.residentes.map(r => `
-            <label style="display: block;">
-                <input type="checkbox" name="residente" value="${r[0]}">
-                ${r[1]} - Parcela ${r[3]}
-            </label>
-        `).join('');
+    const container = document.getElementById('destinatariosAI');
 
-        container.innerHTML = `
-            <div class="destinatarios-inteligente">
-                <input type="text" placeholder="Buscar residente..." class="form-control" style="margin-bottom: 12px;">
+    // Filtra residentes que no tengan nombre o parcela para evitar "undefined"
+    const residentesValidos = this.residentes.filter(r => r && r[1] && r[3]);
+
+    const residentesHtml = residentesValidos.map(r => `
+        <label class="residente-label" style="display: block; padding: 8px; border-radius: 4px; transition: background-color 0.2s;">
+            <input type="checkbox" name="residente" value="${r[0]}">
+            ${r[1]} - Parcela ${r[3]}
+        </label>
+    `).join('');
+
+    container.innerHTML = `
+        <div class="destinatarios-inteligente">
+            <input type="text" id="filtroResidentes" placeholder="Buscar por nombre o n° de parcela..." class="form-control" style="margin-bottom: 12px;">
+            <div id="lista-residentes-scroll">
                 ${residentesHtml}
             </div>
-        `;
-    }
+        </div>
+    `;
+
+    // Añadir el listener para el filtro interactivo
+    document.getElementById('filtroResidentes').addEventListener('input', (e) => {
+        const filtro = e.target.value.toLowerCase().trim();
+        document.querySelectorAll('.residente-label').forEach(label => {
+            const textoLabel = label.textContent.toLowerCase();
+            // Busca tanto en el nombre como en "parcela [numero]"
+            const match = textoLabel.includes(filtro) || textoLabel.includes(`parcela ${filtro}`);
+            label.style.display = match ? 'block' : 'none';
+        });
+    });
+}
 
     async enviarComunicacionAI() {
         if (!this.checkRateLimit()) {
@@ -1205,32 +1237,33 @@ La Administración`
         if (spinner) spinner.remove();
     }
 
-    mostrarMensaje(mensaje, tipo = 'info') {
-        const colores = {
-            'success': '#28a745',
-            'error': '#dc3545',
-            'warning': '#ffc107',
-            'info': '#17a2b8'
-        };
+   mostrarMensaje(mensaje, tipo = 'info') {
+    // Colores del sistema anterior
+    const colores = {
+        'success': '#28a745', // Verde
+        'error': '#dc3545',   // Rojo
+        'warning': '#ffc107', // Amarillo
+        'info': '#17a2b8'     // Azul/Celeste
+    };
 
-        const toast = document.createElement('div');
-        toast.style.cssText = `
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            background: ${colores[tipo]};
-            color: white;
-            padding: 15px 20px;
-            border-radius: 8px;
-            z-index: 3000;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-            font-weight: 500;
-        `;
-        toast.textContent = mensaje;
-        document.body.appendChild(toast);
+    const toast = document.createElement('div');
+    toast.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: ${colores[tipo]};
+        color: white;
+        padding: 15px 20px;
+        border-radius: 8px;
+        z-index: 3000;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        font-weight: 500;
+    `;
+    toast.textContent = mensaje;
+    document.body.appendChild(toast);
 
-        setTimeout(() => toast.remove(), 4000);
-    }
+    setTimeout(() => toast.remove(), 4000);
+}
 
     // -------- RESIDENTES --------
 async obtenerResidentes() {
