@@ -3,15 +3,17 @@ async function cargarDashboard() {
   limpiarMainContent();
   mostrarSpinner();
   
-  let residentes = [], pagos = [], egresos = [], tareas = [], config = {}, ingresosExtra = [];
+  // Agrega una variable "multas" y una función "obtenerMultas()"
+  let residentes = [], pagos = [], egresos = [], tareas = [], config = {}, ingresosExtra = [], multas = []; // <-- MODIFICADO
   try {
-    const [residentesData, pagosData, egresosData, tareasData, configData, ingresosExtraData] = await Promise.all([
+    const [residentesData, pagosData, egresosData, tareasData, configData, ingresosExtraData, multasData] = await Promise.all([ // <-- MODIFICADO
         obtenerResidentes(),
         obtenerPagosGC(),
         obtenerEgresos(),
         obtenerTareas(), 
         obtenerConfiguracion(),
-        obtenerIngresosExtra()
+        obtenerIngresosExtra(),
+        obtenerMultas() // <-- NUEVO: Llama a la función para obtener las multas
     ]);
     residentes = residentesData || [];
     pagos = pagosData || [];
@@ -19,6 +21,7 @@ async function cargarDashboard() {
     tareas = tareasData || [];
     config = configData || {};
     ingresosExtra = ingresosExtraData || [];
+    multas = multasData || []; // <-- MODIFICADO
   } catch (e) {
     ocultarSpinner();
     mostrarMensaje('Error al cargar datos del dashboard: ' + e.message, 'error');
@@ -26,12 +29,15 @@ async function cargarDashboard() {
   }
 
   // --- CÁLCULOS PRINCIPALES ---
-  // <-- MODIFICADO: Se ha eliminado el bloque de código que filtraba por "Fecha_Saldo_Inicial".
-  // Ahora los cálculos usan los arrays completos ("pagos", "egresos", "ingresosExtra").
-
+  
+  // Calcula el total de cada fuente de ingreso por separado
+  const saldoInicial = Number(config[1] || 0); // <-- NUEVO: Asumiendo que el valor está en la columna B (índice 1) de tu hoja de Configuración.
   const totalIngresosGC = pagos.reduce((a,b) => a + Number(b[6]||0) + Number(b[17]||0), 0);
   const totalIngresosExtra = ingresosExtra.reduce((a,b) => a + Number(b[3]||0), 0);
-  const totalIngresos = totalIngresosGC + totalIngresosExtra;
+  const totalMultas = multas.reduce((a,b) => a + Number(b[4]||0), 0); // <-- NUEVO: Suma la columna E (índice 4) de la hoja Multas.
+
+  // Suma todos los ingresos en una sola variable
+  const totalIngresos = saldoInicial + totalIngresosGC + totalIngresosExtra + totalMultas; // <-- MODIFICADO
 
   const totalEgresos = egresos.reduce((a,b) => a + Number(b[6]||0), 0);
   const saldoCaja = totalIngresos - totalEgresos;
