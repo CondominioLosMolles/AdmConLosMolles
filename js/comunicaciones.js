@@ -1232,21 +1232,37 @@ La Administración`
         setTimeout(() => toast.remove(), 4000);
     }
 
-    // Estas funciones deberían existir en tu código base
-    async obtenerResidentes() {
-        // Implementar según tu sistema actual
-        return [];
-    }
+    // -------- RESIDENTES --------
+async function obtenerResidentes() {
+    // Se expande el rango de N a T para leer las nuevas columnas del convenio.
+    const res = await gapi.client.sheets.spreadsheets.values.get({
+        spreadsheetId: SPREADSHEET_ID,
+        range: `${SHEET_RESIDENTES}!A2:T`
+    });
+    return res.result.values || [];
+}
 
-    async obtenerComunicaciones() {
-        // Implementar según tu sistema actual
-        return [];
-    }
+   // -------- COMUNICACIONES --------
+async function obtenerComunicaciones() {
+    const res = await gapi.client.sheets.spreadsheets.values.get({
+        spreadsheetId: SPREADSHEET_ID,
+        range: `${SHEET_COMUNICACIONES}!A2:H`
+    });
+    return res.result.values || [];
+}
 
-    async agregarComunicacion(comunicacion) {
-        // Implementar según tu sistema actual
-        return true;
-    }
+   async function agregarComunicacion(datos) {
+    const comunicaciones = await obtenerComunicaciones();
+    const lastId = comunicaciones.length > 0 && comunicaciones[comunicaciones.length - 1][0] ? parseInt(comunicaciones[comunicaciones.length - 1][0]) : 0;
+    datos[0] = (lastId + 1).toString(); // Asigna el nuevo ID
+    await gapi.client.sheets.spreadsheets.values.append({
+        spreadsheetId: SPREADSHEET_ID,
+        range: `${SHEET_COMUNICACIONES}!A:H`,
+        valueInputOption: 'USER_ENTERED',
+        resource: {
+            values: [datos]
+        }
+    });
 }
 
 // === INICIALIZACIÓN ===
