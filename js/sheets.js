@@ -13,7 +13,7 @@ const SHEET_PROVEEDORES = 'Proveedores';
 const SHEET_PAGOS_GC = 'Pagos_GC';
 const SHEET_CONFIG_TIMC = 'Config_TIMC';
 const SHEET_EGRESOS = 'Egresos';
-const SHEET_INGRESOS_EXTRA = 'Ingresos_Extra'; // <-- NUEVA HOJA
+const SHEET_INGRESOS_EXTRA = 'Ingresos_Extra';
 const SHEET_CATEGORIAS_EGRESOS = 'Categorias_Egresos';
 const SHEET_MANTENCIONES = 'Mantenciones';
 const SHEET_MULTAS = 'Multas';
@@ -75,22 +75,50 @@ async function buscarOCrearRutaDeComprobantes(nombreCarpetaParcela, nombreMes, a
 }
 
 async function buscarOCrearRutaDeEgreso(nombreMes, anio) {
+    const carpetaPrincipalId = await findFolderId(MAIN_DRIVE_FOLDER_NAME);
+    if (!carpetaPrincipalId) {
+        throw new Error(`No se encontró la carpeta principal de Drive: "${MAIN_DRIVE_FOLDER_NAME}"`);
+    }
+    let carpetaEgresosId = await findFolderId('Egresos', carpetaPrincipalId);
+    if (!carpetaEgresosId) {
+        carpetaEgresosId = await createFolder('Egresos', carpetaPrincipalId);
+    }
+    let carpetaAnioId = await findFolderId(anio.toString(), carpetaEgresosId);
+    if (!carpetaAnioId) {
+        carpetaAnioId = await createFolder(anio.toString(), carpetaEgresosId);
+    }
+    let carpetaMesId = await findFolderId(nombreMes, carpetaAnioId);
+    if (!carpetaMesId) {
+        carpetaMesId = await createFolder(nombreMes, carpetaAnioId);
+    }
+    return carpetaMesId;
+}
+
+// ▼▼▼ CORRECCIÓN 1: SE AÑADE LA FUNCIÓN 'buscarOCrearRutaDeIngreso' QUE FALTABA ▼▼▼
+/**
+ * Busca o crea la estructura de carpetas para los comprobantes de Ingresos Extra.
+ * La ruta será: /Los Molles/Ingresos/[Año]/[Mes]/
+ * @param {string} nombreMes - El nombre del mes del ingreso (ej. "Enero").
+ * @param {string} anio - El año del ingreso (ej. "2024").
+ * @returns {Promise<string>} El ID de la carpeta de destino en Google Drive.
+ */
+async function buscarOCrearRutaDeIngreso(nombreMes, anio) {
     // 1. Busca la carpeta principal "Los Molles"
     const carpetaPrincipalId = await findFolderId(MAIN_DRIVE_FOLDER_NAME);
     if (!carpetaPrincipalId) {
         throw new Error(`No se encontró la carpeta principal de Drive: "${MAIN_DRIVE_FOLDER_NAME}"`);
     }
 
-    // 2. Busca o crea la carpeta "Egresos" dentro de la principal
-    let carpetaEgresosId = await findFolderId('Egresos', carpetaPrincipalId);
-    if (!carpetaEgresosId) {
-        carpetaEgresosId = await createFolder('Egresos', carpetaPrincipalId);
+    // 2. Busca o crea la carpeta "Ingresos" dentro de la principal
+    let carpetaIngresosId = await findFolderId('Ingresos', carpetaPrincipalId);
+    if (!carpetaIngresosId) {
+        carpetaIngresosId = await createFolder('Ingresos', carpetaPrincipalId);
     }
 
-    // 3. Busca o crea la carpeta para el AÑO dentro de "Egresos"
-    let carpetaAnioId = await findFolderId(anio.toString(), carpetaEgresosId);
+    // 3. Busca o crea la carpeta para el AÑO dentro de "Ingresos"
+    let carpetaAnioId = await findFolderId(anio.toString(), carpetaIngresosId);
     if (!carpetaAnioId) {
-        carpetaAnioId = await createFolder(anio.toString(), carpetaAnioId);
+        carpetaAnioId = await createFolder(anio.toString(), carpetaIngresosId);
     }
 
     // 4. Busca o crea la carpeta para el MES dentro del AÑO
@@ -102,6 +130,7 @@ async function buscarOCrearRutaDeEgreso(nombreMes, anio) {
     // 5. Devuelve el ID de la carpeta final del mes
     return carpetaMesId;
 }
+// ▲▲▲ FIN DE LA CORRECCIÓN 1 ▲▲▲
 
 async function subirComprobante(file, folderId) {
     const metadata = {
@@ -169,13 +198,10 @@ async function actualizarConfiguracion(key, value) {
 }
 // -------- RESIDENTES --------
 async function obtenerResidentes() {
-    // ▼ INICIO: CÓDIGO ACTUALIZADO ▼
-    // Se expande el rango de N a T para leer las nuevas columnas del convenio.
     const res = await gapi.client.sheets.spreadsheets.values.get({
         spreadsheetId: SPREADSHEET_ID,
         range: `${SHEET_RESIDENTES}!A2:T`
     });
-    // ▲ FIN: CÓDIGO ACTUALIZADO ▲
     return res.result.values || [];
 }
 
@@ -183,8 +209,6 @@ async function agregarResidente(datos) {
     const residentes = await obtenerResidentes();
     const lastId = residentes.length > 0 && residentes[residentes.length - 1][0] ? parseInt(residentes[residentes.length - 1][0]) : 0;
     datos[0] = (lastId + 1).toString();
-    // ▼ INICIO: CÓDIGO ACTUALIZADO ▼
-    // Se expande el rango de N a T para escribir en las nuevas columnas del convenio.
     await gapi.client.sheets.spreadsheets.values.append({
         spreadsheetId: SPREADSHEET_ID,
         range: `${SHEET_RESIDENTES}!A:T`,
@@ -193,7 +217,6 @@ async function agregarResidente(datos) {
             values: [datos]
         }
     });
-    // ▲ FIN: CÓDIGO ACTUALIZADO ▲
 }
 
 async function actualizarResidente(datos) {
@@ -201,8 +224,6 @@ async function actualizarResidente(datos) {
     const idx = residentes.findIndex(r => r[0] === datos[0]);
     if (idx === -1) throw new Error('Residente no encontrado');
     const row = idx + 2;
-    // ▼ INICIO: CÓDIGO ACTUALIZADO ▼
-    // Se expande el rango de N a T para actualizar las nuevas columnas del convenio.
     await gapi.client.sheets.spreadsheets.values.update({
         spreadsheetId: SPREADSHEET_ID,
         range: `${SHEET_RESIDENTES}!A${row}:T${row}`,
@@ -211,7 +232,6 @@ async function actualizarResidente(datos) {
             values: [datos]
         }
     });
-    // ▲ FIN: CÓDIGO ACTUALIZADO ▲
 }
 
 async function actualizarSaldoConvenioEnSheet(rowNumber, nuevoSaldo) {
@@ -478,34 +498,38 @@ async function obtenerEstadoDeCuenta(parcela) {
 
 // -------- CONTABILIDAD (INGRESOS Y EGRESOS) --------
 
-// ▼▼▼ INICIO: CÓDIGO NUEVO AÑADIDO ▼▼▼
+// ▼▼▼ CORRECCIÓN 2: SE MODIFICAN LAS FUNCIONES DE 'Ingresos_Extra' ▼▼▼
 async function obtenerIngresosExtra() {
     try {
         const res = await gapi.client.sheets.spreadsheets.values.get({
             spreadsheetId: SPREADSHEET_ID,
-            range: `${SHEET_INGRESOS_EXTRA}!A2:D` // Columnas: ID, Fecha, Concepto, Monto
+            // Se lee hasta la columna G para obtener todos los datos y calcular el ID correctamente
+            range: `${SHEET_INGRESOS_EXTRA}!A2:G`
         });
         return res.result.values || [];
     } catch (err) {
         console.error("Error al obtener ingresos extra. Asegúrate que la hoja 'Ingresos_Extra' existe.", err);
-        return []; // Retorna vacío para no detener la aplicación
+        return [];
     }
 }
 
 async function agregarIngresoExtra(datos) {
-    // Genera un ID único para el ingreso extra
-    const id = `IE-${Date.now()}`;
-    const datosConId = [id, ...datos]; // [ID, Fecha, Concepto, Monto]
+    // Se calcula el último ID para generar uno nuevo y correlativo
+    const ingresos = await obtenerIngresosExtra();
+    const lastId = ingresos.length > 0 && ingresos[ingresos.length - 1][0] ? parseInt(ingresos[ingresos.length - 1][0]) : 0;
+    datos[0] = (lastId + 1).toString(); // Se reemplaza el primer elemento (que era 'null') por el nuevo ID
+
     await gapi.client.sheets.spreadsheets.values.append({
         spreadsheetId: SPREADSHEET_ID,
-        range: `${SHEET_INGRESOS_EXTRA}!A:D`,
+        // El rango se corrige a A:G para que coincida con la cantidad de datos enviados
+        range: `${SHEET_INGRESOS_EXTRA}!A:G`,
         valueInputOption: 'USER_ENTERED',
         resource: {
-            values: [datosConId]
+            values: [datos] // Se guarda la fila completa
         }
     });
 }
-// ▲▲▲ FIN: CÓDIGO NUEVO AÑADIDO ▲▲▲
+// ▲▲▲ FIN DE LA CORRECCIÓN 2 ▲▲▲
 
 async function obtenerCategoriasEgresos() {
     const res = await gapi.client.sheets.spreadsheets.values.get({
