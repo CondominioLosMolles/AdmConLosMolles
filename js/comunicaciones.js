@@ -61,10 +61,14 @@ class ComunicacionesAI {
     }
 
     async getSecureAPIKey() {
-        // En producción, esto debería venir de un servicio seguro
-        // Por ahora, simularemos que está disponible
-        return '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';
+    // La clave ahora viene del archivo config.js que no se sube a GitHub.
+    if (typeof OPENAI_API_KEY !== 'undefined') {
+        return OPENAI_API_KEY;
+    } else {
+        // Este error aparecerá si olvidaste incluir config.js en tu HTML.
+        throw new Error("API Key no encontrada. Asegúrate de que config.js esté cargado.");
     }
+}
 
     // === FUNCIONALIDADES DE IA ===
     async analyzeContent(message) {
