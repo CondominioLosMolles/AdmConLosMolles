@@ -1233,7 +1233,7 @@ La Administración`
     }
 
     // -------- RESIDENTES --------
-async function obtenerResidentes() {
+async obtenerResidentes() {
     // Se expande el rango de N a T para leer las nuevas columnas del convenio.
     const res = await gapi.client.sheets.spreadsheets.values.get({
         spreadsheetId: SPREADSHEET_ID,
@@ -1243,7 +1243,7 @@ async function obtenerResidentes() {
 }
 
    // -------- COMUNICACIONES --------
-async function obtenerComunicaciones() {
+async obtenerComunicaciones() {
     const res = await gapi.client.sheets.spreadsheets.values.get({
         spreadsheetId: SPREADSHEET_ID,
         range: `${SHEET_COMUNICACIONES}!A2:H`
@@ -1251,7 +1251,7 @@ async function obtenerComunicaciones() {
     return res.result.values || [];
 }
 
-   async function agregarComunicacion(datos) {
+   async agregarComunicacion(datos) {
     const comunicaciones = await obtenerComunicaciones();
     const lastId = comunicaciones.length > 0 && comunicaciones[comunicaciones.length - 1][0] ? parseInt(comunicaciones[comunicaciones.length - 1][0]) : 0;
     datos[0] = (lastId + 1).toString(); // Asigna el nuevo ID
