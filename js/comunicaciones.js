@@ -1264,6 +1264,7 @@ async obtenerComunicaciones() {
         }
     });
 }
+    }
 
 // === INICIALIZACIÓN ===
 const comunicacionesAI = new ComunicacionesAI();
