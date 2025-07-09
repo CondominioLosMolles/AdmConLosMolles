@@ -206,7 +206,23 @@ class ComunicacionesAI {
         }
     }
 
-    
+    // === FUNCIONES PRINCIPALES ===
+    async cargarComunicaciones() {
+        this.limpiarMainContent();
+        this.mostrarSpinner();
+
+        try {
+            await this.initializeUserData();
+            await this.loadData();
+            this.renderUI();
+            this.setupEventListeners();
+        } catch (error) {
+            this.mostrarMensaje('Error crítico: ' + error.message, 'error');
+        } finally {
+            this.ocultarSpinner();
+        }
+    }
+
     async initializeUserData() {
         try {
             const profile = await gapi.client.gmail.users.getProfile({ userId: 'me' });
@@ -355,7 +371,7 @@ class ComunicacionesAI {
                     <h2>📧 Central de Comunicaciones IA</h2>
                     
                     <div class="ai-suggestions">
-                        <h4>🤖 Asistente IA</h4>
+                        <h4> Asistente IA</h4>
                         <div id="aiSuggestions">
                             <p>Escribe tu mensaje y obtén sugerencias inteligentes...</p>
                         </div>
@@ -366,7 +382,7 @@ class ComunicacionesAI {
                             <label><strong>Plantilla Inteligente</strong></label>
                             <select id="selectPlantillaAI" class="form-control">
                                 <option value="">Seleccionar plantilla...</option>
-                                <option value="generate">🤖 Generar con IA</option>
+                                <option value="generate"> Generar con IA</option>
                                 <option value="citacion_asamblea">📋 Citación Asamblea</option>
                                 <option value="aviso_corte">⚠️ Aviso de Corte</option>
                                 <option value="emergencia">🚨 Emergencia</option>
@@ -982,7 +998,7 @@ La Administración`
                     <div class="subtitle">Sistema de Comunicaciones Inteligente</div>
                 </div>
                 <div class="content">
-                    <h2>${asunto} <span class="ai-badge">🤖 AI</span></h2>
+                    <h2>${asunto} <span class="ai-badge"> AI</span></h2>
                     <div class="highlight">
                         <p>${mensajeHtml}</p>
                     </div>
@@ -992,7 +1008,7 @@ La Administración`
                     <p>Este correo fue generado automáticamente por nuestro sistema de comunicaciones con IA.</p>
                     <p>Para consultas, contacte a la administración.</p>
                     <p style="margin-top: 15px; font-size: 11px; opacity: 0.7;">
-                        🔒 Comunicación segura y cifrada • 🤖 Optimizado con Inteligencia Artificial
+                        🔒 Comunicación segura y cifrada • Optimizado con Inteligencia Artificial
                     </p>
                 </div>
             </div>
@@ -1262,31 +1278,18 @@ La Administración`
             return false;
         }
     }
-    
-    // === FUNCIONES PRINCIPALES ===
-    async cargarComunicaciones() {
-        this.limpiarMainContent();
-        this.mostrarSpinner();
 
-        try {
-            await this.initializeUserData();
-            await this.loadData();
-            this.renderUI();
-            this.setupEventListeners();
-        } catch (error) {
-            this.mostrarMensaje('Error crítico: ' + error.message, 'error');
-        } finally {
-            this.ocultarSpinner();
-        }
-    }
+// === INICIALIZACIÓN Y PUNTO DE ENTRADA ===
 
-// === INICIALIZACIÓN ===
+// 1. Se crea una instancia única de la clase.
 const comunicacionesAI = new ComunicacionesAI();
 
-// Función principal para integrar con tu sistema actual
+// 2. Se declara la ÚNICA función global que tu sistema debe llamar.
+//    Esta función usa el método de la clase para hacer todo el trabajo.
 async function cargarComunicaciones() {
+    // Llama al método .cargarComunicaciones() que está DENTRO de la instancia que creamos.
     await comunicacionesAI.cargarComunicaciones();
 }
 
-// Exportar para uso global
+// 3. (Opcional pero recomendado) Se asigna la instancia a window para poder depurar desde la consola.
 window.comunicacionesAI = comunicacionesAI;
