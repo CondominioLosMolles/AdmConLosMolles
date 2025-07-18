@@ -306,8 +306,6 @@ async function cargarInformes() {
 
   // js/informes.js
 
-// js/informes.js
-
 function generarInformeEstadoParcela() {
     const filtros = getFiltros();
     if (!filtros.parcela) {
@@ -395,7 +393,7 @@ function generarInformeEstadoParcela() {
                             <th>Interés</th>
                             <th>Multa</th>
                             <th>Monto Pagado G.C.</th>
-                            <th>Meses Deuda</th> {/* */}
+                            <th>Meses Deuda</th>
                             <th>Deuda Pendiente</th>
                             <th>Estado</th>
                         </tr>
@@ -410,7 +408,7 @@ function generarInformeEstadoParcela() {
                                 <td>$${parseFloat(m.Interes || 0).toLocaleString('es-CL')}</td>
                                 <td>$${parseFloat(m['Multa_1/4'] || 0).toLocaleString('es-CL')}</td>
                                 <td>$${parseFloat(m.Monto_Pagado || 0).toLocaleString('es-CL')}</td>
-                                <td style="text-align:center;">${m.Meses_Inpagos || 0}</td> {/* */}
+                                <td style="text-align:center;">${m.Meses_Inpagos || 0}</td>
                                 <td style="${deuda > 0 ? 'color:red; font-weight:bold;' : ''}">$${deuda.toLocaleString('es-CL')}</td>
                                 <td>${m.Estado}</td>
                             </tr>
@@ -422,7 +420,7 @@ function generarInformeEstadoParcela() {
                             <td style="padding: 0.75rem;">$${totalInteres.toLocaleString('es-CL')}</td>
                             <td style="padding: 0.75rem;">$${totalMulta.toLocaleString('es-CL')}</td>
                             <td style="padding: 0.75rem;">$${totalPagadoGC.toLocaleString('es-CL')}</td>
-                            <td style="padding: 0.75rem;"></td> {/* */}
+                            <td style="padding: 0.75rem;"></td>
                             <td style="padding: 0.75rem; color:red;">$${totalDeudaPendiente.toLocaleString('es-CL')}</td>
                             <td style="padding: 0.75rem;"></td>
                         </tr>
@@ -437,20 +435,20 @@ function generarInformeEstadoParcela() {
             ["Estado de Cuenta - Parcela", filtros.parcela],
             ["Nombre Residente", residenteInfo ? residenteInfo[1] : 'N/A'],
             [],
-            ["Fecha Pago", "Periodo", "Interés", "Multa", "Monto Pagado G.C.", "Meses Deuda", "Deuda Pendiente", "Estado"], // <-- CABECERA EXCEL ACTUALIZADA
+            ["Fecha Pago", "Periodo", "Interés", "Multa", "Monto Pagado G.C.", "Meses Deuda", "Deuda Pendiente", "Estado"],
             ...movimientosAVisualizar.map(m => [
                 m.Fecha_Pago ? new Date(m.Fecha_Pago.replace(/-/g,'/')).toLocaleDateString('es-CL', { timeZone: 'UTC' }) : '---',
                 m.Periodo,
                 parseFloat(m.Interes || 0),
                 parseFloat(m['Multa_1/4'] || 0),
                 parseFloat(m.Monto_Pagado || 0),
-                parseInt(m.Meses_Inpagos || 0), // <-- DATO EXCEL ACTUALIZADO
+                parseInt(m.Meses_Inpagos || 0),
                 parseFloat(m.Deuda_Total || 0),
                 m.Estado
             ])];
         
         dataToExport.push([
-            "", "Totales:", totalInteres, totalMulta, totalPagadoGC, "", totalDeudaPendiente, "" // <-- TOTALES EXCEL ACTUALIZADOS
+            "", "Totales:", totalInteres, totalMulta, totalPagadoGC, "", totalDeudaPendiente, ""
         ]);
 
         const ws = XLSX.utils.aoa_to_sheet(dataToExport);
