@@ -304,7 +304,9 @@ async function cargarInformes() {
         };
     }
 
-  function generarInformeEstadoParcela() {
+  // js/informes.js
+
+function generarInformeEstadoParcela() {
     const filtros = getFiltros();
     if (!filtros.parcela) {
         areaInforme.innerHTML = `<div class="widget"><p style="color:red;">Por favor, seleccione un número de parcela para generar este informe.</p></div>`;
@@ -328,9 +330,28 @@ async function cargarInformes() {
         });
     }
 
+    // --- INICIO DE LA CORRECCIÓN ---
+
+    // 1. Ordena los movimientos filtrados por fecha para asegurar que el último sea el más reciente.
+    movimientosAVisualizar.sort((a, b) => {
+        const dateA = parsePeriodo(a.Periodo);
+        const dateB = parsePeriodo(b.Periodo);
+        if (!dateA) return 1; // Mueve los registros sin fecha al final
+        if (!dateB) return -1;
+        return dateA - dateB; // Orden ascendente
+    });
+
+    // 2. Obtiene el último movimiento de la lista YA FILTRADA Y ORDENADA.
+    const ultimoMovimientoDelPeriodo = movimientosAVisualizar.length > 0 ? movimientosAVisualizar[movimientosAVisualizar.length - 1] : null;
+
+    // 3. Calcula la deuda de G.C. basándose en el saldo de ese último movimiento.
+    const deudaTotalGC = ultimoMovimientoDelPeriodo ? parseFloat(ultimoMovimientoDelPeriodo.Deuda_Total || 0) : 0;
+    
+    // 4. Mantiene los otros valores que son saldos generales y no dependen del rango de fecha.
     const deudaTotalConvenio = parseFloat(residenteInfo ? residenteInfo[12] || 0 : 0);
     const saldoAFavor = parseFloat(residenteInfo ? residenteInfo[13] || 0 : 0);
-    const deudaTotalGC = todosLosMovimientos.filter(p => p.Estado === 'Moroso').reduce((sum, p) => sum + parseFloat(p.Deuda_Total || 0), 0);
+    
+    // --- FIN DE LA CORRECCIÓN ---
     
     const {
         totalInteres,
