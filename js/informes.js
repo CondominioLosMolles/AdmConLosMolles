@@ -306,6 +306,8 @@ async function cargarInformes() {
 
   // js/informes.js
 
+// js/informes.js
+
 function generarInformeEstadoParcela() {
     const filtros = getFiltros();
     if (!filtros.parcela) {
@@ -332,22 +334,17 @@ function generarInformeEstadoParcela() {
 
     // --- INICIO DE LA CORRECCIÓN ---
 
-    // 1. Ordena los movimientos filtrados por fecha para asegurar que el último sea el más reciente.
-    movimientosAVisualizar.sort((a, b) => {
-        const dateA = parsePeriodo(a.Periodo);
-        const dateB = parsePeriodo(b.Periodo);
-        if (!dateA) return 1; // Mueve los registros sin fecha al final
-        if (!dateB) return -1;
-        return dateA - dateB; // Orden ascendente
-    });
+    // 1. Calcula la deuda del período sumando solo los cargos y restando pagos dentro del rango filtrado.
+    const deudaDelPeriodo = movimientosAVisualizar.reduce((total, mov) => {
+        const cargos = parseFloat(mov.Valor_Gasto_Comun || 0) + parseFloat(mov.Interes || 0) + parseFloat(mov['Multa_1/4'] || 0);
+        const pagos = parseFloat(mov.Monto_Pagado || 0) + parseFloat(mov.Abono_Convenio || 0) + parseFloat(mov.Saldo_Favor_Usado || 0);
+        return total + cargos - pagos;
+    }, 0);
 
-    // 2. Obtiene el último movimiento de la lista YA FILTRADA Y ORDENADA.
-    const ultimoMovimientoDelPeriodo = movimientosAVisualizar.length > 0 ? movimientosAVisualizar[movimientosAVisualizar.length - 1] : null;
+    const deudaTotalGC = deudaDelPeriodo;
 
-    // 3. Calcula la deuda de G.C. basándose en el saldo de ese último movimiento.
-    const deudaTotalGC = ultimoMovimientoDelPeriodo ? parseFloat(ultimoMovimientoDelPeriodo.Deuda_Total || 0) : 0;
-    
-    // 4. Mantiene los otros valores que son saldos generales y no dependen del rango de fecha.
+    // 2. Mantiene los otros valores que son saldos generales y no dependen del rango de fecha.
+    // Para la deuda de convenio y saldo a favor, se usan los totales generales del residente, ya que estos no se desglosan por mes en la planilla.
     const deudaTotalConvenio = parseFloat(residenteInfo ? residenteInfo[12] || 0 : 0);
     const saldoAFavor = parseFloat(residenteInfo ? residenteInfo[13] || 0 : 0);
     
