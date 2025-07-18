@@ -332,9 +332,6 @@ function generarInformeEstadoParcela() {
         });
     }
 
-    // --- INICIO DE LA CORRECCIÓN ---
-
-    // 1. Calcula la deuda del período sumando solo los cargos y restando pagos dentro del rango filtrado.
     const deudaDelPeriodo = movimientosAVisualizar.reduce((total, mov) => {
         const cargos = parseFloat(mov.Valor_Gasto_Comun || 0) + parseFloat(mov.Interes || 0) + parseFloat(mov['Multa_1/4'] || 0);
         const pagos = parseFloat(mov.Monto_Pagado || 0) + parseFloat(mov.Abono_Convenio || 0) + parseFloat(mov.Saldo_Favor_Usado || 0);
@@ -342,13 +339,8 @@ function generarInformeEstadoParcela() {
     }, 0);
 
     const deudaTotalGC = deudaDelPeriodo;
-
-    // 2. Mantiene los otros valores que son saldos generales y no dependen del rango de fecha.
-    // Para la deuda de convenio y saldo a favor, se usan los totales generales del residente, ya que estos no se desglosan por mes en la planilla.
     const deudaTotalConvenio = parseFloat(residenteInfo ? residenteInfo[12] || 0 : 0);
     const saldoAFavor = parseFloat(residenteInfo ? residenteInfo[13] || 0 : 0);
-    
-    // --- FIN DE LA CORRECCIÓN ---
     
     const {
         totalInteres,
@@ -386,22 +378,31 @@ function generarInformeEstadoParcela() {
             <p><b>Nombre:</b> ${residenteInfo ? residenteInfo[1] : 'N/A'}<br>
                 <b>Email:</b> ${residenteInfo ? residenteInfo[5] : 'N/A'}</p>
 
-            <h4>Resumen General de Deudas y Saldos</h4>
+            <h4>Resumen de Saldos del Período</h4>
             <div style="display:flex; gap: 20px; margin-bottom: 20px; flex-wrap:wrap;">
-                <div style="padding:10px; border-radius:5px; background-color:#fff0f1;"><b>Deuda G.C. Total:</b> <span style="color:red; font-weight:bold;">$${deudaTotalGC.toLocaleString('es-CL')}</span></div>
-                <div style="padding:10px; border-radius:5px; background-color:#fff8e1;"><b>Deuda Convenio:</b> <span style="color:#f57f17; font-weight:bold;">$${deudaTotalConvenio.toLocaleString('es-CL')}</span></div>
-                <div style="padding:10px; border-radius:5px; background-color:#e8f5e9;"><b>Saldo a Favor:</b> <span style="color:#2e7d32; font-weight:bold;">$${saldoAFavor.toLocaleString('es-CL')}</span></div>
+                <div style="padding:10px; border-radius:5px; background-color:#fff0f1;"><b>Cargos G.C. del Período:</b> <span style="color:red; font-weight:bold;">$${deudaTotalGC.toLocaleString('es-CL')}</span></div>
+                <div style="padding:10px; border-radius:5px; background-color:#fff8e1;"><b>Deuda Convenio Total:</b> <span style="color:#f57f17; font-weight:bold;">$${deudaTotalConvenio.toLocaleString('es-CL')}</span></div>
+                <div style="padding:10px; border-radius:5px; background-color:#e8f5e9;"><b>Saldo a Favor Total:</b> <span style="color:#2e7d32; font-weight:bold;">$${saldoAFavor.toLocaleString('es-CL')}</span></div>
             </div>
 
             <h4>Movimientos en el Período Seleccionado</h4>
             <div class="table-container">
                 <table class="table">
-                    <thead><tr><th>Fecha Pago</th><th>Período</th><th>Interés</th><th>Multa</th><th>Monto Pagado G.C.</th><th>Saldo</th><th>Uso Saldo a Favor</th><th>Abono Convenio</th><th>Deuda Pendiente</th><th>Estado</th></tr></thead>
+                    <thead>
+                        <tr>
+                            <th>Fecha Pago</th>
+                            <th>Período</th>
+                            <th>Interés</th>
+                            <th>Multa</th>
+                            <th>Monto Pagado G.C.</th>
+                            <th>Meses Deuda</th> {/* */}
+                            <th>Deuda Pendiente</th>
+                            <th>Estado</th>
+                        </tr>
+                    </thead>
                     <tbody>
                         ${movimientosAVisualizar.map(m => {
                             const deuda = parseFloat(m.Deuda_Total || 0);
-                            const usoSaldo = parseFloat(m.Saldo_Favor_Usado || 0);
-                            const saldo = parseFloat(m['Saldo_Pendiente_o_a_favor'] || 0);
                             return `
                             <tr>
                                 <td>${m.Fecha_Pago ? new Date(m.Fecha_Pago.replace(/-/g,'/')).toLocaleDateString('es-CL', { timeZone: 'UTC' }) : '---'}</td>
@@ -409,23 +410,19 @@ function generarInformeEstadoParcela() {
                                 <td>$${parseFloat(m.Interes || 0).toLocaleString('es-CL')}</td>
                                 <td>$${parseFloat(m['Multa_1/4'] || 0).toLocaleString('es-CL')}</td>
                                 <td>$${parseFloat(m.Monto_Pagado || 0).toLocaleString('es-CL')}</td>
-                                <td style="color:${saldo > 0 ? '#2e7d32' : (saldo < 0 ? 'red' : 'inherit')}; font-weight: ${saldo !== 0 ? 'bold' : 'normal'};">$${saldo.toLocaleString('es-CL')}</td>
-                                <td style="color:#2e7d32; font-weight: ${usoSaldo > 0 ? 'bold' : 'normal'};">$${usoSaldo.toLocaleString('es-CL')}</td>
-                                <td>$${parseFloat(m.Abono_Convenio || 0).toLocaleString('es-CL')}</td>
+                                <td style="text-align:center;">${m.Meses_Inpagos || 0}</td> {/* */}
                                 <td style="${deuda > 0 ? 'color:red; font-weight:bold;' : ''}">$${deuda.toLocaleString('es-CL')}</td>
                                 <td>${m.Estado}</td>
                             </tr>
-                        `}).join('') || `<tr><td colspan="10" style="text-align:center;">No hay cargos de gastos comunes en el período seleccionado.</td></tr>`}
+                        `}).join('') || `<tr><td colspan="8" style="text-align:center;">No hay cargos de gastos comunes en el período seleccionado.</td></tr>`}
                     </tbody>
                     <tfoot style="font-weight:bold;">
                         <tr style="background-color: #f8f9fa; border-top: 2px solid #dee2e6;">
-                            <td style="padding: 0.75rem; text-align:right;" colspan="2">Totales:</td>
+                            <td style="padding: 0.75rem; text-align:right;" colspan="2">Totales del Período:</td>
                             <td style="padding: 0.75rem;">$${totalInteres.toLocaleString('es-CL')}</td>
                             <td style="padding: 0.75rem;">$${totalMulta.toLocaleString('es-CL')}</td>
                             <td style="padding: 0.75rem;">$${totalPagadoGC.toLocaleString('es-CL')}</td>
-                            <td style="padding: 0.75rem; color:${totalSaldo > 0 ? '#2e7d32' : (totalSaldo < 0 ? 'red' : 'inherit')};">$${totalSaldo.toLocaleString('es-CL')}</td>
-                            <td style="padding: 0.75rem; color:#2e7d32;">$${totalUsoSaldoFavor.toLocaleString('es-CL')}</td>
-                            <td style="padding: 0.75rem;">$${totalAbonoConvenio.toLocaleString('es-CL')}</td>
+                            <td style="padding: 0.75rem;"></td> {/* */}
                             <td style="padding: 0.75rem; color:red;">$${totalDeudaPendiente.toLocaleString('es-CL')}</td>
                             <td style="padding: 0.75rem;"></td>
                         </tr>
@@ -440,22 +437,20 @@ function generarInformeEstadoParcela() {
             ["Estado de Cuenta - Parcela", filtros.parcela],
             ["Nombre Residente", residenteInfo ? residenteInfo[1] : 'N/A'],
             [],
-            ["Fecha Pago", "Periodo", "Interés", "Multa", "Monto Pagado G.C.", "Saldo", "Uso Saldo a Favor", "Abono Convenio", "Deuda Pendiente", "Estado"],
+            ["Fecha Pago", "Periodo", "Interés", "Multa", "Monto Pagado G.C.", "Meses Deuda", "Deuda Pendiente", "Estado"], // <-- CABECERA EXCEL ACTUALIZADA
             ...movimientosAVisualizar.map(m => [
                 m.Fecha_Pago ? new Date(m.Fecha_Pago.replace(/-/g,'/')).toLocaleDateString('es-CL', { timeZone: 'UTC' }) : '---',
                 m.Periodo,
                 parseFloat(m.Interes || 0),
                 parseFloat(m['Multa_1/4'] || 0),
                 parseFloat(m.Monto_Pagado || 0),
-                parseFloat(m['Saldo_Pendiente_o_a_favor'] || 0),
-                parseFloat(m.Saldo_Favor_Usado || 0),
-                parseFloat(m.Abono_Convenio || 0),
+                parseInt(m.Meses_Inpagos || 0), // <-- DATO EXCEL ACTUALIZADO
                 parseFloat(m.Deuda_Total || 0),
                 m.Estado
             ])];
         
         dataToExport.push([
-            "", "Totales:", totalInteres, totalMulta, totalPagadoGC, totalSaldo, totalUsoSaldoFavor, totalAbonoConvenio, totalDeudaPendiente, ""
+            "", "Totales:", totalInteres, totalMulta, totalPagadoGC, "", totalDeudaPendiente, "" // <-- TOTALES EXCEL ACTUALIZADOS
         ]);
 
         const ws = XLSX.utils.aoa_to_sheet(dataToExport);
@@ -473,7 +468,6 @@ function generarInformeEstadoParcela() {
         mostrarSpinner();
         try {
             const asunto = `Estado de Cuenta - Parcela ${filtros.parcela}`;
-            // ▼ MODIFICADO: Se pasan todos los totales a la función del correo.
             const datosParaCorreo = {
                 nombreResidente: residenteInfo[1],
                 numeroParcela: filtros.parcela,
