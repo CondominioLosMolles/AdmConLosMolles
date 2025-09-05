@@ -1,5 +1,5 @@
 // =================================================================================
-// ===== GASTOS_COMUNES.JS - CÓDIGO COMPLETO Y FINAL (CON BOTÓN DE ACCIÓN) =====
+// ===== GASTOS_COMUNES.JS - CÓDIGO COMPLETO Y FINAL (CON TODAS LAS CORRECCIONES) =====
 // =================================================================================
 
 // Constantes globales para el módulo
@@ -116,15 +116,19 @@ async function cargarGastosComunes() {
     const deudaDelPeriodo = valorGC + interes + multa;
     const saldoTransaccion = montoTotalAbonadoGC - deudaDelPeriodo;
 
+    // ▼ INICIO: CÓDIGO MODIFICADO ▼
+    // Se crea una variable para el resultado final, que será más clara.
     let resultadoHtml;
 
     if (saldoTransaccion >= 0) {
+        // El período está pagado.
         resultadoHtml = `
             <tr style="font-weight:bold; border-top:2px solid #2e7d32;">
                 <td style="padding:10px 0; color:#2e7d32; font-size:1.1em;">Estado del Período:</td>
                 <td style="padding:10px 0; text-align:right; color:#2e7d32; font-size:1.1em;">PAGADO</td>
             </tr>
         `;
+        // Solo se muestra el saldo a favor si es mayor que cero.
         if (saldoTransaccion > 0) {
             resultadoHtml += `
                 <tr>
@@ -134,6 +138,7 @@ async function cargarGastosComunes() {
             `;
         }
     } else {
+        // El período queda con deuda.
         resultadoHtml = `
             <tr style="font-weight:bold; border-top:2px solid #cccccc;">
                 <td style="padding:10px 0; color:#d32f2f;">Saldo pendiente del Período:</td>
@@ -141,6 +146,7 @@ async function cargarGastosComunes() {
             </tr>
         `;
     }
+    // ▲ FIN: CÓDIGO MODIFICADO ▲
 
     return `
     <!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><title>Comprobante de Pago</title></head>
@@ -173,26 +179,6 @@ async function cargarGastosComunes() {
     </body></html>`;
 }
 
-    async function guardarDetallesPago(datosPago) {
-        mostrarSpinner();
-        try {
-            await gapi.client.request({
-                'path': `https://script.googleapis.com/v1/scripts/${SCRIPT_ID}:run`,
-                'method': 'POST',
-                'body': { 'function': 'guardarDetallesPago_GS', 'parameters': [datosPago] }
-            });
-            await cargarGastosComunes(); 
-            document.getElementById('filtroParcela').value = datosPago.nParcela;
-            filtrarYRenderizar();
-            mostrarMensaje('Pago guardado con éxito.', 'success');
-        } catch (err) {
-            const errorMessage = err.result?.error?.message || err.message || 'Error desconocido.';
-            mostrarMensaje(`Error al guardar el pago: ${errorMessage}`, 'error');
-        } finally {
-            ocultarSpinner();
-        }
-    }
-
     async function guardarConvenio(nParcela, datosConvenio) {
       mostrarSpinner();
       try {
@@ -204,7 +190,9 @@ async function cargarGastosComunes() {
             'parameters': [nParcela, datosConvenio]
           }
         });
+        // Recargar los datos para reflejar los cambios
         await cargarGastosComunes();
+        // Forzar el filtro para ver la parcela actualizada
         document.getElementById('filtroParcela').value = nParcela;
         filtrarYRenderizar();
         mostrarMensaje('Convenio guardado y deudas anteriores congeladas con éxito.', 'success');
@@ -247,7 +235,7 @@ async function cargarGastosComunes() {
         const instruccion = `Para formalizar el convenio de la parcela ${nParcela} (${nombreResidente}), por favor, pegue aquí el enlace permanente del correo de aceptación del residente.\n\nPara obtener el enlace en Gmail:\n1. Abra el correo de aceptación.\n2. Haga clic en los tres puntos (Más opciones).\n3. Seleccione "Imprimir".\n4. En la ventana de impresión, copie la URL de la barra de direcciones del navegador.`;
         const urlConvenio = prompt(instruccion, "");
 
-        if (urlConvenio === null) return;
+        if (urlConvenio === null) return; // El usuario canceló
         if (urlConvenio.trim() === "" || !urlConvenio.startsWith("http")) {
             alert("El enlace proporcionado no es válido. Por favor, inténtelo de nuevo.");
             return;
@@ -292,6 +280,10 @@ async function cargarGastosComunes() {
             .estado-moroso { background-color: #dc3545; color: white; } 
             .estado-abono { background-color: #ffc107; color: #333; } 
             .estado-en-convenio { background-color: #0dcaf0; color: #000; }
+            .fila-clicable:hover { background-color: #e9f1fb; cursor: pointer; } 
+            #detalle-pago-grid { display: grid; grid-template-columns: auto 1fr; gap: 10px 20px; align-items: center;} 
+            #detalle-pago-grid b { grid-column: 1; text-align: right; } 
+            #detalle-pago-grid span { grid-column: 2; text-align: left; word-break: break-all; } 
             .suggestion-item { padding: 8px 12px; cursor: pointer; } 
             .suggestion-item:hover { background-color: #e9f1fb; } 
             #table-pagos { table-layout: fixed; width: 100%; border-collapse: collapse; } 
@@ -305,22 +297,6 @@ async function cargarGastosComunes() {
             .saldo-info { padding: 10px; border-radius: 5px; margin-top: 5px; font-weight: bold; text-align: center; } 
             .saldo-convenio { background-color: #fff8e1; color: #f57f17; } 
             .saldo-favor { background-color: #e8f5e9; color: #2e7d32; }
-            .swal2-label { margin-top: 1em !important; }
-
-             /* ▼ NUEVO ESTILO PARA EL BOTÓN DE ACCIÓN ▼ */
-            .btn-accion-pago {
-                padding: 4px 10px;
-                font-size: 13px;
-                cursor: pointer;
-                border: none;
-                background-color: #007bff;
-                color: white;
-                border-radius: 5px;
-                font-weight: 600;
-            }
-            .btn-accion-pago:hover {
-                background-color: #0056b3;
-            }
         </style>
         <div style="display:flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;"><h2>Gastos Comunes</h2></div>
         <div style="display: flex; flex-wrap: wrap; gap: 24px; align-items: stretch;">
@@ -409,6 +385,13 @@ async function cargarGastosComunes() {
                 <form id="formEnviarComprobante" style="display:flex; flex-direction:column; gap:15px;"><div style="display:flex; gap: 15px; flex-wrap: wrap;"><div style="flex: 1; min-width: 120px;"><label><b>N° Parcela</b></label><input type="number" id="inputNParcelaComprobante" min="1" max="26" required style="width:100%;"></div><div style="flex: 2; min-width: 200px;"><label><b>Residente(s)</b></label><input type="text" id="inputNombreResidenteComprobante" readonly style="width:100%; background:#eee;"></div></div><div id="periodo-selector-container" style="display: none;"><label><b>Seleccione el Comprobante</b></label><select id="selectPeriodoComprobante" style="width:100%; padding: 11px 10px;"></select></div><div><label><b>Email(s) Destinatario</b></label><input type="email" id="inputEmailComprobante" readonly style="width:100%; background:#eee;"></div><div><label><b>Asunto</b></label><input type="text" id="inputAsuntoComprobante" readonly style="width:100%; background:#eee;"></div><div><label><b>Previsualización del Correo</b></label><div id="divCuerpoComprobante" style="width:100%; height: 250px; background:#f8f9fa; border: 1px solid #ccc; border-radius: 4px; padding: 10px; overflow-y: auto;"><span style="color: #6c757d;">Ingrese un N° de Parcela para generar la previsualización.</span></div></div><div style="text-align: right; margin-top: 10px;"><button class="btn secondary" type="button" id="btnCerrarModalComprobante">Cancelar</button><button class="btn" type="submit">Enviar Correo</button></div></form>
             </div>
         </div>
+        <div id="modalDetallePago" class="modal" style="display:none;">
+            <div class="modal-content">
+                <h3 style="margin-top:0;">Detalle Completo del Registro</h3>
+                <div id="contenidoDetallePago" style="margin-bottom: 20px;"></div>
+                <div style="text-align: right;"><button id="btnCerrarModalDetalle" class="btn secondary">Cerrar</button></div>
+            </div>
+        </div>
         
         <div id="modalConvenio" class="modal" style="display:none;">
             <div class="modal-content">
@@ -436,6 +419,47 @@ async function cargarGastosComunes() {
                     <div style="text-align: right; margin-top: 20px;">
                         <button class="btn secondary" type="button" id="btnCerrarModalConvenio">Cancelar</button>
                         <button class="btn" type="submit">Guardar Convenio</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        
+        <!-- MODAL PARA ABONAR A DEUDAS EXISTENTES -->
+        <div id="modalAbonar" class="modal" style="display:none;">
+            <div class="modal-content">
+                <h3>Abonar a Deuda Existente</h3>
+                <form id="formAbonar">
+                    <input type="hidden" id="abonarIdPago">
+                    <div>
+                        <label>Período</label>
+                        <input type="text" id="abonarPeriodo" readonly>
+                    </div>
+                    <div>
+                        <label>Deuda Pendiente</label>
+                        <input type="text" id="abonarDeudaPendiente" readonly>
+                    </div>
+                    <div>
+                        <label>Monto a Abonar (CLP)</label>
+                        <input type="number" id="abonarMonto" min="0" step="1" required>
+                    </div>
+                    <div>
+                        <label>Fecha de Pago</label>
+                        <input type="date" id="abonarFechaPago" required>
+                    </div>
+                    <div>
+                        <label>Método de Pago</label>
+                        <select id="abonarMetodoPago" required>
+                            <option value="Transferencia">Transferencia</option>
+                            <option value="Efectivo">Efectivo</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label>Descripción (Opcional)</label>
+                        <textarea id="abonarDescripcion" rows="2" placeholder="Ej: Abono a intereses y multas"></textarea>
+                    </div>
+                    <div style="text-align: right; margin-top: 20px;">
+                        <button class="btn secondary" type="button" id="btnCerrarModalAbonar">Cancelar</button>
+                        <button class="btn" type="submit">Registrar Abono</button>
                     </div>
                 </form>
             </div>
@@ -508,9 +532,16 @@ async function cargarGastosComunes() {
         datos.forEach(pago => {
             const estadoClass = (pago.Estado || 'pendiente').toLowerCase().replace(/ /g, '-');
             const tr = document.createElement('tr');
+            tr.dataset.idPago = pago.ID_Pago;
+            tr.classList.add('fila-clicable');
             const abonoConvenio = parseFloat(pago.Abono_Convenio || 0);
             const comprobanteEnviado = pago.Comprobante_Enviado === 'SI' ? '<span class="comprobante-enviado">✓</span>' : '';
-            const botonAccion = `<button class="btn-accion-pago" data-id-pago="${pago.ID_Pago}">Editar/Pagar</button>`;
+            
+            // Botón para abonar a deudas existentes
+            let abonarButton = '';
+            if (pago.Estado !== 'Pagado' && parseFloat(pago.Deuda_Total || 0) > 0) {
+                abonarButton = `<button class="btn small abonar-btn" data-id="${pago.ID_Pago}">Abonar</button>`;
+            }
 
             tr.innerHTML = `
                 <td>${pago.Nombre_Residente || 'N/A'}</td>
@@ -522,28 +553,32 @@ async function cargarGastosComunes() {
                 <td>${pago.Fecha_Pago ? new Date(pago.Fecha_Pago.replace(/-/g, '/')).toLocaleDateString('es-CL', {timeZone:'UTC'}) : '---'}</td>
                 <td><span class="estado-tag estado-${estadoClass}">${pago.Estado || 'Pendiente'}</span></td>
                 <td>${comprobanteEnviado}</td>
-                <td>${botonAccion}</td>`;
+                <td>${abonarButton}</td>`;
             tbodyGastos.appendChild(tr);
         });
         const tabla = document.getElementById('table-pagos');
         aplicarAnchosGuardados(tabla);
         hacerColumnasRedimensionables(tabla);
+        configurarAbonos(); // Configurar eventos para los botones de abonar
     }
     
+    // ▼ INICIO: FUNCIÓN COMPLETAMENTE ACTUALIZADA ▼
     function renderizarTablaResidente(parcela, anio) {
         const residente = residentes.find(r => String(r[3]) === String(parcela));
         if (!residente) { 
             document.getElementById('widget-convenio').style.display = 'none';
-            tbodyGastos.innerHTML = `<tr><td colspan="11">No se encontró residente.</td></tr>`; 
+            tbodyGastos.innerHTML = `<tr><td colspan="12">No se encontró residente.</td></tr>`; 
             return; 
         }
 
         const widgetConvenio = document.getElementById('widget-convenio');
+        
+        // 1. La verificación ahora es más robusta: ignora mayúsculas/minúsculas y espacios.
         const convenioActivo = (residente[15] || '').trim().toUpperCase() === 'SI';
 
         if (convenioActivo) {
             widgetConvenio.style.display = 'block';
-            const deudaConvenioInicial = parseFloat(residente[19] || 0);
+            const deudaConvenioInicial = parseFloat(residente[19] || 0); // Columna T
             const totalAbonado = pagosGC_obj
                 .filter(p => String(p.N_Parcela) === String(parcela))
                 .reduce((sum, pago) => sum + parseFloat(pago.Abono_Convenio || 0), 0);
@@ -587,9 +622,11 @@ async function cargarGastosComunes() {
                 tbodyAbonos.innerHTML = `<tr><td colspan="3" style="text-align:center;">No hay abonos a convenio registrados para este año.</td></tr>`;
             }
         } else {
+            // Se oculta el widget si no hay convenio activo
             widgetConvenio.style.display = 'none';
         }
         
+        // 2. Se usa 'convenioActivo' (la variable corregida) y se cambia .textContent por .innerHTML para que el ícono se muestre correctamente.
         const nombreResidenteConConvenio = `${residente[1]} ${convenioActivo ? '<span title="Este residente tiene un convenio de pago activo" style="cursor:help;">📜</span>' : ''}`;
         document.querySelector('#detalle-gastos h3').innerHTML = `Detalle Anual de Gastos Comunes para ${nombreResidenteConConvenio} (Parcela ${parcela})`;
         
@@ -598,13 +635,10 @@ async function cargarGastosComunes() {
         
         MESES.forEach((mes, index) => {
             const pagoExistente = pagosGC_obj.find(p => String(p.N_Parcela) === String(parcela) && p.Periodo && formatearPeriodo(p.Periodo).toLowerCase().startsWith(mes.toLowerCase()) && p.anio == anio);
-            
             let interes = 0, multa = 0, saldo = 0, deudaPendiente = 0;
             let estado = 'Pendiente', montoPagado = 0, fechaPago = '---', metodoPago = '---', comprobanteEnviado = '';
-            let botonAccion = `<span style="color:#999;">Sin Registro</span>`;
-
             const fechaVencimiento = new Date(anio, index, 10);
-            if (pagoExistente && pagoExistente.ID_Pago) {
+            if (pagoExistente) {
                 estado = pagoExistente.Estado;
                 montoPagado = parseFloat(pagoExistente.Monto_Pagado || 0);
                 saldo = parseFloat(pagoExistente.Saldo_Pendiente_o_a_favor || 0);
@@ -614,10 +648,19 @@ async function cargarGastosComunes() {
                 fechaPago = pagoExistente.Fecha_Pago ? new Date(pagoExistente.Fecha_Pago.replace(/-/g, '/')).toLocaleDateString('es-CL', {timeZone: 'UTC'}) : '---';
                 metodoPago = pagoExistente.Metodo_Pago || '---';
                 comprobanteEnviado = pagoExistente.Comprobante_Enviado === 'SI' ? '<span class="comprobante-enviado">✓</span>' : '';
-                botonAccion = `<button class="btn-accion-pago" data-id-pago="${pagoExistente.ID_Pago}">Editar/Pagar</button>`;
             }
-            const tr = document.createElement('tr');
             
+            // Botón para abonar a deudas existentes
+            let abonarButton = '';
+            if (estado !== 'Pagado' && deudaPendiente > 0 && pagoExistente) {
+                abonarButton = `<button class="btn small abonar-btn" data-id="${pagoExistente.ID_Pago}">Abonar</button>`;
+            }
+            
+            const tr = document.createElement('tr');
+            if (pagoExistente) {
+                tr.dataset.idPago = pagoExistente.ID_Pago;
+                tr.classList.add('fila-clicable');
+            }
             const estadoClass = (estado || 'pendiente').toLowerCase().replace(/ /g, '-');
             tr.innerHTML = `
                 <td><b>${mes} ${anio}</b></td>
@@ -631,19 +674,21 @@ async function cargarGastosComunes() {
                 <td>${metodoPago}</td>
                 <td><span class="estado-tag estado-${estadoClass}">${estado || 'Pendiente'}</span></td>
                 <td>${comprobanteEnviado}</td>
-                <td>${botonAccion}</td>`;
+                <td>${abonarButton}</td>`;
             tbodyGastos.appendChild(tr);
         });
+        configurarAbonos(); // Configurar eventos para los botones de abonar
     }
+    // ▲ FIN: FUNCIÓN COMPLETAMENTE ACTUALIZADA ▲
 
     function abrirModalConvenio(nParcela, residente) {
         const modal = document.getElementById('modalConvenio');
         document.getElementById('formConvenio').reset();
         document.getElementById('convenioNParcela').value = nParcela;
         
-        document.getElementById('convenioDeudaTotal').value = residente[19] || 0;
-        document.getElementById('convenioCuotas').value = residente[16] || 1;
-        const fecha = residente[18];
+        document.getElementById('convenioDeudaTotal').value = residente[19] || 0; // Columna T
+        document.getElementById('convenioCuotas').value = residente[16] || 1; // Columna Q
+        const fecha = residente[18]; // Columna S
         document.getElementById('convenioFechaInicio').value = fecha ? new Date(fecha).toISOString().split('T')[0] : '';
         
         calcularValorCuota(); 
@@ -662,72 +707,44 @@ async function cargarGastosComunes() {
             mostrarMensaje('No se encontró el registro del pago.', 'error');
             return;
         }
-
+        const modal = document.getElementById('modalDetallePago');
+        const contenido = document.getElementById('contenidoDetallePago');
         const valorGC = parseFloat(pago.Valor_Gasto_Comun || 0);
         const interes = parseFloat(pago.Interes || 0);
         const multa = parseFloat(pago['Multa_1/4'] || 0);
         const deudaDelPeriodo = valorGC + interes + multa;
-        const montoPagadoActual = parseFloat(pago.Monto_Pagado || 0);
-        const saldoPendiente = deudaDelPeriodo - montoPagadoActual;
-        
-        Swal.fire({
-            title: `Registrar Pago para ${formatearPeriodo(pago.Periodo)}`,
-            html: `
-                <div style="text-align: left; margin-top: 1.5em;">
-                    <p><b>Residente:</b> ${pago.Nombre_Residente} (Parcela ${pago.N_Parcela})</p>
-                    <p><b>Deuda Total del Período:</b> $${deudaDelPeriodo.toLocaleString('es-CL')}</p>
-                    <p><b>Monto Pagado Actual:</b> $${montoPagadoActual.toLocaleString('es-CL')}</p>
-                    ${saldoPendiente > 0 ? `<p style="color: red; font-weight: bold;">Saldo Pendiente: $${saldoPendiente.toLocaleString('es-CL')}</p>` : ''}
-                    <hr style="margin: 1.5em 0;">
-                    
-                    <label for="swal-monto-pagado" class="swal2-label">Monto Pagado Total (reemplaza valor actual):</label>
-                    <input id="swal-monto-pagado" class="swal2-input" type="number" placeholder="Dejar en blanco para no modificar">
-                    
-                    <label for="swal-abono" class="swal2-label" style="font-weight:bold; color:#0056b3;">Abonar a la Deuda (se suma al pago existente):</label>
-                    <input id="swal-abono" class="swal2-input" type="number" placeholder="Ej: 5250">
-                    
-                    <label for="swal-metodo-pago" class="swal2-label">Método de Pago:</label>
-                    <select id="swal-metodo-pago" class="swal2-select">
-                        <option value="Transferencia" ${pago.Metodo_Pago === 'Transferencia' ? 'selected' : ''}>Transferencia</option>
-                        <option value="Efectivo" ${pago.Metodo_Pago === 'Efectivo' ? 'selected' : ''}>Efectivo</option>
-                    </select>
-                    
-                    <label for="swal-descripcion-pago" class="swal2-label">Descripción / Nota (opcional):</label>
-                    <textarea id="swal-descripcion-pago" class="swal2-textarea" placeholder="Ej: Abono de intereses pendientes...">${pago.Descripcion_Pago || ''}</textarea>
-                </div>
-            `,
-            showCancelButton: true,
-            confirmButtonText: 'Guardar Pago',
-            cancelButtonText: 'Cancelar',
-            preConfirm: () => {
-                const montoPagado = document.getElementById('swal-monto-pagado').value;
-                const abono = document.getElementById('swal-abono').value;
+        const montoPagadoGC = parseFloat(pago.Monto_Pagado || 0);
+        const saldoFavorUsado = parseFloat(pago.Saldo_Favor_Usado || 0);
+        const saldoTransaccion = parseFloat(pago.Saldo_Pendiente_o_a_favor || 0);
+        const saldoFinalTexto = saldoTransaccion >= 0 ? `A favor: $${saldoTransaccion.toLocaleString('es-CL')}` : `Pendiente: $${Math.abs(saldoTransaccion).toLocaleString('es-CL')}`;
+        const abonoConvenio = parseFloat(pago.Abono_Convenio || 0);
+        const colorAbono = abonoConvenio > 0 ? 'darkblue' : '#555';
+        const descripcionPago = pago.Descripcion_Pago || 'Sin descripción.';
+        let filaComprobante = pago.ID_Comprobante_Drive 
+            ? `<b>Comprobante:</b> <span><a href="${pago.ID_Comprobante_Drive}" target="_blank" class="btn small" style="display: inline-block; text-decoration: none;">Ver Documento</a></span>`
+            : '<b>Comprobante:</b> <span>No adjunto</span>';
 
-                if (montoPagado && abono) {
-                    Swal.showValidationMessage('Por favor, ingrese un valor en "Monto Pagado Total" O en "Abonar", pero no en ambos.');
-                    return false;
-                }
-                
-                if (montoPagado === '' && abono === '') {
-                     Swal.showValidationMessage('Debe ingresar un monto a pagar o un abono.');
-                    return false;
-                }
-
-                return {
-                    idPago: pago.ID_Pago,
-                    nParcela: pago.N_Parcela,
-                    rowNum: pago.rowNum,
-                    montoPagado: montoPagado ? parseFloat(montoPagado) : null,
-                    abono: abono ? parseFloat(abono) : null,
-                    metodoPago: document.getElementById('swal-metodo-pago').value,
-                    descripcionPago: document.getElementById('swal-descripcion-pago').value
-                };
-            }
-        }).then((result) => {
-            if (result.isConfirmed) {
-                guardarDetallesPago(result.value);
-            }
-        });
+        contenido.innerHTML = `
+            <div id="detalle-pago-grid">
+                <b>Residente:</b>        <span>${pago.Nombre_Residente}</span>
+                <b>N° Parcela:</b>       <span>${pago.N_Parcela}</span>
+                <b>Período pagado:</b>   <span>${formatearPeriodo(pago.Periodo)}</span>
+                <hr style="grid-column: 1 / -1;">
+                <b style="color:#2a7ca3;">Deuda del Período G.C.:</b> <span style="font-weight:bold; color:#2a7ca3;">$${deudaDelPeriodo.toLocaleString('es-CL')}</span>
+                <hr style="grid-column: 1 / -1;">
+                <b>Monto Pagado (transf/efectivo):</b> <span style="font-weight:bold; color:green;">$${montoPagadoGC.toLocaleString('es-CL')}</span>
+                <b>Saldo a Favor Utilizado:</b> <span style="font-weight:bold; color:purple;">$${saldoFavorUsado.toLocaleString('es-CL')}</span>
+                <b>Abono a Convenio:</b> <span style="font-weight:bold; color:${colorAbono};">$${abonoConvenio.toLocaleString('es-CL')}</span>
+                <b>Fecha de Pago:</b>      <span>${new Date(pago.Fecha_Pago.replace(/-/g, '/')).toLocaleDateString('es-CL', {timeZone:'UTC'})}</span>
+                <b>Método de Pago:</b>     <span>${pago.Metodo_Pago}</span>
+                <b style="font-size:1.1em;">Resultado Saldo G.C.:</b> <span style="font-weight:bold; font-size:1.1em; color:${saldoTransaccion < 0 ? 'red' : 'green'};">${saldoFinalTexto}</span>
+                <hr style="grid-column: 1 / -1;">
+                <b>Estado del pago:</b>    <span>${pago.Estado}</span>
+                ${filaComprobante}
+                <b style="grid-column:1 / -1;text-align:left;margin-bottom:-5px;margin-top:10px;">Descripción:</b>
+                <div style="grid-column:1 / -1;white-space:pre-wrap;word-wrap:break-word;background:#f8f9fa;padding:8px 12px;border-radius:4px;border:1px solid #eee;min-height:40px;">${descripcionPago}</div>
+            </div>`;
+        modal.style.display = 'flex';
     }
 
     function filtrarYRenderizar() {
@@ -751,6 +768,103 @@ async function cargarGastosComunes() {
             const timcValor = anioData[mesNumero] ? `<b>${anioData[mesNumero]}%</b>` : 'N/A';
             timcList.innerHTML += `<div style="flex-basis: 15%;">${mes}: ${timcValor}</div>`;
         });
+    }
+
+    // =======================================================
+    // FUNCIONES PARA MANEJAR ABONOS A DEUDAS EXISTENTES
+    // =======================================================
+
+    function configurarAbonos() {
+        document.querySelectorAll('.abonar-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const idPago = e.target.dataset.id;
+                const pago = pagosGC_obj.find(p => p.ID_Pago === idPago);
+                
+                if (pago) {
+                    document.getElementById('abonarIdPago').value = idPago;
+                    document.getElementById('abonarPeriodo').value = formatearPeriodo(pago.Periodo);
+                    document.getElementById('abonarDeudaPendiente').value = `$${parseFloat(pago.Deuda_Total || 0).toLocaleString('es-CL')}`;
+                    document.getElementById('abonarMonto').value = '';
+                    document.getElementById('abonarFechaPago').value = new Date().toISOString().split('T')[0];
+                    document.getElementById('abonarMetodoPago').value = 'Transferencia';
+                    document.getElementById('abonarDescripcion').value = '';
+                    
+                    document.getElementById('modalAbonar').style.display = 'flex';
+                }
+            });
+        });
+        
+        document.getElementById('btnCerrarModalAbonar').addEventListener('click', () => {
+            document.getElementById('modalAbonar').style.display = 'none';
+        });
+        
+        document.getElementById('formAbonar').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            await procesarAbono();
+        });
+    }
+
+    async function procesarAbono() {
+        const idPago = document.getElementById('abonarIdPago').value;
+        const montoAbonar = parseFloat(document.getElementById('abonarMonto').value);
+        const fechaPago = document.getElementById('abonarFechaPago').value;
+        const metodoPago = document.getElementById('abonarMetodoPago').value;
+        const descripcion = document.getElementById('abonarDescripcion').value;
+        
+        const pago = pagosGC_obj.find(p => p.ID_Pago === idPago);
+        if (!pago) {
+            mostrarMensaje('No se encontró el registro de pago.', 'error');
+            return;
+        }
+        
+        const montoPagadoActual = parseFloat(pago.Monto_Pagado || 0);
+        const nuevoMontoPagado = montoPagadoActual + montoAbonar;
+        const deudaPendiente = parseFloat(pago.Deuda_Total || 0);
+        const nuevaDeudaPendiente = Math.max(0, deudaPendiente - montoAbonar);
+        
+        // Determinar el nuevo estado
+        let nuevoEstado = pago.Estado;
+        if (nuevaDeudaPendiente === 0) {
+            nuevoEstado = 'Pagado';
+        } else if (nuevoMontoPagado > 0) {
+            nuevoEstado = pago.Estado === 'En Convenio' ? 'En Convenio' : 'Abonado';
+        }
+        
+        // Preparar datos para actualizar
+        const datosActualizacion = {
+            rowNum: pago.rowNum,
+            montoPagado: nuevoMontoPagado,
+            saldo: nuevoMontoPagado - (parseFloat(pago.Valor_Gasto_Comun || 0) + parseFloat(pago.Interes || 0) + parseFloat(pago['Multa_1/4'] || 0)),
+            deudaTotal: nuevaDeudaPendiente,
+            fechaPago: fechaPago,
+            metodoPago: metodoPago,
+            estado: nuevoEstado,
+            idComprobante: pago.ID_Comprobante_Drive,
+            abonoConvenio: pago.Abono_Convenio,
+            descripcionPago: descripcion,
+            saldoFavorUsado: pago.Saldo_Favor_Usado
+        };
+        
+        mostrarSpinner();
+        try {
+            await actualizarPagoGC(datosActualizacion);
+            
+            // Actualizar el objeto local
+            pago.Monto_Pagado = nuevoMontoPagado;
+            pago.Deuda_Total = nuevaDeudaPendiente;
+            pago.Fecha_Pago = fechaPago;
+            pago.Metodo_Pago = metodoPago;
+            pago.Estado = nuevoEstado;
+            pago.Descripcion_Pago = descripcion;
+            
+            mostrarMensaje('Abono registrado correctamente.', 'success');
+            document.getElementById('modalAbonar').style.display = 'none';
+            filtrarYRenderizar();
+        } catch (err) {
+            mostrarMensaje('Error al registrar el abono: ' + err.message, 'error');
+        } finally {
+            ocultarSpinner();
+        }
     }
 
     // =======================================================
@@ -1076,16 +1190,22 @@ async function cargarGastosComunes() {
         filtrarYRenderizar();
     });
     
-    // ▼ LISTENER DE CLIC MODIFICADO Y ROBUSTO ▼
     document.getElementById('tbody-gastos').addEventListener('click', (e) => {
-        if (e.target.classList.contains('btn-accion-pago')) {
-            const idPago = e.target.dataset.idPago;
-            if (idPago) {
-                abrirModalDetalle(idPago);
-            }
+        const fila = e.target.closest('tr.fila-clicable');
+        if (fila && fila.dataset.idPago) {
+            abrirModalDetalle(fila.dataset.idPago);
         }
     });
 
+    document.getElementById('modalDetallePago').addEventListener('click', (e) => {
+        if(e.target.id === 'modalDetallePago' || e.target.id === 'btnCerrarModalDetalle') {
+            e.currentTarget.style.display = 'none';
+        }
+    });
+    document.getElementById('btnCerrarModalDetalle').addEventListener('click', () => {
+        document.getElementById('modalDetallePago').style.display = 'none';
+    });
+    
     document.getElementById('btnCerrarModalConvenio').addEventListener('click', () => {
         document.getElementById('modalConvenio').style.display = 'none';
     });
