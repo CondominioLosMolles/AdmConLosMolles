@@ -591,15 +591,14 @@ async function cargarGastosComunes() {
     MESES.forEach((mes, index) => {
         const pagoExistente = pagosGC_obj.find(p => String(p.N_Parcela) === String(parcela) && p.Periodo && formatearPeriodo(p.Periodo).toLowerCase().startsWith(mes.toLowerCase()) && p.anio == anio);
         
-        // ▼ LÍNEAS CORREGIDAS ▼
-        // Aquí definimos los valores por defecto para todas las variables.
         let interes = 0, multa = 0, saldo = 0, deudaPendiente = 0;
         let estado = 'Pendiente', montoPagado = 0, fechaPago = '---', metodoPago = '---', comprobanteEnviado = '';
-        // ▲ FIN DE LÍNEAS CORREGIDAS ▲
 
         const fechaVencimiento = new Date(anio, index, 10);
 
-        if (pagoExistente) {
+        // ▼ LÍNEA CORREGIDA ▼
+        // Ahora nos aseguramos de que el pagoExistente no sea nulo y tenga un ID_Pago antes de usarlo.
+        if (pagoExistente && pagoExistente.ID_Pago) {
             estado = pagoExistente.Estado;
             montoPagado = parseFloat(pagoExistente.Monto_Pagado || 0);
             saldo = parseFloat(pagoExistente.Saldo_Pendiente_o_a_favor || 0);
@@ -612,7 +611,10 @@ async function cargarGastosComunes() {
         }
 
         const tr = document.createElement('tr');
-        if (pagoExistente) {
+        
+        // ▼ LÍNEA CORREGIDA ▼
+        // Se aplica la misma verificación aquí para evitar el error.
+        if (pagoExistente && pagoExistente.ID_Pago) {
             tr.dataset.idPago = pagoExistente.ID_Pago;
             tr.classList.add('fila-clicable');
         }
@@ -633,7 +635,6 @@ async function cargarGastosComunes() {
         tbodyGastos.appendChild(tr);
     });
 }
-
     function abrirModalConvenio(nParcela, residente) {
         const modal = document.getElementById('modalConvenio');
         document.getElementById('formConvenio').reset();
