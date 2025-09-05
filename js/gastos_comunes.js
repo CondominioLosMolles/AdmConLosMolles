@@ -522,109 +522,117 @@ async function cargarGastosComunes() {
         hacerColumnasRedimensionables(tabla);
     }
     
-    function renderizarTablaResidente(parcela, anio) {
-        const residente = residentes.find(r => String(r[3]) === String(parcela));
-        if (!residente) { 
-            document.getElementById('widget-convenio').style.display = 'none';
-            tbodyGastos.innerHTML = `<tr><td colspan="11">No se encontró residente.</td></tr>`; 
-            return; 
-        }
-
-        const widgetConvenio = document.getElementById('widget-convenio');
-        const convenioActivo = (residente[15] || '').trim().toUpperCase() === 'SI';
-
-        if (convenioActivo) {
-            widgetConvenio.style.display = 'block';
-            const deudaConvenioInicial = parseFloat(residente[19] || 0);
-            const totalAbonado = pagosGC_obj
-                .filter(p => String(p.N_Parcela) === String(parcela))
-                .reduce((sum, pago) => sum + parseFloat(pago.Abono_Convenio || 0), 0);
-            const saldoActualConvenio = deudaConvenioInicial - totalAbonado;
-
-            document.getElementById('convenio-summary-grid').innerHTML = `
-                <div>Deuda Original Convenio<span style="color: #dc3545;">$${deudaConvenioInicial.toLocaleString('es-CL')}</span></div>
-                <div>Total Abonado<span style="color: #198754;">$${totalAbonado.toLocaleString('es-CL')}</span></div>
-                <div>Saldo Convenio<span style="color: #ffc107;">$${saldoActualConvenio.toLocaleString('es-CL')}</span></div>
-                <div style="grid-column: 1 / -1; margin-top: 10px; display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
-                    <button id="btnAdministrarConvenio" class="btn small">Administrar Convenio</button>
-                    <button id="btnEnviarCorreoConvenio" class="btn secondary small">Enviar Acuerdo por Correo</button>
-                    <button id="btnFormalizarConvenio" class="btn small">Formalizar con Respaldo</button>
-                </div>
-            `;
-            
-            document.getElementById('btnAdministrarConvenio').addEventListener('click', () => abrirModalConvenio(parcela, residente));
-            
-            document.getElementById('btnEnviarCorreoConvenio').addEventListener('click', () => {
-                const datosConvenio = {
-                    deudaInicial: parseFloat(residente[19] || 0),
-                    cuotas: parseInt(residente[16] || 0),
-                    valorCuota: parseFloat(residente[17] || 0),
-                    fechaInicio: residente[18] || ''
-                };
-                enviarAcuerdoConvenio(residente, datosConvenio);
-            });
-
-            document.getElementById('btnFormalizarConvenio').addEventListener('click', () => formalizarConvenio(parcela, residente[1]));
-            
-            const abonosDelAnio = pagosGC_obj.filter(p => String(p.N_Parcela) === String(parcela) && p.anio == anio && parseFloat(p.Abono_Convenio || 0) > 0);
-            document.getElementById('thead-abonos').innerHTML = `<tr><th>Fecha de Pago</th><th>Monto Abonado</th><th>Comprobante</th></tr>`;
-            const tbodyAbonos = document.getElementById('tbody-abonos');
-            tbodyAbonos.innerHTML = '';
-            if(abonosDelAnio.length > 0) {
-                abonosDelAnio.forEach(abono => {
-                    const linkComprobante = abono.ID_Comprobante_Drive ? `<a href="${abono.ID_Comprobante_Drive}" target="_blank" class="btn small">Ver</a>` : 'N/A';
-                    tbodyAbonos.innerHTML += `<tr><td>${new Date(abono.Fecha_Pago.replace(/-/g, '/')).toLocaleDateString('es-CL', {timeZone:'UTC'})}</td><td>$${parseFloat(abono.Abono_Convenio).toLocaleString('es-CL')}</td><td>${linkComprobante}</td></tr>`;
-                });
-            } else {
-                tbodyAbonos.innerHTML = `<tr><td colspan="3" style="text-align:center;">No hay abonos a convenio registrados para este año.</td></tr>`;
-            }
-        } else {
-            widgetConvenio.style.display = 'none';
-        }
-        
-        const nombreResidenteConConvenio = `${residente[1]} ${convenioActivo ? '<span title="Este residente tiene un convenio de pago activo" style="cursor:help;">📜</span>' : ''}`;
-        document.querySelector('#detalle-gastos h3').innerHTML = `Detalle Anual de Gastos Comunes para ${nombreResidenteConConvenio} (Parcela ${parcela})`;
-        
-        theadGastos.innerHTML = `<tr><th>Período</th><th>Fecha Vencimiento</th><th>Monto Pagado</th><th>Saldo Transacción</th><th>Interés</th><th>Multa</th><th>Deuda Pendiente</th><th>Fecha Pago</th><th>Método Pago</th><th>Estado</th><th>Comprobante</th></tr>`;
-        tbodyGastos.innerHTML = '';
-        
-        MESES.forEach((mes, index) => {
-            const pagoExistente = pagosGC_obj.find(p => String(p.N_Parcela) === String(parcela) && p.Periodo && formatearPeriodo(p.Periodo).toLowerCase().startsWith(mes.toLowerCase()) && p.anio == anio);
-            let interes = 0, multa = 0, saldo = 0, deudaPendiente = 0;
-            let estado = 'Pendiente', montoPagado = 0, fechaPago = '---', metodoPago = '---', comprobanteEnviado = '';
-            const fechaVencimiento = new Date(anio, index, 10);
-            if (pagoExistente) {
-                estado = pagoExistente.Estado;
-                montoPagado = parseFloat(pagoExistente.Monto_Pagado || 0);
-                saldo = parseFloat(pagoExistente.Saldo_Pendiente_o_a_favor || 0);
-                deudaPendiente = parseFloat(pagoExistente.Deuda_Total || 0);
-                interes = parseFloat(pagoExistente.Interes || 0);
-                multa = parseFloat(pagoExistente['Multa_1/4'] || 0);
-                fechaPago = pagoExistente.Fecha_Pago ? new Date(pagoExistente.Fecha_Pago.replace(/-/g, '/')).toLocaleDateString('es-CL', {timeZone: 'UTC'}) : '---';
-                metodoPago = pagoExistente.Metodo_Pago || '---';
-                comprobanteEnviado = pagoExistente.Comprobante_Enviado === 'SI' ? '<span class="comprobante-enviado">✓</span>' : '';
-            }
-            const tr = document.createElement('tr');
-            if (pagoExistente) {
-                tr.dataset.idPago = pagoExistente.ID_Pago;
-                tr.classList.add('fila-clicable');
-            }
-            const estadoClass = (estado || 'pendiente').toLowerCase().replace(/ /g, '-');
-            tr.innerHTML = `
-                <td><b>${mes} ${anio}</b></td>
-                <td>${fechaVencimiento.toLocaleDateString('es-CL', {timeZone: 'UTC'})}</td>
-                <td>$${montoPagado.toLocaleString('es-CL')}</td>
-                <td style="color:${saldo < 0 ? 'red' : 'green'}; font-weight:bold;">$${saldo.toLocaleString('es-CL')}</td>
-                <td>$${interes.toLocaleString('es-CL', {minimumFractionDigits:2, maximumFractionDigits:2})}</td>
-                <td>$${multa.toLocaleString('es-CL')}</td>
-                <td style="font-weight:bold; color: red;">$${deudaPendiente.toLocaleString('es-CL')}</td>
-                <td>${fechaPago}</td>
-                <td>${metodoPago}</td>
-                <td><span class="estado-tag estado-${estadoClass}">${estado || 'Pendiente'}</span></td>
-                <td>${comprobanteEnviado}</td>`;
-            tbodyGastos.appendChild(tr);
-        });
+   function renderizarTablaResidente(parcela, anio) {
+    const residente = residentes.find(r => String(r[3]) === String(parcela));
+    if (!residente) { 
+        document.getElementById('widget-convenio').style.display = 'none';
+        tbodyGastos.innerHTML = `<tr><td colspan="11">No se encontró residente.</td></tr>`; 
+        return; 
     }
+
+    const widgetConvenio = document.getElementById('widget-convenio');
+    const convenioActivo = (residente[15] || '').trim().toUpperCase() === 'SI';
+
+    if (convenioActivo) {
+        widgetConvenio.style.display = 'block';
+        const deudaConvenioInicial = parseFloat(residente[19] || 0);
+        const totalAbonado = pagosGC_obj
+            .filter(p => String(p.N_Parcela) === String(parcela))
+            .reduce((sum, pago) => sum + parseFloat(pago.Abono_Convenio || 0), 0);
+        const saldoActualConvenio = deudaConvenioInicial - totalAbonado;
+
+        document.getElementById('convenio-summary-grid').innerHTML = `
+            <div>Deuda Original Convenio<span style="color: #dc3545;">$${deudaConvenioInicial.toLocaleString('es-CL')}</span></div>
+            <div>Total Abonado<span style="color: #198754;">$${totalAbonado.toLocaleString('es-CL')}</span></div>
+            <div>Saldo Convenio<span style="color: #ffc107;">$${saldoActualConvenio.toLocaleString('es-CL')}</span></div>
+            <div style="grid-column: 1 / -1; margin-top: 10px; display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
+                <button id="btnAdministrarConvenio" class="btn small">Administrar Convenio</button>
+                <button id="btnEnviarCorreoConvenio" class="btn secondary small">Enviar Acuerdo por Correo</button>
+                <button id="btnFormalizarConvenio" class="btn small">Formalizar con Respaldo</button>
+            </div>
+        `;
+        
+        document.getElementById('btnAdministrarConvenio').addEventListener('click', () => abrirModalConvenio(parcela, residente));
+        
+        document.getElementById('btnEnviarCorreoConvenio').addEventListener('click', () => {
+            const datosConvenio = {
+                deudaInicial: parseFloat(residente[19] || 0),
+                cuotas: parseInt(residente[16] || 0),
+                valorCuota: parseFloat(residente[17] || 0),
+                fechaInicio: residente[18] || ''
+            };
+            enviarAcuerdoConvenio(residente, datosConvenio);
+        });
+
+        document.getElementById('btnFormalizarConvenio').addEventListener('click', () => formalizarConvenio(parcela, residente[1]));
+        
+        const abonosDelAnio = pagosGC_obj.filter(p => String(p.N_Parcela) === String(parcela) && p.anio == anio && parseFloat(p.Abono_Convenio || 0) > 0);
+        document.getElementById('thead-abonos').innerHTML = `<tr><th>Fecha de Pago</th><th>Monto Abonado</th><th>Comprobante</th></tr>`;
+        const tbodyAbonos = document.getElementById('tbody-abonos');
+        tbodyAbonos.innerHTML = '';
+        if(abonosDelAnio.length > 0) {
+            abonosDelAnio.forEach(abono => {
+                const linkComprobante = abono.ID_Comprobante_Drive ? `<a href="${abono.ID_Comprobante_Drive}" target="_blank" class="btn small">Ver</a>` : 'N/A';
+                tbodyAbonos.innerHTML += `<tr><td>${new Date(abono.Fecha_Pago.replace(/-/g, '/')).toLocaleDateString('es-CL', {timeZone:'UTC'})}</td><td>$${parseFloat(abono.Abono_Convenio).toLocaleString('es-CL')}</td><td>${linkComprobante}</td></tr>`;
+            });
+        } else {
+            tbodyAbonos.innerHTML = `<tr><td colspan="3" style="text-align:center;">No hay abonos a convenio registrados para este año.</td></tr>`;
+        }
+    } else {
+        widgetConvenio.style.display = 'none';
+    }
+    
+    const nombreResidenteConConvenio = `${residente[1]} ${convenioActivo ? '<span title="Este residente tiene un convenio de pago activo" style="cursor:help;">📜</span>' : ''}`;
+    document.querySelector('#detalle-gastos h3').innerHTML = `Detalle Anual de Gastos Comunes para ${nombreResidenteConConvenio} (Parcela ${parcela})`;
+    
+    theadGastos.innerHTML = `<tr><th>Período</th><th>Fecha Vencimiento</th><th>Monto Pagado</th><th>Saldo Transacción</th><th>Interés</th><th>Multa</th><th>Deuda Pendiente</th><th>Fecha Pago</th><th>Método Pago</th><th>Estado</th><th>Comprobante</th></tr>`;
+    tbodyGastos.innerHTML = '';
+    
+    MESES.forEach((mes, index) => {
+        const pagoExistente = pagosGC_obj.find(p => String(p.N_Parcela) === String(parcela) && p.Periodo && formatearPeriodo(p.Periodo).toLowerCase().startsWith(mes.toLowerCase()) && p.anio == anio);
+        
+        // ▼ LÍNEAS CORREGIDAS ▼
+        // Aquí definimos los valores por defecto para todas las variables.
+        let interes = 0, multa = 0, saldo = 0, deudaPendiente = 0;
+        let estado = 'Pendiente', montoPagado = 0, fechaPago = '---', metodoPago = '---', comprobanteEnviado = '';
+        // ▲ FIN DE LÍNEAS CORREGIDAS ▲
+
+        const fechaVencimiento = new Date(anio, index, 10);
+
+        if (pagoExistente) {
+            estado = pagoExistente.Estado;
+            montoPagado = parseFloat(pagoExistente.Monto_Pagado || 0);
+            saldo = parseFloat(pagoExistente.Saldo_Pendiente_o_a_favor || 0);
+            deudaPendiente = parseFloat(pagoExistente.Deuda_Total || 0);
+            interes = parseFloat(pagoExistente.Interes || 0);
+            multa = parseFloat(pagoExistente['Multa_1/4'] || 0);
+            fechaPago = pagoExistente.Fecha_Pago ? new Date(pagoExistente.Fecha_Pago.replace(/-/g, '/')).toLocaleDateString('es-CL', {timeZone: 'UTC'}) : '---';
+            metodoPago = pagoExistente.Metodo_Pago || '---';
+            comprobanteEnviado = pagoExistente.Comprobante_Enviado === 'SI' ? '<span class="comprobante-enviado">✓</span>' : '';
+        }
+
+        const tr = document.createElement('tr');
+        if (pagoExistente) {
+            tr.dataset.idPago = pagoExistente.ID_Pago;
+            tr.classList.add('fila-clicable');
+        }
+
+        const estadoClass = (estado || 'pendiente').toLowerCase().replace(/ /g, '-');
+        tr.innerHTML = `
+            <td><b>${mes} ${anio}</b></td>
+            <td>${fechaVencimiento.toLocaleDateString('es-CL', {timeZone: 'UTC'})}</td>
+            <td>$${montoPagado.toLocaleString('es-CL')}</td>
+            <td style="color:${saldo < 0 ? 'red' : 'green'}; font-weight:bold;">$${saldo.toLocaleString('es-CL')}</td>
+            <td>$${interes.toLocaleString('es-CL', {minimumFractionDigits:2, maximumFractionDigits:2})}</td>
+            <td>$${multa.toLocaleString('es-CL')}</td>
+            <td style="font-weight:bold; color: red;">$${deudaPendiente.toLocaleString('es-CL')}</td>
+            <td>${fechaPago}</td>
+            <td>${metodoPago}</td>
+            <td><span class="estado-tag estado-${estadoClass}">${estado || 'Pendiente'}</span></td>
+            <td>${comprobanteEnviado}</td>`;
+        tbodyGastos.appendChild(tr);
+    });
+}
 
     function abrirModalConvenio(nParcela, residente) {
         const modal = document.getElementById('modalConvenio');
