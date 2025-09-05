@@ -1,5 +1,5 @@
 // =================================================================================
-// ===== GASTOS_COMUNES.JS - CÓDIGO CON SOLUCIÓN DE ABONOS PARCIALES =====
+// ===== GASTOS_COMUNES.JS - CÓDIGO FINAL CON ABONOS Y LIMPIEZA DE MODAL ANTIGUO =====
 // =================================================================================
 
 // Constantes globales para el módulo
@@ -646,7 +646,6 @@ async function cargarGastosComunes() {
         document.getElementById('convenioValorCuota').value = (deuda > 0 && cuotas > 0) ? Math.round(deuda / cuotas) : 0;
     }
 
-    // ▼ INICIO: FUNCIÓN COMPLETAMENTE ACTUALIZADA PARA ABONOS ▼
     function abrirModalDetalle(idPago) {
         const pago = pagosGC_obj.find(p => p.ID_Pago == idPago);
         if (!pago) {
@@ -722,7 +721,6 @@ async function cargarGastosComunes() {
             }
         });
     }
-    // ▲ FIN: FUNCIÓN COMPLETAMENTE ACTUALIZADA PARA ABONOS ▲
 
     function filtrarYRenderizar() {
         const parcela = document.getElementById('filtroParcela').value;
