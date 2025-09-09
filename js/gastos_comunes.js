@@ -1235,10 +1235,10 @@ async function cargarGastosComunes() {
     ocultarSpinner();
 }
 /* ============================================================================
- *  CONVENIOS – UI DE CUOTAS Y REGISTRO DE PAGO (BLOQUE NUEVO)
+ *  CONVENIOS – UI DE CUOTAS Y REGISTRO DE PAGO (BLOQUE NUEVO, CON FIX)
  *  ========================================================================== */
 
-// 1) Wrapper seguro para invocar tu Apps Script sin romper lo existente
+/* 1) Wrapper seguro para invocar tu Apps Script sin romper lo existente */
 async function _gsInvoke(functionName, parameters = []) {
   try {
     // Si tu app ya tiene un wrapper global, úsalo
@@ -1265,7 +1265,7 @@ async function _gsInvoke(functionName, parameters = []) {
   }
 }
 
-// 2) Helpers
+/* 2) Helpers */
 function fileToBase64_(file) {
   return new Promise((resolve, reject) => {
     const fr = new FileReader();
@@ -1280,10 +1280,11 @@ function el_(html) {
   return d.firstElementChild;
 }
 
-// 3) Inyección de contenedor “Cuotas del Convenio” debajo del widget
+/* 3) Inyección de contenedor “Cuotas del Convenio” debajo del widget */
 (function injectCuotasUI() {
   const section = document.getElementById('gastos-comunes-section');
   if (!section) return;
+
   const host = el_(`
     <div id="cuotas-convenio-box" style="display:none;margin-top:24px">
       <div class="section-title">Cuotas del Convenio</div>
@@ -1338,13 +1339,16 @@ function el_(html) {
     </div>`);
   document.body.appendChild(modal);
 
-  document.getElementById('pq_cerrar').onclick = () => modal.style.display='none';
+  // FIX: tras inyectar el modal, asegurar los listeners (binding seguro)
+  if (typeof window.__afterInjectCuotaModalHook === 'function') {
+    window.__afterInjectCuotaModalHook();
+  }
 })();
 
-// 4) Estado local del convenio mostrado
+/* 4) Estado local del convenio mostrado */
 const _cvState = { nParcela: null, idConvenio: null, cuotas: [] };
 
-// 5) API de carga/refresh (llamar cuando el usuario seleccione una parcela con convenio)
+/* 5) API de carga/refresh (llamar cuando el usuario seleccione una parcela con convenio) */
 async function cargarConvenioYCuotas(nParcela) {
   _cvState.nParcela = nParcela;
   const conv = await _gsInvoke('obtenerConvenio_GS', [nParcela]);
@@ -1388,7 +1392,7 @@ async function cargarConvenioYCuotas(nParcela) {
   box.style.display = 'block';
 }
 
-// 6) Abrir modal con cuota preseleccionada
+/* 6) Abrir modal con cuota preseleccionada */
 window.abrirModalPagarCuota = function(nCuota) {
   document.getElementById('pq_ncuota').value = nCuota || (_cvState.cuotas.find(c => c.estado!=='Pagada')?.nCuota || 1);
   document.getElementById('pq_fecha').valueAsDate = new Date();
@@ -1399,18 +1403,19 @@ window.abrirModalPagarCuota = function(nCuota) {
   document.getElementById('modalPagarCuota').style.display = 'block';
 };
 
-// 7) Guardar pago (con opcional subida de archivo y envío)
-document.getElementById('pq_guardar').onclick = async () => {
+/* 7) Handler único para guardar pago (con subida de archivo y envío opcional) */
+async function onGuardarPagoCuota() {
   try {
     const nCuota = Number(document.getElementById('pq_ncuota').value);
     const fecha  = document.getElementById('pq_fecha').value;
     const monto  = Number(document.getElementById('pq_monto').value);
-    const metodo = document.getElementById('pq_metodo').value.trim();
-    const obs    = document.getElementById('pq_obs').value.trim();
+    const metodo = (document.getElementById('pq_metodo').value || '').trim();
+    const obs    = (document.getElementById('pq_obs').value || '').trim();
     const enviar = document.getElementById('pq_enviar').checked;
+
     const fileEl = document.getElementById('pq_file');
     let fileObj  = null;
-    if (fileEl.files && fileEl.files[0]) {
+    if (fileEl && fileEl.files && fileEl.files[0]) {
       const f = fileEl.files[0];
       fileObj = { name: f.name, mime: f.type || 'application/octet-stream', base64: await fileToBase64_(f) };
     }
@@ -1424,7 +1429,6 @@ document.getElementById('pq_guardar').onclick = async () => {
       enviarComprobante: !!enviar, file: fileObj
     };
     const res = await _gsInvoke('registrarPagoCuota_GS', [payload]);
-    // refrescar vista
     await cargarConvenioYCuotas(_cvState.nParcela);
     document.getElementById('modalPagarCuota').style.display = 'none';
     alert('Pago registrado correctamente' + (res?.enviadoA ? ` y comprobante enviado a ${res.enviadoA}` : ''));
@@ -1432,15 +1436,37 @@ document.getElementById('pq_guardar').onclick = async () => {
     console.error(e);
     alert('Error al registrar el pago: ' + (e.message || e));
   }
-};
+}
 
-// 8) Hook: si ya tienes un change handler de parcela/año, llama a cargarConvenioYCuotas(parcela)
-//    Ejemplo seguro (no interfiere con lo tuyo):
+/* 8) Binding SEGURO de botones del modal (evita "null onclick") */
+function ensureCuotaModalBindings() {
+  const btnGuardar = document.getElementById('pq_guardar');
+  if (btnGuardar && !btnGuardar._bound) {
+    btnGuardar.addEventListener('click', onGuardarPagoCuota);
+    btnGuardar._bound = true;
+  }
+  const btnCerrar = document.getElementById('pq_cerrar');
+  if (btnCerrar && !btnCerrar._bound) {
+    btnCerrar.addEventListener('click', () => {
+      const m = document.getElementById('modalPagarCuota');
+      if (m) m.style.display = 'none';
+    });
+    btnCerrar._bound = true;
+  }
+}
+
+/* 9) Asegurar bindings cuando el DOM esté listo */
+document.addEventListener('DOMContentLoaded', ensureCuotaModalBindings);
+
+/* 10) Hook para que la inyección del modal pueda avisar que ya existe y bindear */
+if (typeof window.__afterInjectCuotaModalHook === 'function') {
+  window.__afterInjectCuotaModalHook(ensureCuotaModalBindings);
+} else {
+  window.__afterInjectCuotaModalHook = ensureCuotaModalBindings;
+}
+
+/* 11) Hook de integración con tu selector de parcela/año */
 window._hookConvenioOnParcelaChange = async function(nParcela) {
   try { await cargarConvenioYCuotas(nParcela); } catch(e){ console.warn(e); }
 };
-
-// Si ya tienes lógica que detecta la parcela seleccionada al cargar la pantalla, 
-// puedes hacer algo como:
-//   _hookConvenioOnParcelaChange(document.getElementById('input-parcela')?.value);
-
+// Ejemplo: _hookConvenioOnParcelaChange(document.getElementById('input-parcela')?.value);
