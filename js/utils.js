@@ -8,7 +8,7 @@
  */
 async function llamarAPI(functionName, parameters = []) {
   // Cambia este scriptId por el de tu proyecto (si ya está correcto, déjalo tal cual).
-  const SCRIPT_URL = "https://script.googleapis.com/v1/scripts/AKfycbwmNZFxMLQtL-rcr479Y78Wat7e8JaDtHaUbdCEarhSIJ8LYqGWO97jlvOELMOGc5PlFQ:run";
+  const SCRIPT_URL = "https://script.googleapis.com/v1/scripts/AKfycbw_FdUARsUgDyyjIezpdN_59QCr02Zl6g8eI64IA4CzdXY7ibXvAGh1FK-mTwDYXv--8Q:run";
 
   try {
     const tokenObj = gapi.auth.getToken();
