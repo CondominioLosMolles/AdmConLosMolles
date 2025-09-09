@@ -1242,7 +1242,7 @@ async function cargarGastosComunes() {
 async function _gsInvoke(functionName, parameters = []) {
   try {
     if (typeof window.llamarAPI === 'function') {
-      return await window.llamarAPI(functionName, parameters); // utils.js
+      return await window.llamarAPI(functionName, parameters); // utils.js (Execution API)
     }
     if (typeof window.postToServer === 'function') {
       return await window.postToServer(functionName, parameters);
@@ -1266,7 +1266,7 @@ async function _gsInvoke(functionName, parameters = []) {
   }
 }
 
-/* 2) Helpers */
+/* 2) Helpers DOM/archivos – ROBUSTOS */
 function el_(html) {
   const d = document.createElement('div');
   d.innerHTML = html.trim();
@@ -1280,11 +1280,40 @@ function fileToBase64_(file) {
     fr.readAsDataURL(file);
   });
 }
+
+/** Obtiene un contenedor estable donde inyectar la UI de Convenios */
+function getGastosHost_() {
+  // 1) id esperado
+  let host = document.getElementById('gastos-comunes-section');
+  // 2) main-content de tu app
+  if (!host) host = document.getElementById('main-content');
+  // 3) primer <main>
+  if (!host) host = document.querySelector('main');
+  // 4) fallback
+  return host || document.body;
+}
+
+/** Intenta localizar el input de N° Parcela de forma tolerante y leer su valor */
 function findParcelaSeleccionada() {
-  const section = document.getElementById('gastos-comunes-section');
-  if (!section) return null;
-  const input = section.querySelector('input[type="number"], input[type="text"]');
-  const val = (input && input.value) ? String(input.value).trim() : null;
+  const attrOf = (el) =>
+    (el?.id || '') + ' ' + (el?.name || '') + ' ' + (el?.placeholder || '') + ' ' +
+    (el?.labels ? Array.from(el.labels).map(l => l.textContent).join(' ') : '');
+
+  // 1) inputs dentro del host
+  const host = getGastosHost_();
+  let candidates = Array.from(host.querySelectorAll('input[type="text"],input[type="number"]'))
+    .filter(i => /parc|parcela|lote|unidad/i.test(attrOf(i)));
+
+  // 2) si no halló por nombre, toma el primer input visible numérico en filtros
+  if (!candidates.length) {
+    const filtros = host.querySelector('.card, .filters, .filter, .form, .form-grid') || host;
+    const tmp = Array.from(filtros.querySelectorAll('input[type="number"],input[type="text"]'))
+      .filter(i => i.offsetParent !== null);
+    if (tmp.length) candidates = [tmp[0]];
+  }
+
+  const el = candidates[0];
+  const val = el && el.value ? String(el.value).trim() : null;
   return val || null;
 }
 
@@ -1344,6 +1373,19 @@ function ensureBindings() {
     });
     btnAct._bound = true;
   }
+
+  // Hook extra: si el input de parcela cambia, refrescar
+  const host = getGastosHost_();
+  const maybeInputs = host.querySelectorAll('input[type="text"],input[type="number"]');
+  maybeInputs.forEach(inp => {
+    if (!inp._cvBound && /parc|parcela|lote|unidad/i.test((inp.id||'')+(inp.name||'')+(inp.placeholder||''))) {
+      inp.addEventListener('change', () => {
+        const p = findParcelaSeleccionada();
+        if (p) _hookConvenioOnParcelaChange(p);
+      });
+      inp._cvBound = true;
+    }
+  });
 }
 
 /* 5) Handlers */
@@ -1412,8 +1454,7 @@ async function onActivarConvenio() {
 
 /* 6) Inyección de UI (cabecera + tabla + modales) */
 function injectConveniosUI() {
-  const section = document.getElementById('gastos-comunes-section');
-  if (!section) return;
+  const section = getGastosHost_(); // robusto
 
   // Barra de acciones
   if (!document.getElementById('convenio-actions-bar')) {
@@ -1422,12 +1463,8 @@ function injectConveniosUI() {
         <button class="btn" id="btn-refrescar-convenio">Refrescar convenio</button>
         <button class="btn" id="btn-activar-convenio">Activar Convenio (nuevo)</button>
       </div>`);
-    const widget = section.querySelector('.section-title')?.closest('div');
-    if (widget && widget.parentElement) {
-      widget.parentElement.insertBefore(actions, widget.nextSibling);
-    } else {
-      section.insertBefore(actions, section.firstChild);
-    }
+    // Inserta al principio del host
+    section.insertBefore(actions, section.firstChild);
   }
 
   // Contenedor + tabla
@@ -1564,6 +1601,7 @@ window._hookConvenioOnParcelaChange = async function(nParcela) {
 /* 10) Bootstrap al cargar */
 document.addEventListener('DOMContentLoaded', () => {
   injectConveniosUI();
+  ensureBindings();
   const p = findParcelaSeleccionada();
   if (p) _hookConvenioOnParcelaChange(p);
 });
