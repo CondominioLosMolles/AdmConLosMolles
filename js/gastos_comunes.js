@@ -1236,19 +1236,14 @@ async function cargarGastosComunes() {
 }
 /* ============================================================================
  *  CONVENIOS – UI DE CUOTAS + ACTIVACIÓN Y REGISTRO DE PAGO (BLOQUE NUEVO)
+ *  (Versión robusta: sin SCRIPT_ID, con MutationObserver)
  *  ========================================================================== */
 
-/* 1) Wrapper: prioriza utils.llamarAPI (Execution API) y luego WebApp si existe */
+/* 1) Wrapper: usa utils.llamarAPI (Execution API); fallback WebApp solo si existe */
 async function _gsInvoke(functionName, parameters = []) {
   try {
     if (typeof window.llamarAPI === 'function') {
-      return await window.llamarAPI(functionName, parameters); // utils.js (Execution API)
-    }
-    if (typeof window.postToServer === 'function') {
-      return await window.postToServer(functionName, parameters);
-    }
-    if (typeof window.callServer === 'function') {
-      return await window.callServer(functionName, parameters);
+      return await window.llamarAPI(functionName, parameters);
     }
     const url = window.APPS_SCRIPT_WEBAPP_URL || window.GS_ENDPOINT;
     if (!url) throw new Error('No está configurada la URL del Apps Script ni existe llamarAPI.');
@@ -1266,7 +1261,7 @@ async function _gsInvoke(functionName, parameters = []) {
   }
 }
 
-/* 2) Helpers DOM/archivos – ROBUSTOS */
+/* 2) Helpers DOM/archivos */
 function el_(html) {
   const d = document.createElement('div');
   d.innerHTML = html.trim();
@@ -1281,48 +1276,45 @@ function fileToBase64_(file) {
   });
 }
 
-/** Obtiene un contenedor estable donde inyectar la UI de Convenios */
+/* --- Localización robusta del host y del input Parcela --- */
 function getGastosHost_() {
-  // 1) id esperado
-  let host = document.getElementById('gastos-comunes-section');
-  // 2) main-content de tu app
-  if (!host) host = document.getElementById('main-content');
-  // 3) primer <main>
-  if (!host) host = document.querySelector('main');
-  // 4) fallback
-  return host || document.body;
+  // contenedor más específico si existe
+  return document.getElementById('gastos-comunes-section')
+      || document.getElementById('main-content')
+      || document.querySelector('main')
+      || document.body;
 }
+function findFiltersCard_(host) {
+  // Busca una tarjeta que contenga el label/placeholder “Parcela”
+  const labels = Array.from(host.querySelectorAll('label'));
+  const byLabel = labels.find(l => /parcela|parc/i.test(l.textContent || ''));
+  if (byLabel) return byLabel.closest('.card') || byLabel.closest('.form-grid') || byLabel.closest('div');
 
-/** Intenta localizar el input de N° Parcela de forma tolerante y leer su valor */
+  // Fallback: primera card arriba
+  return host.querySelector('.card') || host;
+}
 function findParcelaSeleccionada() {
-  const attrOf = (el) =>
-    (el?.id || '') + ' ' + (el?.name || '') + ' ' + (el?.placeholder || '') + ' ' +
-    (el?.labels ? Array.from(el.labels).map(l => l.textContent).join(' ') : '');
-
-  // 1) inputs dentro del host
   const host = getGastosHost_();
-  let candidates = Array.from(host.querySelectorAll('input[type="text"],input[type="number"]'))
-    .filter(i => /parc|parcela|lote|unidad/i.test(attrOf(i)));
+  // candidatos: inputs visibles
+  const inputs = Array.from(host.querySelectorAll('input[type="number"],input[type="text"]'))
+    .filter(i => i.offsetParent !== null);
 
-  // 2) si no halló por nombre, toma el primer input visible numérico en filtros
-  if (!candidates.length) {
-    const filtros = host.querySelector('.card, .filters, .filter, .form, .form-grid') || host;
-    const tmp = Array.from(filtros.querySelectorAll('input[type="number"],input[type="text"]'))
-      .filter(i => i.offsetParent !== null);
-    if (tmp.length) candidates = [tmp[0]];
-  }
+  // los que “huelen” a parcela por id/name/placeholder/label
+  const good = inputs.filter(i => {
+    const text = (i.id || '') + ' ' + (i.name || '') + ' ' + (i.placeholder || '');
+    const lab = i.labels ? Array.from(i.labels).map(l => l.textContent).join(' ') : '';
+    return /parc|parcela|lote|unidad/i.test(text + ' ' + lab);
+  });
 
-  const el = candidates[0];
-  const val = el && el.value ? String(el.value).trim() : null;
-  return val || null;
+  const el = good[0] || inputs[0];
+  return el && el.value ? String(el.value).trim() : null;
 }
 
 /* 3) Estado local */
 const _cvState = { nParcela: null, idConvenio: null, cuotas: [] };
 
-/* 4) Bindings SEGUROS (evita 'onclick' sobre null) */
+/* 4) Bindings seguros */
 function ensureBindings() {
-  // Modal pagar cuota
   const btnGuardar = document.getElementById('pq_guardar');
   if (btnGuardar && !btnGuardar._bound) {
     btnGuardar.addEventListener('click', onGuardarPagoCuota);
@@ -1337,7 +1329,6 @@ function ensureBindings() {
     btnCerrar._bound = true;
   }
 
-  // Modal activar convenio
   const acGuardar = document.getElementById('ac_guardar');
   if (acGuardar && !acGuardar._bound) {
     acGuardar.addEventListener('click', onActivarConvenio);
@@ -1352,7 +1343,6 @@ function ensureBindings() {
     acCerrar._bound = true;
   }
 
-  // Botones de cabecera
   const btnRef = document.getElementById('btn-refrescar-convenio');
   if (btnRef && !btnRef._bound) {
     btnRef.addEventListener('click', () => {
@@ -1374,11 +1364,10 @@ function ensureBindings() {
     btnAct._bound = true;
   }
 
-  // Hook extra: si el input de parcela cambia, refrescar
+  // Refrescar al cambiar el input de parcela (si lo detectamos)
   const host = getGastosHost_();
-  const maybeInputs = host.querySelectorAll('input[type="text"],input[type="number"]');
-  maybeInputs.forEach(inp => {
-    if (!inp._cvBound && /parc|parcela|lote|unidad/i.test((inp.id||'')+(inp.name||'')+(inp.placeholder||''))) {
+  Array.from(host.querySelectorAll('input[type="text"],input[type="number"]')).forEach(inp => {
+    if (!inp._cvBound) {
       inp.addEventListener('change', () => {
         const p = findParcelaSeleccionada();
         if (p) _hookConvenioOnParcelaChange(p);
@@ -1452,9 +1441,10 @@ async function onActivarConvenio() {
   }
 }
 
-/* 6) Inyección de UI (cabecera + tabla + modales) */
+/* 6) Inyección de UI (barra + tabla + modales) */
 function injectConveniosUI() {
-  const section = getGastosHost_(); // robusto
+  const host = getGastosHost_();
+  const filtersCard = findFiltersCard_(host);
 
   // Barra de acciones
   if (!document.getElementById('convenio-actions-bar')) {
@@ -1463,13 +1453,12 @@ function injectConveniosUI() {
         <button class="btn" id="btn-refrescar-convenio">Refrescar convenio</button>
         <button class="btn" id="btn-activar-convenio">Activar Convenio (nuevo)</button>
       </div>`);
-    // Inserta al principio del host
-    section.insertBefore(actions, section.firstChild);
+    (filtersCard?.parentElement || host).insertBefore(actions, (filtersCard?.nextSibling) || host.firstChild);
   }
 
   // Contenedor + tabla
   if (!document.getElementById('cuotas-convenio-box')) {
-    const host = el_(`
+    const box = el_(`
       <div id="cuotas-convenio-box" style="display:none;margin-top:12px">
         <div class="section-title">Cuotas del Convenio</div>
         <div id="cuotas-convenio-summary" class="cards-row" style="margin-bottom:12px"></div>
@@ -1485,7 +1474,7 @@ function injectConveniosUI() {
           </table>
         </div>
       </div>`);
-    section.appendChild(host);
+    host.appendChild(box);
   }
 
   // Modal pagar cuota
@@ -1536,9 +1525,10 @@ function injectConveniosUI() {
   }
 
   ensureBindings();
+  console.log('[Convenios] UI inyectada');
 }
 
-/* 7) Cargar/Refrescar convenio y cuotas */
+/* 7) Lógica de carga/refresh */
 async function cargarConvenioYCuotas(nParcela) {
   _cvState.nParcela = nParcela;
   const conv = await _gsInvoke('obtenerConvenio_GS', [nParcela]);
@@ -1593,15 +1583,34 @@ window.abrirModalPagarCuota = function(nCuota) {
   document.getElementById('modalPagarCuota').style.display = 'block';
 };
 
-/* 9) Hook público para refrescar por parcela (puedes llamarlo desde tu flujo actual) */
+/* 9) Hook público para refrescar por parcela */
 window._hookConvenioOnParcelaChange = async function(nParcela) {
   try { await cargarConvenioYCuotas(nParcela); } catch(e){ console.warn(e); }
 };
 
-/* 10) Bootstrap al cargar */
-document.addEventListener('DOMContentLoaded', () => {
-  injectConveniosUI();
-  ensureBindings();
-  const p = findParcelaSeleccionada();
-  if (p) _hookConvenioOnParcelaChange(p);
-});
+/* 10) Inicialización robusta: espera a que se pinte la vista de Gastos */
+(function bootstrapConvenios() {
+  const already = { injected: false };
+
+  function tryInit() {
+    const host = getGastosHost_();
+    // Heurística: existe la tabla anual o la tarjeta de filtros
+    const hasFilters = host.querySelector('label, .form-grid, .card');
+    const hasTable   = host.querySelector('table');
+    if (!already.injected && (hasFilters || hasTable)) {
+      injectConveniosUI();
+      ensureBindings();
+      already.injected = true;
+
+      const p = findParcelaSeleccionada();
+      if (p) _hookConvenioOnParcelaChange(p);
+    }
+  }
+
+  // 1) Intento inmediato
+  tryInit();
+
+  // 2) Observa cambios en el DOM (la SPA renderiza después)
+  const obs = new MutationObserver(() => tryInit());
+  obs.observe(document.body, { childList: true, subtree: true });
+})();
