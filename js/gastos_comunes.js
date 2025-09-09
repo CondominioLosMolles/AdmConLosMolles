@@ -1235,20 +1235,18 @@ async function cargarGastosComunes() {
     ocultarSpinner();
 }
 /* ============================================================================
- *  CONVENIOS – UI DE CUOTAS Y REGISTRO DE PAGO (BLOQUE NUEVO, CON FIX)
+ *  CONVENIOS – UI DE CUOTAS Y REGISTRO DE PAGO (BLOQUE NUEVO, DOMContentLoaded SAFE)
  *  ========================================================================== */
 
 /* 1) Wrapper seguro para invocar tu Apps Script sin romper lo existente */
 async function _gsInvoke(functionName, parameters = []) {
   try {
-    // Si tu app ya tiene un wrapper global, úsalo
     if (typeof window.postToServer === 'function') {
       return await window.postToServer(functionName, parameters);
     }
     if (typeof window.callServer === 'function') {
       return await window.callServer(functionName, parameters);
     }
-    // Fallback genérico (si defines window.APPS_SCRIPT_WEBAPP_URL)
     const url = window.APPS_SCRIPT_WEBAPP_URL || window.GS_ENDPOINT;
     if (!url) throw new Error('No está configurada la URL del Apps Script.');
     const resp = await fetch(url, {
@@ -1280,130 +1278,27 @@ function el_(html) {
   return d.firstElementChild;
 }
 
-/* 3) Inyección de contenedor “Cuotas del Convenio” debajo del widget */
-(function injectCuotasUI() {
-  const section = document.getElementById('gastos-comunes-section');
-  if (!section) return;
-
-  const host = el_(`
-    <div id="cuotas-convenio-box" style="display:none;margin-top:24px">
-      <div class="section-title">Cuotas del Convenio</div>
-      <div id="cuotas-convenio-summary" class="cards-row" style="margin-bottom:12px"></div>
-      <div class="table-wrapper">
-        <table id="tabla-cuotas-convenio" class="residente-table" aria-label="Tabla de cuotas del convenio">
-          <thead>
-            <tr>
-              <th>#</th><th>Vencimiento</th><th>Monto Cuota</th>
-              <th>Pagado</th><th>Saldo</th><th>Estado</th><th>Comprobante</th><th>Acciones</th>
-            </tr>
-          </thead>
-          <tbody></tbody>
-        </table>
-      </div>
-    </div>`);
-  section.appendChild(host);
-
-  // Modal de pago de cuota
-  const modal = el_(`
-    <div id="modalPagarCuota" class="modal" style="display:none">
-      <div class="modal-content" style="max-width:520px">
-        <h3>Registrar pago de cuota</h3>
-        <div class="form-grid">
-          <label>N° Cuota
-            <input type="number" id="pq_ncuota" min="1" required />
-          </label>
-          <label>Fecha de pago
-            <input type="date" id="pq_fecha" required />
-          </label>
-          <label>Monto pagado ($)
-            <input type="number" id="pq_monto" min="0" step="1" required />
-          </label>
-          <label>Método
-            <input type="text" id="pq_metodo" placeholder="Transferencia / Efectivo / Tarjeta" />
-          </label>
-          <label>Observación
-            <input type="text" id="pq_obs" />
-          </label>
-          <label>Adjuntar respaldo
-            <input type="file" id="pq_file" accept=".pdf,.jpg,.jpeg,.png" />
-          </label>
-          <label style="grid-column:1 / -1">
-            <input type="checkbox" id="pq_enviar" checked /> Enviar comprobante por correo al guardar
-          </label>
-        </div>
-        <div class="modal-actions">
-          <button class="btn" id="pq_guardar">Guardar</button>
-          <button class="btn btn-secondary" id="pq_cerrar">Cancelar</button>
-        </div>
-      </div>
-    </div>`);
-  document.body.appendChild(modal);
-
-  // FIX: tras inyectar el modal, asegurar los listeners (binding seguro)
-  if (typeof window.__afterInjectCuotaModalHook === 'function') {
-    window.__afterInjectCuotaModalHook();
-  }
-})();
-
-/* 4) Estado local del convenio mostrado */
+/* 3) Estado local del convenio mostrado */
 const _cvState = { nParcela: null, idConvenio: null, cuotas: [] };
 
-/* 5) API de carga/refresh (llamar cuando el usuario seleccione una parcela con convenio) */
-async function cargarConvenioYCuotas(nParcela) {
-  _cvState.nParcela = nParcela;
-  const conv = await _gsInvoke('obtenerConvenio_GS', [nParcela]);
-  const box = document.getElementById('cuotas-convenio-box');
-  if (!conv) { if (box) box.style.display='none'; return; }
-
-  _cvState.idConvenio = conv.idConvenio;
-  const cuotas = await _gsInvoke('obtenerCuotas_GS', [conv.idConvenio]);
-  _cvState.cuotas = cuotas || [];
-
-  // Pintar resumen
-  const sum = document.getElementById('cuotas-convenio-summary');
-  sum.innerHTML = `
-    <div class="card small"><div class="card-title">Deuda Original</div><div class="card-value">$${Number(conv.deudaOriginal).toLocaleString('es-CL')}</div></div>
-    <div class="card small"><div class="card-title">Saldo Convenio</div><div class="card-value">$${Number(conv.saldoConvenio).toLocaleString('es-CL')}</div></div>
-    <div class="card small"><div class="card-title">Cuotas</div><div class="card-value">${conv.nCuotas}</div></div>
-    <div class="card small"><div class="card-title">Valor Cuota</div><div class="card-value">$${Number(conv.valorCuota).toLocaleString('es-CL')}</div></div>
-  `;
-
-  // Pintar tabla
-  const tb = document.querySelector('#tabla-cuotas-convenio tbody');
-  tb.innerHTML = '';
-  _cvState.cuotas.forEach(c => {
-    const tr = document.createElement('tr');
-    const linkHtml = (c.comprobantes || '').split(';').filter(Boolean).map(u => `<a href="${u}" target="_blank">Ver</a>`).join(' · ');
-    const btn = (c.estado === 'Pagada')
-      ? `<button class="btn btn-secondary" disabled>Pagada</button>`
-      : `<button class="btn" data-cuota="${c.nCuota}" onclick="abrirModalPagarCuota(${c.nCuota})">Registrar pago</button>`;
-    tr.innerHTML = `
-      <td>${c.nCuota}</td>
-      <td>${new Date(c.fechaVencimiento).toLocaleDateString('es-CL')}</td>
-      <td style="text-align:right">$${Number(c.montoCuota).toLocaleString('es-CL')}</td>
-      <td style="text-align:right">$${Number(c.pagadoAcumulado).toLocaleString('es-CL')}</td>
-      <td style="text-align:right">$${Number(c.saldoCuota).toLocaleString('es-CL')}</td>
-      <td>${c.estado}</td>
-      <td>${linkHtml || '—'}</td>
-      <td>${btn}</td>`;
-    tb.appendChild(tr);
-  });
-
-  box.style.display = 'block';
+/* 4) Binding SEGURO de botones del modal (evita "null onclick") */
+function ensureCuotaModalBindings() {
+  const btnGuardar = document.getElementById('pq_guardar');
+  if (btnGuardar && !btnGuardar._bound) {
+    btnGuardar.addEventListener('click', onGuardarPagoCuota);
+    btnGuardar._bound = true;
+  }
+  const btnCerrar = document.getElementById('pq_cerrar');
+  if (btnCerrar && !btnCerrar._bound) {
+    btnCerrar.addEventListener('click', () => {
+      const m = document.getElementById('modalPagarCuota');
+      if (m) m.style.display = 'none';
+    });
+    btnCerrar._bound = true;
+  }
 }
 
-/* 6) Abrir modal con cuota preseleccionada */
-window.abrirModalPagarCuota = function(nCuota) {
-  document.getElementById('pq_ncuota').value = nCuota || (_cvState.cuotas.find(c => c.estado!=='Pagada')?.nCuota || 1);
-  document.getElementById('pq_fecha').valueAsDate = new Date();
-  document.getElementById('pq_monto').value = '';
-  document.getElementById('pq_metodo').value = '';
-  document.getElementById('pq_obs').value = '';
-  document.getElementById('pq_file').value = '';
-  document.getElementById('modalPagarCuota').style.display = 'block';
-};
-
-/* 7) Handler único para guardar pago (con subida de archivo y envío opcional) */
+/* 5) Handler único para guardar pago (con subida de archivo y envío opcional) */
 async function onGuardarPagoCuota() {
   try {
     const nCuota = Number(document.getElementById('pq_ncuota').value);
@@ -1430,7 +1325,8 @@ async function onGuardarPagoCuota() {
     };
     const res = await _gsInvoke('registrarPagoCuota_GS', [payload]);
     await cargarConvenioYCuotas(_cvState.nParcela);
-    document.getElementById('modalPagarCuota').style.display = 'none';
+    const modal = document.getElementById('modalPagarCuota');
+    if (modal) modal.style.display = 'none';
     alert('Pago registrado correctamente' + (res?.enviadoA ? ` y comprobante enviado a ${res.enviadoA}` : ''));
   } catch (e) {
     console.error(e);
@@ -1438,35 +1334,133 @@ async function onGuardarPagoCuota() {
   }
 }
 
-/* 8) Binding SEGURO de botones del modal (evita "null onclick") */
-function ensureCuotaModalBindings() {
-  const btnGuardar = document.getElementById('pq_guardar');
-  if (btnGuardar && !btnGuardar._bound) {
-    btnGuardar.addEventListener('click', onGuardarPagoCuota);
-    btnGuardar._bound = true;
+/* 6) Inyección de contenedor y modal (se ejecuta cuando el DOM está listo) */
+function injectCuotasUI() {
+  // Evitar doble inyección
+  if (document.getElementById('cuotas-convenio-box')) {
+    ensureCuotaModalBindings();
+    return;
   }
-  const btnCerrar = document.getElementById('pq_cerrar');
-  if (btnCerrar && !btnCerrar._bound) {
-    btnCerrar.addEventListener('click', () => {
-      const m = document.getElementById('modalPagarCuota');
-      if (m) m.style.display = 'none';
-    });
-    btnCerrar._bound = true;
+  const section = document.getElementById('gastos-comunes-section');
+  if (!section) return;
+
+  const host = el_(`
+    <div id="cuotas-convenio-box" style="display:none;margin-top:24px">
+      <div class="section-title">Cuotas del Convenio</div>
+      <div id="cuotas-convenio-summary" class="cards-row" style="margin-bottom:12px"></div>
+      <div class="table-wrapper">
+        <table id="tabla-cuotas-convenio" class="residente-table" aria-label="Tabla de cuotas del convenio">
+          <thead>
+            <tr>
+              <th>#</th><th>Vencimiento</th><th>Monto Cuota</th>
+              <th>Pagado</th><th>Saldo</th><th>Estado</th><th>Comprobante</th><th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>`);
+  section.appendChild(host);
+
+  // Modal
+  if (!document.getElementById('modalPagarCuota')) {
+    const modal = el_(`
+      <div id="modalPagarCuota" class="modal" style="display:none">
+        <div class="modal-content" style="max-width:520px">
+          <h3>Registrar pago de cuota</h3>
+          <div class="form-grid">
+            <label>N° Cuota
+              <input type="number" id="pq_ncuota" min="1" required />
+            </label>
+            <label>Fecha de pago
+              <input type="date" id="pq_fecha" required />
+            </label>
+            <label>Monto pagado ($)
+              <input type="number" id="pq_monto" min="0" step="1" required />
+            </label>
+            <label>Método
+              <input type="text" id="pq_metodo" placeholder="Transferencia / Efectivo / Tarjeta" />
+            </label>
+            <label>Observación
+              <input type="text" id="pq_obs" />
+            </label>
+            <label>Adjuntar respaldo
+              <input type="file" id="pq_file" accept=".pdf,.jpg,.jpeg,.png" />
+            </label>
+            <label style="grid-column:1 / -1">
+              <input type="checkbox" id="pq_enviar" checked /> Enviar comprobante por correo al guardar
+            </label>
+          </div>
+          <div class="modal-actions">
+            <button class="btn" id="pq_guardar">Guardar</button>
+            <button class="btn btn-secondary" id="pq_cerrar">Cancelar</button>
+          </div>
+        </div>
+      </div>`);
+    document.body.appendChild(modal);
   }
+
+  // Bind seguro
+  ensureCuotaModalBindings();
 }
 
-/* 9) Asegurar bindings cuando el DOM esté listo */
-document.addEventListener('DOMContentLoaded', ensureCuotaModalBindings);
+/* 7) Carga/refresh del convenio y sus cuotas */
+async function cargarConvenioYCuotas(nParcela) {
+  _cvState.nParcela = nParcela;
+  const conv = await _gsInvoke('obtenerConvenio_GS', [nParcela]);
+  const box = document.getElementById('cuotas-convenio-box');
+  if (!conv) { if (box) box.style.display='none'; return; }
 
-/* 10) Hook para que la inyección del modal pueda avisar que ya existe y bindear */
-if (typeof window.__afterInjectCuotaModalHook === 'function') {
-  window.__afterInjectCuotaModalHook(ensureCuotaModalBindings);
-} else {
-  window.__afterInjectCuotaModalHook = ensureCuotaModalBindings;
+  _cvState.idConvenio = conv.idConvenio;
+  const cuotas = await _gsInvoke('obtenerCuotas_GS', [conv.idConvenio]);
+  _cvState.cuotas = cuotas || [];
+
+  const sum = document.getElementById('cuotas-convenio-summary');
+  sum.innerHTML = `
+    <div class="card small"><div class="card-title">Deuda Original</div><div class="card-value">$${Number(conv.deudaOriginal).toLocaleString('es-CL')}</div></div>
+    <div class="card small"><div class="card-title">Saldo Convenio</div><div class="card-value">$${Number(conv.saldoConvenio).toLocaleString('es-CL')}</div></div>
+    <div class="card small"><div class="card-title">Cuotas</div><div class="card-value">${conv.nCuotas}</div></div>
+    <div class="card small"><div class="card-title">Valor Cuota</div><div class="card-value">$${Number(conv.valorCuota).toLocaleString('es-CL')}</div></div>
+  `;
+
+  const tb = document.querySelector('#tabla-cuotas-convenio tbody');
+  tb.innerHTML = '';
+  _cvState.cuotas.forEach(c => {
+    const tr = document.createElement('tr');
+    const linkHtml = (c.comprobantes || '').split(';').filter(Boolean).map(u => `<a href="${u}" target="_blank">Ver</a>`).join(' · ');
+    const btn = (c.estado === 'Pagada')
+      ? `<button class="btn btn-secondary" disabled>Pagada</button>`
+      : `<button class="btn" data-cuota="${c.nCuota}" onclick="abrirModalPagarCuota(${c.nCuota})">Registrar pago</button>`;
+    tr.innerHTML = `
+      <td>${c.nCuota}</td>
+      <td>${new Date(c.fechaVencimiento).toLocaleDateString('es-CL')}</td>
+      <td style="text-align:right">$${Number(c.montoCuota).toLocaleString('es-CL')}</td>
+      <td style="text-align:right">$${Number(c.pagadoAcumulado).toLocaleString('es-CL')}</td>
+      <td style="text-align:right">$${Number(c.saldoCuota).toLocaleString('es-CL')}</td>
+      <td>${c.estado}</td>
+      <td>${linkHtml || '—'}</td>
+      <td>${btn}</td>`;
+    tb.appendChild(tr);
+  });
+
+  box.style.display = 'block';
 }
 
-/* 11) Hook de integración con tu selector de parcela/año */
+/* 8) Abrir modal con cuota preseleccionada */
+window.abrirModalPagarCuota = function(nCuota) {
+  document.getElementById('pq_ncuota').value = nCuota || (_cvState.cuotas.find(c => c.estado!=='Pagada')?.nCuota || 1);
+  document.getElementById('pq_fecha').valueAsDate = new Date();
+  document.getElementById('pq_monto').value = '';
+  document.getElementById('pq_metodo').value = '';
+  document.getElementById('pq_obs').value = '';
+  document.getElementById('pq_file').value = '';
+  document.getElementById('modalPagarCuota').style.display = 'block';
+};
+
+/* 9) Hook de integración con tu selector de parcela/año */
 window._hookConvenioOnParcelaChange = async function(nParcela) {
   try { await cargarConvenioYCuotas(nParcela); } catch(e){ console.warn(e); }
 };
-// Ejemplo: _hookConvenioOnParcelaChange(document.getElementById('input-parcela')?.value);
+
+/* 10) Iniciar cuando el DOM esté listo */
+document.addEventListener('DOMContentLoaded', injectCuotasUI);
