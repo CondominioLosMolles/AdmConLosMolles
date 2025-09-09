@@ -6,6 +6,7 @@
     <title>Sistema de Gestión de Convenios</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🏠</text></svg>">
     <style>
         :root {
             --primary-color: #2c3e50;
@@ -409,11 +410,46 @@
         </div>
     </div>
 
-    <!-- Cargar APIs de Google -->
-    <script src="https://apis.google.com/js/api.js"></script>
-    <script src="https://accounts.google.com/gsi/client"></script>
-    
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Cargar APIs de Google de forma segura -->
+    <script>
+        // Solución para los errores de variables no definidas
+        window.gapiloaded = false;
+        window.gisloaded = false;
+        
+        // Función para cargar scripts de forma segura
+        function loadScript(src, onload) {
+            return new Promise((resolve, reject) => {
+                const script = document.createElement('script');
+                script.src = src;
+                script.onload = () => {
+                    if (onload) onload();
+                    resolve();
+                };
+                script.onerror = reject;
+                document.head.appendChild(script);
+            });
+        }
+
+        // Cargar APIs de Google con manejo de errores
+        Promise.all([
+            loadScript('https://apis.google.com/js/api.js', () => {
+                console.log("Google API cargada correctamente");
+                window.gapiloaded = true;
+            }),
+            loadScript('https://accounts.google.com/gsi/client', () => {
+                console.log("Google Identity Services cargado correctamente");
+                window.gisloaded = true;
+            }),
+            loadScript('https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js')
+        ]).then(() => {
+            console.log("Todos los scripts cargados correctamente");
+            inicializarAplicacion();
+        }).catch(error => {
+            console.error("Error al cargar scripts:", error);
+            mostrarError("Error al cargar recursos necesarios. Por favor, recarga la página.");
+        });
+    </script>
+
     <script>
         // Variables globales
         let convenios = [];
@@ -423,30 +459,34 @@
         let archivoComprobante = null;
         let gapiInicializada = false;
 
-        // Inicialización cuando el DOM esté cargado
-        document.addEventListener('DOMContentLoaded', function() {
-            console.log("DOM cargado, inicializando APIs de Google...");
+        // Inicializar la aplicación después de cargar los scripts
+        function inicializarAplicacion() {
+            console.log("Inicializando aplicación...");
+            inicializarComponentes();
             inicializarGoogleAPI();
-        });
+        }
 
         // Inicializar Google API
         function inicializarGoogleAPI() {
-            console.log("Paso 1: Inicializando gapi client...");
+            if (typeof gapi === 'undefined') {
+                console.error("gapi no está disponible");
+                mostrarError("Error: Google API no se cargó correctamente.");
+                return;
+            }
             
-            // Cargar la API de Google
+            console.log("Inicializando gapi client...");
+            
             gapi.load('client', {
                 callback: function() {
                     console.log("Google API cargada");
                     
-                    // Inicializar el cliente con las APIs y clave API necesaria
                     gapi.client.init({
                         'apiKey': 'TU_API_KEY', // Reemplaza con tu API key
                         'discoveryDocs': ['https://sheets.googleapis.com/$discovery/rest?version=v4', 
                                          'https://drive.googleapis.com/$discovery/rest?version=v3'],
                     }).then(function() {
-                        console.log("Paso 2: gapi.client.init() completado.");
+                        console.log("gapi.client.init() completado.");
                         gapiInicializada = true;
-                        inicializarComponentes();
                         cargarConvenios();
                     }).catch(function(error) {
                         console.error("Error al inicializar gapi.client: ", error);
@@ -457,7 +497,7 @@
                     console.error("Error al cargar la API de Google");
                     mostrarError("Error al cargar la API de Google. Recarga la página.");
                 },
-                timeout: 5000 // 5 segundos de espera
+                timeout: 10000
             });
         }
 
