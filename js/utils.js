@@ -55,3 +55,33 @@ async function llamarAPI(functionName, parameters = []) {
     throw error;
   }
 }
+/* =====================================================================
+ * CORE SHIMS: asegura utilidades base para que no falle la app
+ * (colocar en utils.js o en un archivo que cargue ANTES de dashboard.js)
+ * ===================================================================== */
+(function () {
+  // Devuelve el contenedor principal de la app
+  function _getMainContentEl() {
+    return document.getElementById('main-content')
+        || document.querySelector('#contenido-principal')
+        || document.querySelector('#content')
+        || document.querySelector('main');
+  }
+
+  // Si no existe limpiarMainContent, define una versión segura
+  if (typeof window.limpiarMainContent !== 'function') {
+    window.limpiarMainContent = function () {
+      const el = _getMainContentEl();
+      if (el) el.innerHTML = '';
+    };
+  }
+
+  // (Opcional) helper para inyectar HTML sin romper nada
+  if (typeof window.renderEnMainContent !== 'function') {
+    window.renderEnMainContent = function (html) {
+      const el = _getMainContentEl();
+      if (el != null) el.innerHTML = html;
+    };
+  }
+})();
+
