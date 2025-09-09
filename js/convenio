@@ -1,0 +1,880 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Módulo de Convenios</title>
+    <style>
+        :root {
+            --primary: #3498db;
+            --secondary: #2ecc71;
+            --danger: #e74c3c;
+            --dark: #2c3e50;
+            --light: #ecf0f1;
+            --gray: #95a5a6;
+        }
+        
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background-color: #f5f7f9;
+            color: #333;
+            line-height: 1.6;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+        }
+        
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #eee;
+        }
+        
+        h1 {
+            color: var(--dark);
+            font-size: 28px;
+        }
+        
+        .filters {
+            background: var(--light);
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        
+        .filters h3 {
+            margin-bottom: 15px;
+            color: var(--dark);
+        }
+        
+        .filter-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 15px;
+        }
+        
+        .filter-item label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+            color: var(--dark);
+        }
+        
+        .filter-item input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 16px;
+        }
+        
+        .actions {
+            display: flex;
+            gap: 15px;
+            margin: 20px 0;
+        }
+        
+        .btn {
+            padding: 12px 20px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s;
+            font-size: 16px;
+        }
+        
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: #2980b9;
+        }
+        
+        .btn-success {
+            background: var(--secondary);
+            color: white;
+        }
+        
+        .btn-success:hover {
+            background: #27ae60;
+        }
+        
+        .btn-danger {
+            background: var(--danger);
+            color: white;
+        }
+        
+        .btn-danger:hover {
+            background: #c0392b;
+        }
+        
+        .convenio-summary {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+        
+        .summary-card {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            text-align: center;
+        }
+        
+        .summary-card h3 {
+            font-size: 16px;
+            color: var(--gray);
+            margin-bottom: 10px;
+        }
+        
+        .summary-card .value {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--dark);
+        }
+        
+        .summary-card .value.paid {
+            color: var(--secondary);
+        }
+        
+        .summary-card .value.pending {
+            color: var(--danger);
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+        
+        th, td {
+            padding: 15px;
+            text-align: left;
+            border-bottom: 1px solid #eee;
+        }
+        
+        th {
+            background: var(--primary);
+            color: white;
+            font-weight: 600;
+        }
+        
+        tr:hover {
+            background: #f9f9f9;
+        }
+        
+        .status {
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 600;
+        }
+        
+        .status-paid {
+            background: #e8f5e9;
+            color: var(--secondary);
+        }
+        
+        .status-pending {
+            background: #ffebee;
+            color: var(--danger);
+        }
+        
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .modal-content {
+            background: white;
+            border-radius: 10px;
+            width: 90%;
+            max-width: 600px;
+            padding: 25px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+        
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .modal-header h2 {
+            color: var(--dark);
+        }
+        
+        .close {
+            font-size: 24px;
+            cursor: pointer;
+            color: var(--gray);
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: var(--dark);
+        }
+        
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 16px;
+        }
+        
+        .form-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            margin-top: 25px;
+        }
+        
+        .notification {
+            padding: 15px;
+            border-radius: 6px;
+            margin: 15px 0;
+            font-weight: 600;
+        }
+        
+        .notification.success {
+            background: #e8f5e9;
+            color: #2e7d32;
+            border-left: 4px solid var(--secondary);
+        }
+        
+        .notification.error {
+            background: #ffebee;
+            color: #c62828;
+            border-left: 4px solid var(--danger);
+        }
+        
+        .comprobante {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        
+        .comprobante a {
+            color: var(--primary);
+            text-decoration: none;
+            font-weight: 600;
+        }
+        
+        .comprobante a:hover {
+            text-decoration: underline;
+        }
+        
+        @media (max-width: 768px) {
+            .filter-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .convenio-summary {
+                grid-template-columns: 1fr;
+            }
+            
+            .actions {
+                flex-direction: column;
+            }
+            
+            table {
+                display: block;
+                overflow-x: auto;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Módulo de Convenios de Pagos</h1>
+        </header>
+        
+        <div class="filters">
+            <h3>Filtros de Búsqueda</h3>
+            <div class="filter-grid">
+                <div class="filter-item">
+                    <label for="parcela">N° de Parcela/Unidad</label>
+                    <input type="text" id="parcela" placeholder="Ej: 105, 201-A">
+                </div>
+                <div class="filter-item">
+                    <label for="year">Año</label>
+                    <input type="number" id="year" value="2025" min="2020" max="2030">
+                </div>
+            </div>
+        </div>
+        
+        <div class="actions">
+            <button class="btn btn-primary" id="btn-buscar-convenio">Buscar Convenio</button>
+            <button class="btn btn-success" id="btn-activar-convenio">Nuevo Convenio</button>
+        </div>
+        
+        <div id="convenio-info" style="display: none;">
+            <div class="convenio-summary">
+                <div class="summary-card">
+                    <h3>Deuda Original</h3>
+                    <div class="value">$850.000</div>
+                </div>
+                <div class="summary-card">
+                    <h3>Saldo Pendiente</h3>
+                    <div class="value pending">$350.000</div>
+                </div>
+                <div class="summary-card">
+                    <h3>Cuotas Pagadas</h3>
+                    <div class="value paid">5/10</div>
+                </div>
+                <div class="summary-card">
+                    <h3>Valor Cuota</h3>
+                    <div class="value">$85.000</div>
+                </div>
+            </div>
+            
+            <table>
+                <thead>
+                    <tr>
+                        <th># Cuota</th>
+                        <th>Vencimiento</th>
+                        <th>Valor</th>
+                        <th>Pagado</th>
+                        <th>Saldo</th>
+                        <th>Estado</th>
+                        <th>Comprobante</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>1</td>
+                        <td>10/01/2025</td>
+                        <td>$85.000</td>
+                        <td>$85.000</td>
+                        <td>$0</td>
+                        <td><span class="status status-paid">Pagada</span></td>
+                        <td class="comprobante">
+                            <a href="#" target="_blank">comprobante_1.pdf</a>
+                        </td>
+                        <td>
+                            <button class="btn btn-primary" disabled>Pagada</button>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>2</td>
+                        <td>10/02/2025</td>
+                        <td>$85.000</td>
+                        <td>$85.000</td>
+                        <td>$0</td>
+                        <td><span class="status status-paid">Pagada</span></td>
+                        <td class="comprobante">
+                            <a href="#" target="_blank">comprobante_2.pdf</a>
+                        </td>
+                        <td>
+                            <button class="btn btn-primary" disabled>Pagada</button>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>3</td>
+                        <td>10/03/2025</td>
+                        <td>$85.000</td>
+                        <td>$85.000</td>
+                        <td>$0</td>
+                        <td><span class="status status-paid">Pagada</span></td>
+                        <td class="comprobante">
+                            <a href="#" target="_blank">comprobante_3.pdf</a>
+                        </td>
+                        <td>
+                            <button class="btn btn-primary" disabled>Pagada</button>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>4</td>
+                        <td>10/04/2025</td>
+                        <td>$85.000</td>
+                        <td>$85.000</td>
+                        <td>$0</td>
+                        <td><span class="status status-paid">Pagada</span></td>
+                        <td class="comprobante">
+                            <a href="#" target="_blank">comprobante_4.pdf</a>
+                        </td>
+                        <td>
+                            <button class="btn btn-primary" disabled>Pagada</button>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>5</td>
+                        <td>10/05/2025</td>
+                        <td>$85.000</td>
+                        <td>$85.000</td>
+                        <td>$0</td>
+                        <td><span class="status status-paid">Pagada</span></td>
+                        <td class="comprobante">
+                            <a href="#" target="_blank">comprobante_5.pdf</a>
+                        </td>
+                        <td>
+                            <button class="btn btn-primary" disabled>Pagada</button>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>6</td>
+                        <td>10/06/2025</td>
+                        <td>$85.000</td>
+                        <td>$50.000</td>
+                        <td>$35.000</td>
+                        <td><span class="status status-pending">Parcial</span></td>
+                        <td class="comprobante">
+                            <a href="#" target="_blank">comprobante_6.pdf</a>
+                        </td>
+                        <td>
+                            <button class="btn btn-primary">Pagar</button>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>7</td>
+                        <td>10/07/2025</td>
+                        <td>$85.000</td>
+                        <td>$0</td>
+                        <td>$85.000</td>
+                        <td><span class="status status-pending">Pendiente</span></td>
+                        <td class="comprobante">-</td>
+                        <td>
+                            <button class="btn btn-primary">Pagar</button>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>8</td>
+                        <td>10/08/2025</td>
+                        <td>$85.000</td>
+                        <td>$0</td>
+                        <td>$85.000</td>
+                        <td><span class="status status-pending">Pendiente</span></td>
+                        <td class="comprobante">-</td>
+                        <td>
+                            <button class="btn btn-primary">Pagar</button>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>9</td>
+                        <td>10/09/2025</td>
+                        <td>$85.000</td>
+                        <td>$0</td>
+                        <td>$85.000</td>
+                        <td><span class="status status-pending">Pendiente</span></td>
+                        <td class="comprobante">-</td>
+                        <td>
+                            <button class="btn btn-primary">Pagar</button>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>10</td>
+                        <td>10/10/2025</td>
+                        <td>$85.000</td>
+                        <td>$0</td>
+                        <td>$85.000</td>
+                        <td><span class="status status-pending">Pendiente</span></td>
+                        <td class="comprobante">-</td>
+                        <td>
+                            <button class="btn btn-primary">Pagar</button>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        
+        <div id="no-convenio" style="display: none; text-align: center; padding: 40px 20px;">
+            <h3 style="color: var(--gray); margin-bottom: 20px;">No se encontró convenio para esta unidad</h3>
+            <button class="btn btn-success" id="btn-crear-convenio">Crear Nuevo Convenio</button>
+        </div>
+    </div>
+    
+    <!-- Modal para Nuevo Convenio -->
+    <div id="modal-convenio" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Activar Nuevo Convenio</h2>
+                <span class="close">&times;</span>
+            </div>
+            
+            <div class="notification success" id="success-msg" style="display: none;">
+                Convenio activado exitosamente!
+            </div>
+            
+            <div class="notification error" id="error-msg" style="display: none;">
+                Error al activar el convenio. Complete todos los campos.
+            </div>
+            
+            <div class="form-group">
+                <label for="ac_parcela">N° de Parcela/Unidad</label>
+                <input type="text" id="ac_parcela" readonly>
+            </div>
+            
+            <div class="form-group">
+                <label for="ac_deuda">Deuda Original ($)</label>
+                <input type="number" id="ac_deuda" min="1" step="1" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="ac_cuotas">N° de Cuotas</label>
+                <input type="number" id="ac_cuotas" min="1" step="1" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="ac_valor">Valor por Cuota ($)</label>
+                <input type="number" id="ac_valor" min="1" step="1" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="ac_fecha">Fecha Inicio</label>
+                <input type="date" id="ac_fecha" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="ac_interes">Interés (%)</label>
+                <input type="number" id="ac_interes" min="0" step="0.01" value="0">
+            </div>
+            
+            <div class="form-actions">
+                <button class="btn btn-danger" id="ac_cerrar">Cancelar</button>
+                <button class="btn btn-success" id="ac_guardar">Activar Convenio</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Modal para Registrar Pago -->
+    <div id="modal-pago" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Registrar Pago de Cuota</h2>
+                <span class="close">&times;</span>
+            </div>
+            
+            <div class="notification success" id="pago-success-msg" style="display: none;">
+                Pago registrado exitosamente!
+            </div>
+            
+            <div class="form-group">
+                <label for="pq_ncuota">N° Cuota</label>
+                <input type="number" id="pq_ncuota" min="1" required readonly>
+            </div>
+            
+            <div class="form-group">
+                <label for="pq_fecha">Fecha de Pago</label>
+                <input type="date" id="pq_fecha" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="pq_monto">Monto Pagado ($)</label>
+                <input type="number" id="pq_monto" min="0" step="1" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="pq_metodo">Método de Pago</label>
+                <select id="pq_metodo" required>
+                    <option value="">Seleccione método</option>
+                    <option value="Transferencia">Transferencia</option>
+                    <option value="Efectivo">Efectivo</option>
+                    <option value="Tarjeta">Tarjeta de Crédito/Débito</option>
+                    <option value="Cheque">Cheque</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label for="pq_obs">Observación</label>
+                <input type="text" id="pq_obs" placeholder="Detalles adicionales del pago">
+            </div>
+            
+            <div class="form-group">
+                <label for="pq_file">Adjuntar Comprobante (PDF, JPG, PNG)</label>
+                <input type="file" id="pq_file" accept=".pdf,.jpg,.jpeg,.png">
+            </div>
+            
+            <div class="form-group">
+                <label>
+                    <input type="checkbox" id="pq_enviar" checked> 
+                    Enviar comprobante por correo al residente
+                </label>
+            </div>
+            
+            <div class="form-actions">
+                <button class="btn btn-danger" id="pq_cerrar">Cancelar</button>
+                <button class="btn btn-success" id="pq_guardar">Registrar Pago</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Simulación de datos - En un caso real, estos vendrían de Google Sheets
+        let conveniosData = {
+            "105": {
+                deudaOriginal: 850000,
+                saldoConvenio: 350000,
+                nCuotas: 10,
+                valorCuota: 85000,
+                cuotas: [
+                    { nCuota: 1, fechaVencimiento: "2025-01-10", montoCuota: 85000, pagadoAcumulado: 85000, saldoCuota: 0, estado: "Pagada", comprobantes: "comprobante_1.pdf" },
+                    { nCuota: 2, fechaVencimiento: "2025-02-10", montoCuota: 85000, pagadoAcumulado: 85000, saldoCuota: 0, estado: "Pagada", comprobantes: "comprobante_2.pdf" },
+                    { nCuota: 3, fechaVencimiento: "2025-03-10", montoCuota: 85000, pagadoAcumulado: 85000, saldoCuota: 0, estado: "Pagada", comprobantes: "comprobante_3.pdf" },
+                    { nCuota: 4, fechaVencimiento: "2025-04-10", montoCuota: 85000, pagadoAcumulado: 85000, saldoCuota: 0, estado: "Pagada", comprobantes: "comprobante_4.pdf" },
+                    { nCuota: 5, fechaVencimiento: "2025-05-10", montoCuota: 85000, pagadoAcumulado: 85000, saldoCuota: 0, estado: "Pagada", comprobantes: "comprobante_5.pdf" },
+                    { nCuota: 6, fechaVencimiento: "2025-06-10", montoCuota: 85000, pagadoAcumulado: 50000, saldoCuota: 35000, estado: "Parcial", comprobantes: "comprobante_6.pdf" },
+                    { nCuota: 7, fechaVencimiento: "2025-07-10", montoCuota: 85000, pagadoAcumulado: 0, saldoCuota: 85000, estado: "Pendiente", comprobantes: "" },
+                    { nCuota: 8, fechaVencimiento: "2025-08-10", montoCuota: 85000, pagadoAcumulado: 0, saldoCuota: 85000, estado: "Pendiente", comprobantes: "" },
+                    { nCuota: 9, fechaVencimiento: "2025-09-10", montoCuota: 85000, pagadoAcumulado: 0, saldoCuota: 85000, estado: "Pendiente", comprobantes: "" },
+                    { nCuota: 10, fechaVencimiento: "2025-10-10", montoCuota: 85000, pagadoAcumulado: 0, saldoCuota: 85000, estado: "Pendiente", comprobantes: "" }
+                ]
+            }
+        };
+
+        document.addEventListener('DOMContentLoaded', function() {
+            // Configurar fecha actual por defecto
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('ac_fecha').value = today;
+            document.getElementById('pq_fecha').value = today;
+            
+            // Obtener elementos DOM
+            const modalConvenio = document.getElementById('modal-convenio');
+            const modalPago = document.getElementById('modal-pago');
+            const btnBuscar = document.getElementById('btn-buscar-convenio');
+            const btnActivar = document.getElementById('btn-activar-convenio');
+            const btnCrear = document.getElementById('btn-crear-convenio');
+            const btnGuardarConvenio = document.getElementById('ac_guardar');
+            const btnCerrarConvenio = document.getElementById('ac_cerrar');
+            const btnGuardarPago = document.getElementById('pq_guardar');
+            const btnCerrarPago = document.getElementById('pq_cerrar');
+            const closeButtons = document.querySelectorAll('.close');
+            const parcelaInput = document.getElementById('parcela');
+            
+            // Event Listeners
+            btnBuscar.addEventListener('click', buscarConvenio);
+            btnActivar.addEventListener('click', abrirModalConvenio);
+            btnCrear.addEventListener('click', abrirModalConvenio);
+            btnGuardarConvenio.addEventListener('click', guardarConvenio);
+            btnCerrarConvenio.addEventListener('click', cerrarModalConvenio);
+            btnGuardarPago.addEventListener('click', registrarPago);
+            btnCerrarPago.addEventListener('click', cerrarModalPago);
+            
+            closeButtons.forEach(button => {
+                button.addEventListener('click', function() {
+                    modalConvenio.style.display = 'none';
+                    modalPago.style.display = 'none';
+                });
+            });
+            
+            // Cerrar modal al hacer clic fuera del contenido
+            window.addEventListener('click', function(event) {
+                if (event.target === modalConvenio) {
+                    modalConvenio.style.display = 'none';
+                }
+                if (event.target === modalPago) {
+                    modalPago.style.display = 'none';
+                }
+            });
+            
+            // Autocompletar parcela en modal de convenio
+            parcelaInput.addEventListener('change', function() {
+                document.getElementById('ac_parcela').value = this.value;
+            });
+            
+            // Función para buscar convenio
+            function buscarConvenio() {
+                const parcela = parcelaInput.value.trim();
+                const year = document.getElementById('year').value;
+                
+                if (!parcela) {
+                    alert('Por favor ingrese un número de parcela/unidad');
+                    return;
+                }
+                
+                // Simular búsqueda de convenio
+                if (conveniosData[parcela]) {
+                    mostrarConvenio(conveniosData[parcela]);
+                } else {
+                    document.getElementById('convenio-info').style.display = 'none';
+                    document.getElementById('no-convenio').style.display = 'block';
+                }
+            }
+            
+            // Función para mostrar convenio
+            function mostrarConvenio(convenio) {
+                document.getElementById('no-convenio').style.display = 'none';
+                
+                // Actualizar resumen
+                const summaryCards = document.querySelectorAll('.summary-card');
+                summaryCards[0].querySelector('.value').textContent = `$${convenio.deudaOriginal.toLocaleString('es-CL')}`;
+                summaryCards[1].querySelector('.value').textContent = `$${convenio.saldoConvenio.toLocaleString('es-CL')}`;
+                
+                const cuotasPagadas = convenio.cuotas.filter(c => c.estado === 'Pagada').length;
+                summaryCards[2].querySelector('.value').textContent = `${cuotasPagadas}/${convenio.nCuotas}`;
+                summaryCards[3].querySelector('.value').textContent = `$${convenio.valorCuota.toLocaleString('es-CL')}`;
+                
+                // Actualizar tabla
+                const tbody = document.querySelector('#convenio-info tbody');
+                tbody.innerHTML = '';
+                
+                convenio.cuotas.forEach(cuota => {
+                    const tr = document.createElement('tr');
+                    
+                    const statusClass = cuota.estado === 'Pagada' ? 'status-paid' : 
+                                      cuota.estado === 'Parcial' ? 'status-pending' : 'status-pending';
+                    const statusText = cuota.estado === 'Pagada' ? 'Pagada' : 
+                                     cuota.estado === 'Parcial' ? 'Parcial' : 'Pendiente';
+                    
+                    const comprobanteHTML = cuota.comprobantes ? 
+                        `<a href="#" target="_blank">${cuota.comprobantes}</a>` : 
+                        '-';
+                    
+                    const actionButton = cuota.estado === 'Pagada' ?
+                        `<button class="btn btn-primary" disabled>Pagada</button>` :
+                        `<button class="btn btn-primary" onclick="abrirModalPago(${cuota.nCuota})">Pagar</button>`;
+                    
+                    tr.innerHTML = `
+                        <td>${cuota.nCuota}</td>
+                        <td>${formatDate(cuota.fechaVencimiento)}</td>
+                        <td>$${cuota.montoCuota.toLocaleString('es-CL')}</td>
+                        <td>$${cuota.pagadoAcumulado.toLocaleString('es-CL')}</td>
+                        <td>$${cuota.saldoCuota.toLocaleString('es-CL')}</td>
+                        <td><span class="status ${statusClass}">${statusText}</span></td>
+                        <td class="comprobante">${comprobanteHTML}</td>
+                        <td>${actionButton}</td>
+                    `;
+                    
+                    tbody.appendChild(tr);
+                });
+                
+                document.getElementById('convenio-info').style.display = 'block';
+            }
+            
+            // Función para abrir modal de convenio
+            function abrirModalConvenio() {
+                const parcela = parcelaInput.value.trim();
+                if (parcela) {
+                    document.getElementById('ac_parcela').value = parcela;
+                }
+                document.getElementById('success-msg').style.display = 'none';
+                document.getElementById('error-msg').style.display = 'none';
+                modalConvenio.style.display = 'flex';
+            }
+            
+            // Función para cerrar modal de convenio
+            function cerrarModalConvenio() {
+                modalConvenio.style.display = 'none';
+            }
+            
+            // Función para guardar convenio
+            function guardarConvenio() {
+                const parcela = document.getElementById('ac_parcela').value;
+                const deuda = document.getElementById('ac_deuda').value;
+                const cuotas = document.getElementById('ac_cuotas').value;
+                const valor = document.getElementById('ac_valor').value;
+                const fecha = document.getElementById('ac_fecha').value;
+                
+                if (!parcela || !deuda || !cuotas || !valor || !fecha) {
+                    document.getElementById('error-msg').style.display = 'block';
+                    return;
+                }
+                
+                // Simular guardado exitoso
+                document.getElementById('success-msg').style.display = 'block';
+                
+                // Cerrar modal después de 2 segundos
+                setTimeout(() => {
+                    modalConvenio.style.display = 'none';
+                    // Actualizar la vista con el nuevo convenio
+                    buscarConvenio();
+                }, 2000);
+            }
+            
+            // Función para abrir modal de pago
+            window.abrirModalPago = function(nCuota) {
+                document.getElementById('pq_ncuota').value = nCuota;
+                document.getElementById('pq_monto').value = conveniosData[parcelaInput.value].valorCuota;
+                document.getElementById('pago-success-msg').style.display = 'none';
+                modalPago.style.display = 'flex';
+            };
+            
+            // Función para cerrar modal de pago
+            function cerrarModalPago() {
+                modalPago.style.display = 'none';
+            }
+            
+            // Función para registrar pago
+            function registrarPago() {
+                const nCuota = document.getElementById('pq_ncuota').value;
+                const fecha = document.getElementById('pq_fecha').value;
+                const monto = document.getElementById('pq_monto').value;
+                const metodo = document.getElementById('pq_metodo').value;
+                
+                if (!nCuota || !fecha || !monto || !metodo) {
+                    alert('Por favor complete todos los campos obligatorios');
+                    return;
+                }
+                
+                // Simular registro exitoso
+                document.getElementById('pago-success-msg').style.display = 'block';
+                
+                // Cerrar modal después de 2 segundos
+                setTimeout(() => {
+                    modalPago.style.display = 'none';
+                    // Actualizar la vista con el pago registrado
+                    buscarConvenio();
+                }, 2000);
+            }
+            
+            // Función auxiliar para formatear fechas
+            function formatDate(dateString) {
+                const date = new Date(dateString);
+                return date.toLocaleDateString('es-CL');
+            }
+            
+            // Simular que ya hay una parcela buscada al cargar la página
+            parcelaInput.value = "105";
+            buscarConvenio();
+        });
+    </script>
+</body>
+</html>
