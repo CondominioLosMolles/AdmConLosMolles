@@ -7,11 +7,17 @@
     <style>
         :root {
             --primary: #3498db;
+            --primary-dark: #2980b9;
             --secondary: #2ecc71;
+            --secondary-dark: #27ae60;
             --danger: #e74c3c;
+            --danger-dark: #c0392b;
             --dark: #2c3e50;
             --light: #ecf0f1;
             --gray: #95a5a6;
+            --light-gray: #bdc3c7;
+            --text: #333;
+            --text-light: #777;
         }
         
         * {
@@ -23,7 +29,7 @@
         
         body {
             background-color: #f5f7f9;
-            color: #333;
+            color: var(--text);
             line-height: 1.6;
             padding: 20px;
         }
@@ -106,7 +112,7 @@
         }
         
         .btn-primary:hover {
-            background: #2980b9;
+            background: var(--primary-dark);
         }
         
         .btn-success {
@@ -115,7 +121,7 @@
         }
         
         .btn-success:hover {
-            background: #27ae60;
+            background: var(--secondary-dark);
         }
         
         .btn-danger {
@@ -124,7 +130,7 @@
         }
         
         .btn-danger:hover {
-            background: #c0392b;
+            background: var(--danger-dark);
         }
         
         .convenio-summary {
@@ -203,6 +209,11 @@
         .status-pending {
             background: #ffebee;
             color: var(--danger);
+        }
+        
+        .status-partial {
+            background: #fff3e0;
+            color: #f57c00;
         }
         
         .modal {
@@ -309,6 +320,17 @@
         
         .comprobante a:hover {
             text-decoration: underline;
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: var(--text-light);
+        }
+        
+        .empty-state h3 {
+            margin-bottom: 15px;
+            font-weight: normal;
         }
         
         @media (max-width: 768px) {
@@ -466,12 +488,12 @@
                         <td>$85.000</td>
                         <td>$50.000</td>
                         <td>$35.000</td>
-                        <td><span class="status status-pending">Parcial</span></td>
+                        <td><span class="status status-partial">Parcial</span></td>
                         <td class="comprobante">
                             <a href="#" target="_blank">comprobante_6.pdf</a>
                         </td>
                         <td>
-                            <button class="btn btn-primary">Pagar</button>
+                            <button class="btn btn-primary" onclick="abrirModalPago(6)">Pagar</button>
                         </td>
                     </tr>
                     <tr>
@@ -483,7 +505,7 @@
                         <td><span class="status status-pending">Pendiente</span></td>
                         <td class="comprobante">-</td>
                         <td>
-                            <button class="btn btn-primary">Pagar</button>
+                            <button class="btn btn-primary" onclick="abrirModalPago(7)">Pagar</button>
                         </td>
                     </tr>
                     <tr>
@@ -495,7 +517,7 @@
                         <td><span class="status status-pending">Pendiente</span></td>
                         <td class="comprobante">-</td>
                         <td>
-                            <button class="btn btn-primary">Pagar</button>
+                            <button class="btn btn-primary" onclick="abrirModalPago(8)">Pagar</button>
                         </td>
                     </tr>
                     <tr>
@@ -507,7 +529,7 @@
                         <td><span class="status status-pending">Pendiente</span></td>
                         <td class="comprobante">-</td>
                         <td>
-                            <button class="btn btn-primary">Pagar</button>
+                            <button class="btn btn-primary" onclick="abrirModalPago(9)">Pagar</button>
                         </td>
                     </tr>
                     <tr>
@@ -519,15 +541,15 @@
                         <td><span class="status status-pending">Pendiente</span></td>
                         <td class="comprobante">-</td>
                         <td>
-                            <button class="btn btn-primary">Pagar</button>
+                            <button class="btn btn-primary" onclick="abrirModalPago(10)">Pagar</button>
                         </td>
                     </tr>
                 </tbody>
             </table>
         </div>
         
-        <div id="no-convenio" style="display: none; text-align: center; padding: 40px 20px;">
-            <h3 style="color: var(--gray); margin-bottom: 20px;">No se encontró convenio para esta unidad</h3>
+        <div id="no-convenio" class="empty-state" style="display: none;">
+            <h3>No se encontró convenio para esta unidad</h3>
             <button class="btn btn-success" id="btn-crear-convenio">Crear Nuevo Convenio</button>
         </div>
     </div>
@@ -760,7 +782,7 @@
                     const tr = document.createElement('tr');
                     
                     const statusClass = cuota.estado === 'Pagada' ? 'status-paid' : 
-                                      cuota.estado === 'Parcial' ? 'status-pending' : 'status-pending';
+                                      cuota.estado === 'Parcial' ? 'status-partial' : 'status-pending';
                     const statusText = cuota.estado === 'Pagada' ? 'Pagada' : 
                                      cuota.estado === 'Parcial' ? 'Parcial' : 'Pendiente';
                     
