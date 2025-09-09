@@ -1,19 +1,93 @@
+// js/utils.js - Versión estable
+
+/* ==========================
+ * Utilidades de layout/base
+ * ========================== */
+function limpiarMainContent() {
+  const mainContent = document.getElementById('main-content')
+    || document.querySelector('#contenido-principal')
+    || document.querySelector('#content')
+    || document.querySelector('main');
+  if (mainContent) mainContent.innerHTML = '';
+}
+
+function mostrarSpinner() {
+  const spinner = document.getElementById('spinner');
+  if (spinner) spinner.style.display = 'flex';
+}
+function ocultarSpinner() {
+  const spinner = document.getElementById('spinner');
+  if (spinner) spinner.style.display = 'none';
+}
+
+function mostrarMensaje(msg, tipo = 'info') {
+  const container = document.createElement('div');
+  container.className = `mensaje-flotante ${tipo}`;
+  container.textContent = msg;
+  document.body.appendChild(container);
+  setTimeout(() => { container.classList.add('visible'); }, 10);
+  setTimeout(() => {
+    container.classList.remove('visible');
+    setTimeout(() => { container.remove(); }, 500);
+  }, 3000);
+}
+
+/* ==========================
+ * Modal global reutilizable
+ * ========================== */
+function mostrarModalGlobal(titulo, cuerpoHtml, callbackGuardar, tamano = 'normal') {
+  const modalContainer = document.getElementById('global-modal-container');
+  const modalContent   = document.getElementById('global-modal-content');
+  const modalTitle     = document.getElementById('global-modal-title');
+  const modalBody      = document.getElementById('global-modal-body');
+  const saveBtn        = document.getElementById('global-modal-save');
+  const closeBtn       = document.getElementById('global-modal-close');
+
+  if (!modalContainer) {
+    console.error('El contenedor de modal global no existe en index.html');
+    return;
+  }
+
+  modalTitle.textContent = titulo;
+  modalBody.innerHTML = cuerpoHtml;
+
+  // Reemplaza el botón para evitar listeners duplicados
+  const newSaveBtn = saveBtn.cloneNode(true);
+  saveBtn.parentNode.replaceChild(newSaveBtn, saveBtn);
+  newSaveBtn.onclick = callbackGuardar;
+
+  closeBtn.onclick = ocultarModalGlobal;
+
+  if (tamano === 'large') modalContent.classList.add('large');
+  else modalContent.classList.remove('large');
+
+  modalContainer.style.display = 'flex';
+}
+
+function ocultarModalGlobal() {
+  const modalContainer = document.getElementById('global-modal-container');
+  if (modalContainer) {
+    modalContainer.style.display = 'none';
+    const body = document.getElementById('global-modal-body');
+    if (body) body.innerHTML = '';
+  }
+}
+
+/* ==========================================================
+ * Llamada central a Google Apps Script (Execution API gapi)
+ * ========================================================== */
 /**
- * Función central para comunicarse con la Google Apps Script Execution API.
- * REQUIERE: gapi.auth.getToken() válido (ya lo gestionas en auth.js).
- *
- * @param {string} functionName - Nombre de la función en tu Apps Script.
- * @param {Array} parameters - Parámetros posicionales para esa función.
- * @returns {Promise<any>} - Respuesta devuelta por la función del Apps Script.
+ * REQUIERE que ya estés autenticado con gapi (tu auth.js lo hace).
+ * Usa la Execution API: URL "Ejecutable de API" del deployment.
  */
 async function llamarAPI(functionName, parameters = []) {
-  // Cambia este scriptId por el de tu proyecto (si ya está correcto, déjalo tal cual).
+  // Pega aquí tu URL "Ejecutable de API" (termina en ...:run)
   const SCRIPT_URL = "https://script.googleapis.com/v1/scripts/AKfycbw_FdUARsUgDyyjIezpdN_59QCr02Zl6g8eI64IA4CzdXY7ibXvAGh1FK-mTwDYXv--8Q:run";
 
   try {
     const tokenObj = gapi.auth.getToken();
     if (!tokenObj || !tokenObj.access_token) {
-      throw new Error('No hay token de Google válido. Asegura login con gapi antes de llamar a la API.');
+      throw new Error('No hay token OAuth. Inicia sesión con Google antes de llamar a la API.');
     }
 
     const res = await fetch(SCRIPT_URL, {
@@ -23,65 +97,7 @@ async function llamarAPI(functionName, parameters = []) {
         'Authorization': `Bearer ${tokenObj.access_token}`
       },
       body: JSON.stringify({
-        // Formato requerido por Execution API
+        // OJO: en Execution API la clave es "function" (no "functionName")
         "function": functionName,
         "parameters": parameters,
-        "devMode": true
-      }),
-    });
-
-    const text = await res.text();
-    let jsonResponse = {};
-    try { jsonResponse = text ? JSON.parse(text) : {}; } catch (_e) {}
-
-    if (!res.ok) {
-      // Mensaje detallado de error HTTP/Execution API
-      const errMsg = jsonResponse?.error?.message || text || `HTTP ${res.status}`;
-      throw new Error(`Execution API error: ${errMsg}`);
-    }
-
-    // Execution API devuelve { done, response, error }
-    if (jsonResponse.error) {
-      const detail = jsonResponse.error.details?.[0]?.errorMessage || jsonResponse.error.message;
-      throw new Error(detail || 'Ocurrió un error en el Apps Script.');
-    }
-
-    // Algunos runtimes devuelven {response: {result: ...}}
-    const result = jsonResponse.response?.result ?? jsonResponse.response;
-    return result;
-
-  } catch (error) {
-    console.error(`Error llamando a '${functionName}':`, error);
-    throw error;
-  }
-}
-/* =====================================================================
- * CORE SHIMS: asegura utilidades base para que no falle la app
- * (colocar en utils.js o en un archivo que cargue ANTES de dashboard.js)
- * ===================================================================== */
-(function () {
-  // Devuelve el contenedor principal de la app
-  function _getMainContentEl() {
-    return document.getElementById('main-content')
-        || document.querySelector('#contenido-principal')
-        || document.querySelector('#content')
-        || document.querySelector('main');
-  }
-
-  // Si no existe limpiarMainContent, define una versión segura
-  if (typeof window.limpiarMainContent !== 'function') {
-    window.limpiarMainContent = function () {
-      const el = _getMainContentEl();
-      if (el) el.innerHTML = '';
-    };
-  }
-
-  // (Opcional) helper para inyectar HTML sin romper nada
-  if (typeof window.renderEnMainContent !== 'function') {
-    window.renderEnMainContent = function (html) {
-      const el = _getMainContentEl();
-      if (el != null) el.innerHTML = html;
-    };
-  }
-})();
-
+        "devMode":
