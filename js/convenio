@@ -1,387 +1,335 @@
-// convenio.js - Módulo independiente para gestión de convenios de pago
+// =======================================================
+// ===== convenios.js - Módulo de Gestión de Convenios =====
+// =======================================================
 
-// Estado global del módulo
-const _convenioState = {
-    nParcela: null,
-    idConvenio: null,
-    cuotas: [],
-    convenio: null
-};
+async function cargarConvenios() {
+    limpiarMainContent();
+    mostrarSpinner();
 
-// Inicialización del módulo
-function initConvenios() {
-    console.log("Inicializando módulo de convenios");
-    injectConveniosUI();
-    ensureBindings();
-    
-    // Intentar cargar convenio si hay una parcela seleccionada
-    const parcela = findParcelaSeleccionada();
-    if (parcela) {
-        _hookConvenioOnParcelaChange(parcela);
-    }
-}
+    // Estado local del módulo
+    let convenios = [];
+    let cuotas = [];
+    let residentes = [];
 
-// Inyectar la interfaz de usuario
-function injectConveniosUI() {
-    // Solo inyectar si no existe ya
-    if (document.getElementById('convenio-actions-bar')) return;
-    
-    const host = document.getElementById('main-content') || document.body;
-    
-    // Barra de acciones
-    const actionsBar = document.createElement('div');
-    actionsBar.id = 'convenio-actions-bar';
-    actionsBar.style.cssText = 'display:flex;gap:8px;margin:12px 0';
-    actionsBar.innerHTML = `
-        <button class="btn btn-primary" id="btn-activar-convenio">Nuevo Convenio</button>
-    `;
-    
-    // Contenedor principal
-    const convenioBox = document.createElement('div');
-    convenioBox.id = 'cuotas-convenio-box';
-    convenioBox.style.cssText = 'display:none;margin-top:12px';
-    convenioBox.innerHTML = `
-        <div class="section-title">Cuotas del Convenio</div>
-        <div id="cuotas-convenio-summary" class="cards-row" style="margin-bottom:12px"></div>
-        <div class="table-wrapper">
-            <table id="tabla-cuotas-convenio" class="residente-table" aria-label="Tabla de cuotas del convenio">
-                <thead>
-                    <tr>
-                        <th>#</th><th>Vencimiento</th><th>Monto Cuota</th>
-                        <th>Pagado</th><th>Saldo</th><th>Estado</th><th>Comprobante</th><th>Acciones</th>
-                    </tr>
-                </thead>
-                <tbody></tbody>
-            </table>
-        </div>
-    `;
-    
-    // Insertar en el DOM
-    host.insertBefore(actionsBar, host.firstChild);
-    host.appendChild(convenioBox);
-    
-    // Crear modales
-    createModals();
-    
-    console.log('[Convenios] UI inyectada');
-}
-
-// Crear modales
-function createModals() {
-    if (document.getElementById('modalActivarConvenio')) return;
-    
-    // Modal activar convenio
-    const modalCv = document.createElement('div');
-    modalCv.id = 'modalActivarConvenio';
-    modalCv.className = 'modal';
-    modalCv.style.display = 'none';
-    modalCv.innerHTML = `
-        <div class="modal-content" style="max-width:580px">
-            <h3>Activar Convenio</h3>
-            <div class="form-grid">
-                <label>N° Parcela <input type="text" id="ac_parcela" required /></label>
-                <label>Deuda Original ($) <input type="number" id="ac_deuda" min="1" step="1" required /></label>
-                <label>N° de Cuotas <input type="number" id="ac_cuotas" min="1" step="1" required /></label>
-                <label>Valor por Cuota ($) <input type="number" id="ac_valor" min="1" step="1" required /></label>
-                <label>Fecha Inicio <input type="date" id="ac_fecha" required /></label>
-                <label>Interés (%) <input type="number" id="ac_interes" min="0" step="0.01" placeholder="0" /></label>
-            </div>
-            <div class="modal-actions">
-                <button class="btn btn-primary" id="ac_guardar">Activar</button>
-                <button class="btn btn-secondary" id="ac_cerrar">Cancelar</button>
+    // HTML principal del módulo
+    const mainContent = document.getElementById('main-content');
+    mainContent.innerHTML = `
+        <div class="container mt-4">
+            <div class="card shadow-sm">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h2 class="h4 mb-0">Gestión de Convenios de Pago</h2>
+                    <button id="btnNuevoConvenio" class="btn btn-primary">
+                        <i class="fas fa-plus me-2"></i>Nuevo Convenio
+                    </button>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover table-bordered">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>N° Parcela</th>
+                                    <th>Residente</th>
+                                    <th>Deuda Original</th>
+                                    <th>N° Cuotas</th>
+                                    <th>Valor Cuota</th>
+                                    <th>Saldo Pendiente</th>
+                                    <th>Estado</th>
+                                    <th class="text-center">Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tabla-convenios-body">
+                                </tbody>
+                        </table>
+                    </div>
+                </div>
             </div>
         </div>
-    `;
-    
-    // Modal pagar cuota
-    const modalPay = document.createElement('div');
-    modalPay.id = 'modalPagarCuota';
-    modalPay.className = 'modal';
-    modalPay.style.display = 'none';
-    modalPay.innerHTML = `
-        <div class="modal-content" style="max-width:520px">
-            <h3>Registrar pago de cuota</h3>
-            <div class="form-grid">
-                <label>N° Cuota <input type="number" id="pq_ncuota" min="1" required /></label>
-                <label>Fecha de pago <input type="date" id="pq_fecha" required /></label>
-                <label>Monto pagado ($) <input type="number" id="pq_monto" min="0" step="1" required /></label>
-                <label>Método <input type="text" id="pq_metodo" placeholder="Transferencia / Efectivo / Tarjeta" /></label>
-                <label>Observación <input type="text" id="pq_obs" /></label>
-                <label>Adjuntar respaldo <input type="file" id="pq_file" accept=".pdf,.jpg,.jpeg,.png" /></label>
-                <label style="grid-column:1 / -1"><input type="checkbox" id="pq_enviar" checked /> Enviar comprobante por correo al guardar</label>
+
+        <div id="modalNuevoConvenio" class="modal-custom">
+            <div class="modal-content-custom modal-lg">
+                <div class="modal-header-custom">
+                    <h5 class="modal-title-custom">Crear Nuevo Convenio de Pago</h5>
+                    <button type="button" class="btn-close-custom" id="btnCerrarModalNuevo">&times;</button>
+                </div>
+                <div class="modal-body-custom">
+                    <form id="formNuevoConvenio">
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="convenioResidente" class="form-label">Residente / Parcela</label>
+                                <select id="convenioResidente" class="form-select" required></select>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="convenioDeudaTotal" class="form-label">Monto Deuda Total</label>
+                                <input type="number" id="convenioDeudaTotal" class="form-control" required min="1">
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="convenioCuotas" class="form-label">Número de Cuotas</label>
+                                <input type="number" id="convenioCuotas" class="form-control" required min="1" max="120">
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="convenioValorCuota" class="form-label">Valor Cuota (calculado)</label>
+                                <input type="text" id="convenioValorCuota" class="form-control" disabled>
+                            </div>
+                        </div>
+                         <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="convenioFechaInicio" class="form-label">Fecha Primera Cuota</label>
+                                <input type="date" id="convenioFechaInicio" class="form-control" required>
+                            </div>
+                        </div>
+                        <div class="form-group text-end">
+                            <button type="submit" class="btn btn-success">Guardar Convenio</button>
+                        </div>
+                    </form>
+                </div>
             </div>
-            <div class="modal-actions">
-                <button class="btn btn-primary" id="pq_guardar">Guardar</button>
-                <button class="btn btn-secondary" id="pq_cerrar">Cancelar</button>
+        </div>
+
+        <div id="modalDetalleConvenio" class="modal-custom">
+            <div class="modal-content-custom modal-xl">
+                 <div class="modal-header-custom">
+                    <h5 class="modal-title-custom" id="detalleConvenioTitle">Detalle de Cuotas</h5>
+                    <button type="button" class="btn-close-custom" id="btnCerrarModalDetalle">&times;</button>
+                </div>
+                <div class="modal-body-custom">
+                    <div id="detalle-convenio-info" class="mb-4"></div>
+                    <div class="table-responsive">
+                        <table class="table table-sm table-bordered">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>N° Cuota</th>
+                                    <th>Fecha Vencimiento</th>
+                                    <th>Monto Cuota</th>
+                                    <th>Estado</th>
+                                    <th class="text-center">Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tabla-cuotas-body"></tbody>
+                        </table>
+                    </div>
+                </div>
             </div>
         </div>
     `;
-    
-    document.body.appendChild(modalCv);
-    document.body.appendChild(modalPay);
-}
 
-// Configurar event listeners
-function ensureBindings() {
-    // Botón activar convenio
-    const btnAct = document.getElementById('btn-activar-convenio');
-    if (btnAct && !btnAct._bound) {
-        btnAct.addEventListener('click', () => {
-            const p = findParcelaSeleccionada();
-            if (!p) return alert('Ingresa N° de parcela en Filtros.');
-            document.getElementById('ac_parcela').value = p;
-            document.getElementById('ac_fecha').valueAsDate = new Date();
-            document.getElementById('modalActivarConvenio').style.display = 'block';
-        });
-        btnAct._bound = true;
-    }
-
-    // Botones modales
-    bindModalButtons();
-    
-    // Detectar cambios en input de parcela
-    setupParcelaChangeListener();
-}
-
-// Vincular botones de modales
-function bindModalButtons() {
-    // Modal activar convenio
-    const acGuardar = document.getElementById('ac_guardar');
-    if (acGuardar && !acGuardar._bound) {
-        acGuardar.addEventListener('click', onActivarConvenio);
-        acGuardar._bound = true;
-    }
-    
-    const acCerrar = document.getElementById('ac_cerrar');
-    if (acCerrar && !acCerrar._bound) {
-        acCerrar.addEventListener('click', () => {
-            document.getElementById('modalActivarConvenio').style.display = 'none';
-        });
-        acCerrar._bound = true;
-    }
-    
-    // Modal pagar cuota
-    const pqGuardar = document.getElementById('pq_guardar');
-    if (pqGuardar && !pqGuardar._bound) {
-        pqGuardar.addEventListener('click', onGuardarPagoCuota);
-        pqGuardar._bound = true;
-    }
-    
-    const pqCerrar = document.getElementById('pq_cerrar');
-    if (pqCerrar && !pqCerrar._bound) {
-        pqCerrar.addEventListener('click', () => {
-            document.getElementById('modalPagarCuota').style.display = 'none';
-        });
-        pqCerrar._bound = true;
-    }
-}
-
-// Configurar listener para cambios en input de parcela
-function setupParcelaChangeListener() {
-    const host = document.getElementById('main-content') || document.body;
-    const inputs = host.querySelectorAll('input[type="text"], input[type="number"]');
-    
-    inputs.forEach(inp => {
-        if (!inp._cvBound) {
-            inp.addEventListener('change', () => {
-                const p = findParcelaSeleccionada();
-                if (p) _hookConvenioOnParcelaChange(p);
-            });
-            inp._cvBound = true;
-        }
-    });
-}
-
-// Encontrar parcela seleccionada
-function findParcelaSeleccionada() {
-    const host = document.getElementById('main-content') || document.body;
-    const inputs = Array.from(host.querySelectorAll('input[type="number"], input[type="text"]'))
-        .filter(i => i.offsetParent !== null);
-    
-    const good = inputs.filter(i => {
-        const text = (i.id || '') + ' ' + (i.name || '') + ' ' + (i.placeholder || '');
-        const lab = i.labels ? Array.from(i.labels).map(l => l.textContent).join(' ') : '';
-        return /parc|parcela|lote|unidad/i.test(text + ' ' + lab);
-    });
-    
-    const el = good[0] || inputs[0];
-    return el && el.value ? String(el.value).trim() : null;
-}
-
-// Handler para activar convenio
-async function onActivarConvenio() {
+    // Carga de datos inicial
     try {
-        const nParcela = String(document.getElementById('ac_parcela').value || '').trim();
-        const deuda = Number(document.getElementById('ac_deuda').value);
-        const cuotas = Number(document.getElementById('ac_cuotas').value);
-        const valor = Number(document.getElementById('ac_valor').value);
-        const fecha = document.getElementById('ac_fecha').value;
-        const interes = Number(document.getElementById('ac_interes').value || 0);
-
-        if (!nParcela || !deuda || !cuotas || !valor || !fecha) {
-            return alert('Completa todos los campos requeridos.');
-        }
-
-        await _gsInvoke('activarConvenio_GS', [nParcela, {
-            deuda, cuotas, valorCuota: valor, fechaInicio: fecha, interes
-        }]);
-
-        document.getElementById('modalActivarConvenio').style.display = 'none';
-        await _hookConvenioOnParcelaChange(nParcela);
-        alert('Convenio activado y cuotas generadas.');
-    } catch (e) {
-        console.error(e);
-        alert('Error al activar convenio: ' + (e.message || e));
+        const data = await llamarAPI('obtenerDatosConvenios');
+        convenios = data.convenios;
+        cuotas = data.cuotas;
+        residentes = data.residentes;
+        renderizarTablaConvenios();
+    } catch (error) {
+        mostrarMensaje('Error al cargar los datos de convenios: ' + error.message, 'error');
+        console.error(error);
+    } finally {
+        ocultarSpinner();
     }
-}
 
-// Handler para registrar pago
-async function onGuardarPagoCuota() {
-    try {
-        const nCuota = Number(document.getElementById('pq_ncuota').value);
-        const fecha = document.getElementById('pq_fecha').value;
-        const monto = Number(document.getElementById('pq_monto').value);
-        const metodo = (document.getElementById('pq_metodo').value || '').trim();
-        const obs = (document.getElementById('pq_obs').value || '').trim();
-        const enviar = document.getElementById('pq_enviar').checked;
-
-        const fileEl = document.getElementById('pq_file');
-        let fileObj = null;
-        if (fileEl && fileEl.files && fileEl.files[0]) {
-            const f = fileEl.files[0];
-            fileObj = { name: f.name, mime: f.type || 'application/octet-stream', base64: await fileToBase64_(f) };
+    // --- RENDERIZACIÓN ---
+    function renderizarTablaConvenios() {
+        const tbody = document.getElementById('tabla-convenios-body');
+        if (convenios.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="8" class="text-center">No hay convenios registrados.</td></tr>';
+            return;
         }
+        tbody.innerHTML = convenios.map(c => `
+            <tr>
+                <td>${c.N_Parcela}</td>
+                <td>${c.Nombre_Residente}</td>
+                <td>$${c.Deuda_Original.toLocaleString('es-CL')}</td>
+                <td>${c.N_Cuotas}</td>
+                <td>$${c.Valor_Cuota.toLocaleString('es-CL')}</td>
+                <td>$${c.Saldo_Convenio.toLocaleString('es-CL')}</td>
+                <td><span class="badge bg-${c.Estado === 'Activo' ? 'success' : (c.Estado === 'Pagado' ? 'info' : 'danger')}">${c.Estado}</span></td>
+                <td class="text-center">
+                    <button class="btn btn-info btn-sm btn-ver-detalle" data-id="${c.ID_Convenio}" title="Ver Detalle">
+                        <i class="fas fa-eye"></i>
+                    </button>
+                    ${c.Estado === 'Activo' ? `<button class="btn btn-danger btn-sm btn-anular" data-id="${c.ID_Convenio}" title="Anular Convenio">
+                        <i class="fas fa-times-circle"></i>
+                    </button>` : ''}
+                </td>
+            </tr>
+        `).join('');
+        agregarEventListenersTabla();
+    }
+    
+    function renderizarDetalleCuotas(convenioId) {
+        const convenio = convenios.find(c => c.ID_Convenio === convenioId);
+        const cuotasConvenio = cuotas.filter(cu => cu.ID_Convenio === convenioId).sort((a, b) => a.N_Cuota - b.N_Cuota);
+
+        document.getElementById('detalleConvenioTitle').innerText = `Detalle de Cuotas - Parcela ${convenio.N_Parcela} (${convenio.Nombre_Residente})`;
         
-        if (!_convenioState.nParcela || !_convenioState.idConvenio) throw new Error('No hay convenio cargado.');
-        if (!nCuota || !fecha || !monto) throw new Error('Completa N° cuota, fecha y monto.');
+        const infoDiv = document.getElementById('detalle-convenio-info');
+        infoDiv.innerHTML = `
+            <div class="row">
+                <div class="col-md-4"><strong>Deuda Original:</strong> $${convenio.Deuda_Original.toLocaleString('es-CL')}</div>
+                <div class="col-md-4"><strong>Saldo Pendiente:</strong> $${convenio.Saldo_Convenio.toLocaleString('es-CL')}</div>
+                <div class="col-md-4"><strong>Estado:</strong> ${convenio.Estado}</div>
+            </div>
+        `;
 
-        const payload = {
-            nParcela: _convenioState.nParcela,
-            idConvenio: _convenioState.idConvenio,
-            nCuota, fechaPago: fecha, monto, metodo, observacion: obs,
-            enviarComprobante: !!enviar, file: fileObj
+        const tbody = document.getElementById('tabla-cuotas-body');
+        tbody.innerHTML = cuotasConvenio.map(cuota => `
+             <tr>
+                <td>${cuota.N_Cuota}</td>
+                <td>${new Date(cuota.Fecha_Vencimiento).toLocaleDateString('es-CL')}</td>
+                <td>$${cuota.Monto_Cuota.toLocaleString('es-CL')}</td>
+                <td><span class="badge bg-${cuota.Estado === 'Pagado' ? 'success' : (cuota.Estado === 'Pendiente' ? 'warning' : 'secondary')}">${cuota.Estado}</span></td>
+                <td class="text-center">
+                    ${cuota.Estado === 'Pendiente' ? `<button class="btn btn-success btn-sm btn-pagar-cuota" data-id="${cuota.ID_Cuota}">
+                        Registrar Pago
+                    </button>` : 'N/A'}
+                </td>
+            </tr>
+        `).join('');
+        agregarEventListenersDetalle();
+        document.getElementById('modalDetalleConvenio').style.display = 'flex';
+    }
+
+
+    // --- LÓGICA DE EVENTOS ---
+    function agregarEventListenersTabla() {
+        document.querySelectorAll('.btn-ver-detalle').forEach(btn => {
+            btn.addEventListener('click', (e) => renderizarDetalleCuotas(e.currentTarget.dataset.id));
+        });
+        document.querySelectorAll('.btn-anular').forEach(btn => {
+            btn.addEventListener('click', (e) => handleAnularConvenio(e.currentTarget.dataset.id));
+        });
+    }
+    
+    function agregarEventListenersDetalle() {
+        document.querySelectorAll('.btn-pagar-cuota').forEach(btn => {
+            btn.addEventListener('click', (e) => handlePagarCuota(e.currentTarget.dataset.id));
+        });
+    }
+
+    document.getElementById('btnNuevoConvenio').addEventListener('click', abrirModalNuevo);
+    document.getElementById('btnCerrarModalNuevo').addEventListener('click', () => document.getElementById('modalNuevoConvenio').style.display = 'none');
+    document.getElementById('btnCerrarModalDetalle').addEventListener('click', () => document.getElementById('modalDetalleConvenio').style.display = 'none');
+    
+    // Lógica del formulario de nuevo convenio
+    const form = document.getElementById('formNuevoConvenio');
+    const deudaInput = document.getElementById('convenioDeudaTotal');
+    const cuotasInput = document.getElementById('convenioCuotas');
+    const valorCuotaInput = document.getElementById('convenioValorCuota');
+
+    function calcularValorCuota() {
+        const deuda = parseFloat(deudaInput.value) || 0;
+        const numCuotas = parseInt(cuotasInput.value) || 0;
+        if (deuda > 0 && numCuotas > 0) {
+            const valor = Math.round(deuda / numCuotas);
+            valorCuotaInput.value = `$${valor.toLocaleString('es-CL')}`;
+        } else {
+            valorCuotaInput.value = '';
+        }
+    }
+
+    deudaInput.addEventListener('input', calcularValorCuota);
+    cuotasInput.addEventListener('input', calcularValorCuota);
+
+    form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const nParcela = document.getElementById('convenioResidente').value;
+        if (!nParcela) {
+            mostrarMensaje('Debe seleccionar un residente.', 'error');
+            return;
+        }
+
+        const datosConvenio = {
+            N_Parcela: parseInt(nParcela),
+            Deuda_Original: parseFloat(deudaInput.value),
+            N_Cuotas: parseInt(cuotasInput.value),
+            Fecha_Inicio: document.getElementById('convenioFechaInicio').value,
         };
-        
-        const res = await _gsInvoke('registrarPagoCuota_GS', [payload]);
-        await cargarConvenioYCuotas(_convenioState.nParcela);
-        
-        document.getElementById('modalPagarCuota').style.display = 'none';
-        alert('Pago registrado correctamente' + (res?.enviadoA ? ` y comprobante enviado a ${res.enviadoA}` : ''));
-    } catch (e) {
-        console.error(e);
-        alert('Error al registrar el pago: ' + (e.message || e));
-    }
-}
 
-// Cargar convenio y cuotas
-async function cargarConvenioYCuotas(nParcela) {
-    _convenioState.nParcela = nParcela;
-    const conv = await _gsInvoke('obtenerConvenio_GS', [nParcela]);
-    const box = document.getElementById('cuotas-convenio-box');
-    
-    if (!conv) { 
-        if (box) box.style.display = 'none'; 
-        return; 
-    }
-
-    _convenioState.idConvenio = conv.idConvenio;
-    _convenioState.convenio = conv;
-    const cuotas = await _gsInvoke('obtenerCuotas_GS', [conv.idConvenio]);
-    _convenioState.cuotas = cuotas || [];
-
-    // Actualizar resumen
-    const sum = document.getElementById('cuotas-convenio-summary');
-    sum.innerHTML = `
-        <div class="card small"><div class="card-title">Deuda Original</div><div class="card-value">$${Number(conv.deudaOriginal).toLocaleString('es-CL')}</div></div>
-        <div class="card small"><div class="card-title">Saldo Convenio</div><div class="card-value">$${Number(conv.saldoConvenio).toLocaleString('es-CL')}</div></div>
-        <div class="card small"><div class="card-title">Cuotas</div><div class="card-value">${conv.nCuotas}</div></div>
-        <div class="card small"><div class="card-title">Valor Cuota</div><div class="card-value">$${Number(conv.valorCuota).toLocaleString('es-CL')}</div></div>
-    `;
-
-    // Actualizar tabla
-    const tb = document.querySelector('#tabla-cuotas-convenio tbody');
-    tb.innerHTML = '';
-    
-    _convenioState.cuotas.forEach(c => {
-        const tr = document.createElement('tr');
-        const linkHtml = (c.comprobantes || '').split(';').filter(Boolean).map(u => `<a href="${u}" target="_blank">Ver</a>`).join(' · ');
-        const btn = (c.estado === 'Pagada')
-            ? `<button class="btn btn-secondary" disabled>Pagada</button>`
-            : `<button class="btn btn-primary" data-cuota="${c.nCuota}" onclick="abrirModalPagarCuota(${c.nCuota})">Registrar pago</button>`;
-        
-        tr.innerHTML = `
-            <td>${c.nCuota}</td>
-            <td>${new Date(c.fechaVencimiento).toLocaleDateString('es-CL')}</td>
-            <td style="text-align:right">$${Number(c.montoCuota).toLocaleString('es-CL')}</td>
-            <td style="text-align:right">$${Number(c.pagadoAcumulado).toLocaleString('es-CL')}</td>
-            <td style="text-align:right">$${Number(c.saldoCuota).toLocaleString('es-CL')}</td>
-            <td>${c.estado}</td>
-            <td>${linkHtml || '—'}</td>
-            <td>${btn}</td>`;
-        
-        tb.appendChild(tr);
-    });
-
-    box.style.display = 'block';
-}
-
-// Abrir modal de pago
-window.abrirModalPagarCuota = function(nCuota) {
-    document.getElementById('pq_ncuota').value = nCuota || (_convenioState.cuotas.find(c => c.estado !== 'Pagada')?.nCuota || 1);
-    document.getElementById('pq_fecha').valueAsDate = new Date();
-    document.getElementById('pq_monto').value = '';
-    document.getElementById('pq_metodo').value = '';
-    document.getElementById('pq_obs').value = '';
-    document.getElementById('pq_file').value = '';
-    document.getElementById('modalPagarCuota').style.display = 'block';
-};
-
-// Hook para cambio de parcela
-window._hookConvenioOnParcelaChange = async function(nParcela) {
-    try { 
-        await cargarConvenioYCuotas(nParcela); 
-    } catch(e) { 
-        console.warn(e); 
-    }
-};
-
-// Helper para convertir archivo a base64
-function fileToBase64_(file) {
-    return new Promise((resolve, reject) => {
-        const fr = new FileReader();
-        fr.onload = () => resolve(fr.result.split(',')[1]);
-        fr.onerror = reject;
-        fr.readAsDataURL(file);
-    });
-}
-
-// Llamada al backend
-async function _gsInvoke(functionName, parameters = []) {
-    try {
-        if (typeof window.llamarAPI === 'function') {
-            return await window.llamarAPI(functionName, parameters);
+        mostrarSpinner();
+        try {
+            const nuevoConvenio = await llamarAPI('crearConvenio', [datosConvenio]);
+            convenios.push(nuevoConvenio.convenio);
+            cuotas.push(...nuevoConvenio.cuotas);
+            renderizarTablaConvenios();
+            mostrarMensaje('Convenio creado exitosamente.', 'success');
+            document.getElementById('modalNuevoConvenio').style.display = 'none';
+            form.reset();
+        } catch (error) {
+            mostrarMensaje(`Error al crear el convenio: ${error.message}`, 'error');
+        } finally {
+            ocultarSpinner();
         }
-        const url = window.APPS_SCRIPT_WEBAPP_URL || window.GS_ENDPOINT;
-        if (!url) throw new Error('No está configurada la URL del Apps Script ni existe llamarAPI.');
-        
-        const resp = await fetch(url, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ function: functionName, parameters })
-        });
-        
-        const data = await resp.json();
-        if (data.status === 'success') return data.response;
-        throw new Error(data.error?.message || 'Error en Apps Script (WebApp)');
-    } catch (e) {
-        console.error('GS ERROR:', e);
-        throw e;
-    }
-}
+    });
 
-// Inicializar cuando el DOM esté listo
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initConvenios);
-} else {
-    initConvenios();
+    function abrirModalNuevo() {
+        const select = document.getElementById('convenioResidente');
+        // Filtrar residentes para que no aparezcan los que ya tienen un convenio activo
+        const residentesConConvenioActivo = convenios.filter(c => c.Estado === 'Activo').map(c => c.N_Parcela);
+        const residentesFiltrados = residentes.filter(r => !residentesConConvenioActivo.includes(r.N_Parcela));
+        
+        select.innerHTML = '<option value="">Seleccione un residente...</option>' +
+            residentesFiltrados.sort((a,b) => a.N_Parcela - b.N_Parcela).map(r => 
+            `<option value="${r.N_Parcela}">Parcela ${r.N_Parcela} - ${r.Nombre_Completo}</option>`
+        ).join('');
+        form.reset();
+        valorCuotaInput.value = '';
+        document.getElementById('modalNuevoConvenio').style.display = 'flex';
+    }
+
+    // --- MANEJADORES DE ACCIONES (API CALLS) ---
+    async function handleAnularConvenio(convenioId) {
+        if (!confirm('¿Está seguro de que desea anular este convenio? Esta acción no se puede deshacer.')) return;
+        
+        mostrarSpinner();
+        try {
+            await llamarAPI('anularConvenio', [convenioId]);
+            // Actualizar datos locales para reflejar el cambio
+            const convenioIndex = convenios.findIndex(c => c.ID_Convenio === convenioId);
+            if (convenioIndex !== -1) {
+                convenios[convenioIndex].Estado = 'Anulado';
+                convenios[convenioIndex].Saldo_Convenio = 0;
+            }
+            cuotas.forEach(cuota => {
+                if (cuota.ID_Convenio === convenioId && cuota.Estado === 'Pendiente') {
+                    cuota.Estado = 'Anulada';
+                }
+            });
+            renderizarTablaConvenios();
+            mostrarMensaje('Convenio anulado correctamente.', 'success');
+        } catch (error) {
+            mostrarMensaje(`Error al anular el convenio: ${error.message}`, 'error');
+        } finally {
+            ocultarSpinner();
+        }
+    }
+    
+    async function handlePagarCuota(cuotaId) {
+         if (!confirm('¿Confirma el registro del pago para esta cuota?')) return;
+
+        mostrarSpinner();
+        try {
+            const { updatedConvenio, updatedCuota } = await llamarAPI('registrarPagoCuota', [cuotaId]);
+
+            // Actualizar datos locales
+            const cuotaIndex = cuotas.findIndex(c => c.ID_Cuota === cuotaId);
+            if (cuotaIndex !== -1) {
+                Object.assign(cuotas[cuotaIndex], updatedCuota);
+            }
+            const convenioIndex = convenios.findIndex(c => c.ID_Convenio === updatedConvenio.ID_Convenio);
+            if (convenioIndex !== -1) {
+                Object.assign(convenios[convenioIndex], updatedConvenio);
+            }
+
+            // Volver a renderizar la tabla principal y el modal
+            renderizarTablaConvenios();
+            renderizarDetalleCuotas(updatedConvenio.ID_Convenio);
+            mostrarMensaje('Pago de cuota registrado exitosamente.', 'success');
+
+        } catch (error) {
+            mostrarMensaje(`Error al registrar el pago: ${error.message}`, 'error');
+        } finally {
+            ocultarSpinner();
+        }
+    }
 }
