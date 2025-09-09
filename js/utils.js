@@ -91,7 +91,7 @@
    */
   window.llamarAPI = async function (functionName, parameters = []) {
     // ⬇️ Pega aquí tu URL "Ejecutable de API" (termina en ...:run)
-    const SCRIPT_URL = "https://script.googleapis.com/v1/scripts/AKfycbwj3AV8Qy7Gqj_Drn3TTHPsqKAN5orgtxrWTulaPGrsO2ZCWFo9jg0DiSbFhvgBrY19ww:run";
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwj3AV8Qy7Gqj_Drn3TTHPsqKAN5orgtxrWTulaPGrsO2ZCWFo9jg0DiSbFhvgBrY19ww/exec";
 
     const tokenObj = (window.gapi && gapi.auth && gapi.auth.getToken) ? gapi.auth.getToken() : null;
     if (!tokenObj || !tokenObj.access_token) {
