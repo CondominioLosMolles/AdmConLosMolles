@@ -1235,17 +1235,15 @@ async function cargarGastosComunes() {
     ocultarSpinner();
 }
 /* ============================================================================
- *  CONFIG: URL del Apps Script WebApp (necesaria si no tienes postToServer/callServer)
- *  ========================================================================== */
-window.APPS_SCRIPT_WEBAPP_URL = window.APPS_SCRIPT_WEBAPP_URL || '<<PEGA_AQUI_TU_URL_EXEC_DE_APPS_SCRIPT>>';
-
-/* ============================================================================
  *  CONVENIOS – UI DE CUOTAS + ACTIVACIÓN Y REGISTRO DE PAGO (BLOQUE NUEVO)
  *  ========================================================================== */
 
-/* 1) Wrapper seguro para invocar tu Apps Script sin romper lo existente */
+/* 1) Wrapper: prioriza utils.llamarAPI (Execution API) y luego WebApp si existe */
 async function _gsInvoke(functionName, parameters = []) {
   try {
+    if (typeof window.llamarAPI === 'function') {
+      return await window.llamarAPI(functionName, parameters); // utils.js
+    }
     if (typeof window.postToServer === 'function') {
       return await window.postToServer(functionName, parameters);
     }
@@ -1253,15 +1251,15 @@ async function _gsInvoke(functionName, parameters = []) {
       return await window.callServer(functionName, parameters);
     }
     const url = window.APPS_SCRIPT_WEBAPP_URL || window.GS_ENDPOINT;
-    if (!url) throw new Error('No está configurada la URL del Apps Script.');
+    if (!url) throw new Error('No está configurada la URL del Apps Script ni existe llamarAPI.');
     const resp = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ functionName, parameters })
+      body: JSON.stringify({ function: functionName, parameters })
     });
     const data = await resp.json();
     if (data.status === 'success') return data.response;
-    throw new Error(data.error?.message || 'Error en Apps Script');
+    throw new Error(data.error?.message || 'Error en Apps Script (WebApp)');
   } catch (e) {
     console.error('GS ERROR:', e);
     throw e;
@@ -1269,6 +1267,11 @@ async function _gsInvoke(functionName, parameters = []) {
 }
 
 /* 2) Helpers */
+function el_(html) {
+  const d = document.createElement('div');
+  d.innerHTML = html.trim();
+  return d.firstElementChild;
+}
 function fileToBase64_(file) {
   return new Promise((resolve, reject) => {
     const fr = new FileReader();
@@ -1277,26 +1280,18 @@ function fileToBase64_(file) {
     fr.readAsDataURL(file);
   });
 }
-function el_(html) {
-  const d = document.createElement('div');
-  d.innerHTML = html.trim();
-  return d.firstElementChild;
-}
 function findParcelaSeleccionada() {
-  // Intenta leer el valor del input de "N° Parcela" dentro de Filtros
-  const filtros = document.querySelector('#gastos-comunes-section');
-  if (!filtros) return null;
-  // prioriza inputs numéricos o de texto dentro del primer card
-  const card = filtros.querySelector('.card, .filters, div');
-  const input = filtros.querySelector('input[type="number"], input[type="text"]');
+  const section = document.getElementById('gastos-comunes-section');
+  if (!section) return null;
+  const input = section.querySelector('input[type="number"], input[type="text"]');
   const val = (input && input.value) ? String(input.value).trim() : null;
   return val || null;
 }
 
-/* 3) Estado local del convenio mostrado */
+/* 3) Estado local */
 const _cvState = { nParcela: null, idConvenio: null, cuotas: [] };
 
-/* 4) Binding SEGURO de botones de modales */
+/* 4) Bindings SEGUROS (evita 'onclick' sobre null) */
 function ensureBindings() {
   // Modal pagar cuota
   const btnGuardar = document.getElementById('pq_guardar');
@@ -1351,7 +1346,7 @@ function ensureBindings() {
   }
 }
 
-/* 5) Handler: guardar pago de cuota */
+/* 5) Handlers */
 async function onGuardarPagoCuota() {
   try {
     const nCuota = Number(document.getElementById('pq_ncuota').value);
@@ -1387,7 +1382,6 @@ async function onGuardarPagoCuota() {
   }
 }
 
-/* 6) Handler: ACTIVAR CONVENIO (nuevo flujo) */
 async function onActivarConvenio() {
   try {
     const nParcela = String(document.getElementById('ac_parcela').value || '').trim();
@@ -1416,19 +1410,18 @@ async function onActivarConvenio() {
   }
 }
 
-/* 7) Inyección de UI (cabecera + tabla + modales) cuando el DOM esté listo */
+/* 6) Inyección de UI (cabecera + tabla + modales) */
 function injectConveniosUI() {
   const section = document.getElementById('gastos-comunes-section');
   if (!section) return;
 
-  // Cabecera de acciones (si no existe)
+  // Barra de acciones
   if (!document.getElementById('convenio-actions-bar')) {
     const actions = el_(`
       <div id="convenio-actions-bar" style="display:flex;gap:8px;margin:12px 0">
         <button class="btn" id="btn-refrescar-convenio">Refrescar convenio</button>
         <button class="btn" id="btn-activar-convenio">Activar Convenio (nuevo)</button>
       </div>`);
-    // Inserta debajo del widget "Estado de Convenio de Pago" si existe, si no, al inicio de la sección
     const widget = section.querySelector('.section-title')?.closest('div');
     if (widget && widget.parentElement) {
       widget.parentElement.insertBefore(actions, widget.nextSibling);
@@ -1437,7 +1430,7 @@ function injectConveniosUI() {
     }
   }
 
-  // Contenedor + tabla “Cuotas del Convenio”
+  // Contenedor + tabla
   if (!document.getElementById('cuotas-convenio-box')) {
     const host = el_(`
       <div id="cuotas-convenio-box" style="display:none;margin-top:12px">
@@ -1458,7 +1451,7 @@ function injectConveniosUI() {
     section.appendChild(host);
   }
 
-  // Modal Pagar Cuota
+  // Modal pagar cuota
   if (!document.getElementById('modalPagarCuota')) {
     const modalPay = el_(`
       <div id="modalPagarCuota" class="modal" style="display:none">
@@ -1482,7 +1475,7 @@ function injectConveniosUI() {
     document.body.appendChild(modalPay);
   }
 
-  // Modal Activar Convenio (nuevo flujo)
+  // Modal activar convenio (nuevo)
   if (!document.getElementById('modalActivarConvenio')) {
     const modalCv = el_(`
       <div id="modalActivarConvenio" class="modal" style="display:none">
@@ -1505,11 +1498,10 @@ function injectConveniosUI() {
     document.body.appendChild(modalCv);
   }
 
-  // Bind seguro
   ensureBindings();
 }
 
-/* 8) Carga/refresh del convenio y sus cuotas */
+/* 7) Cargar/Refrescar convenio y cuotas */
 async function cargarConvenioYCuotas(nParcela) {
   _cvState.nParcela = nParcela;
   const conv = await _gsInvoke('obtenerConvenio_GS', [nParcela]);
@@ -1520,6 +1512,7 @@ async function cargarConvenioYCuotas(nParcela) {
   const cuotas = await _gsInvoke('obtenerCuotas_GS', [conv.idConvenio]);
   _cvState.cuotas = cuotas || [];
 
+  // Resumen
   const sum = document.getElementById('cuotas-convenio-summary');
   sum.innerHTML = `
     <div class="card small"><div class="card-title">Deuda Original</div><div class="card-value">$${Number(conv.deudaOriginal).toLocaleString('es-CL')}</div></div>
@@ -1528,6 +1521,7 @@ async function cargarConvenioYCuotas(nParcela) {
     <div class="card small"><div class="card-title">Valor Cuota</div><div class="card-value">$${Number(conv.valorCuota).toLocaleString('es-CL')}</div></div>
   `;
 
+  // Tabla
   const tb = document.querySelector('#tabla-cuotas-convenio tbody');
   tb.innerHTML = '';
   _cvState.cuotas.forEach(c => {
@@ -1551,7 +1545,7 @@ async function cargarConvenioYCuotas(nParcela) {
   box.style.display = 'block';
 }
 
-/* 9) Abrir modal con cuota preseleccionada */
+/* 8) Abrir modal de pago con cuota preseleccionada */
 window.abrirModalPagarCuota = function(nCuota) {
   document.getElementById('pq_ncuota').value = nCuota || (_cvState.cuotas.find(c => c.estado!=='Pagada')?.nCuota || 1);
   document.getElementById('pq_fecha').valueAsDate = new Date();
@@ -1562,20 +1556,14 @@ window.abrirModalPagarCuota = function(nCuota) {
   document.getElementById('modalPagarCuota').style.display = 'block';
 };
 
-/* 10) Hook público para refrescar por parcela (invócalo desde tu flujo actual si quieres) */
+/* 9) Hook público para refrescar por parcela (puedes llamarlo desde tu flujo actual) */
 window._hookConvenioOnParcelaChange = async function(nParcela) {
-  try {
-    await cargarConvenioYCuotas(nParcela);
-  } catch(e) {
-    console.warn(e);
-  }
+  try { await cargarConvenioYCuotas(nParcela); } catch(e){ console.warn(e); }
 };
 
-/* 11) Bootstrap al cargar la página */
+/* 10) Bootstrap al cargar */
 document.addEventListener('DOMContentLoaded', () => {
   injectConveniosUI();
-  // Si ya hay una parcela escrita en filtros, intenta cargarla
   const p = findParcelaSeleccionada();
   if (p) _hookConvenioOnParcelaChange(p);
 });
-
