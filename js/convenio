@@ -79,7 +79,7 @@ async function cargarConvenios() {
                                 <input type="date" id="convenioFechaInicio" class="form-control" required>
                             </div>
                         </div>
-                        <div class="form-group text-end">
+                        <div class="form-group text-end mt-3">
                             <button type="submit" class="btn btn-success">Guardar Convenio</button>
                         </div>
                     </form>
@@ -114,7 +114,7 @@ async function cargarConvenios() {
         </div>
     `;
 
-    // Carga de datos inicial
+    // --- Carga de datos inicial ---
     try {
         const data = await llamarAPI('obtenerDatosConvenios');
         convenios = data.convenios;
@@ -130,7 +130,12 @@ async function cargarConvenios() {
 
     // --- RENDERIZACIÓN ---
     function renderizarTablaConvenios() {
+        // La línea de abajo es la que estaba fallando. Con la plantilla correcta, ya no fallará.
         const tbody = document.getElementById('tabla-convenios-body');
+        if (!tbody) {
+            console.error("Error crítico: El elemento #tabla-convenios-body no se encuentra en el DOM.");
+            return;
+        }
         if (convenios.length === 0) {
             tbody.innerHTML = '<tr><td colspan="8" class="text-center">No hay convenios registrados.</td></tr>';
             return;
@@ -211,7 +216,6 @@ async function cargarConvenios() {
     document.getElementById('btnCerrarModalNuevo').addEventListener('click', () => document.getElementById('modalNuevoConvenio').style.display = 'none');
     document.getElementById('btnCerrarModalDetalle').addEventListener('click', () => document.getElementById('modalDetalleConvenio').style.display = 'none');
     
-    // Lógica del formulario de nuevo convenio
     const form = document.getElementById('formNuevoConvenio');
     const deudaInput = document.getElementById('convenioDeudaTotal');
     const cuotasInput = document.getElementById('convenioCuotas');
@@ -264,7 +268,6 @@ async function cargarConvenios() {
 
     function abrirModalNuevo() {
         const select = document.getElementById('convenioResidente');
-        // Filtrar residentes para que no aparezcan los que ya tienen un convenio activo
         const residentesConConvenioActivo = convenios.filter(c => c.Estado === 'Activo').map(c => c.N_Parcela);
         const residentesFiltrados = residentes.filter(r => !residentesConConvenioActivo.includes(r.N_Parcela));
         
@@ -284,7 +287,6 @@ async function cargarConvenios() {
         mostrarSpinner();
         try {
             await llamarAPI('anularConvenio', [convenioId]);
-            // Actualizar datos locales para reflejar el cambio
             const convenioIndex = convenios.findIndex(c => c.ID_Convenio === convenioId);
             if (convenioIndex !== -1) {
                 convenios[convenioIndex].Estado = 'Anulado';
@@ -311,7 +313,6 @@ async function cargarConvenios() {
         try {
             const { updatedConvenio, updatedCuota } = await llamarAPI('registrarPagoCuota', [cuotaId]);
 
-            // Actualizar datos locales
             const cuotaIndex = cuotas.findIndex(c => c.ID_Cuota === cuotaId);
             if (cuotaIndex !== -1) {
                 Object.assign(cuotas[cuotaIndex], updatedCuota);
@@ -321,7 +322,6 @@ async function cargarConvenios() {
                 Object.assign(convenios[convenioIndex], updatedConvenio);
             }
 
-            // Volver a renderizar la tabla principal y el modal
             renderizarTablaConvenios();
             renderizarDetalleCuotas(updatedConvenio.ID_Convenio);
             mostrarMensaje('Pago de cuota registrado exitosamente.', 'success');
