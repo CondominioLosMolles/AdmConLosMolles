@@ -19,9 +19,9 @@ const SHEET_MANTENCIONES = 'Mantenciones';
 const SHEET_MULTAS = 'Multas';
 const SHEET_ASAMBLEAS = 'Asambleas';
 const SHEET_COMUNICACIONES = 'Comunicaciones';
+const SHEET_CONFIGURACION = 'Configuracion';
 const SHEET_CONVENIOS = 'Convenios';
 const SHEET_CUOTAS_CONVENIO = 'Cuotas_Convenio';
-const SHEET_CONFIGURACION = 'Configuracion';
 const MAIN_DRIVE_FOLDER_NAME = 'Los Molles';
 
 // --- IDs de las Hojas (para operaciones internas de la API) ---
@@ -96,43 +96,29 @@ async function buscarOCrearRutaDeEgreso(nombreMes, anio) {
     return carpetaMesId;
 }
 
-// ▼▼▼ CORRECCIÓN 1: SE AÑADE LA FUNCIÓN 'buscarOCrearRutaDeIngreso' QUE FALTABA ▼▼▼
-/**
- * Busca o crea la estructura de carpetas para los comprobantes de Ingresos Extra.
- * La ruta será: /Los Molles/Ingresos/[Año]/[Mes]/
- * @param {string} nombreMes - El nombre del mes del ingreso (ej. "Enero").
- * @param {string} anio - El año del ingreso (ej. "2024").
- * @returns {Promise<string>} El ID de la carpeta de destino en Google Drive.
- */
 async function buscarOCrearRutaDeIngreso(nombreMes, anio) {
-    // 1. Busca la carpeta principal "Los Molles"
     const carpetaPrincipalId = await findFolderId(MAIN_DRIVE_FOLDER_NAME);
     if (!carpetaPrincipalId) {
         throw new Error(`No se encontró la carpeta principal de Drive: "${MAIN_DRIVE_FOLDER_NAME}"`);
     }
 
-    // 2. Busca o crea la carpeta "Ingresos" dentro de la principal
     let carpetaIngresosId = await findFolderId('Ingresos', carpetaPrincipalId);
     if (!carpetaIngresosId) {
         carpetaIngresosId = await createFolder('Ingresos', carpetaPrincipalId);
     }
 
-    // 3. Busca o crea la carpeta para el AÑO dentro de "Ingresos"
     let carpetaAnioId = await findFolderId(anio.toString(), carpetaIngresosId);
     if (!carpetaAnioId) {
         carpetaAnioId = await createFolder(anio.toString(), carpetaIngresosId);
     }
 
-    // 4. Busca o crea la carpeta para el MES dentro del AÑO
     let carpetaMesId = await findFolderId(nombreMes, carpetaAnioId);
     if (!carpetaMesId) {
         carpetaMesId = await createFolder(nombreMes, carpetaAnioId);
     }
 
-    // 5. Devuelve el ID de la carpeta final del mes
     return carpetaMesId;
 }
-// ▲▲▲ FIN DE LA CORRECCIÓN 1 ▲▲▲
 
 async function subirComprobante(file, folderId) {
     const metadata = {
@@ -499,13 +485,10 @@ async function obtenerEstadoDeCuenta(parcela) {
 }
 
 // -------- CONTABILIDAD (INGRESOS Y EGRESOS) --------
-
-// ▼▼▼ CORRECCIÓN 2: SE MODIFICAN LAS FUNCIONES DE 'Ingresos_Extra' ▼▼▼
 async function obtenerIngresosExtra() {
     try {
         const res = await gapi.client.sheets.spreadsheets.values.get({
             spreadsheetId: SPREADSHEET_ID,
-            // Se lee hasta la columna G para obtener todos los datos y calcular el ID correctamente
             range: `${SHEET_INGRESOS_EXTRA}!A2:G`
         });
         return res.result.values || [];
@@ -516,22 +499,19 @@ async function obtenerIngresosExtra() {
 }
 
 async function agregarIngresoExtra(datos) {
-    // Se calcula el último ID para generar uno nuevo y correlativo
     const ingresos = await obtenerIngresosExtra();
     const lastId = ingresos.length > 0 && ingresos[ingresos.length - 1][0] ? parseInt(ingresos[ingresos.length - 1][0]) : 0;
-    datos[0] = (lastId + 1).toString(); // Se reemplaza el primer elemento (que era 'null') por el nuevo ID
+    datos[0] = (lastId + 1).toString();
 
     await gapi.client.sheets.spreadsheets.values.append({
         spreadsheetId: SPREADSHEET_ID,
-        // El rango se corrige a A:G para que coincida con la cantidad de datos enviados
         range: `${SHEET_INGRESOS_EXTRA}!A:G`,
         valueInputOption: 'USER_ENTERED',
         resource: {
-            values: [datos] // Se guarda la fila completa
+            values: [datos]
         }
     });
 }
-// ▲▲▲ FIN DE LA CORRECCIÓN 2 ▲▲▲
 
 async function obtenerCategoriasEgresos() {
     const res = await gapi.client.sheets.spreadsheets.values.get({
@@ -585,6 +565,24 @@ async function eliminarEgreso(id) {
         }
     });
 }
+
+// -------- CONVENIOS Y CUOTAS --------
+async function obtenerConvenios() {
+    const res = await gapi.client.sheets.spreadsheets.values.get({
+        spreadsheetId: SPREADSHEET_ID,
+        range: `${SHEET_CONVENIOS}!A2:Z`
+    });
+    return res.result.values || [];
+}
+
+async function obtenerCuotasConvenio() {
+    const res = await gapi.client.sheets.spreadsheets.values.get({
+        spreadsheetId: SPREADSHEET_ID,
+        range: `${SHEET_CUOTAS_CONVENIO}!A2:Z`
+    });
+    return res.result.values || [];
+}
+
 // -------- MANTENCIONES / TAREAS --------
 async function obtenerTareas() {
     const res = await gapi.client.sheets.spreadsheets.values.get({
