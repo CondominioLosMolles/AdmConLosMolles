@@ -19,6 +19,8 @@ const SHEET_MANTENCIONES = 'Mantenciones';
 const SHEET_MULTAS = 'Multas';
 const SHEET_ASAMBLEAS = 'Asambleas';
 const SHEET_COMUNICACIONES = 'Comunicaciones';
+const SHEET_CONVENIOS = 'Convenios';
+const SHEET_CUOTAS_CONVENIO = 'Cuotas_Convenio';
 const SHEET_CONFIGURACION = 'Configuracion';
 const MAIN_DRIVE_FOLDER_NAME = 'Los Molles';
 
