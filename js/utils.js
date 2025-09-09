@@ -1,145 +1,128 @@
-// js/utils.js — versión estable y autocontenida
-(function () {
-  'use strict';
+// js/utils.js - Versión Final con Manejo de Modal Global
 
-  /* ==========================
-   * Utilidades de layout/base
-   * ========================== */
-  function _mainEl() {
-    return (
-      document.getElementById('main-content') ||
-      document.querySelector('#contenido-principal') ||
-      document.querySelector('#content') ||
-      document.querySelector('main')
-    );
-  }
+function limpiarMainContent() {
+    const mainContent = document.getElementById('main-content');
+    if (mainContent) mainContent.innerHTML = '';
+}
 
-  // Limpia el contenedor principal (llamado por dashboard/gastos, etc.)
-  window.limpiarMainContent = function () {
-    const el = _mainEl();
-    if (el) el.innerHTML = '';
-  };
+function mostrarSpinner() {
+    const spinner = document.getElementById('spinner');
+    if (spinner) spinner.style.display = 'flex';
+}
 
-  window.mostrarSpinner = function () {
-    const sp = document.getElementById('spinner');
-    if (sp) sp.style.display = 'flex';
-  };
-  window.ocultarSpinner = function () {
-    const sp = document.getElementById('spinner');
-    if (sp) sp.style.display = 'none';
-  };
+function ocultarSpinner() {
+    const spinner = document.getElementById('spinner');
+    if (spinner) spinner.style.display = 'none';
+}
 
-  // Mensaje flotante simple
-  window.mostrarMensaje = function (msg, tipo = 'info') {
-    const box = document.createElement('div');
-    box.className = `mensaje-flotante ${tipo}`;
-    box.textContent = msg;
-    document.body.appendChild(box);
-    setTimeout(() => box.classList.add('visible'), 10);
+function mostrarMensaje(msg, tipo = 'info') {
+    const container = document.createElement('div');
+    container.className = `mensaje-flotante ${tipo}`;
+    container.textContent = msg;
+    document.body.appendChild(container);
+    setTimeout(() => { container.classList.add('visible'); }, 10);
     setTimeout(() => {
-      box.classList.remove('visible');
-      setTimeout(() => box.remove(), 400);
+        container.classList.remove('visible');
+        setTimeout(() => { container.remove(); }, 500);
     }, 3000);
-  };
+}
 
-  /* ==========================
-   * Modal global reutilizable
-   * ========================== */
-  window.mostrarModalGlobal = function (titulo, cuerpoHtml, onGuardar, tamano = 'normal') {
-    const cont   = document.getElementById('global-modal-container');
-    const cnt    = document.getElementById('global-modal-content');
-    const title  = document.getElementById('global-modal-title');
-    const body   = document.getElementById('global-modal-body');
-    const btnOk  = document.getElementById('global-modal-save');
-    const btnCls = document.getElementById('global-modal-close');
+/**
+ * Muestra y configura el modal global.
+ * @param {string} titulo - El título que aparecerá en el modal.
+ * @param {string} cuerpoHtml - El contenido HTML del formulario o cuerpo del modal.
+ * @param {Function} callbackGuardar - La función que se ejecutará al hacer clic en "Guardar".
+ * @param {string} tamano - Opcional. 'large' para un modal más ancho.
+ */
+function mostrarModalGlobal(titulo, cuerpoHtml, callbackGuardar, tamano = 'normal') {
+    const modalContainer = document.getElementById('global-modal-container');
+    const modalContent = document.getElementById('global-modal-content');
+    const modalTitle = document.getElementById('global-modal-title');
+    const modalBody = document.getElementById('global-modal-body');
+    const saveBtn = document.getElementById('global-modal-save');
+    const closeBtn = document.getElementById('global-modal-close');
 
-    if (!cont || !cnt || !title || !body || !btnOk || !btnCls) {
-      // Si tu HTML no tiene este modal, al menos no rompemos el flujo
-      alert(titulo + '\n\n' + body?.innerText);
-      return;
+    if (!modalContainer) {
+        console.error('El contenedor de modal global no existe en index.html');
+        return;
     }
 
-    title.textContent = titulo;
-    body.innerHTML = cuerpoHtml;
+    modalTitle.textContent = titulo;
+    modalBody.innerHTML = cuerpoHtml;
 
-    // Evita listeners duplicados
-    const nuevoOk = btnOk.cloneNode(true);
-    btnOk.parentNode.replaceChild(nuevoOk, btnOk);
-    nuevoOk.onclick = onGuardar;
+    // Asignar el evento al botón de guardar. Se clona para evitar listeners duplicados.
+    const newSaveBtn = saveBtn.cloneNode(true);
+    saveBtn.parentNode.replaceChild(newSaveBtn, saveBtn);
+    newSaveBtn.onclick = callbackGuardar;
 
-    btnCls.onclick = window.ocultarModalGlobal;
-
-    if (tamano === 'large') cnt.classList.add('large');
-    else cnt.classList.remove('large');
-
-    cont.style.display = 'flex';
-  };
-
-  window.ocultarModalGlobal = function () {
-    const cont = document.getElementById('global-modal-container');
-    const body = document.getElementById('global-modal-body');
-    if (cont) cont.style.display = 'none';
-    if (body) body.innerHTML = '';
-  };
-
-  /* ==========================================================
-   * Llamada central a Google Apps Script (Execution API gapi)
-   * ========================================================== */
-  /**
-   * REQUIERE estar autenticado con gapi (auth.js lo hace).
-   * Usa la Execution API (tu despliegue "Ejecutable de API": ...:run).
-   */
-  window.llamarAPI = async function (functionName, parameters = []) {
-    // ⬇️ Pega aquí tu URL "Ejecutable de API" (termina en ...:run)
-    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwj3AV8Qy7Gqj_Drn3TTHPsqKAN5orgtxrWTulaPGrsO2ZCWFo9jg0DiSbFhvgBrY19ww/exec";
-
-    const tokenObj = (window.gapi && gapi.auth && gapi.auth.getToken) ? gapi.auth.getToken() : null;
-    if (!tokenObj || !tokenObj.access_token) {
-      throw new Error('No hay token OAuth. Inicia sesión con Google antes de llamar a la API.');
+    closeBtn.onclick = ocultarModalGlobal;
+    
+    if (tamano === 'large') {
+        modalContent.classList.add('large');
+    } else {
+        modalContent.classList.remove('large');
     }
 
-    const res = await fetch(SCRIPT_URL, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${tokenObj.access_token}`
-      },
-      body: JSON.stringify({
-        // Formato de Execution API: clave "function"
-        "function": functionName,
-        "parameters": parameters,
-        "devMode": true
-      })
-    });
+    modalContainer.style.display = 'flex';
+}
 
-    const text = await res.text();
-    let json = {};
-    try { json = text ? JSON.parse(text) : {}; } catch (e) {
-      throw new Error('Respuesta no-JSON de la Execution API: ' + text);
+/**
+ * Oculta el modal global y limpia su contenido.
+ */
+function ocultarModalGlobal() {
+    const modalContainer = document.getElementById('global-modal-container');
+    if (modalContainer) {
+        modalContainer.style.display = 'none';
+        document.getElementById('global-modal-body').innerHTML = '';
     }
+}
 
-    if (!res.ok) {
-      const msg = json?.error?.message || text || `HTTP ${res.status}`;
-      throw new Error(`Execution API error: ${msg}`);
+// =====================================================================================
+// ===== PEGA ESTA FUNCIÓN COMPLETA AL FINAL DE TU ARCHIVO js/utils.js ==============
+// =====================================================================================
+
+/**
+ * Función central para comunicarse con la API de Google Apps Script.
+ * @param {string} functionName - El nombre de la función a ejecutar en el script de Google.
+ * @param {Array} parameters - Un array con los parámetros para la función del script.
+ * @returns {Promise<any>} - La respuesta del script.
+ */
+async function llamarAPI(functionName, parameters = []) {
+    // URL configurada correctamente
+    const SCRIPT_URL = "https://script.googleapis.com/v1/scripts/AKfycbwj3AV8Qy7Gqj_Drn3TTHPsqKAN5orgtxrWTulaPGrsO2ZCWFo9jg0DiSbFhvgBrY19ww:run";
+
+    // El bloque "if" de seguridad ha sido eliminado.
+
+    try {
+        const token = gapi.auth.getToken().access_token;
+        const res = await fetch(SCRIPT_URL, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({
+                functionName: functionName,
+                parameters: parameters
+            }),
+        });
+
+        if (!res.ok) {
+            const errorBody = await res.text();
+            throw new Error(`Error en la respuesta del servidor (HTTP ${res.status}): ${errorBody}`);
+        }
+
+        const jsonResponse = await res.json();
+
+        if (jsonResponse.error) {
+            console.error('Error devuelto por la API:', jsonResponse.error);
+            throw new Error(jsonResponse.error.message || 'Ocurrió un error en el script de Google.');
+        }
+
+        return jsonResponse.response;
+
+    } catch (error) {
+        console.error(`Error llamando a la función '${functionName}':`, error);
+        throw error;
     }
-    if (json.error) {
-      const detail =
-        (json.error.details && json.error.details[0] && json.error.details[0].errorMessage) ||
-        json.error.message;
-      throw new Error(detail || 'Ocurrió un error en Apps Script.');
-    }
-
-    // Normalmente: { response: { result: ... } }
-    return (json.response && ('result' in json.response ? json.response.result : json.response)) || null;
-  };
-
-  /* =========================================
-   * SHIM extra por si algún módulo lo requiere
-   * ========================================= */
-  if (typeof window.renderEnMainContent !== 'function') {
-    window.renderEnMainContent = function (html) {
-      const el = _mainEl();
-      if (el) el.innerHTML = html;
-    };
-  }
-})();
+}
