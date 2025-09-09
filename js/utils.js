@@ -100,4 +100,43 @@ async function llamarAPI(functionName, parameters = []) {
         // OJO: en Execution API la clave es "function" (no "functionName")
         "function": functionName,
         "parameters": parameters,
-        "devMode":
+        "devMode": true
+      })
+    });
+
+    const text = await res.text();
+    let json = {};
+    try { json = text ? JSON.parse(text) : {}; } catch (_) {}
+
+    if (!res.ok) {
+      const msg = json?.error?.message || text || `HTTP ${res.status}`;
+      throw new Error(`Execution API error: ${msg}`);
+    }
+
+    if (json.error) {
+      const detail = json.error.details?.[0]?.errorMessage || json.error.message;
+      throw new Error(detail || 'Ocurrió un error en Apps Script.');
+    }
+
+    // Formato típico: { response: { result: ... } }
+    return json.response?.result ?? json.response ?? null;
+
+  } catch (err) {
+    console.error(`Error llamando a '${functionName}':`, err);
+    throw err;
+  }
+}
+
+/* =========================================
+ * SHIM extra por si algún módulo lo requiere
+ * ========================================= */
+// Si algún archivo intenta usar esto y no existe, evita ReferenceError
+if (typeof window.renderEnMainContent !== 'function') {
+  window.renderEnMainContent = function (html) {
+    const el = document.getElementById('main-content')
+      || document.querySelector('#contenido-principal')
+      || document.querySelector('#content')
+      || document.querySelector('main');
+    if (el) el.innerHTML = html;
+  };
+}
