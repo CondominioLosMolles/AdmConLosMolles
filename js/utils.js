@@ -1,128 +1,57 @@
-// js/utils.js - Versión Final con Manejo de Modal Global
-
-function limpiarMainContent() {
-    const mainContent = document.getElementById('main-content');
-    if (mainContent) mainContent.innerHTML = '';
-}
-
-function mostrarSpinner() {
-    const spinner = document.getElementById('spinner');
-    if (spinner) spinner.style.display = 'flex';
-}
-
-function ocultarSpinner() {
-    const spinner = document.getElementById('spinner');
-    if (spinner) spinner.style.display = 'none';
-}
-
-function mostrarMensaje(msg, tipo = 'info') {
-    const container = document.createElement('div');
-    container.className = `mensaje-flotante ${tipo}`;
-    container.textContent = msg;
-    document.body.appendChild(container);
-    setTimeout(() => { container.classList.add('visible'); }, 10);
-    setTimeout(() => {
-        container.classList.remove('visible');
-        setTimeout(() => { container.remove(); }, 500);
-    }, 3000);
-}
-
 /**
- * Muestra y configura el modal global.
- * @param {string} titulo - El título que aparecerá en el modal.
- * @param {string} cuerpoHtml - El contenido HTML del formulario o cuerpo del modal.
- * @param {Function} callbackGuardar - La función que se ejecutará al hacer clic en "Guardar".
- * @param {string} tamano - Opcional. 'large' para un modal más ancho.
- */
-function mostrarModalGlobal(titulo, cuerpoHtml, callbackGuardar, tamano = 'normal') {
-    const modalContainer = document.getElementById('global-modal-container');
-    const modalContent = document.getElementById('global-modal-content');
-    const modalTitle = document.getElementById('global-modal-title');
-    const modalBody = document.getElementById('global-modal-body');
-    const saveBtn = document.getElementById('global-modal-save');
-    const closeBtn = document.getElementById('global-modal-close');
-
-    if (!modalContainer) {
-        console.error('El contenedor de modal global no existe en index.html');
-        return;
-    }
-
-    modalTitle.textContent = titulo;
-    modalBody.innerHTML = cuerpoHtml;
-
-    // Asignar el evento al botón de guardar. Se clona para evitar listeners duplicados.
-    const newSaveBtn = saveBtn.cloneNode(true);
-    saveBtn.parentNode.replaceChild(newSaveBtn, saveBtn);
-    newSaveBtn.onclick = callbackGuardar;
-
-    closeBtn.onclick = ocultarModalGlobal;
-    
-    if (tamano === 'large') {
-        modalContent.classList.add('large');
-    } else {
-        modalContent.classList.remove('large');
-    }
-
-    modalContainer.style.display = 'flex';
-}
-
-/**
- * Oculta el modal global y limpia su contenido.
- */
-function ocultarModalGlobal() {
-    const modalContainer = document.getElementById('global-modal-container');
-    if (modalContainer) {
-        modalContainer.style.display = 'none';
-        document.getElementById('global-modal-body').innerHTML = '';
-    }
-}
-
-// =====================================================================================
-// ===== PEGA ESTA FUNCIÓN COMPLETA AL FINAL DE TU ARCHIVO js/utils.js ==============
-// =====================================================================================
-
-/**
- * Función central para comunicarse con la API de Google Apps Script.
- * @param {string} functionName - El nombre de la función a ejecutar en el script de Google.
- * @param {Array} parameters - Un array con los parámetros para la función del script.
- * @returns {Promise<any>} - La respuesta del script.
+ * Función central para comunicarse con la Google Apps Script Execution API.
+ * REQUIERE: gapi.auth.getToken() válido (ya lo gestionas en auth.js).
+ *
+ * @param {string} functionName - Nombre de la función en tu Apps Script.
+ * @param {Array} parameters - Parámetros posicionales para esa función.
+ * @returns {Promise<any>} - Respuesta devuelta por la función del Apps Script.
  */
 async function llamarAPI(functionName, parameters = []) {
-    // URL configurada correctamente
-    const SCRIPT_URL = "https://script.googleapis.com/v1/scripts/AKfycbwmNZFxMLQtL-rcr479Y78Wat7e8JaDtHaUbdCEarhSIJ8LYqGWO97jlvOELMOGc5PlFQ:run";
+  // Cambia este scriptId por el de tu proyecto (si ya está correcto, déjalo tal cual).
+  const SCRIPT_URL = "https://script.googleapis.com/v1/scripts/AKfycbwmNZFxMLQtL-rcr479Y78Wat7e8JaDtHaUbdCEarhSIJ8LYqGWO97jlvOELMOGc5PlFQ:run";
 
-    // El bloque "if" de seguridad ha sido eliminado.
-
-    try {
-        const token = gapi.auth.getToken().access_token;
-        const res = await fetch(SCRIPT_URL, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
-            },
-            body: JSON.stringify({
-                functionName: functionName,
-                parameters: parameters
-            }),
-        });
-
-        if (!res.ok) {
-            const errorBody = await res.text();
-            throw new Error(`Error en la respuesta del servidor (HTTP ${res.status}): ${errorBody}`);
-        }
-
-        const jsonResponse = await res.json();
-
-        if (jsonResponse.error) {
-            console.error('Error devuelto por la API:', jsonResponse.error);
-            throw new Error(jsonResponse.error.message || 'Ocurrió un error en el script de Google.');
-        }
-
-        return jsonResponse.response;
-
-    } catch (error) {
-        console.error(`Error llamando a la función '${functionName}':`, error);
-        throw error;
+  try {
+    const tokenObj = gapi.auth.getToken();
+    if (!tokenObj || !tokenObj.access_token) {
+      throw new Error('No hay token de Google válido. Asegura login con gapi antes de llamar a la API.');
     }
+
+    const res = await fetch(SCRIPT_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${tokenObj.access_token}`
+      },
+      body: JSON.stringify({
+        // Formato requerido por Execution API
+        "function": functionName,
+        "parameters": parameters,
+        "devMode": true
+      }),
+    });
+
+    const text = await res.text();
+    let jsonResponse = {};
+    try { jsonResponse = text ? JSON.parse(text) : {}; } catch (_e) {}
+
+    if (!res.ok) {
+      // Mensaje detallado de error HTTP/Execution API
+      const errMsg = jsonResponse?.error?.message || text || `HTTP ${res.status}`;
+      throw new Error(`Execution API error: ${errMsg}`);
+    }
+
+    // Execution API devuelve { done, response, error }
+    if (jsonResponse.error) {
+      const detail = jsonResponse.error.details?.[0]?.errorMessage || jsonResponse.error.message;
+      throw new Error(detail || 'Ocurrió un error en el Apps Script.');
+    }
+
+    // Algunos runtimes devuelven {response: {result: ...}}
+    const result = jsonResponse.response?.result ?? jsonResponse.response;
+    return result;
+
+  } catch (error) {
+    console.error(`Error llamando a '${functionName}':`, error);
+    throw error;
+  }
 }
