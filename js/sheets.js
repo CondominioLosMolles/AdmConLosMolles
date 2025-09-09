@@ -4,7 +4,7 @@
 const SPREADSHEET_ID = '1LwA_L8nfAh8TNhyb4xHjiAXetvik_eqxY6HX9jMNU0Y';
 
 // ID de tu Script
-const SCRIPT_ID = 'AKfycbwmNZFxMLQtL-rcr479Y78Wat7e8JaDtHaUbdCEarhSIJ8LYqGWO97jlvOELMOGc5PlFQ';
+const SCRIPT_ID = 'AKfycbw_FdUARsUgDyyjIezpdN_59QCr02Zl6g8eI64IA4CzdXY7ibXvAGh1FK-mTwDYXv--8Q';
 
 
 // --- Nombres de las Hojas ---
