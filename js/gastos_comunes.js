@@ -1235,15 +1235,15 @@ async function cargarGastosComunes() {
     ocultarSpinner();
 }
 /* ============================================================================
- *  CONVENIOS – UI DE CUOTAS + ACTIVACIÓN Y REGISTRO DE PAGO (BLOQUE NUEVO)
- *  (Versión robusta: sin SCRIPT_ID, con MutationObserver)
+ *  CONVENIOS – UI DE CUOTAS + ACTIVACIÓN Y REGISTRO DE PAGO (ROBUSTO SPA)
+ *  (sin SCRIPT_ID, con MutationObserver para reinyectar al navegar)
  *  ========================================================================== */
 
-/* 1) Wrapper: usa utils.llamarAPI (Execution API); fallback WebApp solo si existe */
+/* 1) Llamadas al backend */
 async function _gsInvoke(functionName, parameters = []) {
   try {
     if (typeof window.llamarAPI === 'function') {
-      return await window.llamarAPI(functionName, parameters);
+      return await window.llamarAPI(functionName, parameters); // Execution API (utils.js)
     }
     const url = window.APPS_SCRIPT_WEBAPP_URL || window.GS_ENDPOINT;
     if (!url) throw new Error('No está configurada la URL del Apps Script ni existe llamarAPI.');
@@ -1278,36 +1278,39 @@ function fileToBase64_(file) {
 
 /* --- Localización robusta del host y del input Parcela --- */
 function getGastosHost_() {
-  // contenedor más específico si existe
   return document.getElementById('gastos-comunes-section')
       || document.getElementById('main-content')
       || document.querySelector('main')
       || document.body;
 }
 function findFiltersCard_(host) {
-  // Busca una tarjeta que contenga el label/placeholder “Parcela”
   const labels = Array.from(host.querySelectorAll('label'));
   const byLabel = labels.find(l => /parcela|parc/i.test(l.textContent || ''));
   if (byLabel) return byLabel.closest('.card') || byLabel.closest('.form-grid') || byLabel.closest('div');
-
-  // Fallback: primera card arriba
   return host.querySelector('.card') || host;
 }
 function findParcelaSeleccionada() {
   const host = getGastosHost_();
-  // candidatos: inputs visibles
   const inputs = Array.from(host.querySelectorAll('input[type="number"],input[type="text"]'))
     .filter(i => i.offsetParent !== null);
-
-  // los que “huelen” a parcela por id/name/placeholder/label
   const good = inputs.filter(i => {
     const text = (i.id || '') + ' ' + (i.name || '') + ' ' + (i.placeholder || '');
     const lab = i.labels ? Array.from(i.labels).map(l => l.textContent).join(' ') : '';
     return /parc|parcela|lote|unidad/i.test(text + ' ' + lab);
   });
-
   const el = good[0] || inputs[0];
   return el && el.value ? String(el.value).trim() : null;
+}
+function queryByText_(selector, regex, root=document) {
+  return Array.from(root.querySelectorAll(selector)).find(el => regex.test((el.textContent || '').trim()));
+}
+function isGastosView_() {
+  const host = getGastosHost_();
+  return !!(
+    queryByText_('h1,h2,.section-title', /Gastos Comunes/i, host) ||
+    queryByText_('button', /Agregar Gasto Común/i, host) ||
+    queryByText_('*', /Configuración de TIMC/i, host)
+  );
 }
 
 /* 3) Estado local */
@@ -1364,7 +1367,7 @@ function ensureBindings() {
     btnAct._bound = true;
   }
 
-  // Refrescar al cambiar el input de parcela (si lo detectamos)
+  // Refrescar al cambiar el input de parcela
   const host = getGastosHost_();
   Array.from(host.querySelectorAll('input[type="text"],input[type="number"]')).forEach(inp => {
     if (!inp._cvBound) {
@@ -1501,7 +1504,7 @@ function injectConveniosUI() {
     document.body.appendChild(modalPay);
   }
 
-  // Modal activar convenio (nuevo)
+  // Modal activar convenio
   if (!document.getElementById('modalActivarConvenio')) {
     const modalCv = el_(`
       <div id="modalActivarConvenio" class="modal" style="display:none">
@@ -1528,7 +1531,7 @@ function injectConveniosUI() {
   console.log('[Convenios] UI inyectada');
 }
 
-/* 7) Lógica de carga/refresh */
+/* 7) Cargar/Refrescar convenio y cuotas */
 async function cargarConvenioYCuotas(nParcela) {
   _cvState.nParcela = nParcela;
   const conv = await _gsInvoke('obtenerConvenio_GS', [nParcela]);
@@ -1539,7 +1542,6 @@ async function cargarConvenioYCuotas(nParcela) {
   const cuotas = await _gsInvoke('obtenerCuotas_GS', [conv.idConvenio]);
   _cvState.cuotas = cuotas || [];
 
-  // Resumen
   const sum = document.getElementById('cuotas-convenio-summary');
   sum.innerHTML = `
     <div class="card small"><div class="card-title">Deuda Original</div><div class="card-value">$${Number(conv.deudaOriginal).toLocaleString('es-CL')}</div></div>
@@ -1548,7 +1550,6 @@ async function cargarConvenioYCuotas(nParcela) {
     <div class="card small"><div class="card-title">Valor Cuota</div><div class="card-value">$${Number(conv.valorCuota).toLocaleString('es-CL')}</div></div>
   `;
 
-  // Tabla
   const tb = document.querySelector('#tabla-cuotas-convenio tbody');
   tb.innerHTML = '';
   _cvState.cuotas.forEach(c => {
@@ -1588,29 +1589,38 @@ window._hookConvenioOnParcelaChange = async function(nParcela) {
   try { await cargarConvenioYCuotas(nParcela); } catch(e){ console.warn(e); }
 };
 
-/* 10) Inicialización robusta: espera a que se pinte la vista de Gastos */
+/* 10) Inicialización ROBUSTA: reinyectar al entrar a Gastos Comunes */
 (function bootstrapConvenios() {
-  const already = { injected: false };
-
-  function tryInit() {
-    const host = getGastosHost_();
-    // Heurística: existe la tabla anual o la tarjeta de filtros
-    const hasFilters = host.querySelector('label, .form-grid, .card');
-    const hasTable   = host.querySelector('table');
-    if (!already.injected && (hasFilters || hasTable)) {
+  function checkAndInject() {
+    // ¿Estamos en la vista de Gastos Comunes y aún no hay barra?
+    if (isGastosView_() && !document.getElementById('convenio-actions-bar')) {
       injectConveniosUI();
       ensureBindings();
-      already.injected = true;
-
       const p = findParcelaSeleccionada();
       if (p) _hookConvenioOnParcelaChange(p);
     }
   }
 
   // 1) Intento inmediato
-  tryInit();
+  checkAndInject();
 
-  // 2) Observa cambios en el DOM (la SPA renderiza después)
-  const obs = new MutationObserver(() => tryInit());
+  // 2) Observa TODOS los cambios del DOM (la SPA re-renderiza)
+  const obs = new MutationObserver(() => checkAndInject());
   obs.observe(document.body, { childList: true, subtree: true });
+
+  // 3) Por si usan hash/router, reintenta al cambiar
+  window.addEventListener('hashchange', checkAndInject);
+  window.addEventListener('popstate', checkAndInject);
+
+  // 4) Al hacer click en el menú lateral intenta reinyectar en breve
+  document.addEventListener('click', (e) => {
+    const t = e.target;
+    if (!t) return;
+    const txt = (t.textContent || '').trim();
+    if (/Gastos Comunes/i.test(txt)) {
+      setTimeout(checkAndInject, 100);
+      setTimeout(checkAndInject, 400);
+      setTimeout(checkAndInject, 900);
+    }
+  });
 })();
