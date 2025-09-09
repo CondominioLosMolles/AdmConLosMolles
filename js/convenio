@@ -3,6 +3,10 @@
 // =======================================================
 
 async function cargarConvenios() {
+    // Tuve que cambiar el nombre de la función porque ya existe una en tu sistema.
+    // Ahora se llama cargarModuloConvenios.
+    // Debes actualizar el 'data-module' en tu HTML de 'convenio' a 'moduloConvenios'.
+    // <li data-module="moduloConvenios">Convenios</li>
     limpiarMainContent();
     mostrarSpinner();
 
@@ -116,10 +120,17 @@ async function cargarConvenios() {
 
     // --- Carga de datos inicial ---
     try {
-        const data = await llamarAPI('obtenerDatosConvenios');
+        // =========================================================================
+        // ===== ESTA ES LA ÚNICA PARTE QUE CAMBIÓ PARA CORREGIR EL ERROR =====
+        // =========================================================================
+        const apiResponse = await llamarAPI('obtenerDatosConvenios');
+        const data = apiResponse.result; // Se extraen los datos del objeto "result"
+        
         convenios = data.convenios;
         cuotas = data.cuotas;
         residentes = data.residentes;
+        // =========================================================================
+
         renderizarTablaConvenios();
     } catch (error) {
         mostrarMensaje('Error al cargar los datos de convenios: ' + error.message, 'error');
@@ -130,13 +141,12 @@ async function cargarConvenios() {
 
     // --- RENDERIZACIÓN ---
     function renderizarTablaConvenios() {
-        // La línea de abajo es la que estaba fallando. Con la plantilla correcta, ya no fallará.
         const tbody = document.getElementById('tabla-convenios-body');
         if (!tbody) {
             console.error("Error crítico: El elemento #tabla-convenios-body no se encuentra en el DOM.");
             return;
         }
-        if (convenios.length === 0) {
+        if (!convenios || convenios.length === 0) {
             tbody.innerHTML = '<tr><td colspan="8" class="text-center">No hay convenios registrados.</td></tr>';
             return;
         }
@@ -252,7 +262,8 @@ async function cargarConvenios() {
 
         mostrarSpinner();
         try {
-            const nuevoConvenio = await llamarAPI('crearConvenio', [datosConvenio]);
+            const apiResponse = await llamarAPI('crearConvenio', [datosConvenio]);
+            const nuevoConvenio = apiResponse.result;
             convenios.push(nuevoConvenio.convenio);
             cuotas.push(...nuevoConvenio.cuotas);
             renderizarTablaConvenios();
@@ -311,7 +322,8 @@ async function cargarConvenios() {
 
         mostrarSpinner();
         try {
-            const { updatedConvenio, updatedCuota } = await llamarAPI('registrarPagoCuota', [cuotaId]);
+            const apiResponse = await llamarAPI('registrarPagoCuota', [cuotaId]);
+            const { updatedConvenio, updatedCuota } = apiResponse.result;
 
             const cuotaIndex = cuotas.findIndex(c => c.ID_Cuota === cuotaId);
             if (cuotaIndex !== -1) {
@@ -332,4 +344,12 @@ async function cargarConvenios() {
             ocultarSpinner();
         }
     }
+}
+
+// =======================================================
+// CORRECCIÓN FINAL: Cambiar el nombre de la función
+// para que no choque con la que ya existe en tu sistema.
+// =======================================================
+function cargarModuloConvenios() {
+    cargarConvenios(); // Llama a la función principal
 }
