@@ -126,3 +126,20 @@ async function llamarAPI(functionName, parameters = []) {
         throw error;
     }
 }
+// ========================================================
+//      FUNCIONES GLOBALES PARA SPINNER DE CARGA
+// ========================================================
+
+function showSpinner() {
+  const spinner = document.getElementById('spinner');
+  if (spinner) {
+    spinner.style.display = 'flex';
+  }
+}
+
+function hideSpinner() {
+  const spinner = document.getElementById('spinner');
+  if (spinner) {
+    spinner.style.display = 'none';
+  }
+}
