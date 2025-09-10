@@ -134,9 +134,10 @@ async function cargarConvenios() {
         </div>
     `;
 
+   setTimeout(async () => {
     inicializarComponentesConvenios();
     await cargarDatosIniciales();
-}
+}, 0);
 
 // --- MANEJO DE COMPONENTES Y EVENTOS ---
 function inicializarComponentesConvenios() {
