@@ -301,7 +301,7 @@ function abrirModalNuevoConvenio() {
     const residentesPrincipales = residentesData.filter(r => r['Contacto Principal'] === 'SI');
     
     select.innerHTML = '<option value="" disabled selected>Seleccione una parcela...</option>' +
-        residentesPrincipales.map(r => `<option value="${r.N_Parcela}">${r.N_Parcela} - ${r.Nombre_Completo}</option>`).join('');
+    residentesPrincipales.map(r => `<option value="${escapeHTML(r.N_Parcela)}">${escapeHTML(r.N_Parcela)} - ${escapeHTML(r.Nombre_Completo)}</option>`).join('');
         
     document.getElementById('resumenCalculoCuota').textContent = 'Ingrese los datos para calcular el valor de la cuota.';
     modalNuevoConvenio.show();
