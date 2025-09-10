@@ -1,4 +1,20 @@
 // =================================================================
+//      FUNCIÓN AUXILIAR PARA LIMPIAR TEXTO EN HTML
+// =================================================================
+function escapeHTML(str) {
+    if (!str) return '';
+    return str.replace(/[&<>"']/g, function(match) {
+        return {
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            '"': '&quot;',
+            "'": '&#39;'
+        }[match];
+    });
+}
+
+// =================================================================
 //      MÓDULO DE GESTIÓN DE CONVENIOS (VERSIÓN ROBUSTA MEJORADA)
 //      Análisis y reconstrucción por Gemini
 // =================================================================
