@@ -151,10 +151,10 @@ async function cargarDatosIniciales() {
     showSpinner();
     try {
         [conveniosData, cuotasData, residentesData] = await Promise.all([
-            getSheetData('Convenios'),
-            getSheetData('Cuotas_Convenio'),
-            getSheetData('Residentes')
-        ]);
+    obtenerConvenios(),
+    obtenerCuotasConvenio(),
+    obtenerResidentes()
+]);
         procesarYUnirDatos(); // Función clave para combinar y calcular datos
         aplicarFiltrosConvenios();
     } catch (error) {
