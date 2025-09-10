@@ -182,31 +182,44 @@ async function cargarDatosIniciales() {
 }
 
 function procesarYUnirDatos() {
-    // Crear un mapa de residentes para búsqueda rápida por N_Parcela
     const residentesMap = new Map();
-    residentesData.forEach(r => {
-        if (!residentesMap.has(r.N_Parcela)) {
-            residentesMap.set(r.N_Parcela, []);
+    // CORRECCIÓN: Usamos índices para leer los datos de los residentes
+    residentesData.forEach(residente => {
+        const nParcela = residente[1];      // N_Parcela está en la columna 1
+        const nombreCompleto = residente[2]; // Nombre_Completo está en la columna 2
+        if (!residentesMap.has(nParcela)) {
+            residentesMap.set(nParcela, []);
         }
-        residentesMap.get(r.N_Parcela).push(r.Nombre_Completo);
+        residentesMap.get(nParcela).push(nombreCompleto);
     });
 
     conveniosUnificados = conveniosData.map(convenio => {
-        const residentesNombres = residentesMap.get(convenio.N_Parcela) || ["Residente no encontrado"];
-        const cuotasDelConvenio = cuotasData.filter(c => c.ID_Convenio === convenio.ID_Convenio);
-        
-        const cuotasPendientes = cuotasDelConvenio.filter(c => c.Estado !== 'Pagado');
-        const saldoPendiente = cuotasPendientes.reduce((sum, cuota) => sum + parseFloat(cuota.Monto_Cuota || 0), 0);
+        // El resto de la lógica ya maneja el formato de array, por lo que no necesita cambios aquí.
+        const convenioArray = Array.isArray(convenio) ? convenio : Object.values(convenio);
+        const nParcelaConvenio = convenioArray[1];
+        const idConvenio = convenioArray[0];
+        const deudaOriginal = convenioArray[3];
+        const nCuotas = convenioArray[4];
+        const valorCuota = convenioArray[5];
+        const estadoConvenio = convenioArray[7];
 
-        let estadoCalculado = convenio.Estado;
+        const residentesNombres = residentesMap.get(nParcelaConvenio) || ["Residente no encontrado"];
+        const cuotasDelConvenio = cuotasData.filter(c => c[1] === idConvenio);
+
+        const cuotasPendientes = cuotasDelConvenio.filter(c => c[8] !== 'Pagado');
+        const saldoPendiente = cuotasPendientes.reduce((sum, cuota) => sum + parseFloat(cuota[5] || 0), 0);
+
+        let estadoCalculado = estadoConvenio;
         if (estadoCalculado === 'Activo') {
-             if (saldoPendiente === 0) {
+            if (saldoPendiente === 0 && cuotasDelConvenio.length > 0) {
                 estadoCalculado = 'Pagado';
             } else {
                 const hoy = new Date();
-                hoy.setHours(0, 0, 0, 0); // Normalizar para comparar solo fechas
+                hoy.setHours(0, 0, 0, 0);
                 const tieneAtraso = cuotasPendientes.some(c => {
-                    const [dia, mes, anio] = c.Fecha_Vencimiento.split('/');
+                    const fechaVencimientoStr = c[4];
+                    if (!fechaVencimientoStr) return false;
+                    const [dia, mes, anio] = fechaVencimientoStr.split('/');
                     const fechaVencimiento = new Date(`${anio}-${mes}-${dia}`);
                     return fechaVencimiento < hoy;
                 });
@@ -218,9 +231,16 @@ function procesarYUnirDatos() {
         }
 
         return {
-            ...convenio, // Copia todas las propiedades del convenio original
-            Nombre_Residente: residentesNombres.join(', '), // Une nombres si hay más de uno por parcela
-            Cuotas_Asociadas: cuotasDelConvenio,
+            ID_Convenio: idConvenio,
+            N_Parcela: nParcelaConvenio,
+            Deuda_Original: deudaOriginal,
+            N_Cuotas: nCuotas,
+            Valor_Cuota: valorCuota,
+            Estado: estadoConvenio,
+            Nombre_Residente: residentesNombres.join(', '),
+            Cuotas_Asociadas: cuotasDelConvenio.map(c => ({ // Convertimos a objeto para la vista de detalle
+                ID_Cuota: c[0], N_Cuota: c[3], Fecha_Vencimiento: c[4], Monto_Cuota: c[5], Estado: c[8]
+            })),
             Saldo_Pendiente_Calculado: saldoPendiente,
             Estado_Calculado: estadoCalculado
         };
@@ -292,17 +312,21 @@ function renderizarPaginacionConvenios(totalItems, paginaActual) {
     paginacionContainer.innerHTML = paginacionHTML;
 }
 
-// --- MODALES Y ACCIONES CRUD ---
 function abrirModalNuevoConvenio() {
     document.getElementById('formNuevoConvenio').reset();
     const select = document.getElementById('convenioResidente');
-    
-    // Filtramos residentes que son "Contacto Principal" para evitar duplicados por parcela
-    const residentesPrincipales = residentesData.filter(r => r['Contacto Principal'] === 'SI');
-    
+
+    // CORRECCIÓN: Usamos el índice de la columna [18] para "Contacto Principal"
+    const residentesPrincipales = residentesData.filter(residente => residente[18] === 'SI');
+
+    // CORRECCIÓN: Usamos los índices [1] para N_Parcela y [2] para Nombre_Completo
     select.innerHTML = '<option value="" disabled selected>Seleccione una parcela...</option>' +
-    residentesPrincipales.map(r => `<option value="${escapeHTML(r.N_Parcela)}">${escapeHTML(r.N_Parcela)} - ${escapeHTML(r.Nombre_Completo)}</option>`).join('');
-        
+        residentesPrincipales.map(residente => {
+            const nParcela = escapeHTML(residente[1]);
+            const nombreCompleto = escapeHTML(residente[2]);
+            return `<option value="${nParcela}">${nParcela} - ${nombreCompleto}</option>`;
+        }).join('');
+
     document.getElementById('resumenCalculoCuota').textContent = 'Ingrese los datos para calcular el valor de la cuota.';
     modalNuevoConvenio.show();
 }
