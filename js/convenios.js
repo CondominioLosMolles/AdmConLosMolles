@@ -181,70 +181,78 @@ async function cargarDatosIniciales() {
     }
 }
 
+// --- PROCESAR Y UNIR DATOS ---
 function procesarYUnirDatos() {
+    // --- INICIO DE LA VERSIÓN ROBUSTA ---
+    // Paso 1: Asegurarnos de que todos los datos son arrays, aunque vengan vacíos.
+    if (!residentesData) residentesData = [];
+    if (!conveniosData) conveniosData = [];
+    if (!cuotasData) cuotasData = [];
+
     const residentesMap = new Map();
-    // CORRECCIÓN: Usamos índices para leer los datos de los residentes
     residentesData.forEach(residente => {
-        const nParcela = residente[1];      // N_Parcela está en la columna 1
-        const nombreCompleto = residente[2]; // Nombre_Completo está en la columna 2
-        if (!residentesMap.has(nParcela)) {
-            residentesMap.set(nParcela, []);
+        const nParcela = residente[1];
+        const nombreCompleto = residente[2];
+        if (nParcela && nombreCompleto) {
+            if (!residentesMap.has(nParcela)) {
+                residentesMap.set(nParcela, []);
+            }
+            residentesMap.get(nParcela).push(nombreCompleto);
         }
-        residentesMap.get(nParcela).push(nombreCompleto);
     });
 
     conveniosUnificados = conveniosData.map(convenio => {
-        // El resto de la lógica ya maneja el formato de array, por lo que no necesita cambios aquí.
-        const convenioArray = Array.isArray(convenio) ? convenio : Object.values(convenio);
-        const nParcelaConvenio = convenioArray[1];
-        const idConvenio = convenioArray[0];
-        const deudaOriginal = convenioArray[3];
-        const nCuotas = convenioArray[4];
-        const valorCuota = convenioArray[5];
-        const estadoConvenio = convenioArray[7];
+        // Saltamos filas vacías o malformadas en la hoja de Convenios
+        if (!convenio || !convenio[0]) return null;
+
+        const idConvenio = convenio[0];
+        const nParcelaConvenio = convenio[1];
+        const estadoConvenio = convenio[7] || 'Activo';
 
         const residentesNombres = residentesMap.get(nParcelaConvenio) || ["Residente no encontrado"];
-        const cuotasDelConvenio = cuotasData.filter(c => c[1] === idConvenio);
 
-        const cuotasPendientes = cuotasDelConvenio.filter(c => c[8] !== 'Pagado');
+        // Filtramos las cuotas de forma segura
+        const cuotasDelConvenio = cuotasData.filter(c => c && c[1] === idConvenio);
+
+        const cuotasPendientes = cuotasDelConvenio.filter(c => c && c[8] !== 'Pagado');
         const saldoPendiente = cuotasPendientes.reduce((sum, cuota) => sum + parseFloat(cuota[5] || 0), 0);
 
         let estadoCalculado = estadoConvenio;
         if (estadoCalculado === 'Activo') {
+            // La condición de pagado ahora es más segura
             if (saldoPendiente === 0 && cuotasDelConvenio.length > 0) {
                 estadoCalculado = 'Pagado';
             } else {
                 const hoy = new Date();
                 hoy.setHours(0, 0, 0, 0);
                 const tieneAtraso = cuotasPendientes.some(c => {
-                    const fechaVencimientoStr = c[4];
+                    const fechaVencimientoStr = c && c[4];
                     if (!fechaVencimientoStr) return false;
                     const [dia, mes, anio] = fechaVencimientoStr.split('/');
+                    if (!dia || !mes || !anio) return false;
                     const fechaVencimiento = new Date(`${anio}-${mes}-${dia}`);
                     return fechaVencimiento < hoy;
                 });
-
-                if (tieneAtraso) {
-                    estadoCalculado = 'Atrasado';
-                }
+                if (tieneAtraso) estadoCalculado = 'Atrasado';
             }
         }
 
+        // Creamos el objeto final con los datos del convenio
         return {
             ID_Convenio: idConvenio,
             N_Parcela: nParcelaConvenio,
-            Deuda_Original: deudaOriginal,
-            N_Cuotas: nCuotas,
-            Valor_Cuota: valorCuota,
+            Deuda_Original: convenio[3] || 0,
+            N_Cuotas: convenio[4] || 0,
+            Valor_Cuota: convenio[5] || 0,
             Estado: estadoConvenio,
             Nombre_Residente: residentesNombres.join(', '),
-            Cuotas_Asociadas: cuotasDelConvenio.map(c => ({ // Convertimos a objeto para la vista de detalle
+            Cuotas_Asociadas: cuotasDelConvenio.map(c => ({
                 ID_Cuota: c[0], N_Cuota: c[3], Fecha_Vencimiento: c[4], Monto_Cuota: c[5], Estado: c[8]
             })),
             Saldo_Pendiente_Calculado: saldoPendiente,
             Estado_Calculado: estadoCalculado
         };
-    });
+    }).filter(Boolean); // Limpiamos cualquier resultado nulo de filas vacías
 }
 
 // --- RENDERIZADO DE TABLA Y PAGINACIÓN ---
