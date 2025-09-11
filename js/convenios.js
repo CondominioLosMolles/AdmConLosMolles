@@ -16,7 +16,6 @@ function escapeHTML(str) {
 
 // =================================================================
 //      MÓDULO DE GESTIÓN DE CONVENIOS (VERSIÓN ROBUSTA MEJORADA)
-//      Análisis y reconstrucción por Gemini
 // =================================================================
 
 // --- VARIABLES GLOBALES DEL MÓDULO ---
@@ -134,10 +133,13 @@ async function cargarConvenios() {
         </div>
     `;
 
-   setTimeout(async () => {
-    inicializarComponentesConvenios();
-    await cargarDatosIniciales();
-}, 0);
+    // Se usa setTimeout para asegurar que el DOM se actualice con el innerHTML
+    // antes de intentar inicializar los componentes y cargar los datos.
+    setTimeout(async () => {
+        inicializarComponentesConvenios();
+        await cargarDatosIniciales();
+    }, 0);
+}
 
 // --- MANEJO DE COMPONENTES Y EVENTOS ---
 function inicializarComponentesConvenios() {
@@ -168,10 +170,10 @@ async function cargarDatosIniciales() {
     showSpinner();
     try {
         [conveniosData, cuotasData, residentesData] = await Promise.all([
-    obtenerConvenios(),
-    obtenerCuotasConvenio(),
-    obtenerResidentes()
-]);
+            obtenerConvenios(),
+            obtenerCuotasConvenio(),
+            obtenerResidentes()
+        ]);
         procesarYUnirDatos(); // Función clave para combinar y calcular datos
         aplicarFiltrosConvenios();
     } catch (error) {
@@ -184,8 +186,6 @@ async function cargarDatosIniciales() {
 
 // --- PROCESAR Y UNIR DATOS ---
 function procesarYUnirDatos() {
-    // --- INICIO DE LA VERSIÓN ROBUSTA ---
-    // Paso 1: Asegurarnos de que todos los datos son arrays, aunque vengan vacíos.
     if (!residentesData) residentesData = [];
     if (!conveniosData) conveniosData = [];
     if (!cuotasData) cuotasData = [];
@@ -203,7 +203,6 @@ function procesarYUnirDatos() {
     });
 
     conveniosUnificados = conveniosData.map(convenio => {
-        // Saltamos filas vacías o malformadas en la hoja de Convenios
         if (!convenio || !convenio[0]) return null;
 
         const idConvenio = convenio[0];
@@ -211,16 +210,12 @@ function procesarYUnirDatos() {
         const estadoConvenio = convenio[7] || 'Activo';
 
         const residentesNombres = residentesMap.get(nParcelaConvenio) || ["Residente no encontrado"];
-
-        // Filtramos las cuotas de forma segura
         const cuotasDelConvenio = cuotasData.filter(c => c && c[1] === idConvenio);
-
         const cuotasPendientes = cuotasDelConvenio.filter(c => c && c[8] !== 'Pagado');
         const saldoPendiente = cuotasPendientes.reduce((sum, cuota) => sum + parseFloat(cuota[5] || 0), 0);
 
         let estadoCalculado = estadoConvenio;
         if (estadoCalculado === 'Activo') {
-            // La condición de pagado ahora es más segura
             if (saldoPendiente === 0 && cuotasDelConvenio.length > 0) {
                 estadoCalculado = 'Pagado';
             } else {
@@ -238,7 +233,6 @@ function procesarYUnirDatos() {
             }
         }
 
-        // Creamos el objeto final con los datos del convenio
         return {
             ID_Convenio: idConvenio,
             N_Parcela: nParcelaConvenio,
@@ -253,7 +247,7 @@ function procesarYUnirDatos() {
             Saldo_Pendiente_Calculado: saldoPendiente,
             Estado_Calculado: estadoCalculado
         };
-    }).filter(Boolean); // Limpiamos cualquier resultado nulo de filas vacías
+    }).filter(Boolean);
 }
 
 // --- RENDERIZADO DE TABLA Y PAGINACIÓN ---
@@ -299,8 +293,6 @@ function renderizarTablaConvenios(pagina) {
 }
 
 function renderizarPaginacionConvenios(totalItems, paginaActual) {
-    // Esta función se mantiene igual, asumiendo que su lógica interna es correcta.
-    // Solo nos aseguramos de que se llama con los parámetros correctos.
     const paginacionContainer = document.getElementById('paginacion-convenios');
     const infoContainer = document.getElementById('registros-info-convenios');
     const totalPaginas = Math.ceil(totalItems / FILAS_POR_PAGINA_CONVENIOS);
@@ -313,22 +305,20 @@ function renderizarPaginacionConvenios(totalItems, paginaActual) {
     }
 
     let paginacionHTML = '<ul class="pagination mb-0">';
-    // Lógica para dibujar botones de paginación (simplificada para brevedad)
     for (let i = 1; i <= totalPaginas; i++) {
-        paginacionHTML += `<li class="page-item ${i === paginaActual ? 'active' : ''}"><a class="page-link" href="#" onclick="renderizarTablaConvenios(${i})">${i}</a></li>`;
+        paginacionHTML += `<li class="page-item ${i === paginaActual ? 'active' : ''}"><a class="page-link" href="#" onclick="event.preventDefault(); renderizarTablaConvenios(${i});">${i}</a></li>`;
     }
     paginacionHTML += '</ul>';
     paginacionContainer.innerHTML = paginacionHTML;
 }
 
+// --- MANEJO DE MODALES ---
 function abrirModalNuevoConvenio() {
     document.getElementById('formNuevoConvenio').reset();
     const select = document.getElementById('convenioResidente');
 
-    // CORRECCIÓN: Usamos el índice de la columna [18] para "Contacto Principal"
     const residentesPrincipales = residentesData.filter(residente => residente[18] === 'SI');
 
-    // CORRECCIÓN: Usamos los índices [1] para N_Parcela y [2] para Nombre_Completo
     select.innerHTML = '<option value="" disabled selected>Seleccione una parcela...</option>' +
         residentesPrincipales.map(residente => {
             const nParcela = escapeHTML(residente[1]);
@@ -415,6 +405,7 @@ function abrirModalDetalle(convenioId) {
     modalDetalleConvenio.show();
 }
 
+// --- ACCIONES (GUARDAR, ACTUALIZAR) ---
 async function guardarConvenio(event) {
     event.preventDefault();
     if (!confirm("¿Está seguro que desea crear este nuevo convenio? Esta acción no se puede deshacer.")) {
@@ -426,55 +417,37 @@ async function guardarConvenio(event) {
         const nParcela = document.getElementById('convenioResidente').value;
         const deudaTotal = parseFloat(document.getElementById('convenioDeudaTotal').value);
         const nCuotas = parseInt(document.getElementById('convenioCuotas').value);
-        const fechaInicioStr = document.getElementById('convenioFechaInicio').value; // Formato YYYY-MM-DD
+        const fechaInicioStr = document.getElementById('convenioFechaInicio').value;
 
         const idConvenio = `C-${nParcela}-${Date.now().toString().slice(-5)}`;
         const valorCuota = Math.round(deudaTotal / nCuotas);
 
-        // *** CORRECCIÓN CRÍTICA: El orden y número de columnas debe coincidir EXACTAMENTE con la hoja 'Convenios' ***
         const filaConvenio = [[
-            idConvenio,           // ID_Convenio
-            nParcela,             // N_Parcela
-            new Date().toLocaleDateString('es-CL'), // Fecha_Inicio
-            deudaTotal,           // Deuda_Original
-            nCuotas,              // N_Cuotas
-            valorCuota,           // Valor_Cuota
-            0,                    // Interes_Convenio (Asumimos 0 si no se especifica)
-            'Activo',             // Estado
-            deudaTotal,           // Saldo_Convenio (Inicial)
-            ''                    // URL_Formalizacion
+            idConvenio, nParcela, new Date().toLocaleDateString('es-CL'),
+            deudaTotal, nCuotas, valorCuota, 0, 'Activo', deudaTotal, ''
         ]];
 
         const filasCuotas = [];
-        const fechaInicio = new Date(fechaInicioStr + 'T12:00:00Z'); // Usar T12:00:00Z para evitar problemas de zona horaria
+        const fechaInicio = new Date(fechaInicioStr + 'T12:00:00Z');
 
         for (let i = 1; i <= nCuotas; i++) {
             const idCuota = `Q-${idConvenio}-${i}`;
             const fechaVencimiento = new Date(fechaInicio);
             fechaVencimiento.setUTCMonth(fechaVencimiento.getUTCMonth() + i - 1);
             
-            // *** CORRECCIÓN CRÍTICA: El orden debe coincidir con la hoja 'Cuotas_Convenio' ***
             filasCuotas.push([
-                idCuota,                // ID_Cuota
-                idConvenio,             // ID_Convenio
-                nParcela,               // N_Parcela
-                i,                      // N_Cuota
-                fechaVencimiento.toLocaleDateString('es-CL'), // Fecha_Vencimiento
-                valorCuota,             // Monto_Cuota
-                0,                      // Monto_Pagado_Acumulado (Inicial)
-                valorCuota,             // Saldo_Cuota (Inicial)
-                'Pendiente'             // Estado
+                idCuota, idConvenio, nParcela, i, 
+                fechaVencimiento.toLocaleDateString('es-CL'),
+                valorCuota, 0, valorCuota, 'Pendiente'
             ]);
         }
 
-        // Simulación de escritura en Google Sheets
         await appendSheetData('Convenios', filaConvenio);
         await appendSheetData('Cuotas_Convenio', filasCuotas);
 
         modalNuevoConvenio.hide();
         mostrarMensaje(`Convenio ${idConvenio} creado con éxito. Recargando datos...`, "success");
         
-        // Recargar todo para ver el nuevo convenio
         setTimeout(cargarDatosIniciales, 1500);
 
     } catch (error) {
@@ -486,25 +459,24 @@ async function guardarConvenio(event) {
 }
 
 async function registrarPagoCuota(cuotaId, convenioId) {
-    // Esta función simula la actualización de una cuota
     console.log(`Iniciando el pago para la cuota ${cuotaId} del convenio ${convenioId}.`);
     
     // Aquí iría la lógica para llamar a una función `updateSheetData`
     // que buscaría la fila por `cuotaId` en la hoja 'Cuotas_Convenio'
-    // y cambiaría la columna 'Estado' a 'Pagado'.
+    // y cambiaría el estado, montos, etc.
 
-    // Por ahora, actualizamos los datos en memoria y recargamos la vista para simular el cambio
-    const cuota = cuotasData.find(c => c.ID_Cuota === cuotaId);
-    if (cuota) {
-        cuota.Estado = 'Pagado';
-        cuota.Saldo_Cuota = 0;
-        // ... otros campos a actualizar
+    // Por ahora, simulamos el cambio en memoria y recargamos la vista
+    const cuotaOriginal = cuotasData.find(c => c[0] === cuotaId);
+    if (cuotaOriginal) {
+        cuotaOriginal[8] = 'Pagado'; // Columna Estado
+        cuotaOriginal[7] = 0; // Columna Saldo_Cuota
     }
 
-    // Volver a procesar y renderizar para reflejar el cambio
     procesarYUnirDatos();
     aplicarFiltrosConvenios();
-    modalDetalleConvenio.hide(); // Cierra el modal actual
-    abrirModalDetalle(convenioId); // Abre el modal actualizado
+    
+    // Cierra y vuelve a abrir el modal de detalles para reflejar el cambio
+    modalDetalleConvenio.hide(); 
+    abrirModalDetalle(convenioId); 
     mostrarMensaje(`Pago de la cuota ${cuotaId} registrado exitosamente (simulado).`, "info");
 }
