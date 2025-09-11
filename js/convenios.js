@@ -274,18 +274,18 @@ function aplicarFiltrosConvenios() {
   renderizarTablaConvenios(1);
 }
 
-function renderizarTablaConvenios(pag = 1) {
-  const tbody = document.getElementById("tabla-convenios-body");
-  const info  = document.getElementById("registros-info-convenios");
-  const nav   = document.getElementById("paginacion-convenios");
+function renderTabla(pag = 1) {
+  const tbody = document.getElementById("tbodyConvenios");
+  const info  = document.getElementById("regInfo");
+  const nav   = document.getElementById("paginacion");
   if (!tbody || !info || !nav) return;
 
-  const ini = (pag - 1) * FILAS_POR_PAGINA_CONVENIOS;
-  const fin = ini + FILAS_POR_PAGINA_CONVENIOS;
+  const ini = (pag - 1) * FILAS_POR_PAGINA;
+  const fin = ini + FILAS_POR_PAGINA;
   const items = conveniosFiltrados.slice(ini, fin);
 
   if (!items.length) {
-    tbody.innerHTML = `<tr><td colspan="8" class="text-center py-4">No hay convenios que coincidan con la búsqueda.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="8" class="text-center py-4">Sin resultados.</td></tr>`;
   } else {
     tbody.innerHTML = items.map(c => {
       const badge = {Activo:"success",Atrasado:"danger",Pagado:"primary",Anulado:"secondary"}[c.Estado] || "light";
@@ -299,7 +299,7 @@ function renderizarTablaConvenios(pag = 1) {
           <td>$${Number(c.Saldo_Pendiente).toLocaleString("es-CL")}</td>
           <td><span class="badge text-bg-${badge}">${c.Estado}</span></td>
           <td class="text-center">
-            <button class="btn btn-sm btn-outline-primary btn-ver-detalle" data-id="${c.ID_Convenio}" title="Ver detalle">
+            <button class="btn btn-sm btn-outline-primary btn-detalle" data-id="${c.ID_Convenio}" title="Ver detalle">
               <i class="fas fa-eye"></i>
             </button>
           </td>
@@ -310,7 +310,7 @@ function renderizarTablaConvenios(pag = 1) {
 
   // Paginación
   const total = conveniosFiltrados.length;
-  const totalPag = Math.max(1, Math.ceil(total / FILAS_POR_PAGINA_CONVENIOS));
+  const totalPag = Math.max(1, Math.ceil(total / FILAS_POR_PAGINA));
   const desde = total ? ini + 1 : 0;
   const hasta = Math.min(fin, total);
   info.textContent = `Mostrando ${desde}-${hasta} de ${total}`;
@@ -318,18 +318,22 @@ function renderizarTablaConvenios(pag = 1) {
   let html = `<ul class="pagination pagination-sm mb-0">`;
   for (let i = 1; i <= totalPag; i++) {
     html += `<li class="page-item ${i===pag?"active":""}">
-      <a class="page-link" href="#" onclick="event.preventDefault(); renderizarTablaConvenios(${i});">${i}</a>
+      <a class="page-link" href="#" onclick="event.preventDefault(); renderTabla(${i});">${i}</a>
     </li>`;
   }
   html += `</ul>`;
   nav.innerHTML = html;
 
-  // Delegación: abrir detalle
-  tbody.addEventListener("click", (ev)=>{
-    const btn = ev.target.closest(".btn-ver-detalle");
-    if (btn) abrirModalDetalle(btn.dataset.id);
-  }, {once:true});
+  // ✅ Delegación estable: funciona siempre, incluso después de re-render
+  tbody.onclick = (e) => {
+    const btn = e.target.closest(".btn-detalle");
+    if (!btn) return;
+    e.preventDefault();
+    const id = btn.getAttribute("data-id");
+    abrirModalDetalle(id);
+  };
 }
+
 
 // =================================================================
 //  MODALES
@@ -465,6 +469,9 @@ function abrirModalDetalle(idConvenio) {
 // =================================================================
 //  GUARDAR CONVENIO
 // =================================================================
+// ======================================================================
+//  GUARDAR CONVENIO (corrige el redondeo y mantiene fechas estables)
+// ======================================================================
 async function guardarConvenio(evt) {
   evt.preventDefault();
   if (!confirm("¿Crear este convenio?")) return;
@@ -487,37 +494,44 @@ async function guardarConvenio(evt) {
     if (!firstYMD) throw new Error("Selecciona la fecha de inicio.");
 
     const idConvenio = `C-${nParcela}-${Date.now().toString().slice(-5)}`;
-    const valorCuota = Math.round(deuda / nCuotas);
+
+    // --------- NUEVO: reparto exacto sin perder $ ----------
+    const base   = Math.floor(deuda / nCuotas);     // monto base por cuota
+    const resto  = deuda - (base * nCuotas);        // pesos sobrantes (0..nCuotas-1)
+    const valorCuotaPromedio = Math.round(deuda / nCuotas); // solo para mostrar en "Resumen"
+    // -------------------------------------------------------
 
     // Fila Convenios (ajusta al orden real de tu hoja)
     const filaConvenio = [[
       idConvenio,          // 0 ID_Convenio
       nParcela,            // 1 N_Parcela
-      new Date().toLocaleDateString("es-CL"), // 2 Fecha creación (solo visual)
+      new Date().toLocaleDateString("es-CL"), // 2 Fecha creación (visual)
       deuda,               // 3 Deuda_Original
       nCuotas,             // 4 N_Cuotas
-      valorCuota,          // 5 Valor_Cuota
+      valorCuotaPromedio,  // 5 Valor_Cuota (promedio para mostrar)
       0,                   // 6 Pagado_Acumulado
       "Activo",            // 7 Estado
       deuda,               // 8 Saldo Inicial
       ""                   // 9 Observaciones
     ]];
 
-    // Filas Cuotas — GUARDAMOS YYYY-MM-DD en E (index 4)
+    // Filas Cuotas — GUARDAMOS YYYY-MM-DD en E (index 4) y repartimos exacto
     const filasCuotas = [];
     for (let i = 1; i <= nCuotas; i++) {
       const idCuota = `Q-${idConvenio}-${i}`;
-      const vencYMD = addMonthsKeepDay(firstYMD, i - 1); // estable
+      const vencYMD = addMonthsKeepDay(firstYMD, i - 1); // estable sin “correr el día”
+      // Las primeras "resto" cuotas llevan +1 peso
+      const monto = base + (i <= resto ? 1 : 0);
 
       filasCuotas.push([
         idCuota,        // A  ID_Cuota
         idConvenio,     // B  ID_Convenio
         nParcela,       // C  N_Parcela
         i,              // D  N_Cuota
-        vencYMD,        // E  Fecha_Vencimiento (YYYY-MM-DD literal)
-        valorCuota,     // F  Monto_Cuota
+        vencYMD,        // E  Fecha_Vencimiento
+        monto,          // F  Monto_Cuota
         0,              // G  Monto_Pagado_Acumulado
-        valorCuota,     // H  Saldo_Cuota
+        monto,          // H  Saldo_Cuota (inicial = monto)
         'Pendiente',    // I  Estado
         ''              // J  Link_Comprobante
       ]);
