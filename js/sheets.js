@@ -816,3 +816,124 @@ async function enviarCorreo(destinatarios, asunto, mensaje) {
         }
     });
 }
+// ===============================================================
+//  BLOQUE AÑADIDO PARA CONVENIOS (pegar al final de sheets.js)
+//  - appendSheetData
+//  - findCuotaRowById / updateCuotaPago
+//  - ensureChildFolder / ensureFolderConvenioPagos / subirComprobante / attachReceiptAndLink
+//  Requiere: SPREADSHEET_ID, SHEET_CONVENIOS, SHEET_CUOTAS_CONVENIO definidos arriba
+//  Permisos: https://www.googleapis.com/auth/spreadsheets y https://www.googleapis.com/auth/drive.file
+// ===============================================================
+
+// Append genérico (fila(s)) a cualquier hoja
+async function appendSheetData(sheetName, rows) {
+  if (!Array.isArray(rows) || !rows.length) throw new Error('appendSheetData: rows vacío.');
+  return gapi.client.sheets.spreadsheets.values.append({
+    spreadsheetId: SPREADSHEET_ID,
+    range: `${sheetName}!A:Z`,
+    valueInputOption: 'USER_ENTERED',
+    insertDataOption: 'INSERT_ROWS',
+    resource: { values: rows }
+  });
+}
+
+// Busca la fila de una cuota por ID (col A) y devuelve { rowIndex, values }
+async function findCuotaRowById(cuotaId) {
+  const range = `${SHEET_CUOTAS_CONVENIO}!A:J`;
+  const res = await gapi.client.sheets.spreadsheets.values.get({
+    spreadsheetId: SPREADSHEET_ID, range
+  });
+  const rows = res.result.values || [];
+  for (let i = 1; i < rows.length; i++) {
+    if (rows[i][0] === cuotaId) return { rowIndex: i + 1, values: rows[i] };
+  }
+  return null;
+}
+
+// Actualiza pago de cuota: suma monto en G, recalcula H, setea I; opcionalmente setea link (J)
+async function updateCuotaPago(cuotaId, monto, linkComprobante) {
+  const found = await findCuotaRowById(cuotaId);
+  if (!found) throw new Error(`No se encontró la cuota ${cuotaId}`);
+
+  const row = found.values.slice();
+  const rowIndex = found.rowIndex;
+
+  const montoCuota = Number(row[5] || 0);               // F
+  const pagadoAcum = Number(row[6] || 0) + Number(monto || 0); // G
+  const saldo      = Math.max(0, montoCuota - pagadoAcum);     // H
+  const estado     = saldo === 0 ? 'Pagado' : 'Pendiente';     // I
+
+  row[6] = String(pagadoAcum);  // G
+  row[7] = String(saldo);       // H
+  row[8] = estado;              // I
+  if (linkComprobante) row[9] = linkComprobante; // J
+
+  await gapi.client.sheets.spreadsheets.values.update({
+    spreadsheetId: SPREADSHEET_ID,
+    range: `${SHEET_CUOTAS_CONVENIO}!A${rowIndex}:J${rowIndex}`,
+    valueInputOption: 'USER_ENTERED',
+    resource: { values: [row] }
+  });
+
+  return { estado, saldo, pagadoAcum, link: row[9] || '' };
+}
+
+// ======= Google Drive helpers para “Parcela N / Convenio pagos” =======
+
+// Crea/encuentra carpeta hija dentro de un parentId
+async function ensureChildFolder(parentId, childName) {
+  const q = `'${parentId}' in parents and name = '${childName}' and mimeType = 'application/vnd.google-apps.folder' and trashed = false`;
+  const list = await gapi.client.drive.files.list({ q, fields: "files(id,name)" });
+  if (list.result.files && list.result.files.length) return list.result.files[0].id;
+  const create = await gapi.client.drive.files.create({
+    resource: { name: childName, mimeType: "application/vnd.google-apps.folder", parents: [parentId] },
+    fields: "id"
+  });
+  return create.result.id;
+}
+
+// Busca la carpeta raíz “Los Molles”, luego “Parcela N”, luego “Convenio pagos”
+async function ensureFolderConvenioPagos(nParcela) {
+  // Si ya tienes otra raíz, cambia el nombre aquí:
+  const ROOT_NAME = 'Los Molles';
+  // Buscar raíz
+  const rootList = await gapi.client.drive.files.list({
+    q: `mimeType='application/vnd.google-apps.folder' and name='${ROOT_NAME}' and trashed=false`,
+    fields: 'files(id,name)'
+  });
+  if (!rootList.result.files || !rootList.result.files.length) {
+    throw new Error(`No se encontró la carpeta raíz de Drive: "${ROOT_NAME}"`);
+  }
+  const rootId = rootList.result.files[0].id;
+
+  const carpetaParcelaId = await ensureChildFolder(rootId, `Parcela ${nParcela}`);
+  const carpetaConvenioId = await ensureChildFolder(carpetaParcelaId, 'Convenio pagos');
+  return carpetaConvenioId;
+}
+
+// Sube archivo binario a Drive y devuelve {id, webViewLink}
+async function subirComprobante(file, folderId) {
+  const metadata = { name: file.name, parents: [folderId] };
+  const formData = new FormData();
+  formData.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
+  formData.append('file', file);
+
+  const resp = await fetch(
+    'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,webViewLink',
+    {
+      method: 'POST',
+      headers: new Headers({ Authorization: 'Bearer ' + gapi.auth.getToken().access_token }),
+      body: formData
+    }
+  );
+  return resp.json();
+}
+
+// Sube comprobante a Parcela N / Convenio pagos y guarda link en J
+async function attachReceiptAndLink(cuotaId, nParcela, file) {
+  const folderId = await ensureFolderConvenioPagos(nParcela);
+  const uploaded = await subirComprobante(file, folderId);
+  const link = uploaded.webViewLink || '';
+  await updateCuotaPago(cuotaId, 0, link); // solo link, sin sumar monto
+  return link;
+}
