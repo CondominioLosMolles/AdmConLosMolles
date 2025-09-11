@@ -345,7 +345,11 @@ function abrirModalNuevoConvenio() {
         }).join('');
 
     document.getElementById('resumenCalculoCuota').textContent = 'Ingrese los datos para calcular el valor de la cuota.';
-    modalNuevoConvenio.show();
+  setTimeout(() => {
+        if (modalNuevoConvenio) {
+             modalNuevoConvenio.show();
+        }
+    }, 50);
 }
 
 function calcularValorCuotaPreview() {
