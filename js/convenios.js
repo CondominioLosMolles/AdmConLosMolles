@@ -405,7 +405,7 @@ function abrirModalDetalle(idConvenio) {
         const btn = estado === "Pagado"
           ? `<span class="text-muted">—</span>`
           : `<button class="btn btn-sm btn-outline-success" onclick="registrarPagoCuotaSimulado('${q[0]}','${c.ID_Convenio}')"><i class="fas fa-dollar-sign"></i> Registrar pago</button>`;
-        const vence = new Date(q?.[3]).toLocaleDateString("es-CL");
+     const vence = ymdToDisplay(q?.[4]); // E = Fecha_Vencimiento
         const monto = Number(q?.[5] || 0).toLocaleString("es-CL");
         return `<tr>
           <td>${q?.[2]}</td><td>${vence}</td><td>$${monto}</td>
