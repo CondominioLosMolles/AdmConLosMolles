@@ -1,10 +1,8 @@
-// js/auth.js - VERSIÓN CORREGIDA Y FINAL
-
 // --- CONFIGURACIÓN ---
 // ASEGÚRATE DE QUE ESTOS VALORES SEAN CORRECTOS, ESPECIALMENTE TU API_KEY
-const API_KEY = 'https://script.googleapis.com/v1/scripts/AKfycbxi83xfutI5npdewRA4ZyLtkBeZVZFKjpk1_gPrQ-AGqNrmhiFerWIEhhuvAaYe1ziftg:run'; 
+const API_KEY = 'https://script.googleapis.com/v1/scripts/AKfycbxi83xfutI5npdewRA4ZyLtkBeZVZFKjpk1_gPrQ-AGqNrmhiFerWIEhhuvAaYe1ziftg:run; // <--- ESTO DEBE SER TU CLAVE REAL
 const CLIENT_ID = '997872453031-5o8s2o6v3qt722fb3p51a2r7bo24ncee.apps.googleusercontent.com';
-const SCOPES = 'https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/gmail.send https://www.googleapis.com/auth/drive';
+
 
 // --- LÓGICA INTERNA (NO MODIFICAR) ---
 let tokenClient;
