@@ -53,18 +53,21 @@ async function initializeGapiClient() {
     }
 }
 
-Promise.all([gapiClientReady, gisAuthReady]).then(() => {
-    console.log("APIs de Google y Autenticación listas para usarse.");
-    const loginBtn = document.getElementById('loginBtn');
-    const logoutBtn = document.getElementById('logoutBtn');
-    
-    if (loginBtn) {
-        loginBtn.style.visibility = 'visible';
-        loginBtn.addEventListener('click', handleAuthClick);
-    }
-    if (logoutBtn) {
-        logoutBtn.addEventListener('click', handleSignoutClick);
-    }
+// Código corregido (envuelto en DOMContentLoaded)
+document.addEventListener('DOMContentLoaded', function() {
+    Promise.all([gapiClientReady, gisAuthReady]).then(() => {
+        console.log("APIs de Google y Autenticación listas para usarse.");
+        const loginBtn = document.getElementById('loginBtn');
+        const logoutBtn = document.getElementById('logoutBtn');
+        
+        if (loginBtn) {
+            loginBtn.style.visibility = 'visible';
+            loginBtn.addEventListener('click', handleAuthClick);
+        }
+        if (logoutBtn) {
+            logoutBtn.addEventListener('click', handleSignoutClick);
+        }
+    });
 });
 
 function handleAuthClick() {
