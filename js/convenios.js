@@ -535,25 +535,35 @@ for (let i = 1; i <= nCuotas; i++) {
 // ======================================================================
 //  SIMULADOR DE PAGO (ajusta si ya tienes API real)
 // ======================================================================
-function registrarPagoCuotaSimulado(cuotaId, convenioId) {
-  const i = (cuotasData || []).findIndex(c => c?.[0] === cuotaId);
-  if (i < 0) {
-    mostrarMensaje && mostrarMensaje("No se encontró la cuota.", "error");
-    return;
+async function registrarPagoCuotaSimulado(cuotaId, convenioId) {
+  try {
+    showSpinner && showSpinner();
+
+    // Monto a pagar: por defecto el total de la cuota (col F)
+    const cuota = (cuotasData || []).find(c => c?.[0] === cuotaId);
+    if (!cuota) throw new Error("No se encontró la cuota seleccionada.");
+    const montoCuota = Number(cuota[5] || 0);
+
+    // Si quieres pedir un monto distinto, acá podrías abrir un prompt/modal
+    const monto = montoCuota;
+
+    // Actualiza en Google Sheets (opcionalmente con link si ya estuviera)
+    const link = cuota[9] || ""; // J
+    await updateCuotaPago(cuotaId, monto, link);
+
+    // Refresca los datos desde Sheets para ver el cambio
+    cuotasData = await obtenerCuotasConvenio();
+    procesarYUnirDatos();
+    aplicarFiltrosConvenios();
+
+    if (modalDetalleConvenio) modalDetalleConvenio.hide();
+    abrirModalDetalle(convenioId);
+
+    mostrarMensaje && mostrarMensaje(`Pago registrado.`, "success");
+  } catch (e) {
+    console.error(e);
+    mostrarMensaje && mostrarMensaje(e.message || "No se pudo registrar el pago.", "error");
+  } finally {
+    hideSpinner && hideSpinner();
   }
-  const row = cuotasData[i];
-  if (row[8] !== "Pagado") {
-    row[4] = row[5];
-    row[6] = new Date().toISOString().slice(0,10);
-    row[7] = 0;
-    row[8] = "Pagado";
-  }
-
-  procesarYUnirDatos();
-  aplicarFiltrosConvenios();
-
-  if (modalDetalleConvenio) modalDetalleConvenio.hide();
-  abrirModalDetalle(convenioId);
-
-  mostrarMensaje && mostrarMensaje(`Pago de la cuota ${cuotaId} registrado (simulado).`, "info");
 }
