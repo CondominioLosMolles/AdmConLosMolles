@@ -6,18 +6,19 @@ function escapeHTML(str) {
   return str.replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;', "'":'&#39;'}[m]));
 }
 
-// =================================================================
-//  📅 FECHAS ESTABLES (evitan corrimientos por zona horaria)
-// =================================================================
+// ===============================================================
+// 📅 FECHAS ESTABLES (evita corrimientos por zona horaria)
+// ===============================================================
 function ymdToDisplay(ymd) {                 // "2025-09-01" -> "01-09-2025"
   if (!ymd || typeof ymd !== 'string') return '—';
   const [y,m,d] = ymd.split('-');
   if (!d) return ymd;
   return `${d}-${m}-${y}`;
 }
+
 function addMonthsKeepDay(ymd, add) {        // suma meses manteniendo día (capado al fin de mes)
   const [y,m,d] = ymd.split('-').map(Number);
-  const base = new Date(y, m - 1, 1);        // 1er día del mes en local time
+  const base = new Date(y, m - 1, 1);        // primer día del mes (hora local)
   base.setMonth(base.getMonth() + add);
   const Y = base.getFullYear();
   const M = base.getMonth() + 1;
