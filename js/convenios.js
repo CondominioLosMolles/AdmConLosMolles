@@ -491,23 +491,24 @@ async function guardarConvenio(evt) {
 
     // Filas Cuotas
     const filasCuotas = [];
-    const first = new Date(fInicio + "T12:00:00");
-    for (let i = 1; i <= nCuotas; i++) {
-      const idCuota = `Q-${idConvenio}-${i}`;
-      const f = new Date(first);
-      f.setMonth(f.getMonth() + (i - 1));
-      filasCuotas.push([
-        idCuota,        // 0
-        idConvenio,     // 1
-        i,              // 2 N°
-        f.toISOString().slice(0,10), // 3 Vencimiento YYYY-MM-DD
-        0,              // 4 MontoPagado
-        valorCuota,     // 5 MontoCuota
-        "",             // 6 FechaPago
-        valorCuota,     // 7 Saldo_Cuota
-        "Pendiente"     // 8 Estado
-      ]);
-    }
+const firstYMD = document.getElementById('convenioFechaInicio').value; // "YYYY-MM-DD"
+for (let i = 1; i <= nCuotas; i++) {
+  const idCuota = `Q-${idConvenio}-${i}`;
+  const vencYMD = addMonthsKeepDay(firstYMD, i - 1); // YYYY-MM-DD estable
+
+  filasCuotas.push([
+    idCuota,        // A  ID_Cuota
+    idConvenio,     // B  ID_Convenio
+    nParcela,       // C  N_Parcela
+    i,              // D  N_Cuota
+    vencYMD,        // E  Fecha_Vencimiento (YYYY-MM-DD literal)
+    valorCuota,     // F  Monto_Cuota
+    0,              // G  Monto_Pagado_Acumulado
+    valorCuota,     // H  Saldo_Cuota
+    'Pendiente',    // I  Estado
+    ''              // J  Link_Comprobante
+  ]);
+}
 
     // Persistir (usa helpers de sheets.js)
     await appendSheetData("Convenios", filaConvenio);
