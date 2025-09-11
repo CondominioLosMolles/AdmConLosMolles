@@ -530,11 +530,18 @@ async function registrarPagoCuota(cuotaId, convenioId) {
 
     const cuota = (cuotasData || []).find(c => c?.[0] === cuotaId);
     if (!cuota) throw new Error("No se encontró la cuota seleccionada.");
+
     const montoCuota = Number(cuota[5] || 0);
+    const hoyYMD = new Date().toISOString().slice(0,10);
+    const fechaPago = prompt("Fecha de pago (YYYY-MM-DD):", hoyYMD);
+    if (!fechaPago) return;
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(fechaPago)) throw new Error("Fecha inválida. Use formato YYYY-MM-DD.");
 
-    await updateCuotaPago(cuotaId, montoCuota, cuota[9] || ""); // suma, recalcula, marca estado
+    // Mantiene el link si ya existía
+    const link = cuota[9] || "";
+    await updateCuotaPago(cuotaId, montoCuota, link, fechaPago); // <-- ahora acepta fecha
 
-    // Refresca datos y redibuja
+    // Refrescar
     cuotasData = await obtenerCuotasConvenio();
     procesarYUnirDatos();
     aplicarFiltrosConvenios();
@@ -570,3 +577,60 @@ async function handleAttachComprobante(cuotaId, nParcela, file, convenioId) {
     hideSpinner && hideSpinner();
   }
 }
+// Envía el comprobante por correo a los emails de la parcela (y opcionales)
+async function enviarComprobanteCuota(cuotaId, nParcela, convenioId) {
+  try {
+    showSpinner && showSpinner();
+
+    const cuota = (cuotasData || []).find(c => c?.[0] === cuotaId);
+    if (!cuota) throw new Error("No se encontró la cuota.");
+    const link = cuota[9]; // J
+    if (!link) throw new Error("Primero adjunte un comprobante para esta cuota.");
+
+    // Emails del/los residentes de la parcela (columna de email suele ser index 5)
+    const emailsBase = (residentesData || [])
+      .filter(r => String(r?.[3]) === String(nParcela) && r?.[5] && r[5].includes("@"))
+      .map(r => r[5].trim());
+
+    if (!emailsBase.length) throw new Error(`La parcela ${nParcela} no tiene email registrado en la hoja "Residentes".`);
+
+    const extra = prompt("Correos adicionales (opcional, separados por coma):", "");
+    const emails = [...emailsBase];
+    if (extra) {
+      extra.split(",").map(s => s.trim()).filter(Boolean).forEach(x => emails.push(x));
+    }
+
+    // Datos para el correo
+    const payload = {
+      cuotaId,
+      nParcela,
+      idConvenio: convenioId,
+      linkComprobante: link,
+      montoCuota: Number(cuota[5] || 0),
+      fechaVencimiento: String(cuota[4] || ""),
+      destinatarios: emails
+    };
+
+    await enviarComprobanteCuota_GAS(payload);
+
+    mostrarMensaje && mostrarMensaje("Comprobante enviado por correo.", "success");
+  } catch (e) {
+    console.error(e);
+    mostrarMensaje && mostrarMensaje(e.message || "No se pudo enviar el comprobante.", "error");
+  } finally {
+    hideSpinner && hideSpinner();
+  }
+}
+
+// Llama a Apps Script para enviar el correo (Execution API)
+async function enviarComprobanteCuota_GAS(payload) {
+  if (typeof SCRIPT_ID === "undefined" || !SCRIPT_ID) {
+    throw new Error("Falta definir SCRIPT_ID en sheets.js para usar Apps Script.");
+  }
+  return gapi.client.request({
+    path: `https://script.googleapis.com/v1/scripts/${SCRIPT_ID}:run`,
+    method: "POST",
+    body: { function: "enviarComprobanteCuota_GS", parameters: [payload] }
+  });
+}
+
