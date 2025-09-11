@@ -413,9 +413,20 @@ function renderizarPaginacionConvenios(totalItems, paginaActual) {
 }
 
 // --- MANEJO DE MODALES ---
-// (Esta es la versión original que debes encontrar y borrar)
+// (Esta es la nueva versión que debes pegar)
 function abrirModalNuevoConvenio() {
-    if (document.getElementById('modalNuevoConvenio')) return; 
+    if (document.getElementById('modalNuevoConvenio')) {
+       const instance = bootstrap.Modal.getInstance(document.getElementById('modalNuevoConvenio'));
+       if(instance) {
+           instance.show();
+           return;
+       }
+    }
+
+    if (!residentesData || residentesData.length === 0) {
+        mostrarMensaje("No se han cargado los datos de residentes. Por favor, recargue la página.", "error");
+        return;
+    }
 
     const modalHTML = `
     <div class="modal fade" id="modalNuevoConvenio" tabindex="-1" aria-labelledby="nuevoConvenioLabel" aria-hidden="true">
@@ -430,14 +441,14 @@ function abrirModalNuevoConvenio() {
                         <div class="row">
                             <div class="col-md-4 mb-3">
                                 <label for="convenio-n-parcela" class="form-label">N° Parcela</label>
-                                <input type="number" class="form-control" id="convenio-n-parcela" list="lista-parcelas" required>
+                                <input type="text" class="form-control" id="convenio-n-parcela" list="lista-parcelas" required placeholder="Escriba o seleccione...">
                                 <datalist id="lista-parcelas">
-                                    ${residentesData.map(r => `<option value="${r[3]}">${r[1]} (Parcela ${r[3]})</option>`).join('')}
+                                    ${residentesData.map(res => `<option value="${res[3]}">${res[1]}</option>`).join('')}
                                 </datalist>
                             </div>
                             <div class="col-md-8 mb-3">
                                 <label for="convenio-residente-nombre" class="form-label">Nombre Residente</label>
-                                <input type="text" class="form-control" id="convenio-residente-nombre" readonly>
+                                <input type="text" class="form-control" id="convenio-residente-nombre" readonly style="background-color: #e9ecef;">
                             </div>
                         </div>
                         <div class="mb-3">
@@ -456,7 +467,7 @@ function abrirModalNuevoConvenio() {
                         </div>
                          <div class="mb-3">
                             <label for="convenio-valor-cuota" class="form-label">Valor Cuota Mensual ($)</label>
-                            <input type="text" class="form-control" id="convenio-valor-cuota" readonly>
+                            <input type="text" class="form-control" id="convenio-valor-cuota" readonly style="background-color: #e9ecef;">
                         </div>
                     </form>
                 </div>
@@ -468,26 +479,59 @@ function abrirModalNuevoConvenio() {
         </div>
     </div>`;
 
-    document.body.insertAdjacentHTML('beforeend', modalHTML);
+    if (!document.getElementById('modalNuevoConvenio')) {
+         document.body.insertAdjacentHTML('beforeend', modalHTML);
+    }
 
     modalNuevoConvenio = new bootstrap.Modal(document.getElementById('modalNuevoConvenio'));
 
     const inputParcela = document.getElementById('convenio-n-parcela');
     const residenteNombre = document.getElementById('convenio-residente-nombre');
     const deudaTotalInput = document.getElementById('convenio-deuda-total');
+    const nCuotasInput = document.getElementById('convenio-n-cuotas');
+    const valorCuotaDisplay = document.getElementById('convenio-valor-cuota');
 
-    inputParcela.addEventListener('change', () => {
+    // MEJORA: Usar el evento 'input' para una respuesta inmediata al escribir.
+    inputParcela.addEventListener('input', () => {
         const nParcela = inputParcela.value;
-        const residente = residentesData.find(r => r[3] === nParcela);
+        const residente = residentesData.find(r => r && r[3] == nParcela);
 
         if (residente) {
-            residenteNombre.value = residente[1];
-            deudaTotalInput.value = 'Calculando...'; 
+            residenteNombre.value = residente[1]; // Columna Nombre_Completo
+            
+            // LÓGICA DE CÁLCULO DE DEUDA:
+            if (pagosGcData && pagosGcData.length > 0) {
+                 // Columnas: 2=N_Parcela, 12=Deuda_Total, 15=Estado
+                const pagosPendientes = pagosGcData.filter(pago => pago[2] == nParcela && pago[15] && pago[15].trim().toLowerCase() !== 'pagado');
+                const deudaCalculada = pagosPendientes.reduce((total, pago) => {
+                    const deuda = parseFloat(pago[12] || 0);
+                    return total + deuda;
+                }, 0);
+                deudaTotalInput.value = deudaCalculada;
+            } else {
+                deudaTotalInput.value = 0;
+                mostrarMensaje("Datos de pagos no encontrados para calcular la deuda.", "warning");
+            }
         } else {
-            residenteNombre.value = 'Residente no encontrado';
+            residenteNombre.value = '';
             deudaTotalInput.value = '';
         }
+        calcularValorCuota();
     });
+    
+    const calcularValorCuota = () => {
+         const deuda = parseFloat(deudaTotalInput.value) || 0;
+         const cuotas = parseInt(nCuotasInput.value) || 0;
+         if (deuda > 0 && cuotas > 0) {
+             const valorCuota = deuda / cuotas;
+             valorCuotaDisplay.value = `$ ${Math.round(valorCuota).toLocaleString('es-CL')}`;
+         } else {
+             valorCuotaDisplay.value = '';
+         }
+    };
+
+    deudaTotalInput.addEventListener('input', calcularValorCuota);
+    nCuotasInput.addEventListener('input', calcularValorCuota);
 
     document.getElementById('btnGuardarConvenio').addEventListener('click', guardarConvenio);
 
