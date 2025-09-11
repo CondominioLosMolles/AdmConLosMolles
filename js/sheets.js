@@ -937,3 +937,56 @@ async function attachReceiptAndLink(cuotaId, nParcela, file) {
   await updateCuotaPago(cuotaId, 0, link); // solo link, sin sumar monto
   return link;
 }
+// === Amplía el rango a A:K para leer también la nueva columna K (Fecha_Pago)
+async function findCuotaRowById(cuotaId) {
+  const range = `${SHEET_CUOTAS_CONVENIO}!A:K`;
+  const res = await gapi.client.sheets.spreadsheets.values.get({
+    spreadsheetId: SPREADSHEET_ID, range
+  });
+  const rows = res.result.values || [];
+  for (let i = 1; i < rows.length; i++) {
+    if (rows[i][0] === cuotaId) return { rowIndex: i + 1, values: rows[i] };
+  }
+  return null;
+}
+
+// === Ahora acepta fechaPago opcional y escribe en columna K
+async function updateCuotaPago(cuotaId, monto, linkComprobante, fechaPago) {
+  const found = await findCuotaRowById(cuotaId);
+  if (!found) throw new Error(`No se encontró la cuota ${cuotaId}`);
+
+  const row = found.values.slice();
+  const rowIndex = found.rowIndex;
+
+  const montoCuota = Number(row[5] || 0);                 // F
+  const pagadoAcum = Number(row[6] || 0) + Number(monto || 0); // G
+  const saldo      = Math.max(0, montoCuota - pagadoAcum);     // H
+  const estado     = saldo === 0 ? 'Pagado' : 'Pendiente';     // I
+
+  row[6] = String(pagadoAcum);  // G: Monto_Pagado_Acumulado
+  row[7] = String(saldo);       // H: Saldo_Cuota
+  row[8] = estado;              // I: Estado
+  if (linkComprobante) row[9] = linkComprobante; // J: Link_Comprobante
+  if (fechaPago) row[10] = fechaPago;           // K: Fecha_Pago (nueva)
+
+  await gapi.client.sheets.spreadsheets.values.update({
+    spreadsheetId: SPREADSHEET_ID,
+    range: `${SHEET_CUOTAS_CONVENIO}!A${rowIndex}:K${rowIndex}`,
+    valueInputOption: 'USER_ENTERED',
+    resource: { values: [row] }
+  });
+
+  return { estado, saldo, pagadoAcum, link: row[9] || '', fechaPago: row[10] || '' };
+}
+
+// === Wrapper para llamar a Apps Script y enviar correo de comprobante (usado en convenios.js)
+async function enviarComprobanteCuota_GAS(payload) {
+  if (typeof SCRIPT_ID === "undefined" || !SCRIPT_ID) {
+    throw new Error("Falta definir SCRIPT_ID en sheets.js para usar Apps Script.");
+  }
+  return gapi.client.request({
+    path: `https://script.googleapis.com/v1/scripts/${SCRIPT_ID}:run`,
+    method: "POST",
+    body: { function: "enviarComprobanteCuota_GS", parameters: [payload] }
+  });
+}
