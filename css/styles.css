@@ -183,28 +183,28 @@ h2, h3, h4 {
 
 
 /* === Estilos para Modal Global y Notificaciones === */
-.modal {
-    position: fixed;
-    top: 0; left: 0; right: 0; bottom: 0;
-    z-index: 1001;
-    display: none;
-    align-items: center;
-    justify-content: center;
-    background: rgba(36, 60, 89, 0.3);
-    padding: 20px;
+.global-modal-custom {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    z-index: 1001;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    background: rgba(36, 60, 89, 0.3);
+    padding: 20px;
 }
 .modal[style*="display: flex"] {
     display: flex !important;
 }
-.modal .modal-content {
-    background: #fff;
-    border-radius: 12px;
-    box-shadow: 0 8px 32px rgba(78, 145, 249, 0.3);
-    padding: 32px 36px;
-    min-width: 300px;
-    max-width: 500px;
-    width: 100%;
-    animation: modalFadeIn 0.25s ease-out;
+.global-modal-custom .modal-content-custom {
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 8px 32px rgba(78, 145, 249, 0.3);
+    padding: 32px 36px;
+    min-width: 300px;
+    max-width: 500px;
+    width: 100%;
+    animation: modalFadeIn 0.25s ease-out;
 }
 .modal .modal-content.large {
     max-width: 750px;
