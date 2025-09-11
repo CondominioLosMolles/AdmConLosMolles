@@ -11,11 +11,13 @@ const gisAuthReady = new Promise(resolve => { resolveGisAuthReady = resolve; });
 let resolveAuthReady;
 window.authReadyPromise = new Promise(resolve => { resolveAuthReady = resolve; });
 
-function gapiLoaded() {
+// <-- CORRECCIÓN AQUÍ
+window.gapiLoaded = function() {
     gapi.load('client', initializeGapiClient);
 }
 
-function gisLoaded() {
+// <-- Y CORRECCIÓN AQUÍ
+window.gisLoaded = function() {
     tokenClient = google.accounts.oauth2.initTokenClient({
         client_id: CLIENT_ID,
         scope: SCOPES,
@@ -54,6 +56,36 @@ function handleAuthClick() {
         tokenClient.requestAccessToken({ prompt: '' });
     }
 }
+
+async function handleTokenResponse(resp) {
+    console.log("Paso 4: Se recibió respuesta del token.", resp);
+    if (resp.error !== undefined) {
+        console.error("Error en la respuesta del token:", resp);
+        throw (resp);
+    }
+    gapi.client.setToken(resp);
+    console.log("Paso 5: Token establecido en gapi.client.");
+    
+    resolveAuthReady();
+}
+
+function handleSignoutClick() {
+    const token = gapi.client.getToken();
+    if (token !== null) {
+        google.accounts.oauth2.revoke(token.access_token, () => {
+            gapi.client.setToken('');
+            document.getElementById('app').style.display = 'none';
+            document.getElementById('login-screen').style.display = 'flex';
+        });
+    }
+}
+
+window.onload = function() {
+    const loginBtn = document.getElementById('loginBtn');
+    const logoutBtn = document.getElementById('logoutBtn');
+    if (loginBtn) loginBtn.addEventListener('click', handleAuthClick);
+    if (logoutBtn) logoutBtn.addEventListener('click', handleSignoutClick);
+};
 
 async function handleTokenResponse(resp) {
     console.log("Paso 4: Se recibió respuesta del token.", resp);
