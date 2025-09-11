@@ -22,6 +22,7 @@ function escapeHTML(str) {
 let conveniosData = [];
 let cuotasData = [];
 let residentesData = [];
+let pagosGcData = []; // AÑADIDO: Variable para almacenar los datos de pagos
 let conveniosUnificados = []; // Datos combinados para fácil acceso
 let conveniosFiltrados = [];
 const FILAS_POR_PAGINA_CONVENIOS = 10;
@@ -240,16 +241,34 @@ function inicializarComponentesConvenios() {
 async function cargarDatosIniciales() {
     showSpinner();
     try {
-        [conveniosData, cuotasData, residentesData] = await Promise.all([
-            obtenerConvenios(),
-            obtenerCuotasConvenio(),
-            obtenerResidentes()
+        // Carga los datos de las hojas de cálculo necesarias en paralelo.
+        [conveniosData, cuotasData, residentesData, pagosGcData] = await Promise.all([
+            getSheetData('Convenios'),
+            getSheetData('Cuotas_Convenio'),
+            getSheetData('Residentes'),
+            getSheetData('Pagos_GC') // Se añade la carga de datos de pagos.
         ]);
-        procesarYUnirDatos(); // Función clave para combinar y calcular datos
+
+        // VERIFICACIÓN Y LIMPIEZA: Omite la fila del encabezado si está presente.
+        if (residentesData.length > 0 && residentesData[0][0] === 'ID_Residente') {
+            residentesData.shift();
+        }
+        if (pagosGcData.length > 0 && pagosGcData[0][0] === 'ID_Pago') {
+            pagosGcData.shift();
+        }
+        if (conveniosData.length > 0 && conveniosData[0][0] === 'ID_Convenio') {
+            conveniosData.shift();
+        }
+        if (cuotasData.length > 0 && cuotasData[0][0] === 'ID_Cuota') {
+            cuotasData.shift();
+        }
+
+        procesarYUnirDatos();
         aplicarFiltrosConvenios();
+
     } catch (error) {
-        console.error("Error cargando datos de convenios:", error);
-        mostrarMensaje("Error fatal al cargar datos. Revise la consola (F12).", "error");
+        console.error("Error al cargar datos iniciales para convenios:", error);
+        mostrarMensaje("No se pudieron cargar los datos necesarios para la gestión de convenios.", "error");
     } finally {
         hideSpinner();
     }
@@ -394,17 +413,86 @@ function renderizarPaginacionConvenios(totalItems, paginaActual) {
 }
 
 // --- MANEJO DE MODALES ---
+// (Esta es la versión original que debes encontrar y borrar)
 function abrirModalNuevoConvenio() {
-    console.log("Paso 1: Se inició la función para abrir la modal.");
+    if (document.getElementById('modalNuevoConvenio')) return; 
 
-    const form = document.getElementById('formNuevoConvenio');
-    if (form) form.reset();
-    
-    const select = document.getElementById('convenioResidente');
-    if (!select) {
-        console.error("Error crítico: No se encontró el elemento <select> con id 'convenioResidente'.");
-        return;
-    }
+    const modalHTML = `
+    <div class="modal fade" id="modalNuevoConvenio" tabindex="-1" aria-labelledby="nuevoConvenioLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="nuevoConvenioLabel">Crear Nuevo Convenio de Pago</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="formNuevoConvenio">
+                        <div class="row">
+                            <div class="col-md-4 mb-3">
+                                <label for="convenio-n-parcela" class="form-label">N° Parcela</label>
+                                <input type="number" class="form-control" id="convenio-n-parcela" list="lista-parcelas" required>
+                                <datalist id="lista-parcelas">
+                                    ${residentesData.map(r => `<option value="${r[3]}">${r[1]} (Parcela ${r[3]})</option>`).join('')}
+                                </datalist>
+                            </div>
+                            <div class="col-md-8 mb-3">
+                                <label for="convenio-residente-nombre" class="form-label">Nombre Residente</label>
+                                <input type="text" class="form-control" id="convenio-residente-nombre" readonly>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="convenio-deuda-total" class="form-label">Monto Total de la Deuda a Repactar ($)</label>
+                            <input type="number" class="form-control" id="convenio-deuda-total" required>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="convenio-n-cuotas" class="form-label">Número de Cuotas</label>
+                                <input type="number" class="form-control" id="convenio-n-cuotas" required min="1" max="48">
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="convenio-fecha-inicio" class="form-label">Fecha de Inicio (Primera Cuota)</label>
+                                <input type="date" class="form-control" id="convenio-fecha-inicio" required>
+                            </div>
+                        </div>
+                         <div class="mb-3">
+                            <label for="convenio-valor-cuota" class="form-label">Valor Cuota Mensual ($)</label>
+                            <input type="text" class="form-control" id="convenio-valor-cuota" readonly>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" id="btnGuardarConvenio" class="btn btn-primary">Guardar Convenio</button>
+                </div>
+            </div>
+        </div>
+    </div>`;
+
+    document.body.insertAdjacentHTML('beforeend', modalHTML);
+
+    modalNuevoConvenio = new bootstrap.Modal(document.getElementById('modalNuevoConvenio'));
+
+    const inputParcela = document.getElementById('convenio-n-parcela');
+    const residenteNombre = document.getElementById('convenio-residente-nombre');
+    const deudaTotalInput = document.getElementById('convenio-deuda-total');
+
+    inputParcela.addEventListener('change', () => {
+        const nParcela = inputParcela.value;
+        const residente = residentesData.find(r => r[3] === nParcela);
+
+        if (residente) {
+            residenteNombre.value = residente[1];
+            deudaTotalInput.value = 'Calculando...'; 
+        } else {
+            residenteNombre.value = 'Residente no encontrado';
+            deudaTotalInput.value = '';
+        }
+    });
+
+    document.getElementById('btnGuardarConvenio').addEventListener('click', guardarConvenio);
+
+    modalNuevoConvenio.show();
+}
 
     // --- DIAGNÓSTICO DE DATOS ---
     console.log("Paso 2: Revisando los datos de residentes disponibles...", residentesData);
