@@ -11,13 +11,11 @@ const gisAuthReady = new Promise(resolve => { resolveGisAuthReady = resolve; });
 let resolveAuthReady;
 window.authReadyPromise = new Promise(resolve => { resolveAuthReady = resolve; });
 
-// <-- CORRECCIÓN AQUÍ
-window.gapiLoaded = function() {
+function gapiLoaded() {
     gapi.load('client', initializeGapiClient);
 }
 
-// <-- Y CORRECCIÓN AQUÍ
-window.gisLoaded = function() {
+function gisLoaded() {
     tokenClient = google.accounts.oauth2.initTokenClient({
         client_id: CLIENT_ID,
         scope: SCOPES,
