@@ -1,70 +1,48 @@
-// ======================================================================
+// =================================================================
 //  UTILIDAD: escapeHTML
-// ======================================================================
+// =================================================================
 function escapeHTML(str) {
-  if (!str) return "";
-  return str.replace(/[&<>"']/g, (m) => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[m]));
+  if (!str) return '';
+  return str.replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;', "'":'&#39;'}[m]));
 }
 
-// ===============================================================
-// SHIM DE ESCRITURA A SHEETS (si no existe appendSheetData/agregar*)
-// ===============================================================
-(function () {
-  const SPREADSHEET_ID =
-    (window && (window.SPREADSHEET_ID || window.SHEET_ID || window.GOOGLE_SHEET_ID)) || null;
+// =================================================================
+//  📅 FECHAS ESTABLES (evitan corrimientos por zona horaria)
+// =================================================================
+function ymdToDisplay(ymd) {                 // "2025-09-01" -> "01-09-2025"
+  if (!ymd || typeof ymd !== 'string') return '—';
+  const [y,m,d] = ymd.split('-');
+  if (!d) return ymd;
+  return `${d}-${m}-${y}`;
+}
+function addMonthsKeepDay(ymd, add) {        // suma meses manteniendo día (capado al fin de mes)
+  const [y,m,d] = ymd.split('-').map(Number);
+  const base = new Date(y, m - 1, 1);        // 1er día del mes en local time
+  base.setMonth(base.getMonth() + add);
+  const Y = base.getFullYear();
+  const M = base.getMonth() + 1;
+  const last = new Date(Y, M, 0).getDate();
+  const D = Math.min(d, last);
+  return `${Y}-${String(M).padStart(2,'0')}-${String(D).padStart(2,'0')}`;
+}
 
-  const SHEET_CONVENIOS = "Convenios";
-  const SHEET_CUOTAS_CONVENIO = "Cuotas_Convenio";
-
-  if (typeof window.appendSheetData !== "function") {
-    window.appendSheetData = async function appendSheetData(sheetName, rows) {
-      if (!Array.isArray(rows) || rows.length === 0) {
-        throw new Error("appendSheetData: rows vacío o inválido.");
-      }
-      if (!SPREADSHEET_ID) {
-        throw new Error("No encuentro SPREADSHEET_ID. Define window.SPREADSHEET_ID en tu app.");
-      }
-      if (!(window.gapi && gapi.client && gapi.client.sheets)) {
-        throw new Error("Google API client (gapi) no está listo. Revisa la inicialización de auth.js.");
-      }
-      return gapi.client.sheets.spreadsheets.values.append({
-        spreadsheetId: SPREADSHEET_ID,
-        range: `${sheetName}!A:Z`,
-        valueInputOption: "USER_ENTERED",
-        insertDataOption: "INSERT_ROWS",
-        resource: { values: rows }
-      });
-    };
-  }
-
-  if (typeof window.agregarConvenio !== "function") {
-    window.agregarConvenio = async function (rows) {
-      return window.appendSheetData(SHEET_CONVENIOS, rows);
-    };
-  }
-  if (typeof window.agregarCuotasConvenio !== "function") {
-    window.agregarCuotasConvenio = async function (rows) {
-      return window.appendSheetData(SHEET_CUOTAS_CONVENIO, rows);
-    };
-  }
-})();
-// ======================================================================
+// =================================================================
 //  ESTADO DEL MÓDULO
-// ======================================================================
+// =================================================================
 let conveniosData = [];
 let cuotasData = [];
 let residentesData = [];
 let conveniosUnificados = [];
 let conveniosFiltrados = [];
 
-const FILAS_POR_PAGINA = 10;
+const FILAS_POR_PAGINA_CONVENIOS = 10;
 
 let modalNuevoConvenio = null;
 let modalDetalleConvenio = null;
 
-// ======================================================================
+// =================================================================
 //  ENTRY POINT
-// ======================================================================
+// =================================================================
 async function cargarConvenios() {
   const el = document.getElementById("main-content");
   if (!el) return;
@@ -73,7 +51,7 @@ async function cargarConvenios() {
     <div class="card shadow-sm">
       <div class="card-header d-flex justify-content-between align-items-center">
         <h2 class="h4 mb-0">Gestión de Convenios de Pago</h2>
-        <button id="btnNuevoConvenio" class="btn btn-primary">
+        <button id="btnAbrirModalNuevoConvenio" class="btn btn-primary">
           <i class="fas fa-plus me-2"></i>Nuevo Convenio
         </button>
       </div>
@@ -82,11 +60,11 @@ async function cargarConvenios() {
           <div class="col-md-6">
             <div class="input-group">
               <span class="input-group-text"><i class="fas fa-search"></i></span>
-              <input id="filtroTxt" class="form-control" placeholder="Buscar por ID, parcela o residente…">
+              <input id="filtroBusquedaConvenio" class="form-control" placeholder="Buscar por ID, parcela o residente…">
             </div>
           </div>
           <div class="col-md-3">
-            <select id="filtroEstado" class="form-select">
+            <select id="filtroEstadoConvenio" class="form-select">
               <option value="">Todos los estados</option>
               <option value="Activo">Activo</option>
               <option value="Atrasado">Atrasado</option>
@@ -110,13 +88,13 @@ async function cargarConvenios() {
                 <th class="text-center">Acciones</th>
               </tr>
             </thead>
-            <tbody id="tbodyConvenios"></tbody>
+            <tbody id="tabla-convenios-body"></tbody>
           </table>
         </div>
 
         <div class="d-flex justify-content-between align-items-center">
-          <small id="regInfo"></small>
-          <nav id="paginacion"></nav>
+          <small id="registros-info-convenios"></small>
+          <nav id="paginacion-convenios"></nav>
         </div>
       </div>
     </div>
@@ -129,13 +107,13 @@ async function cargarConvenios() {
           <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
         </div>
         <div class="modal-body">
-          <form id="formNuevoConvenio">
+          <form id="formNuevoConvenio" novalidate>
             <div class="row g-3">
               <div class="col-md-6">
                 <label class="form-label">Residente (Parcela)</label>
-                <input id="convenioResidente" class="form-control" list="listaParcelas" placeholder="Escribe N° de parcela o elige" required>
-                <datalist id="listaParcelas"></datalist>
-                <small class="text-muted">Tip: escribe el número y presiona Enter.</small>
+                <select id="convenioResidente" class="form-select" required>
+                  <option value="">Cargando…</option>
+                </select>
               </div>
               <div class="col-md-6">
                 <label class="form-label">Deuda Total ($)</label>
@@ -176,29 +154,30 @@ async function cargarConvenios() {
     </div>
   `;
 
-  // Instanciar modales
+  // Instanciar modales y listeners
   modalNuevoConvenio   = new bootstrap.Modal(document.getElementById("modalNuevoConvenio"),   {backdrop:true, keyboard:true});
   modalDetalleConvenio = new bootstrap.Modal(document.getElementById("modalDetalleConvenio"), {backdrop:true, keyboard:true});
 
-  // Listeners
-  document.getElementById("btnNuevoConvenio").addEventListener("click", abrirModalNuevoConvenio);
-  document.getElementById("filtroTxt").addEventListener("input", aplicarFiltrosConvenios);
-  document.getElementById("filtroEstado").addEventListener("change", aplicarFiltrosConvenios);
+  document.getElementById("btnAbrirModalNuevoConvenio").addEventListener("click", abrirModalNuevoConvenio);
+  document.getElementById("filtroBusquedaConvenio").addEventListener("input", aplicarFiltrosConvenios);
+  document.getElementById("filtroEstadoConvenio").addEventListener("change", aplicarFiltrosConvenios);
 
-  const deudaInput  = document.getElementById("convenioDeudaTotal");
-  const cuotasInput = document.getElementById("convenioCuotas");
-  deudaInput.addEventListener("input", calcularValorCuotaPreview);
-  cuotasInput.addEventListener("input", calcularValorCuotaPreview);
+  ["convenioDeudaTotal","convenioCuotas"].forEach(id=>{
+    const el = document.getElementById(id);
+    el && el.addEventListener("input", calcularValorCuotaPreview);
+  });
 
   document.getElementById("formNuevoConvenio").addEventListener("submit", guardarConvenio);
 
   await cargarDatosIniciales();
 }
 
+// =================================================================
+//  DATOS
+// =================================================================
 async function cargarDatosIniciales() {
   try {
     showSpinner && showSpinner();
-    // Estas funciones deben existir en sheets.js
     const [cv, cq, rs] = await Promise.all([
       obtenerConvenios(),        // Hoja "Convenios"
       obtenerCuotasConvenio(),   // Hoja "Cuotas_Convenio"
@@ -217,9 +196,6 @@ async function cargarDatosIniciales() {
   }
 }
 
-// ======================================================================
-//  PROCESAMIENTO Y RENDER
-// ======================================================================
 function procesarYUnirDatos() {
   // Mapa: D (index 3) = N_Parcela  |  B (index 1) = Nombre
   const mapRes = new Map();
@@ -245,6 +221,7 @@ function procesarYUnirDatos() {
     const pendientes = cuotasDelConvenio.filter(c => c?.[8] !== "Pagado");
     const saldoPend = pendientes.reduce((s, c) => s + Number(c?.[7] || c?.[5] || 0), 0);
 
+    // Estado calculado (si hay cuotas vencidas)
     let estado = estadoHoja;
     if (estado === "Activo") {
       if (saldoPend === 0 && cuotasDelConvenio.length) {
@@ -252,7 +229,11 @@ function procesarYUnirDatos() {
       } else {
         const hoy = new Date(); hoy.setHours(0,0,0,0);
         const vencida = pendientes.some(c => {
-          const d = new Date(c?.[3]); d.setHours(0,0,0,0);
+          // c[4] = YYYY-MM-DD (lo guardamos así)
+          const [yy,mm,dd] = String(c?.[4]||"").split("-").map(Number);
+          if (!yy||!mm||!dd) return false;
+          const d = new Date(yy, mm-1, dd);
+          d.setHours(0,0,0,0);
           return d < hoy;
         });
         if (vencida) estado = "Atrasado";
@@ -273,12 +254,12 @@ function procesarYUnirDatos() {
   }).filter(Boolean);
 
   conveniosFiltrados = [...conveniosUnificados];
-  renderTabla(1);
+  renderizarTablaConvenios(1);
 }
 
 function aplicarFiltrosConvenios() {
-  const txt = (document.getElementById("filtroTxt").value || "").toLowerCase().trim();
-  const est = (document.getElementById("filtroEstado").value || "").trim();
+  const txt = (document.getElementById("filtroBusquedaConvenio").value || "").toLowerCase().trim();
+  const est = (document.getElementById("filtroEstadoConvenio").value || "").trim();
 
   conveniosFiltrados = conveniosUnificados.filter(c => {
     const coincideTxt =
@@ -289,21 +270,21 @@ function aplicarFiltrosConvenios() {
     return coincideTxt && coincideEst;
   });
 
-  renderTabla(1);
+  renderizarTablaConvenios(1);
 }
 
-function renderTabla(pag = 1) {
-  const tbody = document.getElementById("tbodyConvenios");
-  const info  = document.getElementById("regInfo");
-  const nav   = document.getElementById("paginacion");
+function renderizarTablaConvenios(pag = 1) {
+  const tbody = document.getElementById("tabla-convenios-body");
+  const info  = document.getElementById("registros-info-convenios");
+  const nav   = document.getElementById("paginacion-convenios");
   if (!tbody || !info || !nav) return;
 
-  const ini = (pag - 1) * FILAS_POR_PAGINA;
-  const fin = ini + FILAS_POR_PAGINA;
+  const ini = (pag - 1) * FILAS_POR_PAGINA_CONVENIOS;
+  const fin = ini + FILAS_POR_PAGINA_CONVENIOS;
   const items = conveniosFiltrados.slice(ini, fin);
 
   if (!items.length) {
-    tbody.innerHTML = `<tr><td colspan="8" class="text-center py-4">Sin resultados.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="8" class="text-center py-4">No hay convenios que coincidan con la búsqueda.</td></tr>`;
   } else {
     tbody.innerHTML = items.map(c => {
       const badge = {Activo:"success",Atrasado:"danger",Pagado:"primary",Anulado:"secondary"}[c.Estado] || "light";
@@ -317,7 +298,7 @@ function renderTabla(pag = 1) {
           <td>$${Number(c.Saldo_Pendiente).toLocaleString("es-CL")}</td>
           <td><span class="badge text-bg-${badge}">${c.Estado}</span></td>
           <td class="text-center">
-            <button class="btn btn-sm btn-outline-primary btn-detalle" data-id="${c.ID_Convenio}" title="Ver detalle">
+            <button class="btn btn-sm btn-outline-primary btn-ver-detalle" data-id="${c.ID_Convenio}" title="Ver detalle">
               <i class="fas fa-eye"></i>
             </button>
           </td>
@@ -328,7 +309,7 @@ function renderTabla(pag = 1) {
 
   // Paginación
   const total = conveniosFiltrados.length;
-  const totalPag = Math.max(1, Math.ceil(total / FILAS_POR_PAGINA));
+  const totalPag = Math.max(1, Math.ceil(total / FILAS_POR_PAGINA_CONVENIOS));
   const desde = total ? ini + 1 : 0;
   const hasta = Math.min(fin, total);
   info.textContent = `Mostrando ${desde}-${hasta} de ${total}`;
@@ -336,41 +317,41 @@ function renderTabla(pag = 1) {
   let html = `<ul class="pagination pagination-sm mb-0">`;
   for (let i = 1; i <= totalPag; i++) {
     html += `<li class="page-item ${i===pag?"active":""}">
-      <a class="page-link" href="#" onclick="event.preventDefault(); renderTabla(${i});">${i}</a>
+      <a class="page-link" href="#" onclick="event.preventDefault(); renderizarTablaConvenios(${i});">${i}</a>
     </li>`;
   }
   html += `</ul>`;
   nav.innerHTML = html;
 
-  // listeners detalle
-  document.querySelectorAll(".btn-detalle").forEach(b => {
-    b.addEventListener("click", (e) => {
-      const id = e.currentTarget.getAttribute("data-id");
-      abrirModalDetalle(id);
-    });
-  });
+  // Delegación: abrir detalle
+  tbody.addEventListener("click", (ev)=>{
+    const btn = ev.target.closest(".btn-ver-detalle");
+    if (btn) abrirModalDetalle(btn.dataset.id);
+  }, {once:true});
 }
 
-// ======================================================================
+// =================================================================
 //  MODALES
-// ======================================================================
+// =================================================================
 function abrirModalNuevoConvenio() {
   const form = document.getElementById("formNuevoConvenio");
   form.reset();
 
-  // Poblar datalist con (D=index 3) N_Parcela y (B=index 1) Nombre
-  const dl = document.getElementById("listaParcelas");
+  // Poblar SELECT con (D=index 3) N_Parcela y (B=index 1) Nombre
+  const sel = document.getElementById("convenioResidente");
   const items = (residentesData || [])
     .filter(r => r && r.length >= 4 && r[3])
     .map(r => ({ parcela: String(r[3]).trim(), nombre: String(r[1] || "Sin nombre").trim() }))
     .sort((a,b) => Number(a.parcela) - Number(b.parcela));
 
-  dl.innerHTML = items.map(it => `<option value="${it.parcela}">${it.parcela} - ${escapeHTML(it.nombre)}</option>`).join("");
+  sel.innerHTML = `<option value="">Seleccione…</option>` + items.map(it =>
+    `<option value="${it.parcela}">${it.parcela} - ${escapeHTML(it.nombre)}</option>`
+  ).join("");
 
   const resumen = document.getElementById("resumenCalculoCuota");
   resumen.textContent = "Ingrese los datos para calcular el valor de la cuota.";
 
-  setTimeout(() => modalNuevoConvenio.show(), 10);
+  setTimeout(() => modalNuevoConvenio.show(), 20);
 }
 
 function calcularValorCuotaPreview() {
@@ -388,29 +369,38 @@ function calcularValorCuotaPreview() {
 }
 
 function abrirModalDetalle(idConvenio) {
-  // Limpieza por si vienes de otro módulo
+  // Limpia backdrops “fantasma”
   document.querySelectorAll(".modal-backdrop").forEach(b => b.remove());
   document.body.classList.remove("modal-open");
 
   const c = conveniosUnificados.find(x => x.ID_Convenio === idConvenio);
   if (!c) return;
 
-  const h = document.getElementById("detalleConvenioTitulo");
-  h.innerHTML = `Detalle del Convenio <span class="badge text-bg-dark">${c.ID_Convenio}</span>`;
+  document.getElementById("detalleConvenioTitulo").innerHTML =
+    `Detalle del Convenio <span class="badge text-bg-dark">${c.ID_Convenio}</span>`;
 
   const tbody = (c.Cuotas && c.Cuotas.length)
     ? c.Cuotas.map(q => {
         const estado = q?.[8] || "Pendiente";
         const badge = { Pagado:"success", Pendiente:"warning", Atrasado:"danger" }[estado] || "light";
-        const btn = estado === "Pagado"
-          ? `<span class="text-muted">—</span>`
-          : `<button class="btn btn-sm btn-outline-success" onclick="registrarPagoCuotaSimulado('${q[0]}','${c.ID_Convenio}')"><i class="fas fa-dollar-sign"></i> Registrar pago</button>`;
-     const vence = ymdToDisplay(q?.[4]); // E = Fecha_Vencimiento
+        const vence = ymdToDisplay(q?.[4]); // E = Fecha_Vencimiento (YYYY-MM-DD)
         const monto = Number(q?.[5] || 0).toLocaleString("es-CL");
+
+        const btns = `
+          <label class="btn btn-sm btn-outline-secondary mb-1">
+            Adjuntar comprobante
+            <input type="file" accept="image/*,application/pdf" hidden
+              onchange="handleAttachComprobante('${q[0]}','${c.N_Parcela}', this.files[0], '${c.ID_Convenio}')">
+          </label>
+          ${estado === "Pagado"
+            ? '<span class="text-muted">—</span>'
+            : `<button class="btn btn-sm btn-outline-success" onclick="registrarPagoCuota('${q[0]}','${c.ID_Convenio}')"><i class="fas fa-dollar-sign"></i> Registrar pago</button>`}
+        `;
+
         return `<tr>
           <td>${q?.[2]}</td><td>${vence}</td><td>$${monto}</td>
           <td><span class="badge text-bg-${badge}">${estado}</span></td>
-          <td class="text-center">${btn}</td>
+          <td class="text-center">${btns}</td>
         </tr>`;
       }).join("")
     : `<tr><td colspan="5" class="text-center py-3">No hay cuotas registradas.</td></tr>`;
@@ -448,9 +438,9 @@ function abrirModalDetalle(idConvenio) {
   setTimeout(() => modalDetalleConvenio.show(), 10);
 }
 
-// ======================================================================
+// =================================================================
 //  GUARDAR CONVENIO
-// ======================================================================
+// =================================================================
 async function guardarConvenio(evt) {
   evt.preventDefault();
   if (!confirm("¿Crear este convenio?")) return;
@@ -461,7 +451,7 @@ async function guardarConvenio(evt) {
     const nParcela  = (document.getElementById("convenioResidente").value || "").trim();
     const deuda     = Number(document.getElementById("convenioDeudaTotal").value);
     const nCuotas   = Number(document.getElementById("convenioCuotas").value);
-    const fInicio   = document.getElementById("convenioFechaInicio").value;
+    const firstYMD  = document.getElementById("convenioFechaInicio").value; // "YYYY-MM-DD"
 
     // Validaciones
     if (!/^\d+$/.test(nParcela)) throw new Error("Ingresa un N° de parcela válido (solo números).");
@@ -470,7 +460,7 @@ async function guardarConvenio(evt) {
     }
     if (!deuda || deuda <= 0)  throw new Error("Deuda total inválida.");
     if (!nCuotas || nCuotas <= 0) throw new Error("Número de cuotas inválido.");
-    if (!fInicio) throw new Error("Selecciona la fecha de inicio.");
+    if (!firstYMD) throw new Error("Selecciona la fecha de inicio.");
 
     const idConvenio = `C-${nParcela}-${Date.now().toString().slice(-5)}`;
     const valorCuota = Math.round(deuda / nCuotas);
@@ -479,7 +469,7 @@ async function guardarConvenio(evt) {
     const filaConvenio = [[
       idConvenio,          // 0 ID_Convenio
       nParcela,            // 1 N_Parcela
-      new Date().toLocaleDateString("es-CL"), // 2 Fecha creación
+      new Date().toLocaleDateString("es-CL"), // 2 Fecha creación (solo visual)
       deuda,               // 3 Deuda_Original
       nCuotas,             // 4 N_Cuotas
       valorCuota,          // 5 Valor_Cuota
@@ -489,28 +479,26 @@ async function guardarConvenio(evt) {
       ""                   // 9 Observaciones
     ]];
 
-    // Filas Cuotas
+    // Filas Cuotas — GUARDAMOS YYYY-MM-DD en E (index 4)
     const filasCuotas = [];
-const firstYMD = document.getElementById('convenioFechaInicio').value; // "YYYY-MM-DD"
-for (let i = 1; i <= nCuotas; i++) {
-  const idCuota = `Q-${idConvenio}-${i}`;
-  const vencYMD = addMonthsKeepDay(firstYMD, i - 1); // YYYY-MM-DD estable
+    for (let i = 1; i <= nCuotas; i++) {
+      const idCuota = `Q-${idConvenio}-${i}`;
+      const vencYMD = addMonthsKeepDay(firstYMD, i - 1); // estable
 
-  filasCuotas.push([
-    idCuota,        // A  ID_Cuota
-    idConvenio,     // B  ID_Convenio
-    nParcela,       // C  N_Parcela
-    i,              // D  N_Cuota
-    vencYMD,        // E  Fecha_Vencimiento (YYYY-MM-DD literal)
-    valorCuota,     // F  Monto_Cuota
-    0,              // G  Monto_Pagado_Acumulado
-    valorCuota,     // H  Saldo_Cuota
-    'Pendiente',    // I  Estado
-    ''              // J  Link_Comprobante
-  ]);
-}
+      filasCuotas.push([
+        idCuota,        // A  ID_Cuota
+        idConvenio,     // B  ID_Convenio
+        nParcela,       // C  N_Parcela
+        i,              // D  N_Cuota
+        vencYMD,        // E  Fecha_Vencimiento (YYYY-MM-DD literal)
+        valorCuota,     // F  Monto_Cuota
+        0,              // G  Monto_Pagado_Acumulado
+        valorCuota,     // H  Saldo_Cuota
+        'Pendiente',    // I  Estado
+        ''              // J  Link_Comprobante
+      ]);
+    }
 
-    // Persistir (usa helpers de sheets.js)
     await appendSheetData("Convenios", filaConvenio);
     await appendSheetData("Cuotas_Convenio", filasCuotas);
 
@@ -532,26 +520,20 @@ for (let i = 1; i <= nCuotas; i++) {
   }
 }
 
-// ======================================================================
-//  SIMULADOR DE PAGO (ajusta si ya tienes API real)
-// ======================================================================
-async function registrarPagoCuotaSimulado(cuotaId, convenioId) {
+// =================================================================
+//  PAGO + COMPROBANTE
+// =================================================================
+async function registrarPagoCuota(cuotaId, convenioId) {
   try {
     showSpinner && showSpinner();
 
-    // Monto a pagar: por defecto el total de la cuota (col F)
     const cuota = (cuotasData || []).find(c => c?.[0] === cuotaId);
     if (!cuota) throw new Error("No se encontró la cuota seleccionada.");
     const montoCuota = Number(cuota[5] || 0);
 
-    // Si quieres pedir un monto distinto, acá podrías abrir un prompt/modal
-    const monto = montoCuota;
+    await updateCuotaPago(cuotaId, montoCuota, cuota[9] || ""); // suma, recalcula, marca estado
 
-    // Actualiza en Google Sheets (opcionalmente con link si ya estuviera)
-    const link = cuota[9] || ""; // J
-    await updateCuotaPago(cuotaId, monto, link);
-
-    // Refresca los datos desde Sheets para ver el cambio
+    // Refresca datos y redibuja
     cuotasData = await obtenerCuotasConvenio();
     procesarYUnirDatos();
     aplicarFiltrosConvenios();
@@ -563,6 +545,26 @@ async function registrarPagoCuotaSimulado(cuotaId, convenioId) {
   } catch (e) {
     console.error(e);
     mostrarMensaje && mostrarMensaje(e.message || "No se pudo registrar el pago.", "error");
+  } finally {
+    hideSpinner && hideSpinner();
+  }
+}
+
+async function handleAttachComprobante(cuotaId, nParcela, file, convenioId) {
+  if (!file) return;
+  try {
+    showSpinner && showSpinner();
+    const link = await attachReceiptAndLink(cuotaId, nParcela, file);
+    mostrarMensaje && mostrarMensaje("Comprobante cargado y vinculado.", "success");
+
+    cuotasData = await obtenerCuotasConvenio();
+    procesarYUnirDatos();
+    aplicarFiltrosConvenios();
+
+    if (modalDetalleConvenio) { modalDetalleConvenio.hide(); abrirModalDetalle(convenioId); }
+  } catch (e) {
+    console.error(e);
+    mostrarMensaje && mostrarMensaje(e.message || "No se pudo adjuntar el comprobante.", "error");
   } finally {
     hideSpinner && hideSpinner();
   }
