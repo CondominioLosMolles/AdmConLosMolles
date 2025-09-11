@@ -25,13 +25,13 @@ let residentesData = [];
 let conveniosUnificados = []; // Datos combinados para fácil acceso
 let conveniosFiltrados = [];
 const FILAS_POR_PAGINA_CONVENIOS = 10;
-let modalNuevoConvenio;
-let modalDetalleConvenio; // Variable para la instancia del modal de detalles
+let modalNuevoConvenio = null;
+let modalDetalleConvenio = null; // Variable para la instancia del modal de detalles
 
 // --- FUNCIÓN PRINCIPAL DE CARGA DEL MÓDULO ---
 async function cargarConvenios() {
-    // HTML para el contenido principal (filtros, tabla, etc.) SIN LAS MODALES
-    const mainContentHTML = `
+    const mainContent = document.getElementById('main-content');
+    mainContent.innerHTML = `
         <div class="card shadow-sm">
             <div class="card-header d-flex justify-content-between align-items-center">
                 <h2 class="h4 mb-0">Gestión de Convenios de Pago</h2>
@@ -72,16 +72,13 @@ async function cargarConvenios() {
                 </div>
             </div>
         </div>
-    `;
 
-    // HTML exclusivo para las modales
-    const modalsHTML = `
-        <div class="modal fade" id="modalNuevoConvenio" tabindex="-1">
+        <div class="modal fade" id="modalNuevoConvenio" tabindex="-1" aria-hidden="true">
             <div class="modal-dialog modal-lg">
                 <div class="modal-content">
                     <div class="modal-header">
                         <h5 class="modal-title">Crear Nuevo Convenio de Pago</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>
                     <div class="modal-body">
                         <form id="formNuevoConvenio" novalidate>
@@ -119,12 +116,12 @@ async function cargarConvenios() {
             </div>
         </div>
 
-        <div class="modal fade" id="modalDetalleConvenio" tabindex="-1">
+        <div class="modal fade" id="modalDetalleConvenio" tabindex="-1" aria-hidden="true">
             <div class="modal-dialog modal-xl">
                 <div class="modal-content">
                     <div class="modal-header">
                         <h5 class="modal-title" id="detalleConvenioTitulo">Detalle del Convenio</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>
                     <div class="modal-body" id="detalleConvenioBody">
                         </div>
@@ -136,11 +133,8 @@ async function cargarConvenios() {
         </div>
     `;
 
-    // Inyectamos cada HTML en su contenedor correspondiente
-    document.getElementById('main-content').innerHTML = mainContentHTML;
-    document.getElementById('modal-container').innerHTML = modalsHTML;
-
-    // El resto de la lógica para inicializar y cargar datos sigue igual
+    // Se usa setTimeout para asegurar que el DOM se actualice con el innerHTML
+    // antes de intentar inicializar los componentes y cargar los datos.
     setTimeout(async () => {
         inicializarComponentesConvenios();
         await cargarDatosIniciales();
@@ -148,39 +142,98 @@ async function cargarConvenios() {
 }
 
 // --- MANEJO DE COMPONENTES Y EVENTOS ---
-// --- MANEJO DE COMPONENTES Y EVENTOS ---
 function inicializarComponentesConvenios() {
+    // Limpiar cualquier backdrop existente
+    const backdrops = document.querySelectorAll('.modal-backdrop');
+    backdrops.forEach(backdrop => backdrop.remove());
+    
+    // Eliminar la clase modal-open del body si existe
+    document.body.classList.remove('modal-open');
+    
+    // Eliminar cualquier modal abierto
+    const openModals = document.querySelectorAll('.modal.show');
+    openModals.forEach(modal => modal.classList.remove('show'));
+    
     // 1. DESTRUYE las instancias anteriores de las modales si existen.
     // Esto es CRÍTICO para evitar backdrops (fondos grises) duplicados.
     if (modalNuevoConvenio) {
-        modalNuevoConvenio.dispose();
+        try {
+            modalNuevoConvenio.dispose();
+        } catch (e) {
+            console.warn("Error al eliminar modalNuevoConvenio:", e);
+        }
+        modalNuevoConvenio = null;
     }
+    
     if (modalDetalleConvenio) {
-        modalDetalleConvenio.dispose();
+        try {
+            modalDetalleConvenio.dispose();
+        } catch (e) {
+            console.warn("Error al eliminar modalDetalleConvenio:", e);
+        }
+        modalDetalleConvenio = null;
     }
 
     // 2. CREA las nuevas instancias, asegurando que están limpias.
-    modalNuevoConvenio = new bootstrap.Modal(document.getElementById('modalNuevoConvenio'));
-    modalDetalleConvenio = new bootstrap.Modal(document.getElementById('modalDetalleConvenio'));
+    const modalNuevoElement = document.getElementById('modalNuevoConvenio');
+    const modalDetalleElement = document.getElementById('modalDetalleConvenio');
+    
+    if (modalNuevoElement) {
+        modalNuevoConvenio = new bootstrap.Modal(modalNuevoElement, {
+            backdrop: true,
+            keyboard: true,
+            focus: true
+        });
+    }
+    
+    if (modalDetalleElement) {
+        modalDetalleConvenio = new bootstrap.Modal(modalDetalleElement, {
+            backdrop: true,
+            keyboard: true,
+            focus: true
+        });
+    }
 
     // 3. Asigna los listeners a los elementos que acabamos de crear en el DOM.
-    document.getElementById('filtroBusquedaConvenio').addEventListener('input', aplicarFiltrosConvenios);
-    document.getElementById('filtroEstadoConvenio').addEventListener('change', aplicarFiltrosConvenios);
-    document.getElementById('btnAbrirModalNuevoConvenio').addEventListener('click', abrirModalNuevoConvenio);
-    document.getElementById('formNuevoConvenio').addEventListener('submit', guardarConvenio);
+    const filtroBusqueda = document.getElementById('filtroBusquedaConvenio');
+    const filtroEstado = document.getElementById('filtroEstadoConvenio');
+    const btnAbrirModal = document.getElementById('btnAbrirModalNuevoConvenio');
+    const formNuevoConvenio = document.getElementById('formNuevoConvenio');
+    
+    if (filtroBusqueda) {
+        filtroBusqueda.addEventListener('input', aplicarFiltrosConvenios);
+    }
+    
+    if (filtroEstado) {
+        filtroEstado.addEventListener('change', aplicarFiltrosConvenios);
+    }
+    
+    if (btnAbrirModal) {
+        btnAbrirModal.addEventListener('click', abrirModalNuevoConvenio);
+    }
+    
+    if (formNuevoConvenio) {
+        formNuevoConvenio.addEventListener('submit', guardarConvenio);
+    }
 
     ['convenioDeudaTotal', 'convenioCuotas'].forEach(id => {
-        document.getElementById(id).addEventListener('input', calcularValorCuotaPreview);
+        const element = document.getElementById(id);
+        if (element) {
+            element.addEventListener('input', calcularValorCuotaPreview);
+        }
     });
 
     // Delegación de eventos para los botones de la tabla (más eficiente)
-    document.getElementById('tabla-convenios-body').addEventListener('click', (event) => {
-        const btn = event.target.closest('.btn-ver-detalle');
-        if (btn) {
-            const convenioId = btn.dataset.id;
-            abrirModalDetalle(convenioId);
-        }
-    });
+    const tablaBody = document.getElementById('tabla-convenios-body');
+    if (tablaBody) {
+        tablaBody.addEventListener('click', (event) => {
+            const btn = event.target.closest('.btn-ver-detalle');
+            if (btn) {
+                const convenioId = btn.dataset.id;
+                abrirModalDetalle(convenioId);
+            }
+        });
+    }
 }
 
 // --- MANEJO DE DATOS (CARGA Y PROCESAMIENTO) ---
@@ -270,8 +323,13 @@ function procesarYUnirDatos() {
 
 // --- RENDERIZADO DE TABLA Y PAGINACIÓN ---
 function aplicarFiltrosConvenios() {
-    const texto = document.getElementById('filtroBusquedaConvenio').value.toLowerCase();
-    const estado = document.getElementById('filtroEstadoConvenio').value;
+    const textoInput = document.getElementById('filtroBusquedaConvenio');
+    const estadoSelect = document.getElementById('filtroEstadoConvenio');
+    
+    if (!textoInput || !estadoSelect) return;
+    
+    const texto = textoInput.value.toLowerCase();
+    const estado = estadoSelect.value;
 
     conveniosFiltrados = conveniosUnificados.filter(c =>
         (c.N_Parcela.toLowerCase().includes(texto) || c.Nombre_Residente.toLowerCase().includes(texto)) &&
@@ -282,6 +340,8 @@ function aplicarFiltrosConvenios() {
 
 function renderizarTablaConvenios(pagina) {
     const tbody = document.getElementById('tabla-convenios-body');
+    if (!tbody) return;
+    
     const inicio = (pagina - 1) * FILAS_POR_PAGINA_CONVENIOS;
     const fin = inicio + FILAS_POR_PAGINA_CONVENIOS;
     const conveniosPaginados = conveniosFiltrados.slice(inicio, fin);
@@ -313,6 +373,9 @@ function renderizarTablaConvenios(pagina) {
 function renderizarPaginacionConvenios(totalItems, paginaActual) {
     const paginacionContainer = document.getElementById('paginacion-convenios');
     const infoContainer = document.getElementById('registros-info-convenios');
+    
+    if (!paginacionContainer || !infoContainer) return;
+    
     const totalPaginas = Math.ceil(totalItems / FILAS_POR_PAGINA_CONVENIOS);
 
     infoContainer.textContent = `Mostrando ${totalItems > 0 ? (paginaActual - 1) * FILAS_POR_PAGINA_CONVENIOS + 1 : 0} a ${Math.min(paginaActual * FILAS_POR_PAGINA_CONVENIOS, totalItems)} de ${totalItems} registros`;
@@ -332,8 +395,16 @@ function renderizarPaginacionConvenios(totalItems, paginaActual) {
 
 // --- MANEJO DE MODALES ---
 function abrirModalNuevoConvenio() {
-    document.getElementById('formNuevoConvenio').reset();
+    // Limpiar backdrops existentes
+    const backdrops = document.querySelectorAll('.modal-backdrop');
+    backdrops.forEach(backdrop => backdrop.remove());
+    document.body.classList.remove('modal-open');
+    
+    const form = document.getElementById('formNuevoConvenio');
+    if (form) form.reset();
+    
     const select = document.getElementById('convenioResidente');
+    if (!select) return;
 
     const residentesPrincipales = residentesData.filter(residente => residente[18] === 'SI');
 
@@ -344,18 +415,25 @@ function abrirModalNuevoConvenio() {
             return `<option value="${nParcela}">${nParcela} - ${nombreCompleto}</option>`;
         }).join('');
 
-    document.getElementById('resumenCalculoCuota').textContent = 'Ingrese los datos para calcular el valor de la cuota.';
-  setTimeout(() => {
-        if (modalNuevoConvenio) {
-             modalNuevoConvenio.show();
-        }
-    }, 50);
+    const resumenDiv = document.getElementById('resumenCalculoCuota');
+    if (resumenDiv) {
+        resumenDiv.textContent = 'Ingrese los datos para calcular el valor de la cuota.';
+    }
+    
+    if (modalNuevoConvenio) {
+        modalNuevoConvenio.show();
+    }
 }
 
 function calcularValorCuotaPreview() {
-    const deuda = parseFloat(document.getElementById('convenioDeudaTotal').value) || 0;
-    const cuotas = parseInt(document.getElementById('convenioCuotas').value) || 0;
+    const deudaInput = document.getElementById('convenioDeudaTotal');
+    const cuotasInput = document.getElementById('convenioCuotas');
     const resumenDiv = document.getElementById('resumenCalculoCuota');
+    
+    if (!deudaInput || !cuotasInput || !resumenDiv) return;
+    
+    const deuda = parseFloat(deudaInput.value) || 0;
+    const cuotas = parseInt(cuotasInput.value) || 0;
 
     if (deuda > 0 && cuotas > 0) {
         const valorCuota = Math.round(deuda / cuotas);
@@ -366,12 +444,22 @@ function calcularValorCuotaPreview() {
 }
 
 function abrirModalDetalle(convenioId) {
+    // Limpiar backdrops existentes
+    const backdrops = document.querySelectorAll('.modal-backdrop');
+    backdrops.forEach(backdrop => backdrop.remove());
+    document.body.classList.remove('modal-open');
+    
     const convenio = conveniosUnificados.find(c => c.ID_Convenio === convenioId);
     if (!convenio) return;
 
-    document.getElementById('detalleConvenioTitulo').innerHTML = `Detalle del Convenio <span class="badge text-bg-dark">${convenio.ID_Convenio}</span>`;
+    const tituloElement = document.getElementById('detalleConvenioTitulo');
+    if (tituloElement) {
+        tituloElement.innerHTML = `Detalle del Convenio <span class="badge text-bg-dark">${convenio.ID_Convenio}</span>`;
+    }
     
     const body = document.getElementById('detalleConvenioBody');
+    if (!body) return;
+    
     let cuotasHtml = convenio.Cuotas_Asociadas.length > 0 ?
         convenio.Cuotas_Asociadas.map(cuota => {
             const estadoClass = { 'Pendiente': 'warning', 'Pagado': 'success' }[cuota.Estado] || 'secondary';
@@ -424,7 +512,9 @@ function abrirModalDetalle(convenioId) {
         </div>
     `;
 
-    modalDetalleConvenio.show();
+    if (modalDetalleConvenio) {
+        modalDetalleConvenio.show();
+    }
 }
 
 // --- ACCIONES (GUARDAR, ACTUALIZAR) ---
@@ -467,7 +557,10 @@ async function guardarConvenio(event) {
         await appendSheetData('Convenios', filaConvenio);
         await appendSheetData('Cuotas_Convenio', filasCuotas);
 
-        modalNuevoConvenio.hide();
+        if (modalNuevoConvenio) {
+            modalNuevoConvenio.hide();
+        }
+        
         mostrarMensaje(`Convenio ${idConvenio} creado con éxito. Recargando datos...`, "success");
         
         setTimeout(cargarDatosIniciales, 1500);
@@ -498,7 +591,10 @@ async function registrarPagoCuota(cuotaId, convenioId) {
     aplicarFiltrosConvenios();
     
     // Cierra y vuelve a abrir el modal de detalles para reflejar el cambio
-    modalDetalleConvenio.hide(); 
+    if (modalDetalleConvenio) {
+        modalDetalleConvenio.hide(); 
+    }
+    
     abrirModalDetalle(convenioId); 
     mostrarMensaje(`Pago de la cuota ${cuotaId} registrado exitosamente (simulado).`, "info");
 }
