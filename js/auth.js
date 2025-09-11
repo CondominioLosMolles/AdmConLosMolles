@@ -2,7 +2,7 @@
 
 // --- CONFIGURACIÓN ---
 // 1. REEMPLAZA ESTO CON TU CLAVE DE API REAL DE LA CONSOLA DE GOOGLE CLOUD
-const API_KEY = '997872453031-5o8s2o6v3qt722fb3p51a2r7bo24ncee.apps.googleusercontent.com'; 
+const API_KEY = 'AIzaSyDF_uzecwnLXVCGRqUxFo1nWJ3a5rHKBto'; 
 
 // 2. ESTAS DOS LÍNEAS YA ESTÁN CORRECTAS EN TU CÓDIGO
 const CLIENT_ID = '997872453031-5o8s2o6v3qt722fb3p51a2r7bo24ncee.apps.googleusercontent.com';
