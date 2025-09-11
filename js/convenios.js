@@ -395,18 +395,31 @@ function renderizarPaginacionConvenios(totalItems, paginaActual) {
 
 // --- MANEJO DE MODALES ---
 function abrirModalNuevoConvenio() {
-    // Limpiar backdrops existentes
-    const backdrops = document.querySelectorAll('.modal-backdrop');
-    backdrops.forEach(backdrop => backdrop.remove());
-    document.body.classList.remove('modal-open');
-    
+    console.log("Paso 1: Se inició la función para abrir la modal.");
+
     const form = document.getElementById('formNuevoConvenio');
     if (form) form.reset();
     
     const select = document.getElementById('convenioResidente');
-    if (!select) return;
+    if (!select) {
+        console.error("Error crítico: No se encontró el elemento <select> con id 'convenioResidente'.");
+        return;
+    }
 
-    const residentesPrincipales = residentesData.filter(residente => residente[18] === 'SI');
+    // --- DIAGNÓSTICO DE DATOS ---
+    console.log("Paso 2: Revisando los datos de residentes disponibles...", residentesData);
+    if (!residentesData || residentesData.length === 0) {
+        console.error("PROBLEMA: La variable 'residentesData' está vacía. Los datos no se cargaron desde la planilla.");
+    }
+
+    // Se agrega una validación para evitar errores si una fila está incompleta
+    const residentesPrincipales = residentesData.filter(residente => residente && residente.length > 18 && residente[18] === 'SI');
+
+    console.log("Paso 3: Se encontraron " + residentesPrincipales.length + " residentes marcados como 'Contacto Principal'.", residentesPrincipales);
+    if (residentesPrincipales.length === 0) {
+        console.warn("ADVERTENCIA: Ningún residente cumple la condición de tener 'SI' en la columna 19 (S). La lista desplegable estará vacía.");
+    }
+    // --- FIN DEL DIAGNÓSTICO ---
 
     select.innerHTML = '<option value="" disabled selected>Seleccione una parcela...</option>' +
         residentesPrincipales.map(residente => {
@@ -420,9 +433,12 @@ function abrirModalNuevoConvenio() {
         resumenDiv.textContent = 'Ingrese los datos para calcular el valor de la cuota.';
     }
     
-    if (modalNuevoConvenio) {
-        modalNuevoConvenio.show();
-    }
+    // Se reincorpora el setTimeout para evitar el error visual del fondo gris
+    setTimeout(() => {
+        if (modalNuevoConvenio) {
+            modalNuevoConvenio.show();
+        }
+    }, 50);
 }
 
 function calcularValorCuotaPreview() {
