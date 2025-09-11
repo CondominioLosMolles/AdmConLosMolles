@@ -6,6 +6,48 @@ function escapeHTML(str) {
   return str.replace(/[&<>"']/g, (m) => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[m]));
 }
 
+// ===============================================================
+// SHIM DE ESCRITURA A SHEETS (si no existe appendSheetData/agregar*)
+// ===============================================================
+(function () {
+  const SPREADSHEET_ID =
+    (window && (window.SPREADSHEET_ID || window.SHEET_ID || window.GOOGLE_SHEET_ID)) || null;
+
+  const SHEET_CONVENIOS = "Convenios";
+  const SHEET_CUOTAS_CONVENIO = "Cuotas_Convenio";
+
+  if (typeof window.appendSheetData !== "function") {
+    window.appendSheetData = async function appendSheetData(sheetName, rows) {
+      if (!Array.isArray(rows) || rows.length === 0) {
+        throw new Error("appendSheetData: rows vacío o inválido.");
+      }
+      if (!SPREADSHEET_ID) {
+        throw new Error("No encuentro SPREADSHEET_ID. Define window.SPREADSHEET_ID en tu app.");
+      }
+      if (!(window.gapi && gapi.client && gapi.client.sheets)) {
+        throw new Error("Google API client (gapi) no está listo. Revisa la inicialización de auth.js.");
+      }
+      return gapi.client.sheets.spreadsheets.values.append({
+        spreadsheetId: SPREADSHEET_ID,
+        range: `${sheetName}!A:Z`,
+        valueInputOption: "USER_ENTERED",
+        insertDataOption: "INSERT_ROWS",
+        resource: { values: rows }
+      });
+    };
+  }
+
+  if (typeof window.agregarConvenio !== "function") {
+    window.agregarConvenio = async function (rows) {
+      return window.appendSheetData(SHEET_CONVENIOS, rows);
+    };
+  }
+  if (typeof window.agregarCuotasConvenio !== "function") {
+    window.agregarCuotasConvenio = async function (rows) {
+      return window.appendSheetData(SHEET_CUOTAS_CONVENIO, rows);
+    };
+  }
+})();
 // ======================================================================
 //  ESTADO DEL MÓDULO
 // ======================================================================
