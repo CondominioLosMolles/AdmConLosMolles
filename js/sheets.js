@@ -582,6 +582,36 @@ async function obtenerCuotasConvenio() {
     });
     return res.result.values || [];
 }
+// --- Helpers de escritura a Google Sheets (para Convenios) ---
+
+/**
+ * Inserta filas en la hoja indicada.
+ * @param {string} sheetName - Nombre de la hoja (p.ej. "Convenios" o "Cuotas_Convenio")
+ * @param {Array<Array<any>>} rows - Arreglo de filas [[...], [...]]
+ */
+async function appendSheetData(sheetName, rows) {
+  if (!Array.isArray(rows) || rows.length === 0) {
+    throw new Error("appendSheetData: rows vacío o inválido.");
+  }
+  // Requiere gapi inicializado y SPREADSHEET_ID definido (ya lo tienes al inicio de este archivo)
+  return gapi.client.sheets.spreadsheets.values.append({
+    spreadsheetId: SPREADSHEET_ID,
+    range: `${sheetName}!A:Z`,
+    valueInputOption: "USER_ENTERED",
+    insertDataOption: "INSERT_ROWS",
+    resource: { values: rows }
+  });
+}
+
+/** Agrega 1 fila a la hoja "Convenios" (compatibilidad con módulos antiguos). */
+async function agregarConvenio(rows) {
+  return appendSheetData(SHEET_CONVENIOS, rows);
+}
+
+/** Agrega N filas a la hoja "Cuotas_Convenio" (compatibilidad con módulos antiguos). */
+async function agregarCuotasConvenio(rows) {
+  return appendSheetData(SHEET_CUOTAS_CONVENIO, rows);
+}
 
 // -------- MANTENCIONES / TAREAS --------
 async function obtenerTareas() {
