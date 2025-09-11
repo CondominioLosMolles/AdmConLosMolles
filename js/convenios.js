@@ -30,8 +30,8 @@ let modalDetalleConvenio; // Variable para la instancia del modal de detalles
 
 // --- FUNCIÓN PRINCIPAL DE CARGA DEL MÓDULO ---
 async function cargarConvenios() {
-    const mainContent = document.getElementById('main-content');
-    mainContent.innerHTML = `
+    // HTML para el contenido principal (filtros, tabla, etc.) SIN LAS MODALES
+    const mainContentHTML = `
         <div class="card shadow-sm">
             <div class="card-header d-flex justify-content-between align-items-center">
                 <h2 class="h4 mb-0">Gestión de Convenios de Pago</h2>
@@ -72,7 +72,10 @@ async function cargarConvenios() {
                 </div>
             </div>
         </div>
+    `;
 
+    // HTML exclusivo para las modales
+    const modalsHTML = `
         <div class="modal fade" id="modalNuevoConvenio" tabindex="-1">
             <div class="modal-dialog modal-lg">
                 <div class="modal-content">
@@ -133,8 +136,11 @@ async function cargarConvenios() {
         </div>
     `;
 
-    // Se usa setTimeout para asegurar que el DOM se actualice con el innerHTML
-    // antes de intentar inicializar los componentes y cargar los datos.
+    // Inyectamos cada HTML en su contenedor correspondiente
+    document.getElementById('main-content').innerHTML = mainContentHTML;
+    document.getElementById('modal-container').innerHTML = modalsHTML;
+
+    // El resto de la lógica para inicializar y cargar datos sigue igual
     setTimeout(async () => {
         inicializarComponentesConvenios();
         await cargarDatosIniciales();
