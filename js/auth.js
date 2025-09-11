@@ -1,13 +1,9 @@
-// js/auth.js - VERSIÓN FINAL CORREGIDA
+// js/auth.js - VERSIÓN FINAL Y ROBUSTA
 
 // --- CONFIGURACIÓN ---
-// 1. REEMPLAZA ESTO CON TU CLAVE DE API REAL DE LA CONSOLA DE GOOGLE CLOUD
-const API_KEY = 'AIzaSyDF_uzecwnLXVCGRqUxFo1nWJ3a5rHKBto'; 
-
-// 2. ESTAS DOS LÍNEAS YA ESTÁN CORRECTAS EN TU CÓDIGO
+const API_KEY = 'AIzaSyDF_uzecwnLXVCGRqUxFo1nWJ3a5rHKBto';
 const CLIENT_ID = '997872453031-5o8s2o6v3qt722fb3p51a2r7bo24ncee.apps.googleusercontent.com';
-const SCOPES = 'https://www.googleapis.comcom/auth/spreadsheets https://www.googleapis.com/auth/gmail.send https://www.googleapis.com/auth/drive';
-
+const SCOPES = 'https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/gmail.send https://www.googleapis.com/auth/drive';
 
 // --- LÓGICA INTERNA (NO MODIFICAR) ---
 let tokenClient;
@@ -23,12 +19,16 @@ function gapiLoaded() {
 }
 
 function gisLoaded() {
-    tokenClient = google.accounts.oauth2.initTokenClient({
-        client_id: CLIENT_ID,
-        scope: SCOPES,
-        callback: handleTokenResponse,
-    });
-    resolveGisAuthReady();
+    try {
+        tokenClient = google.accounts.oauth2.initTokenClient({
+            client_id: CLIENT_ID,
+            scope: SCOPES,
+            callback: handleTokenResponse,
+        });
+        resolveGisAuthReady();
+    } catch (err) {
+        console.error("Error crítico al inicializar Google Identity Services (GIS). Causa probable: Cookies de terceros bloqueadas.", err);
+    }
 }
 
 async function initializeGapiClient() {
@@ -49,11 +49,11 @@ async function initializeGapiClient() {
         console.log("Paso 3: Carga de todas las APIs completada.");
         resolveGapiClientReady();
     } catch (err) {
-        console.error("Error crítico al inicializar o cargar bibliotecas GAPI:", err);
+        console.error("Error crítico al inicializar o cargar bibliotecas GAPI. Causa probable: API Key inválida o APIs no habilitadas.", err);
     }
 }
 
-// Código corregido (envuelto en DOMContentLoaded)
+// Se espera a que el HTML esté listo antes de intentar modificarlo
 document.addEventListener('DOMContentLoaded', function() {
     Promise.all([gapiClientReady, gisAuthReady]).then(() => {
         console.log("APIs de Google y Autenticación listas para usarse.");
@@ -67,6 +67,8 @@ document.addEventListener('DOMContentLoaded', function() {
         if (logoutBtn) {
             logoutBtn.addEventListener('click', handleSignoutClick);
         }
+    }).catch(err => {
+        console.error("No se pudieron inicializar los servicios de Google. El botón de login no se mostrará.", err);
     });
 });
 
@@ -99,8 +101,7 @@ function handleSignoutClick() {
     if (token !== null) {
         google.accounts.oauth2.revoke(token.access_token, () => {
             gapi.client.setToken('');
-            document.getElementById('app').style.display = 'none';
-            document.getElementById('login-screen').style.display = 'flex';
+            location.reload();
         });
     }
 }
