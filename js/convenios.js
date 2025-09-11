@@ -142,10 +142,22 @@ async function cargarConvenios() {
 }
 
 // --- MANEJO DE COMPONENTES Y EVENTOS ---
+// --- MANEJO DE COMPONENTES Y EVENTOS ---
 function inicializarComponentesConvenios() {
+    // 1. DESTRUYE las instancias anteriores de las modales si existen.
+    // Esto es CRÍTICO para evitar backdrops (fondos grises) duplicados.
+    if (modalNuevoConvenio) {
+        modalNuevoConvenio.dispose();
+    }
+    if (modalDetalleConvenio) {
+        modalDetalleConvenio.dispose();
+    }
+
+    // 2. CREA las nuevas instancias, asegurando que están limpias.
     modalNuevoConvenio = new bootstrap.Modal(document.getElementById('modalNuevoConvenio'));
     modalDetalleConvenio = new bootstrap.Modal(document.getElementById('modalDetalleConvenio'));
 
+    // 3. Asigna los listeners a los elementos que acabamos de crear en el DOM.
     document.getElementById('filtroBusquedaConvenio').addEventListener('input', aplicarFiltrosConvenios);
     document.getElementById('filtroEstadoConvenio').addEventListener('change', aplicarFiltrosConvenios);
     document.getElementById('btnAbrirModalNuevoConvenio').addEventListener('click', abrirModalNuevoConvenio);
