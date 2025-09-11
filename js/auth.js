@@ -1,7 +1,7 @@
 // js/auth.js - VERSIÓN FINAL Y ROBUSTA
 
 // --- CONFIGURACIÓN ---
-const API_KEY = 'AIzaSyDF_uzecwnLXVCGRqUxFo1nWJ3a5rHKBto';
+const API_KEY = 'AIzaSyA4nUkMycf_CHZE7TaBBD_WUyWMvSXUwoU';
 const CLIENT_ID = '997872453031-5o8s2o6v3qt722fb3p51a2r7bo24ncee.apps.googleusercontent.com';
 const SCOPES = 'https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/gmail.send https://www.googleapis.com/auth/drive';
 
