@@ -383,23 +383,42 @@ function abrirModalDetalle(idConvenio) {
   const tbody = (c.Cuotas && c.Cuotas.length)
     ? c.Cuotas.map(q => {
         const estado = q?.[8] || "Pendiente";
-        const badge = { Pagado:"success", Pendiente:"warning", Atrasado:"danger" }[estado] || "light";
-        const vence = ymdToDisplay(q?.[4]); // E = Fecha_Vencimiento (YYYY-MM-DD)
-        const monto = Number(q?.[5] || 0).toLocaleString("es-CL");
+        const badge  = { Pagado:"success", Pendiente:"warning", Atrasado:"danger" }[estado] || "light";
+        const vence  = ymdToDisplay(q?.[4]);              // E = Fecha_Vencimiento (YYYY-MM-DD)
+        const monto  = Number(q?.[5] || 0).toLocaleString("es-CL");
+        const link   = q?.[9] || "";                      // J = Link_Comprobante (si existe)
 
         const btns = `
-          <label class="btn btn-sm btn-outline-secondary mb-1">
-            Adjuntar comprobante
-            <input type="file" accept="image/*,application/pdf" hidden
-              onchange="handleAttachComprobante('${q[0]}','${c.N_Parcela}', this.files[0], '${c.ID_Convenio}')">
-          </label>
-          ${estado === "Pagado"
-            ? '<span class="text-muted">—</span>'
-            : `<button class="btn btn-sm btn-outline-success" onclick="registrarPagoCuota('${q[0]}','${c.ID_Convenio}')"><i class="fas fa-dollar-sign"></i> Registrar pago</button>`}
+          <div class="d-flex flex-wrap gap-1 justify-content-center">
+            ${link
+              ? `<a class="btn btn-sm btn-outline-info mb-1" href="${link}" target="_blank" rel="noopener">Ver comprobante</a>`
+              : `<label class="btn btn-sm btn-outline-secondary mb-1">
+                   Adjuntar comprobante
+                   <input type="file" accept="image/*,application/pdf" hidden
+                     onchange="handleAttachComprobante('${q[0]}','${c.N_Parcela}', this.files[0], '${c.ID_Convenio}')">
+                 </label>`
+            }
+            ${link
+              ? `<button class="btn btn-sm btn-outline-primary mb-1"
+                   onclick="enviarComprobanteCuota('${q[0]}','${c.N_Parcela}','${c.ID_Convenio}')">
+                   Enviar por correo
+                 </button>`
+              : ''
+            }
+            ${estado === "Pagado"
+              ? '<span class="text-muted">—</span>'
+              : `<button class="btn btn-sm btn-outline-success mb-1"
+                   onclick="registrarPagoCuota('${q[0]}','${c.ID_Convenio}')">
+                   <i class="fas fa-dollar-sign"></i> Registrar pago
+                 </button>`
+            }
+          </div>
         `;
 
         return `<tr>
-          <td>${q?.[2]}</td><td>${vence}</td><td>$${monto}</td>
+          <td>${q?.[2]}</td>
+          <td>${vence}</td>
+          <td>$${monto}</td>
           <td><span class="badge text-bg-${badge}">${estado}</span></td>
           <td class="text-center">${btns}</td>
         </tr>`;
@@ -422,7 +441,9 @@ function abrirModalDetalle(idConvenio) {
         <ul class="list-group">
           <li class="list-group-item d-flex justify-content-between"><strong>Valor cuota</strong><span>$${c.Valor_Cuota.toLocaleString("es-CL")}</span></li>
           <li class="list-group-item d-flex justify-content-between"><strong>Saldo pendiente</strong><span>$${c.Saldo_Pendiente.toLocaleString("es-CL")}</span></li>
-          <li class="list-group-item d-flex justify-content-between"><strong>Estado</strong><span class="badge text-bg-${{Activo:"success",Atrasado:"danger",Pagado:"primary",Anulado:"secondary"}[c.Estado]||"light"}">${c.Estado}</span></li>
+          <li class="list-group-item d-flex justify-content-between"><strong>Estado</strong>
+            <span class="badge text-bg-${{Activo:"success",Atrasado:"danger",Pagado:"primary",Anulado:"secondary"}[c.Estado]||"light"}">${c.Estado}</span>
+          </li>
         </ul>
       </div>
     </div>
@@ -430,7 +451,9 @@ function abrirModalDetalle(idConvenio) {
     <h5 class="mt-4">Plan de pagos</h5>
     <div class="table-responsive">
       <table class="table table-sm table-bordered">
-        <thead class="table-light"><tr><th>N°</th><th>Vencimiento</th><th>Monto</th><th>Estado</th><th class="text-center">Acción</th></tr></thead>
+        <thead class="table-light">
+          <tr><th>N°</th><th>Vencimiento</th><th>Monto</th><th>Estado</th><th class="text-center">Acción</th></tr>
+        </thead>
         <tbody>${tbody}</tbody>
       </table>
     </div>
