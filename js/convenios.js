@@ -705,33 +705,86 @@ function getEmailsDeParcela(nParcela) {
   return e ? [e] : [];
 }
 
-// Envía el comprobante por correo SOLO al email de columna F de "Residentes"
+// ===============================================================
+//  CORREOS / COMPROBANTE
+// ===============================================================
+
+/**
+ * Busca en `residentesData` la parcela y devuelve el email principal.
+ * La columna D (índice 3) es N_Parcela y la F (índice 5) es Email.
+ * @param {string} nParcela - El número de parcela a buscar.
+ * @returns {string} El email encontrado o una cadena vacía.
+ */
+function getEmailDeParcela(nParcela) {
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!residentesData) return "";
+
+  for (const residente of residentesData) {
+    if (residente && String(residente[3]) === String(nParcela)) {
+      const email = (residente[5] || "").trim();
+      // Devuelve el email solo si es válido, sino retorna vacío.
+      return emailRegex.test(email) ? email : "";
+    }
+  }
+  return ""; // Retorna vacío si no se encuentra la parcela.
+}
+
+/**
+ * Envía el comprobante de una cuota por correo.
+ * Si no encuentra un email en la hoja "Residentes", pide uno al usuario.
+ * @param {string} cuotaId - El ID de la cuota (ej: "Q-C-7-97716-1").
+ * @param {string} nParcela - El N° de la parcela (ej: "7").
+ * @param {string} convenioId - El ID del convenio (ej: "C-7-97716").
+ */
 async function enviarComprobanteCuota(cuotaId, nParcela, convenioId) {
   try {
     showSpinner && showSpinner();
 
-    const cuota = (cuotasData || []).find(c => c?.[0] === cuotaId);
-    if (!cuota) throw new Error("No se encontró la cuota.");
-    const link = cuota[9]; // J = Link_Comprobante
-    if (!link) throw new Error("Primero adjunte un comprobante para esta cuota.");
-
-    const email = getEmailDeParcela(nParcela);
-    if (!email) {
-      throw new Error(`No hay email en "Residentes" (columna F) para la parcela ${nParcela}.`);
+    const cuota = (cuotasData || []).find(c => c && c[0] === cuotaId);
+    if (!cuota) {
+      throw new Error("No se encontró la información de la cuota seleccionada.");
     }
 
+    const linkComprobante = cuota[9]; // Columna J: Link_Comprobante
+    if (!linkComprobante) {
+      throw new Error("Para enviar, primero debe adjuntar un comprobante a esta cuota.");
+    }
+
+    let destinatarios = [];
+    const emailPrincipal = getEmailDeParcela(nParcela);
+
+    if (emailPrincipal) {
+      destinatarios.push(emailPrincipal);
+    } else {
+      // Si no hay email, se lo pedimos al usuario.
+      const emailManual = prompt(
+        `La parcela ${nParcela} no tiene un email registrado en "Residentes".\n` +
+        `Por favor, ingrese el correo de destino:`,
+        ""
+      );
+      if (emailManual && emailManual.trim()) {
+        destinatarios.push(emailManual.trim());
+      } else {
+        // Si el usuario cancela o no ingresa nada, detenemos la operación.
+        throw new Error("Operación cancelada. No se especificó un destinatario.");
+      }
+    }
+
+    // Preparamos los datos para enviar a Google Apps Script
     const payload = {
       cuotaId,
       nParcela,
       idConvenio: convenioId,
-      linkComprobante: link,
-      montoCuota: Number(cuota[5] || 0),
-      fechaVencimiento: String(cuota[4] || ""),
-      destinatarios: [email]            // Apps Script espera arreglo
+      linkComprobante: linkComprobante,
+      montoCuota: Number(cuota[5] || 0),         // Columna F: Monto_Cuota
+      fechaVencimiento: String(cuota[4] || ""), // Columna E: Fecha_Vencimiento
+      destinatarios: destinatarios              // Apps Script espera un arreglo
     };
 
-    await enviarComprobanteCuota_GAS(payload);     // definida en sheets.js
-    mostrarMensaje && mostrarMensaje(`Comprobante enviado a ${email}.`, "success");
+    // La función `enviarComprobanteCuota_GAS` está definida en sheets.js
+    await enviarComprobanteCuota_GAS(payload);
+    mostrarMensaje && mostrarMensaje(`Comprobante enviado a ${destinatarios.join(", ")}.`, "success");
+
   } catch (e) {
     console.error(e);
     mostrarMensaje && mostrarMensaje(e.message || "No se pudo enviar el comprobante.", "error");
