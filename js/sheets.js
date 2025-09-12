@@ -799,38 +799,17 @@ async function agregarComunicacion(datos) {
     });
 }
 // -------- FUNCIONES DE CORREO --------
-async function enviarCorreo(destinatarios, asunto, mensaje) {
-    const toField = Array.isArray(destinatarios) ? destinatarios.join(',') : destinatarios;
-    const email =
-        `To: ${toField}\r\n` +
-        `Subject: ${asunto}\r\n` +
-        `Content-Type: text/html; charset=UTF-8\r\n\r\n` +
-        `${mensaje}`;
-    const base64EncodedEmail = btoa(unescape(encodeURIComponent(email)))
-        .replace(/\+/g, '-')
-        .replace(/\//g, '_');
-    await gapi.client.gmail.users.messages.send({
-        userId: 'me',
-        resource: {
-            raw: base64EncodedEmail
-        }
-    });
-}
 // === Ejecuta la función de Apps Script que envía el correo con el comprobante ===
 window.enviarComprobanteCuota_GAS = async function (payload) {
-  if (!window.SCRIPT_ID) {
+  if (typeof SCRIPT_ID === "undefined" || !SCRIPT_ID) {
     throw new Error("Falta definir SCRIPT_ID en sheets.js");
   }
   const resp = await gapi.client.request({
     path: `https://script.googleapis.com/v1/scripts/${SCRIPT_ID}:run`,
     method: "POST",
-    body: {
-      function: "enviarComprobanteCuota_GS", // <-- nombre en tu Apps Script
-      parameters: [payload]
-    }
+    body: { function: "enviarComprobanteCuota_GS", parameters: [payload] }
   });
 
-  // Si Apps Script devolviera un error estructurado
   if (resp.result && resp.result.error) {
     const msg =
       resp.result.error.details?.[0]?.errorMessage ||
@@ -838,7 +817,6 @@ window.enviarComprobanteCuota_GAS = async function (payload) {
       "Error al ejecutar Apps Script";
     throw new Error(msg);
   }
-
   return resp.result?.response?.result || true;
 };
 
