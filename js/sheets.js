@@ -923,21 +923,20 @@ async function subirComprobante(file, folderId) {
 
 // Sube comprobante a Parcela N / Convenio pagos y guarda link en J
 async function attachReceiptAndLink(cuotaId, nParcela, file) {
-  const folderId = await ensureFolderConvenioPagos(nParcela);
-  const uploaded = await subirComprobante(file, folderId);
+  const folderId = await ensureFolderConvenioPagos(nParcela); // crea "Parcela X/Convenio pagos"
+  const uploaded = await subirComprobante(file, folderId);    // sube el archivo
 
-  // Hacerlo visible con el enlace
+  // Permiso: cualquiera con el enlace puede ver
   try {
     await gapi.client.drive.permissions.create({
       fileId: uploaded.id,
       resource: { role: "reader", type: "anyone" }
     });
   } catch (e) {
-    // si falla, igual seguimos con el link del owner
     console.warn("No se pudo abrir permisos públicos para el comprobante:", e);
   }
 
-  // Recuperar link web visible
+  // Obtener link visible
   const info = await gapi.client.drive.files.get({
     fileId: uploaded.id,
     fields: "webViewLink,webContentLink"
@@ -945,9 +944,10 @@ async function attachReceiptAndLink(cuotaId, nParcela, file) {
   const link = info.result.webViewLink || info.result.webContentLink || uploaded.webViewLink || "";
 
   // Guardar el link en la cuota (columna J)
-  await updateCuotaPago(cuotaId, 0, link);
+  await updateCuotaPago(cuotaId, 0, link); // sin fecha → solo vincula link
   return link;
 }
+
 
 // === Ahora acepta fechaPago opcional y escribe en columna K
 async function updateCuotaPago(cuotaId, monto, linkComprobante, fechaPago) {
