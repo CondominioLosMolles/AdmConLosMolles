@@ -800,27 +800,6 @@ async function agregarComunicacion(datos) {
     });
 }
 // -------- FUNCIONES DE CORREO --------
-// === Ejecuta la función de Apps Script que envía el correo con el comprobante ===
-window.enviarComprobanteCuota_GAS = async function (payload) {
-  // La corrección está en la siguiente línea, cambiando "SS" por "SCRIPT_ID"
-  if (typeof SCRIPT_ID === "undefined" || !SCRIPT_ID) {
-    throw new Error("Falta definir SCRIPT_ID en sheets.js");
-  }
-  const resp = await gapi.client.request({
-    path: `https://script.googleapis.com/v1/scripts/${SCRIPT_ID}:run`,
-    method: "POST",
-    body: { function: "enviarComprobanteCuota_GS", parameters: [payload] }
-  });
-
-  if (resp.result && resp.result.error) {
-    const msg =
-      resp.result.error.details?.[0]?.errorMessage ||
-      resp.result.error.message ||
-      "Error al ejecutar Apps Script";
-    throw new Error(msg);
-  }
-  return resp.result?.response?.result || true;
-};
 // ===============================================================
 // Append genérico (fila(s)) a cualquier hoja
 async function appendSheetData(sheetName, rows) {
