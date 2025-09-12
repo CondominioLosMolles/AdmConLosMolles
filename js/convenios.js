@@ -643,37 +643,94 @@ async function handleAttachComprobante(cuotaId, nParcela, file, convenioId) {
     hideSpinner && hideSpinner();
   }
 }
+// AGREGAR ESTA NUEVA FUNCIÓN EN convenios.js
+
+/**
+ * Crea el cuerpo del correo en formato HTML para un comprobante de pago de cuota de convenio.
+ * @param {object} cuota - El objeto de la cuota pagada.
+ * @param {object} convenio - El objeto del convenio al que pertenece la cuota.
+ * @param {string} residenteNombre - El nombre del residente.
+ * @returns {string} Una cadena de texto con el HTML completo del correo.
+ */
+function crearCuerpoCorreoConvenio(cuota, convenio, residenteNombre) {
+    const nParcela = convenio.N_Parcela;
+    const montoCuota = parseFloat(cuota[5] || 0); // Columna F: Monto_Cuota
+    const nCuota = cuota[3];                      // Columna D: N_Cuota
+    const totalCuotas = convenio.N_Cuotas;
+    const fechaPago = new Date().toLocaleDateString('es-CL');
+
+    return `
+    <!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><title>Comprobante de Pago de Convenio</title></head>
+    <body style="margin:0;padding:0;background-color:#f4f4f4;font-family:Arial,sans-serif;">
+        <table align="center" border="0" cellpadding="0" cellspacing="0" width="600" style="border-collapse:collapse;background-color:#ffffff;margin:20px auto;border:1px solid #dddddd;">
+            <tr><td align="center" bgcolor="#2a7ca3" style="padding:20px;color:#ffffff;"><h2 style="margin:0;">Comprobante de Pago</h2><p style="margin:5px 0 0;">Condominio Los Molles</p></td></tr>
+            <tr><td style="padding:25px 20px;">
+                <p>Estimado(a) <strong>${residenteNombre}</strong>,</p>
+                <p>Confirmamos la recepción del pago de su cuota de convenio. A continuación el detalle:</p>
+                <h4 style="color:#333;margin-bottom:5px;margin-top:15px;border-bottom:1px solid #eee;padding-bottom:5px;">Detalle del Pago Realizado</h4>
+                <table width="100%" cellpadding="4" cellspacing="0" style="border-collapse:collapse;font-size:14px;">
+                    <tr><td style="padding:8px 0;">Pago Cuota de Convenio (${nCuota} de ${totalCuotas}):</td><td style="padding:8px 0;text-align:right;">$${montoCuota.toLocaleString('es-CL')}</td></tr>
+                    <tr style="font-weight:bold;border-top:2px solid #2e7d32;">
+                        <td style="padding:10px 0; color:#2e7d32; font-size:1.1em;">Total Pagado:</td>
+                        <td style="padding:10px 0; text-align:right; color:#2e7d32; font-size:1.1em;">$${montoCuota.toLocaleString('es-CL')}</td>
+                    </tr>
+                </table>
+                <hr style="border:0;border-top:1px solid #eeeeee;margin-top:20px;">
+                <p>Gracias por su compromiso.</p><p style="margin-top:20px;">Atentamente,<br><strong>Alex Thiele</strong><br>Administrador</p>
+            </td></tr>
+            <tr><td bgcolor="#f4f4f4" style="text-align:center;padding:15px;font-size:12px;color:#777777;">Este es un correo electrónico generado automáticamente.</td></tr>
+        </table>
+    </body></html>`;
+}
 // Envía el comprobante por correo a los emails de la parcela (y opcionales)
+// REEMPLAZAR LA FUNCIÓN EXISTENTE EN convenios.js CON ESTA
+
 async function enviarComprobanteCuota(cuotaId, nParcela, convenioId) {
   try {
     showSpinner && showSpinner();
 
-    const cuota = (cuotasData || []).find(c => c?.[0] === cuotaId);
-    if (!cuota) throw new Error("No se encontró la cuota.");
-    const link = cuota[9]; // J
-    if (!link) throw new Error("Primero adjunte un comprobante para esta cuota.");
-
-    // 1) emails desde hoja "Residentes" para la PARCELA
-    let destinatarios = getEmailsDeParcela(nParcela);
-    // 2) si no hay, pide uno manual
-    if (!destinatarios.length) {
-      const manual = prompt(`No hay email en "Residentes" para la parcela ${nParcela}. Ingrese correo destino:`, "");
-      if (!manual) throw new Error("Sin destinatario.");
-      destinatarios = [manual.trim()];
+    const cuota = (cuotasData || []).find(c => c && c[0] === cuotaId);
+    if (!cuota) {
+      throw new Error("No se encontró la información de la cuota seleccionada.");
     }
 
-    const payload = {
-      cuotaId,
-      nParcela,
-      idConvenio: convenioId,
-      linkComprobante: link,
-      montoCuota: Number(cuota[5] || 0),
-      fechaVencimiento: String(cuota[4] || ""),
-      destinatarios
-    };
+    let destinatarios = [];
+    const emailPrincipal = getEmailDeParcela(nParcela);
 
-    await enviarComprobanteCuota_GAS(payload);
-    mostrarMensaje && mostrarMensaje("Comprobante enviado por correo.", "success");
+    if (emailPrincipal) {
+      destinatarios.push(emailPrincipal);
+    } else {
+      const emailManual = prompt(
+        `La parcela ${nParcela} no tiene un email registrado en "Residentes".\n` +
+        `Por favor, ingrese el correo de destino:`, ""
+      );
+      if (emailManual && emailManual.trim()) {
+        destinatarios.push(emailManual.trim());
+      } else {
+        throw new Error("Operación cancelada. No se especificó un destinatario.");
+      }
+    }
+    
+    // --- INICIO DE LA NUEVA LÓGICA ---
+    // 1. Obtener los datos completos del convenio y residente
+    const convenio = conveniosUnificados.find(c => c.ID_Convenio === convenioId);
+    if (!convenio) {
+        throw new Error("No se encontró el convenio asociado para generar el correo.");
+    }
+    const residenteNombre = convenio.Nombre_Residente;
+    const nCuota = cuota[3];
+    const destinatariosStr = destinatarios.join(",");
+
+    // 2. Generar Asunto y Cuerpo del correo usando la nueva función
+    const asunto = `Comprobante de Pago - Convenio Parcela ${nParcela} - Cuota ${nCuota}`;
+    const cuerpoHtml = crearCuerpoCorreoConvenio(cuota, convenio, residenteNombre);
+
+    // 3. Enviar el correo con el cuerpo HTML generado
+    await enviarCorreo(destinatariosStr, asunto, cuerpoHtml);
+    // --- FIN DE LA NUEVA LÓGICA ---
+    
+    mostrarMensaje && mostrarMensaje(`Comprobante enviado a ${destinatariosStr}.`, "success");
+
   } catch (e) {
     console.error(e);
     mostrarMensaje && mostrarMensaje(e.message || "No se pudo enviar el comprobante.", "error");
@@ -681,7 +738,6 @@ async function enviarComprobanteCuota(cuotaId, nParcela, convenioId) {
     hideSpinner && hideSpinner();
   }
 }
-
 
 // Llama a Apps Script para enviar el correo (Execution API)
 // Envía el comprobante por correo SOLO al email de columna F de "Residentes"
