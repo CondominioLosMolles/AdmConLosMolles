@@ -652,13 +652,22 @@ async function handleAttachComprobante(cuotaId, nParcela, file, convenioId) {
  * @param {string} residenteNombre - El nombre del residente.
  * @returns {string} Una cadena de texto con el HTML completo del correo.
  */
+// REEMPLAZA LA FUNCIÓN EXISTENTE EN convenios (14).js CON ESTA VERSIÓN MEJORADA
 function crearCuerpoCorreoConvenio(cuota, convenio, residenteNombre) {
-    const nParcela = convenio.N_Parcela;
-    const montoCuota = parseFloat(cuota[5] || 0); // Columna F: Monto_Cuota
-    const nCuota = cuota[3];                      // Columna D: N_Cuota
+    // --- Variables para mayor claridad ---
+    const montoCuota = parseFloat(cuota[5] || 0);
+    const nCuota = cuota[3];
     const totalCuotas = convenio.N_Cuotas;
-    const fechaPago = new Date().toLocaleDateString('es-CL');
+    const deudaOriginal = parseFloat(convenio.Deuda_Original || 0);
+    const saldoPendienteConvenio = parseFloat(convenio.Saldo_Pendiente || 0);
+    
+    // Calculamos las cuotas pendientes restantes. 
+    // Usamos Math.max para asegurarnos de que no sea un número negativo si el saldo es cero.
+    const cuotasPendientes = saldoPendienteConvenio > 0 && convenio.Valor_Cuota > 0 
+        ? Math.round(saldoPendienteConvenio / convenio.Valor_Cuota) 
+        : 0;
 
+    // --- Plantilla HTML del correo ---
     return `
     <!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><title>Comprobante de Pago de Convenio</title></head>
     <body style="margin:0;padding:0;background-color:#f4f4f4;font-family:Arial,sans-serif;">
@@ -667,14 +676,31 @@ function crearCuerpoCorreoConvenio(cuota, convenio, residenteNombre) {
             <tr><td style="padding:25px 20px;">
                 <p>Estimado(a) <strong>${residenteNombre}</strong>,</p>
                 <p>Confirmamos la recepción del pago de su cuota de convenio. A continuación el detalle:</p>
+                
                 <h4 style="color:#333;margin-bottom:5px;margin-top:15px;border-bottom:1px solid #eee;padding-bottom:5px;">Detalle del Pago Realizado</h4>
                 <table width="100%" cellpadding="4" cellspacing="0" style="border-collapse:collapse;font-size:14px;">
-                    <tr><td style="padding:8px 0;">Pago Cuota de Convenio (${nCuota} de ${totalCuotas}):</td><td style="padding:8px 0;text-align:right;">$${montoCuota.toLocaleString('es-CL')}</td></tr>
-                    <tr style="font-weight:bold;border-top:2px solid #2e7d32;">
-                        <td style="padding:10px 0; color:#2e7d32; font-size:1.1em;">Total Pagado:</td>
-                        <td style="padding:10px 0; text-align:right; color:#2e7d32; font-size:1.1em;">$${montoCuota.toLocaleString('es-CL')}</td>
+                    <tr>
+                        <td style="padding:8px 0;">Pago Cuota de Convenio (${nCuota} de ${totalCuotas}):</td>
+                        <td style="padding:8px 0;text-align:right;font-weight:bold;color:#2e7d32;">$${montoCuota.toLocaleString('es-CL')}</td>
                     </tr>
                 </table>
+
+                <h4 style="color:#333;margin-bottom:5px;margin-top:15px;border-bottom:1px solid #eee;padding-bottom:5px;">Resumen de su Convenio</h4>
+                <table width="100%" cellpadding="4" cellspacing="0" style="border-collapse:collapse;font-size:14px;">
+                    <tr>
+                        <td style="padding:5px 0;">Deuda Original del Convenio:</td>
+                        <td style="padding:5px 0;text-align:right;">$${deudaOriginal.toLocaleString('es-CL')}</td>
+                    </tr>
+                    <tr style="font-weight:bold;">
+                        <td style="padding:8px 0;border-top:1px solid #eeeeee;color:#d32f2f;">Saldo Pendiente del Convenio:</td>
+                        <td style="padding:8px 0;text-align:right;border-top:1px solid #eeeeee;color:#d32f2f;">$${saldoPendienteConvenio.toLocaleString('es-CL')}</td>
+                    </tr>
+                    <tr>
+                        <td style="padding:5px 0;">Cuotas Pendientes restantes:</td>
+                        <td style="padding:5px 0;text-align:right;">${cuotasPendientes}</td>
+                    </tr>
+                </table>
+
                 <hr style="border:0;border-top:1px solid #eeeeee;margin-top:20px;">
                 <p>Gracias por su compromiso.</p><p style="margin-top:20px;">Atentamente,<br><strong>Alex Thiele</strong><br>Administrador</p>
             </td></tr>
