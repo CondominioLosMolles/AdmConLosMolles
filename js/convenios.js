@@ -9,23 +9,40 @@ function escapeHTML(str) {
 // ===============================================================
 // 📅 FECHAS ESTABLES (evita corrimientos por zona horaria)
 // ===============================================================
-function ymdToDisplay(ymd) {                 // "2025-09-01" -> "01-09-2025"
-  if (!ymd || typeof ymd !== 'string') return '—';
-  const [y,m,d] = ymd.split('-');
-  if (!d) return ymd;
-  return `${d}-${m}-${y}`;
+// =================== FECHAS ===================
+// Convierte "YYYY-MM-DD", "DD/MM/YYYY", o serial (45910) -> "DD-MM-YYYY"
+function ymdToDisplay(val) {
+  if (val === null || val === undefined) return "—";
+
+  // Serial de Google Sheets (días desde 1899-12-30)
+  const fromSerial = (n) => {
+    const base = new Date(1899, 11, 30);
+    const d = new Date(base.getTime() + Number(n) * 86400000);
+    const dd = String(d.getDate()).padStart(2, "0");
+    const mm = String(d.getMonth() + 1).padStart(2, "0");
+    const yy = d.getFullYear();
+    return `${dd}-${mm}-${yy}`;
+  };
+
+  if (typeof val === "number") return fromSerial(val);
+  if (typeof val === "string") {
+    if (/^\d+$/.test(val)) return fromSerial(Number(val));      // "45910"
+    if (/^\d{4}-\d{2}-\d{2}$/.test(val)) {                       // "2025-09-10"
+      const [y,m,d] = val.split("-");
+      return `${d}-${m}-${y}`;
+    }
+    if (/^\d{1,2}[\/-]\d{1,2}[\/-]\d{2,4}$/.test(val)) {         // "10/09/2025" o "10-09-2025"
+      const [d,m,y] = val.replaceAll("/", "-").split("-");
+      const yy = y.length === 2 ? `20${y}` : y;
+      return `${d.padStart(2,"0")}-${m.padStart(2,"0")}-${yy}`;
+    }
+  }
+  return String(val);
 }
 
-function addMonthsKeepDay(ymd, add) {        // suma meses manteniendo día (capado al fin de mes)
-  const [y,m,d] = ymd.split('-').map(Number);
-  const base = new Date(y, m - 1, 1);        // primer día del mes (hora local)
-  base.setMonth(base.getMonth() + add);
-  const Y = base.getFullYear();
-  const M = base.getMonth() + 1;
-  const last = new Date(Y, M, 0).getDate();
-  const D = Math.min(d, last);
-  return `${Y}-${String(M).padStart(2,'0')}-${String(D).padStart(2,'0')}`;
-}
+// Ya tienes esta para sumar meses; déjala como estaba:
+function addMonthsKeepDay(ymd, add) { /* … la tuya … */ }
+
 
 // =================================================================
 //  ESTADO DEL MÓDULO
@@ -624,20 +641,15 @@ async function enviarComprobanteCuota(cuotaId, nParcela, convenioId) {
     const link = cuota[9]; // J
     if (!link) throw new Error("Primero adjunte un comprobante para esta cuota.");
 
-    // Emails del/los residentes de la parcela (columna de email suele ser index 5)
-    const emailsBase = (residentesData || [])
-      .filter(r => String(r?.[3]) === String(nParcela) && r?.[5] && r[5].includes("@"))
-      .map(r => r[5].trim());
-
-    if (!emailsBase.length) throw new Error(`La parcela ${nParcela} no tiene email registrado en la hoja "Residentes".`);
-
-    const extra = prompt("Correos adicionales (opcional, separados por coma):", "");
-    const emails = [...emailsBase];
-    if (extra) {
-      extra.split(",").map(s => s.trim()).filter(Boolean).forEach(x => emails.push(x));
+    // 1) emails desde hoja "Residentes" para la PARCELA
+    let destinatarios = getEmailsDeParcela(nParcela);
+    // 2) si no hay, pide uno manual
+    if (!destinatarios.length) {
+      const manual = prompt(`No hay email en "Residentes" para la parcela ${nParcela}. Ingrese correo destino:`, "");
+      if (!manual) throw new Error("Sin destinatario.");
+      destinatarios = [manual.trim()];
     }
 
-    // Datos para el correo
     const payload = {
       cuotaId,
       nParcela,
@@ -645,11 +657,10 @@ async function enviarComprobanteCuota(cuotaId, nParcela, convenioId) {
       linkComprobante: link,
       montoCuota: Number(cuota[5] || 0),
       fechaVencimiento: String(cuota[4] || ""),
-      destinatarios: emails
+      destinatarios
     };
 
     await enviarComprobanteCuota_GAS(payload);
-
     mostrarMensaje && mostrarMensaje("Comprobante enviado por correo.", "success");
   } catch (e) {
     console.error(e);
@@ -658,6 +669,7 @@ async function enviarComprobanteCuota(cuotaId, nParcela, convenioId) {
     hideSpinner && hideSpinner();
   }
 }
+
 
 // Llama a Apps Script para enviar el correo (Execution API)
 async function enviarComprobanteCuota_GAS(payload) {
@@ -669,5 +681,21 @@ async function enviarComprobanteCuota_GAS(payload) {
     method: "POST",
     body: { function: "enviarComprobanteCuota_GS", parameters: [payload] }
   });
+}
+// Devuelve todos los emails encontrados en la fila de la parcela (col D = index 3)
+function getEmailsDeParcela(nParcela) {
+  const out = [];
+  const rx = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  (residentesData || []).forEach(r => {
+    if (String(r?.[3]) === String(nParcela)) {
+      r.forEach(c => {
+        if (typeof c === "string" && rx.test(c.trim())) {
+          const e = c.trim();
+          if (!out.includes(e)) out.push(e);
+        }
+      });
+    }
+  });
+  return out;
 }
 
