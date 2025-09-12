@@ -9,7 +9,6 @@ function escapeHTML(str) {
 // ===============================================================
 // 📅 FECHAS ESTABLES (evita corrimientos por zona horaria)
 // ===============================================================
-// =================== FECHAS ===================
 // Convierte "YYYY-MM-DD", "DD/MM/YYYY", o serial (45910) -> "DD-MM-YYYY"
 function ymdToDisplay(val) {
   if (val === null || val === undefined) return "—";
@@ -42,7 +41,6 @@ function ymdToDisplay(val) {
 
 // Ya tienes esta para sumar meses; déjala como estaba:
 function addMonthsKeepDay(ymd, add) { /* … la tuya … */ }
-
 
 // =================================================================
 //  ESTADO DEL MÓDULO
