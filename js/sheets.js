@@ -1,3 +1,4 @@
+// VERSIÓN DEFINITIVAMENTE CORREGIDA
 // js/sheets.js
 
 // ID de tu Hoja de Cálculo
