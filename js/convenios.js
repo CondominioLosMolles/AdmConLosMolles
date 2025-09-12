@@ -705,6 +705,8 @@ function getEmailsDeParcela(nParcela) {
   return e ? [e] : [];
 }
 
+// REEMPLAZA TODO DESDE LA LÍNEA 705 HASTA EL FINAL CON ESTO:
+
 // ===============================================================
 //  CORREOS / COMPROBANTE
 // ===============================================================
@@ -729,9 +731,12 @@ function getEmailDeParcela(nParcela) {
   return ""; // Retorna vacío si no se encuentra la parcela.
 }
 
- * Envía el comprobante de una cuota por correo.
- // REEMPLAZAR LA FUNCIÓN COMPLETA EN convenios.js
-
+/**
+ * Envía el comprobante de una cuota por correo utilizando la función genérica.
+ * @param {string} cuotaId - El ID de la cuota.
+ * @param {string} nParcela - El N° de la parcela.
+ * @param {string} convenioId - El ID del convenio.
+ */
 async function enviarComprobanteCuota(cuotaId, nParcela, convenioId) {
   try {
     showSpinner && showSpinner();
@@ -763,7 +768,6 @@ async function enviarComprobanteCuota(cuotaId, nParcela, convenioId) {
       }
     }
     
-    // --- INICIO DE LA LÓGICA UNIFICADA ---
     const destinatariosStr = destinatarios.join(",");
     const asunto = `Comprobante de pago – Parcela ${nParcela} – Cuota ${String(cuotaId || "").split("-").pop()}`;
     const monto = Number(cuota[5] || 0).toLocaleString("es-CL");
@@ -782,9 +786,8 @@ async function enviarComprobanteCuota(cuotaId, nParcela, convenioId) {
       '<p><a href="' + linkComprobante + '">Abrir comprobante</a></p>' +
       '<p>Saludos cordiales.</p>';
 
-    // Se llama a la función genérica, igual que en Gastos Comunes
+    // Se llama a la función genérica `enviarCorreo`, que debe estar en sheets.js
     await enviarCorreo(destinatariosStr, asunto, cuerpoHtml);
-    // --- FIN DE LA LÓGICA UNIFICADA ---
     
     mostrarMensaje && mostrarMensaje(`Comprobante enviado a ${destinatariosStr}.`, "success");
 
