@@ -710,7 +710,6 @@ function getEmailsDeParcela(nParcela) {
 // ===============================================================
 //  CORREOS / COMPROBANTE
 // ===============================================================
-
 /**
  * Busca en `residentesData` la parcela y devuelve el email principal.
  * La columna D (índice 3) es N_Parcela y la F (índice 5) es Email.
@@ -724,11 +723,10 @@ function getEmailDeParcela(nParcela) {
   for (const residente of residentesData) {
     if (residente && String(residente[3]) === String(nParcela)) {
       const email = (residente[5] || "").trim();
-      // Devuelve el email solo si es válido, sino retorna vacío.
       return emailRegex.test(email) ? email : "";
     }
   }
-  return ""; // Retorna vacío si no se encuentra la parcela.
+  return "";
 }
 
 /**
