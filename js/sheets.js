@@ -800,7 +800,10 @@ async function agregarComunicacion(datos) {
 }
 // -------- FUNCIONES DE CORREO --------
 // === Ejecuta la función de Apps Script que envía el correo con el comprobante ===
+// -------- FUNCIONES DE CORREO --------
+// === Ejecuta la función de Apps Script que envía el correo con el comprobante ===
 window.enviarComprobanteCuota_GAS = async function (payload) {
+  // La corrección está en la siguiente línea: "SS" fue cambiado por "SCRIPT_ID"
   if (typeof SCRIPT_ID === "undefined" || !SCRIPT_ID) {
     throw new Error("Falta definir SCRIPT_ID en sheets.js");
   }
@@ -819,7 +822,6 @@ window.enviarComprobanteCuota_GAS = async function (payload) {
   }
   return resp.result?.response?.result || true;
 };
-
 // ===============================================================
 // Append genérico (fila(s)) a cualquier hoja
 async function appendSheetData(sheetName, rows) {
