@@ -684,30 +684,47 @@ async function enviarComprobanteCuota(cuotaId, nParcela, convenioId) {
 
 
 // Llama a Apps Script para enviar el correo (Execution API)
-async function enviarComprobanteCuota_GAS(payload) {
-  if (typeof SCRIPT_ID === "undefined" || !SCRIPT_ID) {
-    throw new Error("Falta definir SCRIPT_ID en sheets.js para usar Apps Script.");
-  }
-  return gapi.client.request({
-    path: `https://script.googleapis.com/v1/scripts/${SCRIPT_ID}:run`,
-    method: "POST",
-    body: { function: "enviarComprobanteCuota_GS", parameters: [payload] }
-  });
-}
-// Devuelve todos los emails encontrados en la fila de la parcela (col D = index 3)
-function getEmailsDeParcela(nParcela) {
-  const out = [];
-  const rx = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  (residentesData || []).forEach(r => {
-    if (String(r?.[3]) === String(nParcela)) {
-      r.forEach(c => {
-        if (typeof c === "string" && rx.test(c.trim())) {
-          const e = c.trim();
-          if (!out.includes(e)) out.push(e);
-        }
-      });
+// Envía el comprobante por correo SOLO al email de columna F de "Residentes"
+async function enviarComprobanteCuota(cuotaId, nParcela, convenioId) {
+  try {
+    showSpinner && showSpinner();
+
+    const cuota = (cuotasData || []).find(c => c?.[0] === cuotaId);
+    if (!cuota) throw new Error("No se encontró la cuota.");
+    const link = cuota[9]; // J = Link_Comprobante
+    if (!link) throw new Error("Primero adjunte un comprobante para esta cuota.");
+
+    // Email único desde Residentes (col F). Si no hay, detenemos con mensaje claro.
+    const email = getEmailDeParcela(nParcela);
+    if (!email) {
+      throw new Error(`No hay email en la hoja "Residentes" (columna F) para la parcela ${nParcela}.`);
     }
-  });
-  return out;
+
+    const payload = {
+      cuotaId,
+      nParcela,
+      idConvenio: convenioId,
+      linkComprobante: link,
+      montoCuota: Number(cuota[5] || 0),
+      fechaVencimiento: String(cuota[4] || ""),
+      destinatarios: [email]   // ← solo el correo de F
+    };
+
+    await enviarComprobanteCuota_GAS(payload);
+    mostrarMensaje && mostrarMensaje(`Comprobante enviado a ${email}.`, "success");
+  } catch (e) {
+    console.error(e);
+    mostrarMensaje && mostrarMensaje(e.message || "No se pudo enviar el comprobante.", "error");
+  } finally {
+    hideSpinner && hideSpinner();
+  }
+}
+
+// Devuelve todos los emails encontrados en la fila de la parcela (col D = index 3)
+function getEmailDeParcela(nParcela) {
+  const rx = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  const fila = (residentesData || []).find(r => String(r?.[3]) === String(nParcela));
+  const email = fila?.[5]?.toString().trim() || "";
+  return rx.test(email) ? email : "";
 }
 
