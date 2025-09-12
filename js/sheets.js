@@ -801,6 +801,29 @@ async function agregarComunicacion(datos) {
 }
 // -------- FUNCIONES DE CORREO --------
 // ===============================================================
+async function enviarCorreo(destinatario, asunto, cuerpo) {
+  try {
+    const response = await gapi.client.request({
+      'path': `https://script.googleapis.com/v1/scripts/${SCRIPT_ID}:run`,
+      'method': 'POST',
+      'body': {
+        'function': 'enviarCorreoComprobante_GS',
+        'parameters': [destinatario, asunto, cuerpo]
+      }
+    });
+
+    const result = response.result;
+    if (result.error) {
+      throw new Error(result.error.details || 'Error en el script de Google para enviar correo.');
+    }
+    return result.response?.result;
+
+  } catch (err) {
+    const errorMessage = err.result?.error?.message || err.message || 'Error desconocido.';
+    console.error('Error al llamar a enviarCorreoComprobante_GS:', errorMessage);
+    throw new Error(`Error del cliente al enviar correo: ${errorMessage}`);
+  }
+}
 // Append genérico (fila(s)) a cualquier hoja
 async function appendSheetData(sheetName, rows) {
   if (!Array.isArray(rows) || !rows.length) throw new Error('appendSheetData: rows vacío.');
