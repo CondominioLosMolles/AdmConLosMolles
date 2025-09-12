@@ -817,14 +817,6 @@ async function enviarCorreo(destinatarios, asunto, mensaje) {
     });
 }
 // ===============================================================
-//  BLOQUE AÑADIDO PARA CONVENIOS (pegar al final de sheets.js)
-//  - appendSheetData
-//  - findCuotaRowById / updateCuotaPago
-//  - ensureChildFolder / ensureFolderConvenioPagos / subirComprobante / attachReceiptAndLink
-//  Requiere: SPREADSHEET_ID, SHEET_CONVENIOS, SHEET_CUOTAS_CONVENIO definidos arriba
-//  Permisos: https://www.googleapis.com/auth/spreadsheets y https://www.googleapis.com/auth/drive.file
-// ===============================================================
-
 // Append genérico (fila(s)) a cualquier hoja
 async function appendSheetData(sheetName, rows) {
   if (!Array.isArray(rows) || !rows.length) throw new Error('appendSheetData: rows vacío.');
@@ -984,16 +976,4 @@ async function updateCuotaPago(cuotaId, monto, linkComprobante, fechaPago) {
   });
 
   return { estado, saldo, pagadoAcum, link: row[9] || '', fechaPago: row[10] || '' };
-}
-
-// === Wrapper para llamar a Apps Script y enviar correo de comprobante (usado en convenios.js)
-async function enviarComprobanteCuota_GAS(payload) {
-  if (typeof SCRIPT_ID === "undefined" || !SCRIPT_ID) {
-    throw new Error("Falta definir SCRIPT_ID en sheets.js para usar Apps Script.");
-  }
-  return gapi.client.request({
-    path: `https://script.googleapis.com/v1/scripts/${SCRIPT_ID}:run`,
-    method: "POST",
-    body: { function: "enviarComprobanteCuota_GS", parameters: [payload] }
-  });
 }
