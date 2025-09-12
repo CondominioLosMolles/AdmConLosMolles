@@ -307,8 +307,8 @@ function renderTabla(pag = 1) {
   const nav   = document.getElementById("paginacion-convenios");
   if (!tbody || !info || !nav) return;
 
-  const ini = (pag - 1) * FILAS_POR_PAGINA;
-  const fin = ini + FILAS_POR_PAGINA;
+  const ini = (pag - 1) * FILAS_POR_PAGINA_CONVENIOS;
+const fin = ini + FILAS_POR_PAGINA_CONVENIOS;
   const items = conveniosFiltrados.slice(ini, fin);
 
   if (!items.length) {
@@ -337,7 +337,7 @@ function renderTabla(pag = 1) {
 
   // Paginación
   const total = conveniosFiltrados.length;
-  const totalPag = Math.max(1, Math.ceil(total / FILAS_POR_PAGINA));
+  const totalPag = Math.max(1, Math.ceil(total / FILAS_POR_PAGINA_CONVENIOS));
   const desde = total ? ini + 1 : 0;
   const hasta = Math.min(fin, total);
   info.textContent = `Mostrando ${desde}-${hasta} de ${total}`;
@@ -360,22 +360,7 @@ function renderTabla(pag = 1) {
     abrirModalDetalle(id);
   };
 }
-// Alias para compatibilidad si en otra parte llaman renderizarTablaConvenios
-if (typeof renderizarTablaConvenios !== "function") {
-  function renderizarTablaConvenios(p) { return renderTabla(p); }
-}
 
-// Delegación estable para el botón "ojo"
-const tbody = document.getElementById("tbodyConvenios");
-if (tbody && !tbody.__detalleBound) {
-  tbody.__detalleBound = true;
-  tbody.addEventListener("click", (e) => {
-    const btn = e.target.closest(".btn-detalle");
-    if (!btn) return;
-    e.preventDefault();
-    abrirModalDetalle(btn.getAttribute("data-id"));
-  });
-}
 // --- Alias de compatibilidad (algunos lugares llaman renderizarTablaConvenios) ---
 window.renderizarTablaConvenios = window.renderizarTablaConvenios || function (p) {
   return renderTabla(p);
