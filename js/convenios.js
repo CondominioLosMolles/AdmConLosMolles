@@ -729,7 +729,6 @@ function getEmailDeParcela(nParcela) {
   return ""; // Retorna vacío si no se encuentra la parcela.
 }
 
-/**
  * Envía el comprobante de una cuota por correo.
  // REEMPLAZAR LA FUNCIÓN COMPLETA EN convenios.js
 
