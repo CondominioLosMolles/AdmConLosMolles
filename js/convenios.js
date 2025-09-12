@@ -40,7 +40,19 @@ function ymdToDisplay(val) {
 }
 
 // Ya tienes esta para sumar meses; déjala como estaba:
-function addMonthsKeepDay(ymd, add) { /* … la tuya … */ }
+function addMonthsKeepDay(ymd, add) {
+  if (!ymd) return ymd;
+  const [y, m, d] = String(ymd).split("-").map(Number);
+  if (!y || !m || !d) return ymd;
+  const base = new Date(y, m - 1, 1);      // primer día del mes
+  base.setMonth(base.getMonth() + add);    // suma meses
+  const Y = base.getFullYear();
+  const M = base.getMonth() + 1;
+  const last = new Date(Y, M, 0).getDate();// último día de ese mes
+  const D = Math.min(d, last);             // “capar” al último día si hace falta
+  return `${Y}-${String(M).padStart(2,'0')}-${String(D).padStart(2,'0')}`;
+}
+
 
 // =================================================================
 //  ESTADO DEL MÓDULO
@@ -290,9 +302,9 @@ function aplicarFiltrosConvenios() {
 }
 
 function renderTabla(pag = 1) {
-  const tbody = document.getElementById("tbodyConvenios");
-  const info  = document.getElementById("regInfo");
-  const nav   = document.getElementById("paginacion");
+  const tbody = document.getElementById("tabla-convenios-body");
+  const info  = document.getElementById("registros-info-convenios");
+  const nav   = document.getElementById("paginacion-convenios");
   if (!tbody || !info || !nav) return;
 
   const ini = (pag - 1) * FILAS_POR_PAGINA;
@@ -348,6 +360,26 @@ function renderTabla(pag = 1) {
     abrirModalDetalle(id);
   };
 }
+// Alias para compatibilidad si en otra parte llaman renderizarTablaConvenios
+if (typeof renderizarTablaConvenios !== "function") {
+  function renderizarTablaConvenios(p) { return renderTabla(p); }
+}
+
+// Delegación estable para el botón "ojo"
+const tbody = document.getElementById("tbodyConvenios");
+if (tbody && !tbody.__detalleBound) {
+  tbody.__detalleBound = true;
+  tbody.addEventListener("click", (e) => {
+    const btn = e.target.closest(".btn-detalle");
+    if (!btn) return;
+    e.preventDefault();
+    abrirModalDetalle(btn.getAttribute("data-id"));
+  });
+}
+// --- Alias de compatibilidad (algunos lugares llaman renderizarTablaConvenios) ---
+window.renderizarTablaConvenios = window.renderizarTablaConvenios || function (p) {
+  return renderTabla(p);
+};
 
 
 // =================================================================
@@ -481,9 +513,6 @@ function abrirModalDetalle(idConvenio) {
   setTimeout(() => modalDetalleConvenio.show(), 10);
 }
 
-// =================================================================
-//  GUARDAR CONVENIO
-// =================================================================
 // ======================================================================
 //  GUARDAR CONVENIO (corrige el redondeo y mantiene fechas estables)
 // ======================================================================
