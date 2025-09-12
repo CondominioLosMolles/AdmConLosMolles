@@ -725,16 +725,16 @@ async function enviarComprobanteCuota(cuotaId, nParcela, convenioId) {
 function getEmailsDeParcela(nParcela) {
   const rx = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   const out = [];
-
   (residentesData || []).forEach(r => {
-    if (String(r?.[3]) === String(nParcela)) {   // D = N_Parcela (index 3)
-      const emailF = (r[5] || "").trim();        // F = Email (index 5)
-      if (rx.test(emailF) && !out.includes(emailF)) out.push(emailF);
-
-      const emailG = (r[6] || "").trim();        // G opcional
-      if (rx.test(emailG) && !out.includes(emailG)) out.push(emailG);
+    // D = índice 3 es N_Parcela; F = índice 5 es Email
+    if (String(r?.[3]) === String(nParcela)) {
+      const maybe = (r?.[5] || "").trim();
+      if (rx.test(maybe)) out.push(maybe);
     }
   });
+  return out;
+}
+
 
   return out;
 }
