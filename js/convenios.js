@@ -721,10 +721,20 @@ async function enviarComprobanteCuota(cuotaId, nParcela, convenioId) {
 }
 
 // Devuelve todos los emails encontrados en la fila de la parcela (col D = index 3)
-function getEmailDeParcela(nParcela) {
+// Devuelve los emails de la parcela desde "Residentes": D = N_Parcela, F = Email principal (G opcional)
+function getEmailsDeParcela(nParcela) {
   const rx = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  const fila = (residentesData || []).find(r => String(r?.[3]) === String(nParcela));
-  const email = fila?.[5]?.toString().trim() || "";
-  return rx.test(email) ? email : "";
-}
+  const out = [];
 
+  (residentesData || []).forEach(r => {
+    if (String(r?.[3]) === String(nParcela)) {   // D = N_Parcela (index 3)
+      const emailF = (r[5] || "").trim();        // F = Email (index 5)
+      if (rx.test(emailF) && !out.includes(emailF)) out.push(emailF);
+
+      const emailG = (r[6] || "").trim();        // G opcional
+      if (rx.test(emailG) && !out.includes(emailG)) out.push(emailG);
+    }
+  });
+
+  return out;
+}
