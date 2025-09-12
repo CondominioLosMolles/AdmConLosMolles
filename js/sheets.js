@@ -831,7 +831,7 @@ async function appendSheetData(sheetName, rows) {
 
 // Busca la fila de una cuota por ID (col A) y devuelve { rowIndex, values }
 async function findCuotaRowById(cuotaId) {
-  const range = `${SHEET_CUOTAS_CONVENIO}!A:J`;
+  const range = `${SHEET_CUOTAS_CONVENIO}!A:K`;
   const res = await gapi.client.sheets.spreadsheets.values.get({
     spreadsheetId: SPREADSHEET_ID, range
   });
