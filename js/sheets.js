@@ -800,10 +800,8 @@ async function agregarComunicacion(datos) {
 }
 // -------- FUNCIONES DE CORREO --------
 // === Ejecuta la función de Apps Script que envía el correo con el comprobante ===
-// -------- FUNCIONES DE CORREO --------
-// === Ejecuta la función de Apps Script que envía el correo con el comprobante ===
 window.enviarComprobanteCuota_GAS = async function (payload) {
-  // La corrección está en la siguiente línea: "SS" fue cambiado por "SCRIPT_ID"
+  // La corrección está en la siguiente línea, cambiando "SS" por "SCRIPT_ID"
   if (typeof SCRIPT_ID === "undefined" || !SCRIPT_ID) {
     throw new Error("Falta definir SCRIPT_ID en sheets.js");
   }
