@@ -933,21 +933,28 @@ async function subirComprobante(file, folderId) {
 async function attachReceiptAndLink(cuotaId, nParcela, file) {
   const folderId = await ensureFolderConvenioPagos(nParcela);
   const uploaded = await subirComprobante(file, folderId);
-  const link = uploaded.webViewLink || '';
-  await updateCuotaPago(cuotaId, 0, link); // solo link, sin sumar monto
-  return link;
-}
-// === Amplía el rango a A:K para leer también la nueva columna K (Fecha_Pago)
-async function findCuotaRowById(cuotaId) {
-  const range = `${SHEET_CUOTAS_CONVENIO}!A:K`;
-  const res = await gapi.client.sheets.spreadsheets.values.get({
-    spreadsheetId: SPREADSHEET_ID, range
-  });
-  const rows = res.result.values || [];
-  for (let i = 1; i < rows.length; i++) {
-    if (rows[i][0] === cuotaId) return { rowIndex: i + 1, values: rows[i] };
+
+  // Hacerlo visible con el enlace
+  try {
+    await gapi.client.drive.permissions.create({
+      fileId: uploaded.id,
+      resource: { role: "reader", type: "anyone" }
+    });
+  } catch (e) {
+    // si falla, igual seguimos con el link del owner
+    console.warn("No se pudo abrir permisos públicos para el comprobante:", e);
   }
-  return null;
+
+  // Recuperar link web visible
+  const info = await gapi.client.drive.files.get({
+    fileId: uploaded.id,
+    fields: "webViewLink,webContentLink"
+  });
+  const link = info.result.webViewLink || info.result.webContentLink || uploaded.webViewLink || "";
+
+  // Guardar el link en la cuota (columna J)
+  await updateCuotaPago(cuotaId, 0, link);
+  return link;
 }
 
 // === Ahora acepta fechaPago opcional y escribe en columna K
