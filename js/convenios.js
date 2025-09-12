@@ -685,55 +685,57 @@ async function enviarComprobanteCuota(cuotaId, nParcela, convenioId) {
 
 // Llama a Apps Script para enviar el correo (Execution API)
 // Envía el comprobante por correo SOLO al email de columna F de "Residentes"
-async function enviarComprobanteCuota(cuotaId, nParcela, convenioId) {
-try {
- showSpinner && showSpinner();
-
- const cuota = (cuotasData || []).find(c => c?.[0] === cuotaId);
- if (!cuota) throw new Error("No se encontró la cuota.");
- const link = cuota[9]; // J = Link_Comprobante
- if (!link) throw new Error("Primero adjunte un comprobante para esta cuota.");
-
- // Email único desde Residentes (col F). Si no hay, detenemos con mensaje claro.
- const email = getEmailDeParcela(nParcela); // ← devuelve string o ""
- if (!email) {
-   throw new Error(`No hay email en la hoja "Residentes" (columna F) para la parcela ${nParcela}.`);
- }
-
- const payload = {
-   cuotaId,
-   nParcela,
-   idConvenio: convenioId,
-   linkComprobante: link,
-   montoCuota: Number(cuota[5] || 0),
-   fechaVencimiento: String(cuota[4] || ""),
-   destinatarios: [email] // Apps Script espera arreglo de correos
- };
-
- await enviarComprobanteCuota_GAS(payload);
- mostrarMensaje && mostrarMensaje(`Comprobante enviado a ${email}.`, "success");
-} catch (e) {
- console.error(e);
- mostrarMensaje && mostrarMensaje(e.message || "No se pudo enviar el comprobante.", "error");
-} finally {
- hideSpinner && hideSpinner();
-}
-}
-
-// Devuelve el email principal (columna F = índice 5) de la parcela en "Residentes".
+// === CORREOS / COMPROBANTE ===
+// Devuelve el email principal de la parcela desde "Residentes":
+// D = N_Parcela (índice 3), F = Email (índice 5)
 function getEmailDeParcela(nParcela) {
-const rx = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-for (const r of (residentesData || [])) {
- if (String(r?.[3]) === String(nParcela)) {   // D = N_Parcela
-   const email = (r?.[5] || "").trim();       // F = Email
-   return rx.test(email) ? email : "";
- }
-}
-return "";
+  const rx = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  for (const r of (residentesData || [])) {
+    if (String(r?.[3]) === String(nParcela)) {
+      const email = (r?.[5] || "").trim();
+      return rx.test(email) ? email : "";
+    }
+  }
+  return "";
 }
 
-// Compatibilidad: si en otro lado esperan una lista, devolvemos [email] o []
+// Compatibilidad: si en otro lado esperan lista, devolvemos [email] o []
 function getEmailsDeParcela(nParcela) {
-const e = getEmailDeParcela(nParcela);
-return e ? [e] : [];
+  const e = getEmailDeParcela(nParcela);
+  return e ? [e] : [];
+}
+
+// Envía el comprobante por correo SOLO al email de columna F de "Residentes"
+async function enviarComprobanteCuota(cuotaId, nParcela, convenioId) {
+  try {
+    showSpinner && showSpinner();
+
+    const cuota = (cuotasData || []).find(c => c?.[0] === cuotaId);
+    if (!cuota) throw new Error("No se encontró la cuota.");
+    const link = cuota[9]; // J = Link_Comprobante
+    if (!link) throw new Error("Primero adjunte un comprobante para esta cuota.");
+
+    const email = getEmailDeParcela(nParcela);
+    if (!email) {
+      throw new Error(`No hay email en "Residentes" (columna F) para la parcela ${nParcela}.`);
+    }
+
+    const payload = {
+      cuotaId,
+      nParcela,
+      idConvenio: convenioId,
+      linkComprobante: link,
+      montoCuota: Number(cuota[5] || 0),
+      fechaVencimiento: String(cuota[4] || ""),
+      destinatarios: [email]            // Apps Script espera arreglo
+    };
+
+    await enviarComprobanteCuota_GAS(payload);     // definida en sheets.js
+    mostrarMensaje && mostrarMensaje(`Comprobante enviado a ${email}.`, "success");
+  } catch (e) {
+    console.error(e);
+    mostrarMensaje && mostrarMensaje(e.message || "No se pudo enviar el comprobante.", "error");
+  } finally {
+    hideSpinner && hideSpinner();
+  }
 }
