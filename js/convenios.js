@@ -731,11 +731,8 @@ function getEmailDeParcela(nParcela) {
 
 /**
  * Envía el comprobante de una cuota por correo.
- * Si no encuentra un email en la hoja "Residentes", pide uno al usuario.
- * @param {string} cuotaId - El ID de la cuota (ej: "Q-C-7-97716-1").
- * @param {string} nParcela - El N° de la parcela (ej: "7").
- * @param {string} convenioId - El ID del convenio (ej: "C-7-97716").
- */
+ // REEMPLAZAR LA FUNCIÓN COMPLETA EN convenios.js
+
 async function enviarComprobanteCuota(cuotaId, nParcela, convenioId) {
   try {
     showSpinner && showSpinner();
@@ -745,7 +742,7 @@ async function enviarComprobanteCuota(cuotaId, nParcela, convenioId) {
       throw new Error("No se encontró la información de la cuota seleccionada.");
     }
 
-    const linkComprobante = cuota[9]; // Columna J: Link_Comprobante
+    const linkComprobante = cuota[9]; // Columna J
     if (!linkComprobante) {
       throw new Error("Para enviar, primero debe adjuntar un comprobante a esta cuota.");
     }
@@ -756,34 +753,41 @@ async function enviarComprobanteCuota(cuotaId, nParcela, convenioId) {
     if (emailPrincipal) {
       destinatarios.push(emailPrincipal);
     } else {
-      // Si no hay email, se lo pedimos al usuario.
       const emailManual = prompt(
         `La parcela ${nParcela} no tiene un email registrado en "Residentes".\n` +
-        `Por favor, ingrese el correo de destino:`,
-        ""
+        `Por favor, ingrese el correo de destino:`, ""
       );
       if (emailManual && emailManual.trim()) {
         destinatarios.push(emailManual.trim());
       } else {
-        // Si el usuario cancela o no ingresa nada, detenemos la operación.
         throw new Error("Operación cancelada. No se especificó un destinatario.");
       }
     }
+    
+    // --- INICIO DE LA LÓGICA UNIFICADA ---
+    const destinatariosStr = destinatarios.join(",");
+    const asunto = `Comprobante de pago – Parcela ${nParcela} – Cuota ${String(cuotaId || "").split("-").pop()}`;
+    const monto = Number(cuota[5] || 0).toLocaleString("es-CL");
+    const fechaVenc = ymdToDisplay(cuota[4] || "");
 
-    // Preparamos los datos para enviar a Google Apps Script
-    const payload = {
-      cuotaId,
-      nParcela,
-      idConvenio: convenioId,
-      linkComprobante: linkComprobante,
-      montoCuota: Number(cuota[5] || 0),         // Columna F: Monto_Cuota
-      fechaVencimiento: String(cuota[4] || ""), // Columna E: Fecha_Vencimiento
-      destinatarios: destinatarios              // Apps Script espera un arreglo
-    };
+    const cuerpoHtml = '' +
+      '<p>Estimado/a,</p>' +
+      '<p>Adjuntamos el comprobante del pago registrado para su convenio.</p>' +
+      '<ul>' +
+      '<li><b>Parcela:</b> ' + nParcela + '</li>' +
+      '<li><b>ID Convenio:</b> ' + convenioId + '</li>' +
+      '<li><b>ID Cuota:</b> ' + cuotaId + '</li>' +
+      '<li><b>Monto de la cuota:</b> $' + monto + '</li>' +
+      '<li><b>Fecha de vencimiento:</b> ' + fechaVenc + '</li>' +
+      '</ul>' +
+      '<p><a href="' + linkComprobante + '">Abrir comprobante</a></p>' +
+      '<p>Saludos cordiales.</p>';
 
-    // La función `enviarComprobanteCuota_GAS` está definida en sheets.js
-    await enviarComprobanteCuota_GAS(payload);
-    mostrarMensaje && mostrarMensaje(`Comprobante enviado a ${destinatarios.join(", ")}.`, "success");
+    // Se llama a la función genérica, igual que en Gastos Comunes
+    await enviarCorreo(destinatariosStr, asunto, cuerpoHtml);
+    // --- FIN DE LA LÓGICA UNIFICADA ---
+    
+    mostrarMensaje && mostrarMensaje(`Comprobante enviado a ${destinatariosStr}.`, "success");
 
   } catch (e) {
     console.error(e);
