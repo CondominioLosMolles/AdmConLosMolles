@@ -530,7 +530,7 @@ async function guardarConvenio(evt) {
       Fecha_Inicio: firstYMD
     };
 
-    const URL_DE_TU_SCRIPT = "https://script.google.com/macros/s/AKfycbyW6NCBP75-Vp_MvMR0bYXTLjJY6cRmfei3k3paw8rB9l2_sqUwu4-7MqLMMsZ72NddBw/exec";
+    const URL_DE_TU_SCRIPT = "https://script.google.com/macros/s/AKfycbx774iPzBIhQPc7lxoCdj04p0luLxKugKgeUGcNuIsTt_nPlHkIE3NQ275NHYptI7Hy3g/exec";
 
     const response = await fetch(URL_DE_TU_SCRIPT, {
       method: 'POST',
