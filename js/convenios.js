@@ -753,26 +753,25 @@ async function enviarComprobanteCuota(cuotaId, nParcela, convenioId) {
 }
 
 // EN TU ARCHIVO convenios.js
-// Esta es la función "puente" que faltaba para conectar con el backend.
-
 async function enviarCorreo(destinatario, asunto, cuerpoHtml) {
-  // Asegúrate de que la URL de tu script esté disponible.
-  // Reemplaza esto con la URL de tu implementación más reciente.
+  // 1. URL de tu script (ya la tienes bien)
   const URL_DE_TU_SCRIPT = "https://script.google.com/macros/s/AKfycbx774iPzBIhQPc7lxoCdj04p0luLxKugKgeUGcNuIsTt_nPlHkIE3NQ275NHYptI7Hy3g/exec";
-  
-  if (!URL_DE_TU_SCRIPT || URL_DE_TU_SCRIPT.includes("https://script.google.com/macros/s/AKfycbx774iPzBIhQPc7lxoCdj04p0luLxKugKgeUGcNuIsTt_nPlHkIE3NQ275NHYptI7Hy3g/exec")) {
+
+  // 2. ===== LA CONDICIÓN CORREGIDA =====
+  // Ahora solo verifica que la URL no esté vacía.
+  if (!URL_DE_TU_SCRIPT) {
     throw new Error("La URL del script no está configurada.");
   }
+  // ===================================
 
+  // 3. El resto de la función (está correcta)
   const response = await fetch(URL_DE_TU_SCRIPT, {
     method: 'POST',
     mode: 'cors',
     headers: { 'Content-Type': 'text/plain;charset=utf-8' },
     body: JSON.stringify({
-      // El nombre EXACTO de la función en Google Apps Script que queremos ejecutar
-      functionName: 'enviarCorreoComprobante_GS', 
-      // Los parámetros que esa función espera: destinatario, asunto y cuerpo
-      parameters: [destinatario, asunto, cuerpoHtml] 
+      functionName: 'enviarCorreoComprobante_GS',
+      parameters: [destinatario, asunto, cuerpoHtml]
     })
   });
 
