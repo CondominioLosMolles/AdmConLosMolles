@@ -146,8 +146,33 @@ async function cargarContabilidad() {
 
     // ▼▼▼ INICIO: CÓDIGO HTML MODIFICADO ▼▼▼
     // Se actualiza el modal de "Agregar Otro Ingreso" para que sea completo, incluyendo el campo para adjuntar archivos.
-    main.innerHTML = `
+   main.innerHTML = `
     <style>
+      /* ▼▼▼ ESTILOS AÑADIDOS PARA CORREGIR EL MODAL ▼▼▼ */
+      .modal {
+        position: fixed; /* Mantiene el modal en su lugar, incluso al hacer scroll */
+        z-index: 1000;   /* Asegura que el modal esté por encima de otros contenidos */
+        left: 0;
+        top: 0;
+        width: 100%;     /* Ocupa toda la pantalla para el fondo oscuro */
+        height: 100%;
+        overflow: auto;  /* Habilita el scroll si el contenido es muy grande */
+        background-color: rgba(0,0,0,0.6); /* Fondo oscuro semitransparente */
+        display: flex;   /* Facilita el centrado del contenido */
+        align-items: center;
+        justify-content: center;
+      }
+
+      .modal-content {
+        background-color: #fff;
+        padding: 25px;
+        border-radius: 8px;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        width: 90%; /* Ancho responsivo */
+        max-width: 800px; /* Ancho máximo para pantallas grandes */
+      }
+      /* ▲▲▲ FIN DE LOS ESTILOS AÑADIDOS ▲▲▲ */
+
       .summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 2rem; }
       .summary-card { background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
       .summary-card h4 { margin-top: 0; font-size: 1rem; color: #6c757d; }
@@ -184,12 +209,12 @@ async function cargarContabilidad() {
             <div style="display:flex; flex-wrap:wrap; gap:20px; align-items:flex-end;">
                 <div>
                     <label><b>Saldo Inicial de Caja</b></label>
-                    <input type="number" id="inputSaldoInicial" value="${parseFloat(config.Saldo_Inicial_Caja || 0)}" disabled>
+                    <input type="number" id="inputSaldoInicial" value="\${parseFloat(config.Saldo_Inicial_Caja || 0)}" disabled>
                 </div>
                 <div>
                     <label><b>Fecha de Saldo</b></label>
-                    <span id="fecha-saldo-display" style="display: inline-block; padding: 8px; border: 1px solid #ccc; border-radius: 4px; background: #eee;">${fechaSaldoInicial}</span>
-                    <input type="date" id="inputFechaSaldo" value="${config.Fecha_Saldo_Inicial || ''}" style="display:none;">
+                    <span id="fecha-saldo-display" style="display: inline-block; padding: 8px; border: 1px solid #ccc; border-radius: 4px; background: #eee;">\${fechaSaldoInicial}</span>
+                    <input type="date" id="inputFechaSaldo" value="\${config.Fecha_Saldo_Inicial || ''}" style="display:none;">
                 </div>
                 <div>
                     <button class="btn secondary" id="btnEditarSaldo">Editar</button>
@@ -293,7 +318,7 @@ async function cargarContabilidad() {
             <div style="flex: 1 1 180px;"><label>Categoría</label>
                 <select name="categoria" required>
                     <option value="" disabled selected>-- Seleccione --</option>
-                    ${categoriasEgresos.map(cat => `<option value="${cat}">${cat}</option>`).join('')}
+                    \${categoriasEgresos.map(cat => `<option value="\${cat}">\${cat}</option>`).join('')}
                 </select>
             </div>
             <div style="flex: 1 1 180px;"><label>Mes de Pago</label>
