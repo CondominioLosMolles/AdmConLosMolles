@@ -269,269 +269,222 @@ async function cargarGastosComunes() {
         }
     }
     
-    // =======================================================
-    // RENDERIZADO DEL HTML PRINCIPAL
-    // =======================================================
+   // =======================================================
+// RENDERIZADO DEL HTML PRINCIPAL
+// =======================================================
 
-   /* ... (código anterior sin cambios) ... */
-
-    const main = document.getElementById('main-content');
-    main.innerHTML = `
-        <style>
-            .estado-pagado { background-color: #198754; color: white; } 
-            .estado-moroso { background-color: #dc3545; color: white; } 
-            .estado-abono { background-color: #ffc107; color: #333; } 
-            .estado-en-convenio { background-color: #0dcaf0; color: #000; }
-            .fila-clicable:hover { background-color: #e9f1fb; cursor: pointer; } 
-            #detalle-pago-grid { display: grid; grid-template-columns: auto 1fr; gap: 10px 20px; align-items: center;} 
-            #detalle-pago-grid b { grid-column: 1; text-align: right; } 
-            #detalle-pago-grid span { grid-column: 2; text-align: left; word-break: break-all; } 
-            .suggestion-item { padding: 8px 12px; cursor: pointer; } 
-            .suggestion-item:hover { background-color: #e9f1fb; } 
-            #table-pagos { table-layout: fixed; width: 100%; border-collapse: collapse; } 
-            #table-pagos th { position: relative; } 
-            .resizer { position: absolute; top: 0; right: -2px; width: 5px; cursor: col-resize; user-select: none; height: 100%; z-index: 1;} 
-            .resizer:hover { border-right: 2px solid #007bff; } 
-            .comprobante-enviado { color: green; font-size: 1.2rem; font-weight: bold; text-align: center; } 
-            #convenio-summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 15px; } 
-            #convenio-summary-grid > div { background-color: #f8f9fa; padding: 15px; border-radius: 8px; text-align: center; } 
-            #convenio-summary-grid > div > span { display: block; font-size: 1.4em; font-weight: bold; } 
-            .saldo-info { padding: 10px; border-radius: 5px; margin-top: 5px; font-weight: bold; text-align: center; } 
-            .saldo-convenio { background-color: #fff8e1; color: #f57f17; } 
-            .saldo-favor { background-color: #e8f5e9; color: #2e7d32; }
-            .modal {
-                position: fixed;
-                top: 0;
-                left: 0;
-                width: 100%;
-                height: 100%;
-                background-color: rgba(0, 0, 0, 0.5);
-                display: flex; /* Centrado con flexbox */
-                justify-content: center; /* Centrado horizontal */
-                align-items: center; /* Centrado vertical */
-                z-index: 1000;
-            }
-            .modal-content.large {
-                background-color: #fff;
-                padding: 25px;
-                border-radius: 8px;
-                box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-                width: 90%;
-                max-width: 800px;
-                overflow-y: auto;
-            }
-        </style>
-        <div style="display:flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;"><h2>Gastos Comunes</h2></div>
-        <div style="display: flex; flex-wrap: wrap; gap: 24px; align-items: stretch;">
-            <section class="widget" style="flex: 1; min-width: 350px; display: flex; flex-direction: column; justify-content: space-between;">
-                <div>
-                    <h4 style="margin-top:0;">Filtros de Búsqueda</h4>
-                    <div style="display: flex; flex-wrap: wrap; gap: 20px; margin-bottom: 20px;">
-                        <div style="flex: 1; min-width: 150px;">
-                            <label for="filtroParcela"><b>N° Parcela:</b></label>
-                            <input list="lista-parcelas" id="filtroParcela" placeholder="1-26..." style="width:100%;">
-                            <datalist id="lista-parcelas">${Array.from({ length: 26 }, (_, i) => `<option value="${i + 1}"></option>`).join('')}</datalist>
-                        </div>
-                        <div style="flex: 1; min-width: 150px;">
-                            <label for="filtroAnio"><b>Año:</b></label>
-                            <input type="number" id="filtroAnio" value="${new Date().getFullYear()}" style="width:100%;">
-                        </div>
+const main = document.getElementById('main-content');
+main.innerHTML = `
+    <style>
+        .estado-pagado { background-color: #198754; color: white; } 
+        .estado-moroso { background-color: #dc3545; color: white; } 
+        .estado-abono { background-color: #ffc107; color: #333; } 
+        .estado-en-convenio { background-color: #0dcaf0; color: #000; }
+        .fila-clicable:hover { background-color: #e9f1fb; cursor: pointer; } 
+        #detalle-pago-grid { display: grid; grid-template-columns: auto 1fr; gap: 10px 20px; align-items: center;} 
+        #detalle-pago-grid b { grid-column: 1; text-align: right; } 
+        #detalle-pago-grid span { grid-column: 2; text-align: left; word-break: break-all; } 
+        .suggestion-item { padding: 8px 12px; cursor: pointer; } 
+        .suggestion-item:hover { background-color: #e9f1fb; } 
+        #table-pagos { table-layout: fixed; width: 100%; border-collapse: collapse; } 
+        #table-pagos th { position: relative; } 
+        .resizer { position: absolute; top: 0; right: -2px; width: 5px; cursor: col-resize; user-select: none; height: 100%; z-index: 1;} 
+        .resizer:hover { border-right: 2px solid #007bff; } 
+        .comprobante-enviado { color: green; font-size: 1.2rem; font-weight: bold; text-align: center; } 
+        #convenio-summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 15px; } 
+        #convenio-summary-grid > div { background-color: #f8f9fa; padding: 15px; border-radius: 8px; text-align: center; } 
+        #convenio-summary-grid > div > span { display: block; font-size: 1.4em; font-weight: bold; } 
+        .saldo-info { padding: 10px; border-radius: 5px; margin-top: 5px; font-weight: bold; text-align: center; } 
+        .saldo-convenio { background-color: #fff8e1; color: #f57f17; } 
+        .saldo-favor { background-color: #e8f5e9; color: #2e7d32; }
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            display: flex; /* Centrado con flexbox */
+            justify-content: center; /* Centrado horizontal */
+            align-items: center; /* Centrado vertical */
+            z-index: 1000;
+        }
+        .modal-content.large {
+            background-color: #fff;
+            padding: 25px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            width: 90%;
+            max-width: 800px;
+            overflow-y: auto;
+        }
+    </style>
+    <div style="display:flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;"><h2>Gastos Comunes</h2></div>
+    <div style="display: flex; flex-wrap: wrap; gap: 24px; align-items: stretch;">
+        <section class="widget" style="flex: 1; min-width: 350px; display: flex; flex-direction: column; justify-content: space-between;">
+            <div>
+                <h4 style="margin-top:0;">Filtros de Búsqueda</h4>
+                <div style="display: flex; flex-wrap: wrap; gap: 20px; margin-bottom: 20px;">
+                    <div style="flex: 1; min-width: 150px;">
+                        <label for="filtroParcela"><b>N° Parcela:</b></label>
+                        <input list="lista-parcelas" id="filtroParcela" placeholder="1-26..." style="width:100%;">
+                        <datalist id="lista-parcelas">${Array.from({ length: 26 }, (_, i) => `<option value="${i + 1}"></option>`).join('')}</datalist>
+                    </div>
+                    <div style="flex: 1; min-width: 150px;">
+                        <label for="filtroAnio"><b>Año:</b></label>
+                        <input type="number" id="filtroAnio" value="${new Date().getFullYear()}" style="width:100%;">
                     </div>
                 </div>
-                <div style="margin-top: auto; display: flex; flex-direction: column; align-items: flex-start; gap: 10px;">
-                    <button id="btnAbrirModalGasto" class="btn">Agregar Gasto Común</button>
-                    <button id="btnAbrirModalComprobante" class="btn secondary">Enviar Comprobante</button>
-                </div>
-            </section>
-            <section class="widget" style="flex: 2; min-width: 450px;"><h4 style="margin-top:0;">Configuración de TIMC</h4><div style="display: flex; align-items: flex-end; gap: 16px; margin-bottom: 20px;"><div style="min-width: 120px;"><label for="inputTMC"><b>TIMC (%)</b></label><input type="number" id="inputTMC" step="0.1" placeholder="Ej: 25"></div><div><label for="selectMesTMC"><b>Mes</b></label><select id="selectMesTMC" style="padding: 11px 10px;">${MESES.map((m, i) => `<option value="${i + 1}">${m}</option>`).join('')}</select></div><button id="btnGuardarTMC" class="btn">Guardar en Sheet</button></div><div id="timc-display"><h5 style="margin-top:0; margin-bottom: 10px;">TIMC Guardado para el año seleccionado:</h5><div id="timc-list-horizontal" style="display: flex; flex-wrap: wrap; gap: 15px; background: #e9f1fb; padding: 12px; border-radius: 8px;"></div></div></section>
-        </div>
-        <section id="widget-convenio" class="widget" style="display:none; margin-top: 2rem;">
-            <h3 style="margin-top:0;">Estado de Convenio de Pago</h3>
-            <div id="convenio-summary-grid"></div>
-            <h4 style="margin-top: 1.5rem;">Historial de Abonos (Año Seleccionado)</h4>
-            <div class="table-container"><table class="table"><thead id="thead-abonos"></thead><tbody id="tbody-abonos"></tbody></table></div>
+            </div>
+            <div style="margin-top: auto; display: flex; flex-direction: column; align-items: flex-start; gap: 10px;">
+                <button id="btnAbrirModalGasto" class="btn">Agregar Gasto Común</button>
+                <button id="btnAbrirModalComprobante" class="btn secondary">Enviar Comprobante</button>
+            </div>
         </section>
-        <section id="detalle-gastos" style="margin-top: 2rem;"><h3>Detalle de Pagos Registrados</h3><div class="table-container"><table id="table-pagos" class="table"><thead id="thead-gastos"></thead><tbody id="tbody-gastos"></tbody></table></div></section>
-        
-        <div id="modalGC" class="modal" style="display:none;">
-            <div class="modal-content large">
-                <h3>Agregar Gasto Común</h3>
-                <form id="formGastoComun">
-                    <div class="form-grid">
-                        <div>
-                            <label>N° Parcela</label>
-                            <input type="number" name="N_Parcela" id="inputNParcela" min="1" max="26" required>
-                            <div style="position: relative;">
-                                <label>Nombre Residente</label>
-                                <input type="text" name="Nombre_Residente" id="inputNombreResidente" autocomplete="off" required>
-                                <div id="nombre-suggestions" style="display: none; position: absolute; background-color: white; border: 1px solid #ccc; max-height: 150px; overflow-y: auto; width: 100%; z-index: 10;"></div>
-                            </div>
-                            <label>Valor Gasto Común</label>
-                            <input type="text" name="Valor_Gasto_Comun" id="inputValorGastoComun" readonly style="background:#eee;">
-                            <div id="saldo-convenio-info" class="saldo-info saldo-convenio" style="display:none;"></div>
-                            <div id="saldo-favor-info" class="saldo-info saldo-favor" style="display:none;"></div>
-                            <div style="display:flex; gap: 15px;">
-                                <div style="flex: 1;"><label>Mes que Paga (Período)</label><select name="Periodo" required>${MESES.map((m, i) => `<option value="${i}">${m}</option>`).join('')}</select></div>
-                                <div style="flex: 1;"><label>Año que Paga</label><input type="number" name="Anio_Periodo" id="inputAnioPeriodo" required></div>
-                            </div>
+        <section class="widget" style="flex: 2; min-width: 450px;"><h4 style="margin-top:0;">Configuración de TIMC</h4><div style="display: flex; align-items: flex-end; gap: 16px; margin-bottom: 20px;"><div style="min-width: 120px;"><label for="inputTMC"><b>TIMC (%)</b></label><input type="number" id="inputTMC" step="0.1" placeholder="Ej: 25"></div><div><label for="selectMesTMC"><b>Mes</b></label><select id="selectMesTMC" style="padding: 11px 10px;">${MESES.map((m, i) => `<option value="${i + 1}">${m}</option>`).join('')}</select></div><button id="btnGuardarTMC" class="btn">Guardar en Sheet</button></div><div id="timc-display"><h5 style="margin-top:0; margin-bottom: 10px;">TIMC Guardado para el año seleccionado:</h5><div id="timc-list-horizontal" style="display: flex; flex-wrap: wrap; gap: 15px; background: #e9f1fb; padding: 12px; border-radius: 8px;"></div></div></section>
+    </div>
+    <section id="widget-convenio" class="widget" style="display:none; margin-top: 2rem;">
+        <h3 style="margin-top:0;">Estado de Convenio de Pago</h3>
+        <div id="convenio-summary-grid"></div>
+        <h4 style="margin-top: 1.5rem;">Historial de Abonos (Año Seleccionado)</h4>
+        <div class="table-container"><table class="table"><thead id="thead-abonos"></thead><tbody id="tbody-abonos"></tbody></table></div>
+    </section>
+    <section id="detalle-gastos" style="margin-top: 2rem;"><h3>Detalle de Pagos Registrados</h3><div class="table-container"><table id="table-pagos" class="table"><thead id="thead-gastos"></thead><tbody id="tbody-gastos"></tbody></table></div></section>
+    
+    <div id="modalGC" class="modal" style="display:none;">
+        <div class="modal-content large">
+            <h3>Agregar Gasto Común</h3>
+            <form id="formGastoComun">
+                <div class="form-grid">
+                    <div>
+                        <label>N° Parcela</label>
+                        <input type="number" name="N_Parcela" id="inputNParcela" min="1" max="26" required>
+                        <div style="position: relative;">
+                            <label>Nombre Residente</label>
+                            <input type="text" name="Nombre_Residente" id="inputNombreResidente" autocomplete="off" required>
+                            <div id="nombre-suggestions" style="display: none; position: absolute; background-color: white; border: 1px solid #ccc; max-height: 150px; overflow-y: auto; width: 100%; z-index: 10;"></div>
                         </div>
-                        <div style="border-left: 1px solid #ddd; padding-left: 20px;">
-                            <label>Fecha de Pago</label>
-                            <input type="date" name="Fecha_Pago" required>
-                            <label>Monto Pagado G.C. (depósito/efectivo)</label>
-                            <input type="number" name="Monto_Pagado" min="0" step="1" required placeholder="CLP" value="0">
-                            <label>Usar Saldo a Favor</label>
-                            <input type="number" name="Saldo_Favor_Usado" min="0" step="1" placeholder="CLP" value="0">
-                            <label>Abono a Convenio (CLP)</label>
-                            <input type="number" name="Abono_Convenio" min="0" step="1" placeholder="CLP" value="0">
-                            <label>Método de Pago</label>
-                            <select name="Metodo_Pago" required><option value="Transferencia">Transferencia</option><option value="Efectivo">Efectivo</option></select>
+                        <label>Valor Gasto Común</label>
+                        <input type="text" name="Valor_Gasto_Comun" id="inputValorGastoComun" readonly style="background:#eee;">
+                        <div id="saldo-convenio-info" class="saldo-info saldo-convenio" style="display:none;"></div>
+                        <div id="saldo-favor-info" class="saldo-info saldo-favor" style="display:none;"></div>
+                        <div style="display:flex; gap: 15px;">
+                            <div style="flex: 1;"><label>Mes que Paga (Período)</label><select name="Periodo" required>${MESES.map((m, i) => `<option value="${i}">${m}</option>`).join('')}</select></div>
+                            <div style="flex: 1;"><label>Año que Paga</label><input type="number" name="Anio_Periodo" id="inputAnioPeriodo" required></div>
                         </div>
                     </div>
-                    <div style="width: 100%; margin-top: 20px; padding-top: 15px; border-top: 1px solid #ddd;">
-                        <label>Descripción / Nota del Pago (Opcional)</label>
-                        <textarea name="Descripcion_Pago" rows="2" placeholder="Ej: Pago parcial, solicitud de uso de saldo a favor, etc."></textarea>
-                        <label style="margin-top:15px;">Adjuntar Comprobante (Opcional)</label>
-                        <input type="file" name="Comprobante" accept=".pdf,.jpg,.jpeg,.png">
-                    </div>
-                    <div style="text-align: right; margin-top: 20px;">
-                        <button class="btn secondary" type="button" id="btnCerrarModal">Cancelar</button>
-                        <button class="btn" type="submit">Guardar Gasto</button>
-                    </div>
-                </form>
-            </div>
-        </div>
-        
-        <div id="modalComprobante" class="modal" style="display:none;">
-            <div class="modal-content large">
-                <h3>Enviar Comprobante por Correo</h3>
-                <form id="formEnviarComprobante" style="display:flex; flex-direction:column; gap:15px;"><div style="display:flex; gap: 15px; flex-wrap: wrap;"><div style="flex: 1; min-width: 120px;"><label><b>N° Parcela</b></label><input type="number" id="inputNParcelaComprobante" min="1" max="26" required style="width:100%;"></div><div style="flex: 2; min-width: 200px;"><label><b>Residente(s)</b></label><input type="text" id="inputNombreResidenteComprobante" readonly style="width:100%; background:#eee;"></div></div><div id="periodo-selector-container" style="display: none;"><label><b>Seleccione el Comprobante</b></label><select id="selectPeriodoComprobante" style="width:100%; padding: 11px 10px;"></select></div><div><label><b>Email(s) Destinatario</b></label><input type="email" id="inputEmailComprobante" readonly style="width:100%; background:#eee;"></div><div><label><b>Asunto</b></label><input type="text" id="inputAsuntoComprobante" readonly style="width:100%; background:#eee;"></div><div><label><b>Previsualización del Correo</b></label><div id="divCuerpoComprobante" style="width:100%; height: 250px; background:#f8f9fa; border: 1px solid #ccc; border-radius: 4px; padding: 10px; overflow-y: auto;"><span style="color: #6c757d;">Ingrese un N° de Parcela para generar la previsualización.</span></div></div><div style="text-align: right; margin-top: 10px;"><button class="btn secondary" type="button" id="btnCerrarModalComprobante">Cancelar</button><button class="btn" type="submit">Enviar Correo</button></div></form>
-            </div>
-        </div>
-        <div id="modalDetallePago" class="modal" style="display:none;">
-            <div class="modal-content">
-                <h3 style="margin-top:0;">Detalle Completo del Registro</h3>
-                <div id="contenidoDetallePago" style="margin-bottom: 20px;"></div>
-                <div style="text-align: right;"><button id="btnCerrarModalDetalle" class="btn secondary">Cerrar</button></div>
-            </div>
-        </div>
-        
-        <div id="modalConvenio" class="modal" style="display:none;">
-            <div class="modal-content">
-                <h3 style="margin-top:0;">Administrar Convenio de Pago</h3>
-                <form id="formConvenio">
-                    <input type="hidden" id="convenioNParcela">
-                    <div>
-                        <label>Deuda Total a convenir (CLP)</label>
-                        <input type="number" id="convenioDeudaTotal" required>
-                    </div>
-                    <div class="form-grid" style="margin-top:15px;">
-                        <div>
-                            <label>Nº de Cuotas</label>
-                            <input type="number" id="convenioCuotas" min="1" required>
-                        </div>
-                        <div>
-                            <label>Valor de cada Cuota (CLP)</label>
-                            <input type="number" id="convenioValorCuota" readonly style="background:#eee;">
-                        </div>
-                    </div>
-                    <div style="margin-top:15px;">
-                        <label>Fecha de Inicio del Convenio</label>
-                        <input type="date" id="convenioFechaInicio" required>
-                    </div>
-                    <div style="text-align: right; margin-top: 20px;">
-                        <button class="btn secondary" type="button" id="btnCerrarModalConvenio">Cancelar</button>
-                        <button class="btn" type="submit">Guardar Convenio</button>
-                    </div>
-                </form>
-            </div>
-        </div>
-        
-        <div id="modalAbonar" class="modal" style="display:none;">
-            <div class="modal-content">
-                <h3>Abonar a Deuda Existente</h3>
-                <form id="formAbonar">
-                    <input type="hidden" id="abonarIdPago">
-                    <div>
-                        <label>Período</label>
-                        <input type="text" id="abonarPeriodo" readonly>
-                    </div>
-                    <div>
-                        <label>Deuda Pendiente</label>
-                        <input type="text" id="abonarDeudaPendiente" readonly>
-                    </div>
-                    <div>
-                        <label>Monto a Abonar (CLP)</label>
-                        <input type="number" id="abonarMonto" min="0" step="1" required>
-                    </div>
-                    <div>
+                    <div style="border-left: 1px solid #ddd; padding-left: 20px;">
                         <label>Fecha de Pago</label>
-                        <input type="date" id="abonarFechaPago" required>
-                    </div>
-                    <div>
+                        <input type="date" name="Fecha_Pago" required>
+                        <label>Monto Pagado G.C. (depósito/efectivo)</label>
+                        <input type="number" name="Monto_Pagado" min="0" step="1" required placeholder="CLP" value="0">
+                        <label>Usar Saldo a Favor</label>
+                        <input type="number" name="Saldo_Favor_Usado" min="0" step="1" placeholder="CLP" value="0">
+                        <label>Abono a Convenio (CLP)</label>
+                        <input type="number" name="Abono_Convenio" min="0" step="1" placeholder="CLP" value="0">
                         <label>Método de Pago</label>
-                        <select id="abonarMetodoPago" required>
-                            <option value="Transferencia">Transferencia</option>
-                            <option value="Efectivo">Efectivo</option>
-                        </select>
+                        <select name="Metodo_Pago" required><option value="Transferencia">Transferencia</option><option value="Efectivo">Efectivo</option></select>
+                    </div>
+                </div>
+                <div style="width: 100%; margin-top: 20px; padding-top: 15px; border-top: 1px solid #ddd;">
+                    <label>Descripción / Nota del Pago (Opcional)</label>
+                    <textarea name="Descripcion_Pago" rows="2" placeholder="Ej: Pago parcial, solicitud de uso de saldo a favor, etc."></textarea>
+                    <label style="margin-top:15px;">Adjuntar Comprobante (Opcional)</label>
+                    <input type="file" name="Comprobante" accept=".pdf,.jpg,.jpeg,.png">
+                </div>
+                <div style="text-align: right; margin-top: 20px;">
+                    <button class="btn secondary" type="button" id="btnCerrarModal">Cancelar</button>
+                    <button class="btn" type="submit">Guardar Gasto</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <div id="modalComprobante" class="modal" style="display:none;">
+        <div class="modal-content large">
+            <h3>Enviar Comprobante por Correo</h3>
+            <form id="formEnviarComprobante" style="display:flex; flex-direction:column; gap:15px;"><div style="display:flex; gap: 15px; flex-wrap: wrap;"><div style="flex: 1; min-width: 120px;"><label><b>N° Parcela</b></label><input type="number" id="inputNParcelaComprobante" min="1" max="26" required style="width:100%;"></div><div style="flex: 2; min-width: 200px;"><label><b>Residente(s)</b></label><input type="text" id="inputNombreResidenteComprobante" readonly style="width:100%; background:#eee;"></div></div><div id="periodo-selector-container" style="display: none;"><label><b>Seleccione el Comprobante</b></label><select id="selectPeriodoComprobante" style="width:100%; padding: 11px 10px;"></select></div><div><label><b>Email(s) Destinatario</b></label><input type="email" id="inputEmailComprobante" readonly style="width:100%; background:#eee;"></div><div><label><b>Asunto</b></label><input type="text" id="inputAsuntoComprobante" readonly style="width:100%; background:#eee;"></div><div><label><b>Previsualización del Correo</b></label><div id="divCuerpoComprobante" style="width:100%; height: 250px; background:#f8f9fa; border: 1px solid #ccc; border-radius: 4px; padding: 10px; overflow-y: auto;"><span style="color: #6c757d;">Ingrese un N° de Parcela para generar la previsualización.</span></div></div><div style="text-align: right; margin-top: 10px;"><button class="btn secondary" type="button" id="btnCerrarModalComprobante">Cancelar</button><button class="btn" type="submit">Enviar Correo</button></div></form>
+        </div>
+    </div>
+    <div id="modalDetallePago" class="modal" style="display:none;">
+        <div class="modal-content">
+            <h3 style="margin-top:0;">Detalle Completo del Registro</h3>
+            <div id="contenidoDetallePago" style="margin-bottom: 20px;"></div>
+            <div style="text-align: right;"><button id="btnCerrarModalDetalle" class="btn secondary">Cerrar</button></div>
+        </div>
+    </div>
+    
+    <div id="modalConvenio" class="modal" style="display:none;">
+        <div class="modal-content">
+            <h3 style="margin-top:0;">Administrar Convenio de Pago</h3>
+            <form id="formConvenio">
+                <input type="hidden" id="convenioNParcela">
+                <div>
+                    <label>Deuda Total a convenir (CLP)</label>
+                    <input type="number" id="convenioDeudaTotal" required>
+                </div>
+                <div class="form-grid" style="margin-top:15px;">
+                    <div>
+                        <label>Nº de Cuotas</label>
+                        <input type="number" id="convenioCuotas" min="1" required>
                     </div>
                     <div>
-                        <label>Descripción (Opcional)</label>
-                        <textarea id="abonarDescripcion" rows="2" placeholder="Ej: Abono a intereses y multas"></textarea>
+                        <label>Valor de cada Cuota (CLP)</label>
+                        <input type="number" id="convenioValorCuota" readonly style="background:#eee;">
                     </div>
-                    <div style="text-align: right; margin-top: 20px;">
-                        <button class="btn secondary" type="button" id="btnCerrarModalAbonar">Cancelar</button>
-                        <button class="btn" type="submit">Registrar Abono</button>
-                    </div>
-                </form>
-            </div>
+                </div>
+                <div style="margin-top:15px;">
+                    <label>Fecha de Inicio del Convenio</label>
+                    <input type="date" id="convenioFechaInicio" required>
+                </div>
+                <div style="text-align: right; margin-top: 20px;">
+                    <button class="btn secondary" type="button" id="btnCerrarModalConvenio">Cancelar</button>
+                    <button class="btn" type="submit">Guardar Convenio</button>
+                </div>
+            </form>
         </div>
-        `;
-       
-        <div id="modalComprobante" class="modal" style="display:none;">
-            <div class="modal-content large">
-                <h3>Enviar Comprobante por Correo</h3>
-                <form id="formEnviarComprobante" style="display:flex; flex-direction:column; gap:15px;"><div style="display:flex; gap: 15px; flex-wrap: wrap;"><div style="flex: 1; min-width: 120px;"><label><b>N° Parcela</b></label><input type="number" id="inputNParcelaComprobante" min="1" max="26" required style="width:100%;"></div><div style="flex: 2; min-width: 200px;"><label><b>Residente(s)</b></label><input type="text" id="inputNombreResidenteComprobante" readonly style="width:100%; background:#eee;"></div></div><div id="periodo-selector-container" style="display: none;"><label><b>Seleccione el Comprobante</b></label><select id="selectPeriodoComprobante" style="width:100%; padding: 11px 10px;"></select></div><div><label><b>Email(s) Destinatario</b></label><input type="email" id="inputEmailComprobante" readonly style="width:100%; background:#eee;"></div><div><label><b>Asunto</b></label><input type="text" id="inputAsuntoComprobante" readonly style="width:100%; background:#eee;"></div><div><label><b>Previsualización del Correo</b></label><div id="divCuerpoComprobante" style="width:100%; height: 250px; background:#f8f9fa; border: 1px solid #ccc; border-radius: 4px; padding: 10px; overflow-y: auto;"><span style="color: #6c757d;">Ingrese un N° de Parcela para generar la previsualización.</span></div></div><div style="text-align: right; margin-top: 10px;"><button class="btn secondary" type="button" id="btnCerrarModalComprobante">Cancelar</button><button class="btn" type="submit">Enviar Correo</button></div></form>
-            </div>
+    </div>
+    
+    <div id="modalAbonar" class="modal" style="display:none;">
+        <div class="modal-content">
+            <h3>Abonar a Deuda Existente</h3>
+            <form id="formAbonar">
+                <input type="hidden" id="abonarIdPago">
+                <div>
+                    <label>Período</label>
+                    <input type="text" id="abonarPeriodo" readonly>
+                </div>
+                <div>
+                    <label>Deuda Pendiente</label>
+                    <input type="text" id="abonarDeudaPendiente" readonly>
+                </div>
+                <div>
+                    <label>Monto a Abonar (CLP)</label>
+                    <input type="number" id="abonarMonto" min="0" step="1" required>
+                </div>
+                <div>
+                    <label>Fecha de Pago</label>
+                    <input type="date" id="abonarFechaPago" required>
+                </div>
+                <div>
+                    <label>Método de Pago</label>
+                    <select id="abonarMetodoPago" required>
+                        <option value="Transferencia">Transferencia</option>
+                        <option value="Efectivo">Efectivo</option>
+                    </select>
+                </div>
+                <div>
+                    <label>Descripción (Opcional)</label>
+                    <textarea id="abonarDescripcion" rows="2" placeholder="Ej: Abono a intereses y multas"></textarea>
+                </div>
+                <div style="text-align: right; margin-top: 20px;">
+                    <button class="btn secondary" type="button" id="btnCerrarModalAbonar">Cancelar</button>
+                    <button class="btn" type="submit">Registrar Abono</button>
+                </div>
+            </form>
         </div>
-        <div id="modalDetallePago" class="modal" style="display:none;">
-            <div class="modal-content">
-                <h3 style="margin-top:0;">Detalle Completo del Registro</h3>
-                <div id="contenidoDetallePago" style="margin-bottom: 20px;"></div>
-                <div style="text-align: right;"><button id="btnCerrarModalDetalle" class="btn secondary">Cerrar</button></div>
-            </div>
-        </div>
-        
-        <div id="modalConvenio" class="modal" style="display:none;">
-            <div class="modal-content">
-                <h3 style="margin-top:0;">Administrar Convenio de Pago</h3>
-                <form id="formConvenio">
-                    <input type="hidden" id="convenioNParcela">
-                    <div>
-                        <label>Deuda Total a convenir (CLP)</label>
-                        <input type="number" id="convenioDeudaTotal" required>
-                    </div>
-                    <div class="form-grid" style="margin-top:15px;">
-                        <div>
-                            <label>Nº de Cuotas</label>
-                            <input type="number" id="convenioCuotas" min="1" required>
-                        </div>
-                        <div>
-                            <label>Valor de cada Cuota (CLP)</label>
-                            <input type="number" id="convenioValorCuota" readonly style="background:#eee;">
-                        </div>
-                    </div>
-                    <div style="margin-top:15px;">
-                        <label>Fecha de Inicio del Convenio</label>
-                        <input type="date" id="convenioFechaInicio" required>
-                    </div>
-                    <div style="text-align: right; margin-top: 20px;">
-                        <button class="btn secondary" type="button" id="btnCerrarModalConvenio">Cancelar</button>
-                        <button class="btn" type="submit">Guardar Convenio</button>
-                    </div>
-                </form>
-            </div>
-        </div>
+    </div>
+    `;
         
         <!-- MODAL PARA ABONAR A DEUDAS EXISTENTES -->
         <div id="modalAbonar" class="modal" style="display:none;">
