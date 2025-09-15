@@ -330,7 +330,7 @@ async function cargarGastosComunes() {
         </section>
         <section id="detalle-gastos" style="margin-top: 2rem;"><h3>Detalle de Pagos Registrados</h3><div class="table-container"><table id="table-pagos" class="table"><thead id="thead-gastos"></thead><tbody id="tbody-gastos"></tbody></table></div></section>
         
-        <div id="modalGC" class="modal" style="display:none;">
+       <div id="modalGC" class="modal" style="display:none;">
             <div class="modal-content large">
                 <h3>Agregar Gasto Común</h3>
                 <form id="formGastoComun">
