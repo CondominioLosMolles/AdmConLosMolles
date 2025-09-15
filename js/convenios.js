@@ -501,19 +501,23 @@ function abrirModalDetalle(idConvenio) {
 // ======================================================================
 //  GUARDAR CONVENIO (corrige el redondeo y mantiene fechas estables)
 // ======================================================================
+
 async function guardarConvenio(evt) {
   evt.preventDefault();
-  if (!confirm("¿Crear este convenio?")) return;
+  if (!confirm("¿Está seguro de que desea crear este convenio?")) return;
 
   try {
     showSpinner && showSpinner();
 
+    // ===================================================================
+    // === INICIO: Tu lógica original de validación y cálculo (conservada) ===
+    // ===================================================================
     const nParcela  = (document.getElementById("convenioResidente").value || "").trim();
     const deuda     = Number(document.getElementById("convenioDeudaTotal").value);
     const nCuotas   = Number(document.getElementById("convenioCuotas").value);
-    const firstYMD  = document.getElementById("convenioFechaInicio").value; // "YYYY-MM-DD"
+    const firstYMD  = document.getElementById("convenioFechaInicio").value;
 
-    // Validaciones
+    // Validaciones detalladas
     if (!/^\d+$/.test(nParcela)) throw new Error("Ingresa un N° de parcela válido (solo números).");
     if (!(residentesData || []).some(r => String(r?.[3]).trim() === nParcela)) {
       throw new Error(`La parcela ${nParcela} no existe en la hoja "Residentes".`);
@@ -522,92 +526,54 @@ async function guardarConvenio(evt) {
     if (!nCuotas || nCuotas <= 0) throw new Error("Número de cuotas inválido.");
     if (!firstYMD) throw new Error("Selecciona la fecha de inicio.");
 
+    // Lógica de reparto exacto sin perder centavos
     const idConvenio = `C-${nParcela}-${Date.now().toString().slice(-5)}`;
-
-    // --------- NUEVO: reparto exacto sin perder $ ----------
-    const base   = Math.floor(deuda / nCuotas);     // monto base por cuota
-    const resto  = deuda - (base * nCuotas);        // pesos sobrantes (0..nCuotas-1)
-    const valorCuotaPromedio = Math.round(deuda / nCuotas); // solo para mostrar en "Resumen"
-    // -------------------------------------------------------
-
-    // Fila Convenios (ajusta al orden real de tu hoja)
-    const filaConvenio = [[
-      idConvenio,          // 0 ID_Convenio
-      nParcela,            // 1 N_Parcela
-      new Date().toLocaleDateString("es-CL"), // 2 Fecha creación (visual)
-      deuda,               // 3 Deuda_Original
-      nCuotas,             // 4 N_Cuotas
-      valorCuotaPromedio,  // 5 Valor_Cuota (promedio para mostrar)
-      0,                   // 6 Pagado_Acumulado
-      "Activo",            // 7 Estado
-      deuda,               // 8 Saldo Inicial
-      ""                   // 9 Observaciones
-    ]];
-
-    // Filas Cuotas — GUARDAMOS YYYY-MM-DD en E (index 4) y repartimos exacto
+    const base   = Math.floor(deuda / nCuotas);
+    const resto  = deuda - (base * nCuotas);
+    const valorCuotaPromedio = Math.round(deuda / nCuotas);
+    
+    // Preparación de las filas de cuotas (esto lo enviaremos al backend)
     const filasCuotas = [];
     for (let i = 1; i <= nCuotas; i++) {
-      const idCuota = `Q-${idConvenio}-${i}`;
-      const vencYMD = addMonthsKeepDay(firstYMD, i - 1); // estable sin “correr el día”
-      // Las primeras "resto" cuotas llevan +1 peso
-      const monto = base + (i <= resto ? 1 : 0);
+      const vencYMD = addMonthsKeepDay(firstYMD, i - 1);
+      const monto = base + (i <= resto ? 1 : 0); // Las primeras 'resto' cuotas suman $1
+      filasCuotas.push({ nCuota: i, vencimiento: vencYMD, monto: monto });
+    }
+    // ===================================================================
+    // === FIN: Tu lógica original ===
+    // ===================================================================
 
-      filasCuotas.push([
-        idCuota,        // A  ID_Cuota
-        idConvenio,     // B  ID_Convenio
-        nParcela,       // C  N_Parcela
-        i,              // D  N_Cuota
-        vencYMD,        // E  Fecha_Vencimiento
-        monto,          // F  Monto_Cuota
-        0,              // G  Monto_Pagado_Acumulado
-        monto,          // H  Saldo_Cuota (inicial = monto)
-        'Pendiente',    // I  Estado
-        ''              // J  Link_Comprobante
-      ]);
+    // Preparamos el objeto de datos completo para enviar al servidor.
+    const datosParaCrear = {
+      idConvenio,
+      nParcela,
+      deuda,
+      nCuotas,
+      valorCuotaPromedio,
+      filasCuotas // Enviamos el detalle de cuotas ya calculado
+    };
+    
+    // Usamos google.script.run, el método más estable.
+    const resultado = await new Promise((resolve, reject) => {
+      google.script.run
+        .withSuccessHandler(response => resolve(response))
+        .withFailureHandler(error => reject(error))
+        .crearConvenioYCuotas_v2(datosParaCrear); // Llamamos a una nueva función mejorada del backend
+    });
+
+    if (resultado.status === 'error') {
+      throw new Error(`Error en el servidor: ${resultado.message}`);
     }
 
- // 1. Preparamos los datos básicos que la función `crearConvenio` necesita.
-const datosParaCrear = {
-  N_Parcela: nParcela,
-  Deuda_Original: deuda,
-  N_Cuotas: nCuotas,
-  Fecha_Inicio: firstYMD // Tu script ya sabe cómo manejar "YYYY-MM-DD"
-};
+    mostrarMensaje && mostrarMensaje(resultado.message, "success");
 
-// 2. ¡IMPORTANTE! Reemplaza 'URL_DE_TU_SCRIPT' con la URL de implementación de tu Web App.
-const URL_DE_TU_SCRIPT = "https://script.google.com/macros/s/AKfycbwH_B0SiUB7YNfE7vplBBz6BRiHBQJfg7z_DqjJVl0FKYEjs_UIj2DE-N9a8ms-pAcrMA/exec"; // <--- ¡PEGA TU URL AQUÍ!
-
-// 3. Llamamos a la función `crearConvenio` en tu Google Apps Script.
-const response = await fetch(URL_DE_TU_SCRIPT, {
-  method: 'POST',
-  mode: 'cors', // Necesario para la comunicación entre sitios
-  headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-  body: JSON.stringify({
-    functionName: 'crearConvenio',
-    parameters: [datosParaCrear] // Enviamos los datos como el parámetro que espera la función
-  })
-});
-
-const result = await response.json();
-
-// 4. Si el script de Google devuelve un error, lo mostramos.
-if (result.status === 'error') {
-  throw new Error(result.error.message || "Ocurrió un error en el servidor de Google Sheets.");
-}
-
-    mostrarMensaje && mostrarMensaje(`Convenio ${idConvenio} creado con éxito.`, "success");
-
-    // Recargar en memoria
-    const [cv, cq] = await Promise.all([obtenerConvenios(), obtenerCuotasConvenio()]);
-    conveniosData = cv || [];
-    cuotasData    = cq || [];
-    procesarYUnirDatos();
-    aplicarFiltrosConvenios();
-
+    // Recargamos los datos para refrescar la tabla
+    await cargarDatosIniciales();
     modalNuevoConvenio.hide();
+
   } catch (e) {
     console.error(e);
-    mostrarMensaje && mostrarMensaje(e.message || "Error al guardar el convenio.", "error");
+    mostrarMensaje && mostrarMensaje(e.message || "Ocurrió un error inesperado.", "error");
   } finally {
     hideSpinner && hideSpinner();
   }
