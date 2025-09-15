@@ -757,10 +757,10 @@ async function enviarComprobanteCuota(cuotaId, nParcela, convenioId) {
 
 async function enviarCorreo(destinatario, asunto, cuerpoHtml) {
   // Asegúrate de que la URL de tu script esté disponible.
-  // Puedes definirla globalmente o tomarla de donde la uses para guardar convenios.
-  const URL_DE_TU_SCRIPT = "PEGA_AQUÍ_LA_URL_DE_TU_IMPLEMENTACIÓN_FINAL";
+  // Reemplaza esto con la URL de tu implementación más reciente.
+  const URL_DE_TU_SCRIPT = "https://script.google.com/macros/s/AKfycbx774iPzBIhQPc7lxoCdj04p0luLxKugKgeUGcNuIsTt_nPlHkIE3NQ275NHYptI7Hy3g/exec";
   
-  if (!URL_DE_TU_SCRIPT || URL_DE_TU_SCRIPT === "PEGA_AQUÍ_LA_URL_DE_TU_IMPLEMENTACIÓN_FINAL") {
+  if (!URL_DE_TU_SCRIPT || URL_DE_TU_SCRIPT.includes("https://script.google.com/macros/s/AKfycbx774iPzBIhQPc7lxoCdj04p0luLxKugKgeUGcNuIsTt_nPlHkIE3NQ275NHYptI7Hy3g/exec")) {
     throw new Error("La URL del script no está configurada.");
   }
 
@@ -769,9 +769,9 @@ async function enviarCorreo(destinatario, asunto, cuerpoHtml) {
     mode: 'cors',
     headers: { 'Content-Type': 'text/plain;charset=utf-8' },
     body: JSON.stringify({
-      // El nombre de la función en Google Apps Script que queremos ejecutar
+      // El nombre EXACTO de la función en Google Apps Script que queremos ejecutar
       functionName: 'enviarCorreoComprobante_GS', 
-      // Los parámetros que esa función espera
+      // Los parámetros que esa función espera: destinatario, asunto y cuerpo
       parameters: [destinatario, asunto, cuerpoHtml] 
     })
   });
