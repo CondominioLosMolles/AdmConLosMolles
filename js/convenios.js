@@ -566,8 +566,12 @@ async function guardarConvenio(evt) {
       ]);
     }
 
-    await appendSheetData("Convenios", filaConvenio);
-    await appendSheetData("Cuotas_Convenio", filasCuotas);
+  const datosParaCrear = {
+  N_Parcela: nParcela,
+  Deuda_Original: deuda,
+  N_Cuotas: nCuotas,
+  Fecha_Inicio: firstYMD
+};
 
     mostrarMensaje && mostrarMensaje(`Convenio ${idConvenio} creado con éxito.`, "success");
 
