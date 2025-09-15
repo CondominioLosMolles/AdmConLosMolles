@@ -502,6 +502,7 @@ function abrirModalDetalle(idConvenio) {
 //  GUARDAR CONVENIO (corrige el redondeo y mantiene fechas estables)
 // ======================================================================
 
+// EN TU ARCHIVO convenios.js (TU CÓDIGO ORIGINAL Y CORRECTO)
 async function guardarConvenio(evt) {
   evt.preventDefault();
   if (!confirm("¿Crear este convenio?")) return;
@@ -512,9 +513,8 @@ async function guardarConvenio(evt) {
     const nParcela  = (document.getElementById("convenioResidente").value || "").trim();
     const deuda     = Number(document.getElementById("convenioDeudaTotal").value);
     const nCuotas   = Number(document.getElementById("convenioCuotas").value);
-    const firstYMD  = document.getElementById("convenioFechaInicio").value; // "YYYY-MM-DD"
+    const firstYMD  = document.getElementById("convenioFechaInicio").value;
 
-    // Validaciones
     if (!/^\d+$/.test(nParcela)) throw new Error("Ingresa un N° de parcela válido (solo números).");
     if (!(residentesData || []).some(r => String(r?.[3]).trim() === nParcela)) {
       throw new Error(`La parcela ${nParcela} no existe en la hoja "Residentes".`);
@@ -523,7 +523,6 @@ async function guardarConvenio(evt) {
     if (!nCuotas || nCuotas <= 0) throw new Error("Número de cuotas inválido.");
     if (!firstYMD) throw new Error("Selecciona la fecha de inicio.");
 
-    // Preparamos los datos básicos que la función del backend necesita.
     const datosParaCrear = {
       N_Parcela: nParcela,
       Deuda_Original: deuda,
@@ -531,16 +530,14 @@ async function guardarConvenio(evt) {
       Fecha_Inicio: firstYMD
     };
 
-    // ¡IMPORTANTE! Reemplaza esta URL con la de tu implementación más reciente.
-    const URL_DE_TU_SCRIPT = "PEGA_AQUÍ_LA_URL_DE_TU_IMPLEMENTACIÓN_FINAL";
+    const URL_DE_TU_SCRIPT = "https://script.google.com/macros/s/AKfycbyZPSKFKrLzPpaHBwCnuf4vJ-FivFqVlWxmakgwqB_OCLmMtNY-eSxUaQMEK5VEX15ySQ/exec";
 
-    // Llamamos a la función `crearConvenio` en tu Google Apps Script.
     const response = await fetch(URL_DE_TU_SCRIPT, {
       method: 'POST',
       mode: 'cors',
       headers: { 'Content-Type': 'text/plain;charset=utf-8' },
       body: JSON.stringify({
-        functionName: 'crearConvenio', // El nombre de la función en el backend
+        functionName: 'crearConvenio',
         parameters: [datosParaCrear]
       })
     });
@@ -548,12 +545,11 @@ async function guardarConvenio(evt) {
     const result = await response.json();
 
     if (result.status === 'error') {
-      throw new Error(result.error.message || "Ocurrió un error en el servidor de Google Sheets.");
+      throw new Error(result.error.message || "Ocurrió un error en el servidor.");
     }
 
-    mostrarMensaje && mostrarMensaje(`Convenio para la parcela ${nParcela} creado con éxito.`, "success");
+    mostrarMensaje && mostrarMensaje("Convenio creado con éxito.", "success");
 
-    // Recargar en memoria
     await cargarDatosIniciales();
     modalNuevoConvenio.hide();
   } catch (e) {
