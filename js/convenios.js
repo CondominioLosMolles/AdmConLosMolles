@@ -566,8 +566,34 @@ async function guardarConvenio(evt) {
       ]);
     }
 
-    await appendSheetData("Convenios", filaConvenio);
-    await appendSheetData("Cuotas_Convenio", filasCuotas);
+ // 1. Preparamos los datos básicos que la función `crearConvenio` necesita.
+const datosParaCrear = {
+  N_Parcela: nParcela,
+  Deuda_Original: deuda,
+  N_Cuotas: nCuotas,
+  Fecha_Inicio: firstYMD // Tu script ya sabe cómo manejar "YYYY-MM-DD"
+};
+
+// 2. ¡IMPORTANTE! Reemplaza 'URL_DE_TU_SCRIPT' con la URL de implementación de tu Web App.
+const URL_DE_TU_SCRIPT = "URL_DE_TU_SCRIPT"; // <--- ¡PEGA TU URL AQUÍ!
+
+// 3. Llamamos a la función `crearConvenio` en tu Google Apps Script.
+const response = await fetch(URL_DE_TU_SCRIPT, {
+  method: 'POST',
+  mode: 'cors', // Necesario para la comunicación entre sitios
+  headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+  body: JSON.stringify({
+    functionName: 'crearConvenio',
+    parameters: [datosParaCrear] // Enviamos los datos como el parámetro que espera la función
+  })
+});
+
+const result = await response.json();
+
+// 4. Si el script de Google devuelve un error, lo mostramos.
+if (result.status === 'error') {
+  throw new Error(result.error.message || "Ocurrió un error en el servidor de Google Sheets.");
+}
 
     mostrarMensaje && mostrarMensaje(`Convenio ${idConvenio} creado con éxito.`, "success");
 
