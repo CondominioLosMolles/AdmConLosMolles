@@ -89,7 +89,7 @@ function ocultarModalGlobal() {
  */
 async function llamarAPI(functionName, parameters = []) {
     // URL configurada correctamente
-    const SCRIPT_URL = "https://script.googleapis.com/v1/scripts/AKfycbzuN44ZQzJ2zGDNVSorn5pGlLy9V73ouUV5Df-eabqUpba8--ThYhzL-YyrNTS0eBEegg:run";
+    const SCRIPT_URL = "https://script.googleapis.com/v1/scripts/AKfycbzH5qHJaILNE2qaQQXUvZG1mi7NEMZZiRBFvv0pj4Zb8INtn219nMi-pU_VsJOB6gGTMg:run";
 
     // El bloque "if" de seguridad ha sido eliminado.
 
