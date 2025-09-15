@@ -563,8 +563,9 @@ async function cargarContabilidad() {
 
     function filtrarYRenderizar() {
         let fechaInicio = document.getElementById('fechaInicio').value;
-        let fechaFin = document.getElementById('fechaFin').value;
-        const saldoInicialGlobal = parseFloat(config.Saldo_Inicial_Caja || 0);
+        let fechaFin = document.getElementById('fechaFin').value; 
+const valorLimpio = String(config.Saldo_Inicial_Caja || 0).replace(/\$|\./g, '');
+const saldoInicialGlobal = parseFloat(valorLimpio);
 
         const pagosFiltrados = allPagos.filter(p => {
             const fechaPago = p[13];
