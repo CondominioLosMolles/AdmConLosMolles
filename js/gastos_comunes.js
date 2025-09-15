@@ -273,6 +273,10 @@ async function cargarGastosComunes() {
 // RENDERIZADO DEL HTML PRINCIPAL
 // =======================================================
 
+// =======================================================
+// RENDERIZADO DEL HTML PRINCIPAL
+// =======================================================
+
 const main = document.getElementById('main-content');
 main.innerHTML = `
     <style>
@@ -485,48 +489,6 @@ main.innerHTML = `
         </div>
     </div>
     `;
-        
-        <!-- MODAL PARA ABONAR A DEUDAS EXISTENTES -->
-        <div id="modalAbonar" class="modal" style="display:none;">
-            <div class="modal-content">
-                <h3>Abonar a Deuda Existente</h3>
-                <form id="formAbonar">
-                    <input type="hidden" id="abonarIdPago">
-                    <div>
-                        <label>Período</label>
-                        <input type="text" id="abonarPeriodo" readonly>
-                    </div>
-                    <div>
-                        <label>Deuda Pendiente</label>
-                        <input type="text" id="abonarDeudaPendiente" readonly>
-                    </div>
-                    <div>
-                        <label>Monto a Abonar (CLP)</label>
-                        <input type="number" id="abonarMonto" min="0" step="1" required>
-                    </div>
-                    <div>
-                        <label>Fecha de Pago</label>
-                        <input type="date" id="abonarFechaPago" required>
-                    </div>
-                    <div>
-                        <label>Método de Pago</label>
-                        <select id="abonarMetodoPago" required>
-                            <option value="Transferencia">Transferencia</option>
-                            <option value="Efectivo">Efectivo</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label>Descripción (Opcional)</label>
-                        <textarea id="abonarDescripcion" rows="2" placeholder="Ej: Abono a intereses y multas"></textarea>
-                    </div>
-                    <div style="text-align: right; margin-top: 20px;">
-                        <button class="btn secondary" type="button" id="btnCerrarModalAbonar">Cancelar</button>
-                        <button class="btn" type="submit">Registrar Abono</button>
-                    </div>
-                </form>
-            </div>
-        </div>
-        `;
 
     // =======================================================
     // DEFINICIÓN DE LÓGICA Y RENDERIZADO DE TABLAS
