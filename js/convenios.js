@@ -566,14 +566,8 @@ async function guardarConvenio(evt) {
       ]);
     }
 
-  const datosParaCrear = {
-  N_Parcela: nParcela,
-  Deuda_Original: deuda,
-  N_Cuotas: nCuotas,
-  Fecha_Inicio: firstYMD
-};
-    // Esta función ahora llamará a tu lógica completa en Google Sheets
-await callAppsScript("crearConvenio", datosParaCrear);
+    await appendSheetData("Convenios", filaConvenio);
+    await appendSheetData("Cuotas_Convenio", filasCuotas);
 
     mostrarMensaje && mostrarMensaje(`Convenio ${idConvenio} creado con éxito.`, "success");
 
