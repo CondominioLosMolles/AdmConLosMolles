@@ -752,6 +752,35 @@ async function enviarComprobanteCuota(cuotaId, nParcela, convenioId) {
   }
 }
 
-// ===============================================================
-//  FIN DEL BLOQUE CORREGIDO
-// ===============================================================
+// EN TU ARCHIVO convenios.js
+// Esta es la función "puente" que faltaba para conectar con el backend.
+
+async function enviarCorreo(destinatario, asunto, cuerpoHtml) {
+  // Asegúrate de que la URL de tu script esté disponible.
+  // Puedes definirla globalmente o tomarla de donde la uses para guardar convenios.
+  const URL_DE_TU_SCRIPT = "PEGA_AQUÍ_LA_URL_DE_TU_IMPLEMENTACIÓN_FINAL";
+  
+  if (!URL_DE_TU_SCRIPT || URL_DE_TU_SCRIPT === "PEGA_AQUÍ_LA_URL_DE_TU_IMPLEMENTACIÓN_FINAL") {
+    throw new Error("La URL del script no está configurada.");
+  }
+
+  const response = await fetch(URL_DE_TU_SCRIPT, {
+    method: 'POST',
+    mode: 'cors',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body: JSON.stringify({
+      // El nombre de la función en Google Apps Script que queremos ejecutar
+      functionName: 'enviarCorreoComprobante_GS', 
+      // Los parámetros que esa función espera
+      parameters: [destinatario, asunto, cuerpoHtml] 
+    })
+  });
+
+  const result = await response.json();
+
+  if (result.status === 'error') {
+    throw new Error(result.error.message || "Ocurrió un error en el servidor al enviar el correo.");
+  }
+
+  return result.response;
+}
