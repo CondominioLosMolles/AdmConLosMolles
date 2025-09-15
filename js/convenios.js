@@ -575,7 +575,7 @@ const datosParaCrear = {
 };
 
 // 2. ¡IMPORTANTE! Reemplaza 'URL_DE_TU_SCRIPT' con la URL de implementación de tu Web App.
-const URL_DE_TU_SCRIPT = "https://script.google.com/macros/s/AKfycbx6YLyB752FK-su-nttsoY0vkGQ_71LQzjDzaLfcRJaEgjviPsd0QI5zZhkop-UA9SnXA/exec"; // <--- ¡PEGA TU URL AQUÍ!
+const URL_DE_TU_SCRIPT = "https://script.google.com/macros/s/AKfycbyF9bJHApiREqLbi_VVmrIbJWNQBqN1qehJZZX_XAzOGqWkboTD-KM_G_8vLKDSa6ke/exec"; // <--- ¡PEGA TU URL AQUÍ!
 
 // 3. Llamamos a la función `crearConvenio` en tu Google Apps Script.
 const response = await fetch(URL_DE_TU_SCRIPT, {
