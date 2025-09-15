@@ -334,231 +334,6 @@ async function cargarGastosComunes() {
             <div class="modal-content large">
                 <h3>Agregar Gasto Común</h3>
                 <form id="formGastoComun">
-                    <div class="row">
-                        <div class="col-md-6">
-                            <label>Fecha de Emisión</label>
-                            <input type="date" name="Fecha_Vencimiento" required>
-                        </div>
-                        <div class="col-md-6">
-                            <label>Período del Gasto Común</label>
-                            <input type="month" name="Periodo" required>
-                        </div>
-                    </div>
-                    <div class="row">
-                        <div class="col-md-6">
-                            <label>N° Parcela</label>
-                            <input type="number" name="N_Parcela" id="inputNParcela" min="1" max="26" required>
-                        </div>
-                        <div class="col-md-6">
-                            <label>Valor Gasto Común</label>
-                            <input type="number" name="Valor_Gasto_Comun" min="0" step="1" required>
-                        </div>
-                    </div>
-                    <div class="row">
-                        <div class="col-md-6">
-                            <label>Monto Pagado</label>
-                            <input type="number" name="Monto_Pagado" min="0" step="1" required>
-                        </div>
-                        <div class="col-md-6">
-                            <label>Multa</label>
-                            <input type="number" name="Multa_1/4" min="0" step="1" value="0">
-                        </div>
-                    </div>
-                    <div class="row">
-                        <div class="col-md-6">
-                            <label>Interes</label>
-                            <input type="number" name="Interes" min="0" step="1" value="0">
-                        </div>
-                    </div>
-                    <div style="width: 100%; margin-top: 20px; padding-top: 15px; border-top: 1px solid #ddd;">
-                        <label>Descripción / Nota del Pago (Opcional)</label>
-                        <textarea name="Descripcion_Pago" rows="2" placeholder="Ej: Pago parcial, solicitud de uso de saldo a favor, etc."></textarea>
-                    </div>
-                    <div style="text-align: right; margin-top: 20px;">
-                        <button class="btn secondary" type="button" id="btnCerrarModal">Cancelar</button>
-                        <button class="btn" type="submit">Guardar Gasto</button>
-                    </div>
-                </form>
-            </div>
-        </div>
-        
-        <div id="modalComprobante" class="modal" style="display:none;">
-            <div class="modal-content large">
-                <h3>Enviar Comprobante por Correo</h3>
-                <form id="formEnviarComprobante" style="display:flex; flex-direction:column; gap:15px;"><div style="display:flex; gap: 15px; flex-wrap: wrap;"><div style="flex: 1; min-width: 120px;"><label><b>N° Parcela</b></label><input type="number" id="inputNParcelaComprobante" min="1" max="26" required style="width:100%;"></div><div style="flex: 2; min-width: 200px;"><label><b>Residente(s)</b></label><input type="text" id="inputNombreResidenteComprobante" readonly style="width:100%; background:#eee;"></div></div><div id="periodo-selector-container" style="display: none;"><label><b>Seleccione el Comprobante</b></label><select id="selectPeriodoComprobante" style="width:100%; padding: 11px 10px;"></select></div><div><label><b>Email(s) Destinatario</b></label><input type="email" id="inputEmailComprobante" readonly style="width:100%; background:#eee;"></div><div><label><b>Asunto</b></label><input type="text" id="inputAsuntoComprobante" readonly style="width:100%; background:#eee;"></div><div><label><b>Previsualización del Correo</b></label><div id="divCuerpoComprobante" style="width:100%; height: 250px; background:#f8f9fa; border: 1px solid #ccc; border-radius: 4px; padding: 10px; overflow-y: auto;"><span style="color: #6c757d;">Ingrese un N° de Parcela para generar la previsualización.</span></div></div><div style="text-align: right; margin-top: 10px;"><button class="btn secondary" type="button" id="btnCerrarModalComprobante">Cancelar</button><button class="btn" type="submit">Enviar Correo</button></div></form>
-            </div>
-        </div>
-        <div id="modalDetallePago" class="modal" style="display:none;">
-            <div class="modal-content">
-                <h3 style="margin-top:0;">Detalle Completo del Registro</h3>
-                <div id="contenidoDetallePago" style="margin-bottom: 20px;"></div>
-                <div style="text-align: right;"><button id="btnCerrarModalDetalle" class="btn secondary">Cerrar</button></div>
-            </div>
-        </div>
-        
-        <div id="modalConvenio" class="modal" style="display:none;">
-            <div class="modal-content">
-                <h3 style="margin...
-
-selectedRelevantSnippets:
-snippet_1: // ================================================================================= // ===== GASTOS_COMUNES.JS - CÓDIGO COMPLETO Y FINAL (CON TODAS LAS CORRECCIONES) ===== // ================================================================================= // Constantes globales para el módulo const MESES = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"]; const ENCABEZADOS_PAGOS = [ 'ID_Pago', 'Nombre_Residente', 'N_Parcela', 'Valor_Gasto_Comun', 'Periodo', 'Fecha_Vencimiento', 'Monto_Pagado', 'Saldo_Pendiente_o_a_favor', 'Interes', 'TIMC', 'Multa_1/4', 'Meses_Inpagos', 'Deuda_Total', 'Fecha_Pago', 'Metodo_Pago', 'Estado', 'ID_Comprobante_Drive', 'Abono_Convenio', 'Comprobante_Enviado', 'Descripcion_Deuda', 'Descripcion_Pago', 'Saldo_Favor_Usado' ]; async function cargarGastosComunes() { limpiarMainContent(); mostrarSpinner(); // Variables locales que estarán disponibles para todas las funciones internas let residentes = []; let pagosGC_obj = []; let timcData = {}; let pagoSeleccionadoParaEnviar = null; try { const [residentes_data, pagosGC_raw, timcs_raw] = await Promise.all([ obtenerResidentes(), obtenerPagosGC(), obtenerTIMCs() ]); residentes = residentes_data || []; pagosGC_obj = (pagosGC_raw || []).map((fila, index) => { let obj = {}; ENCABEZADOS_PAGOS.forEach((encabezado, i) => { obj[encabezado] = fila[i]; }); if (obj.Periodo) { const anioMatch = obj.Periodo.toString().match(/\d{4}/); obj.anio = anioMatch ? parseInt(anioMatch[0]) : null; } obj.rowNum = index + 2; return obj; }).filter(p => p.N_Parcela); (timcs_raw || []).forEach(fila => { const [anio, mes, valor] = fila; if (!timcData[anio]) timcData[anio] = {}; timcData[anio][mes] = parseFloat(valor); }); } catch (e) { ocultarSpinner(); mostrarMensaje('Error al cargar datos de Gastos Comunes: ' + e.message, 'error'); return; } // ======================================================= // FUNCIONES DE AYUDA (DEFINIDAS DENTRO PARA TENER ACCESO A LAS VARIABLES) // ======================================================= function formatearPeriodo(periodo) { if (!periodo) return 'N/A'; const matchAnio = periodo.toString().match(/\d{4}/); const anio = matchAnio ? parseInt(matchAnio[0]) : null; const matchMes = MESES.findIndex(m => periodo.toLowerCase().includes(m.toLowerCase())); if (anio && matchMes !== -1) { return `${MESES[matchMes]} ${anio}`; } const match = periodo.toString().match(/^(\d{4})-(\d{1,2})$/); if (match) { const anio = parseInt(match[1]); const mesIndex = parseInt(match[2]) - 1; if (mesIndex >= 0 && mesIndex < 12) { return `${MESES[mesIndex]} ${anio}`; } } return periodo; } function actualizarVistaPreviaComprobante(pago) { pagoSeleccionadoParaEnviar = pago; const parcela = document.getElementById('inputNParcelaComprobante').value; const asuntoInput = document.getElementById('inputAsuntoComprobante'); const cuerpoDiv = document.getElementById('divCuerpoComprobante'); const allResidentsForParcela = residentes.filter(r => String(r[3]) === String(parcela)); const residentNames = allResidentsForParcela.map(r => r[1]).join(' y '); const representativeResident = allResidentsForParcela.find(r => r[9] && r[9].trim().toUpperCase() === 'SI') || allResidentsForParcela[0]; if (!representativeResident) { cuerpoDiv.innerHTML = `<span style="color: #dc3545;">Error: No se pudo encontrar un residente representativo.</span>`; return; } const aEnviar = {...representativeResident}; aEnviar[1] = residentNames; const periodoFormateado = formatearPeriodo(pago.Periodo); asuntoInput.value = `Comprobante pago Gasto Común ${periodoFormateado} Parcela ${parcela}`; cuerpoDiv.innerHTML = crearCuerpoCorreo(pago, aEnviar); } function crearCuerpoCorreo(pago, residente) { const nombreResidente = residente[1]; const periodoFormateado = formatearPeriodo(pago.Periodo); const montoPagado = parseFloat(pago.Monto_Pagado || 0); const saldoFavorUsado = parseFloat(pago.Saldo_Favor_Usado || 0); const abonoConvenio = parseFloat(pago.Abono_Convenio || 0); const montoTotalAbonadoGC = montoPagado + saldoFavorUsado; const valorGC = parseFloat(pago.Valor_Gasto_Comun || 0); const interes = parseFloat(pago.Interes || 0); const multa = parseFloat(pago['Multa_1/4'] || 0); const deudaDelPeriodo = valorGC + interes + multa; const saldoTransaccion = montoTotalAbonadoGC - deudaDelPeriodo; // ▼ INICIO: CÓDIGO MODIFICADO ▼ // Se crea una variable para el resultado final, que será más clara. let resultadoHtml; if (saldoTransaccion >= 0) { // El período está pagado. resultadoHtml = ` <tr style="font-weight:bold; border-top:2px solid #2e7d32;"> <td style="padding:10px 0; color:#2e7d32; font-size:1.1em;">Estado del Período:</td> <td style="padding:10px 0; text-align:right; color:#2e7d32; font-size:1.1em;">PAGADO</td> </tr> `; // Solo se muestra el saldo a favor si es mayor que cero. if (saldoTransaccion > 0) { resultadoHtml += ` <tr> <td style="padding:5px 0;">Saldo a favor generado en esta transacción:</td> <td style="padding:5px 0; text-align:right; font-weight:bold;">$${saldoTransaccion.toLocaleString('es-CL')}</td> </tr> `; } } else { // El período queda con deuda. resultadoHtml = ` <tr style="font-weight:bold; border-top:2px solid #cccccc;"> <td style="padding:10px 0; color:#d32f2f;">Saldo pendiente del Período:</td> <td style="padding:10px 0; text-align:right; color:#d32f2f;">$${Math.abs(saldoTransaccion).toLocaleString('es-CL')}</td> </tr> `; } // ▲ FIN: CÓDIGO MODIFICADO ▲ return ` <!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><title>Comprobante de Pago</title></head> <body style="margin:0;padding:0;background-color:#f4f4f4;font-family:Arial,sans-serif;"> <table align="center" border="0" cellpadding="0" cellspacing="0" width="600" style="border-collapse:collapse;background-color:#ffffff;margin:20px auto;border:1px solid #dddddd;"> <tr><td align="center" bgcolor="#2a7ca3" style="padding:20px;color:#ffffff;"><h2 style="margin:0;">Comprobante de Pago</h2><p style="margin:5px 0 0;">Condominio Los Molles</p></td></tr> <tr><td style="padding:25px 20px;"> <p>Estimado(a) <strong>${nombreResidente}</strong>,</p> <p>Confirmamos la recepción de su pago para el período <strong>${periodoFormateado}</strong>. A continuación el detalle:</p> <h4 style="color:#333;margin-bottom:5px;margin-top:15px;border-bottom:1px solid #eee;padding-bottom:5px;">Detalle Deuda del Período</h4> <table width="100%" cellpadding="4" cellspacing="0" style="border-collapse:collapse;font-size:14px;"> <tr><td style="padding:5px 0;">Gasto Común Ordinario:</td><td style="padding:5px 0;text-align:right;">$${valorGC.toLocaleString('es-CL')}</td></tr> <tr><td style="padding:5px 0;">Intereses por mora:</td><td style="padding:5px 0;text-align:right;">$${interes.toLocaleString('es-CL')}</td></tr> <tr><td style="padding:5px 0;">Multas del período:</td><td style="padding:5px 0;text-align:right;">$${multa.toLocaleString('es-CL')}</td></tr> <tr style="font-weight:bold;border-top:1px solid #dddddd;"><td style="padding:8px 0;">Deuda Total del Período:</td><td style="padding:8px 0;text-align:right;">$${deudaDelPeriodo.toLocaleString('es-CL')}</td></tr> </table> <h4 style="color:#333;margin-bottom:5px;margin-top:15px;border-bottom:1px solid #eee;padding-bottom:5px;">Detalle de su Pago</h4> <table width="100%" cellpadding="4" cellspacing="0" style="border-collapse:collapse;font-size:14px;"> <tr><td style="padding:8px 0;">Monto Pagado (transferencia/efectivo):</td><td style="padding:8px 0;text-align:right;">$${montoPagado.toLocaleString('es-CL')}</td></tr> ${abonoConvenio > 0 ? `<tr><td style="padding:8px 0;">Abono a Convenio de Deuda:</td><td style="padding:8px 0;text-align:right;">$${abonoConvenio.toLocaleString('es-CL')}</td></tr>` : ''} <tr><td style="padding:8px 0;">Saldo a Favor Utilizado:</td><td style="padding:8px 0;text-align:right;">$${saldoFavorUsado.toLocaleString('es-CL')}</td></tr> <tr style="font-weight:bold;"><td style="padding:8px 0;border-top:1px solid #eeeeee;">Total Abonado al Período (G.C.):</td><td style="padding:8px 0;text-align:right;border-top:1px solid #eeeeee;">$${montoTotalAbonadoGC.toLocaleString('es-CL')}</td></tr> ${resultadoHtml} </table> <hr style="border:0;border-top:1px solid #eeeeee;margin-top:20px;"> <p>Gracias por su compromiso.</p><p style="margin-top:20px;">Atentamente,<br><strong>Alex Thiele</strong><br>Administrador</p> </td></tr> <tr><td bgcolor="#f4f4f4" style="text-align:center;padding:15px;font-size:12px;color:#777777;">Este es un correo electrónico generado automáticamente.</td></tr> </table> </body></html>`;
-}
-
-    async function guardarConvenio(nParcela, datosConvenio) {
-      mostrarSpinner();
-      try {
-        await gapi.client.request({
-          'path': `https://script.googleapis.com/v1/scripts/${SCRIPT_ID}:run`,
-          'method': 'POST',
-          'body': {
-            'function': 'guardarConvenio_GS',
-            'parameters': [nParcela, datosConvenio]
-          }
-        });
-        // Recargar los datos para reflejar los cambios
-        await cargarGastosComunes();
-        // Forzar el filtro para ver la parcela actualizada
-        document.getElementById('filtroParcela').value = nParcela;
-        filtrarYRenderizar();
-        mostrarMensaje('Convenio guardado y deudas anteriores congeladas con éxito.', 'success');
-      } catch (err) {
-        const errorMessage = err.result?.error?.message || err.message || 'Error desconocido.';
-        mostrarMensaje(`Error al guardar el convenio: ${errorMessage}`, 'error');
-      } finally {
-        ocultarSpinner();
-      }
-    }
-
-    async function enviarAcuerdoConvenio(residente, datosConvenio) {
-        const emailResidente = residente[5];
-        if (!emailResidente || !emailResidente.includes('@')) {
-            mostrarMensaje('El residente no tiene un correo electrónico válido registrado.', 'error');
-            return;
-        }
-        const confirmacion = confirm(`¿Está seguro que desea enviar el correo de acuerdo de convenio de pago a ${residente[1]} (${emailResidente})?`);
-        if (!confirmacion) return;
-        mostrarSpinner();
-        try {
-            await gapi.client.request({
-                'path': `https://script.googleapis.com/v1/scripts/${SCRIPT_ID}:run`,
-                'method': 'POST',
-                'body': {
-                    'function': 'enviarCorreoConvenio_GS',
-                    'parameters': [residente, datosConvenio]
-                }
-            });
-            mostrarMensaje('Correo de acuerdo de convenio enviado exitosamente.', 'success');
-        } catch (err) {
-            const errorMessage = err.result?.error?.message || err.message || 'Error desconocido.';
-            mostrarMensaje(`Error al enviar el correo de convenio: ${errorMessage}`, 'error');
-        } finally {
-            ocultarSpinner();
-        }
-    }
-
-    async function formalizarConvenio(nParcela, nombreResidente) {
-        const instruccion = `Para formalizar el convenio de la parcela ${nParcela} (${nombreResidente}), por favor, pegue aquí el enlace permanente del correo de aceptación del residente.\n\nPara obtener el enlace en Gmail:\n1. Abra el correo de aceptación.\n2. Haga clic en los tres puntos (Más opciones).\n3. Seleccione "Imprimir".\n4. En la ventana de impresión, copie la URL de la barra de direcciones del navegador.`;
-        const urlConvenio = prompt(instruccion, "");
-
-        if (urlConvenio === null) return; // El usuario canceló
-        if (urlConvenio.trim() === "" || !urlConvenio.startsWith("http")) {
-            alert("El enlace proporcionado no es válido. Por favor, inténtelo de nuevo.");
-            return;
-        }
-
-        mostrarSpinner();
-        try {
-            await gapi.client.request({
-                'path': `https://script.googleapis.com/v1/scripts/${SCRIPT_ID}:run`,
-                'method': 'POST',
-                'body': {
-                    'function': 'formalizarConvenio_GS',
-                    'parameters': [nParcela, urlConvenio]
-                }
-            });
-            
-            pagosGC_obj.forEach(pago => {
-                if (String(pago.N_Parcela) === String(nParcela) && pago.Estado === 'Moroso') {
-                    pago.Estado = 'En Convenio';
-                }
-            });
-
-            filtrarYRenderizar();
-            mostrarMensaje(`Convenio formalizado para la parcela ${nParcela}. Las deudas anteriores han sido marcadas como "En Convenio".`, 'success');
-
-        } catch (err) {
-            const errorMessage = err.result?.error?.message || err.message || 'Error desconocido.';
-            mostrarMensaje(`Error al formalizar el convenio: ${errorMessage}`, 'error');
-        } finally {
-            ocultarSpinner();
-        }
-    }
-    
-    // =======================================================
-    // RENDERIZADO DEL HTML PRINCIPAL
-    // =======================================================
-
-    const main = document.getElementById('main-content');
-    main.innerHTML = `
-        <style>
-            .estado-pagado { background-color: #198754; color: white; } 
-            .estado-moroso { background-color: #dc3545; color: white; } 
-            .estado-abono { background-color: #ffc107; color: #333; } 
-            .estado-en-convenio { background-color: #0dcaf0; color: #000; }
-            .fila-clicable:hover { background-color: #e9f1fb; cursor: pointer; } 
-            #detalle-pago-grid { display: grid; grid-template-columns: auto 1fr; gap: 10px 20px; align-items: center;} 
-            #detalle-pago-grid b { grid-column: 1; text-align: right; } 
-            #detalle-pago-grid span { grid-column: 2; text-align: left; word-break: break-all; } 
-            .suggestion-item { padding: 8px 12px; cursor: pointer; } 
-            .suggestion-item:hover { background-color: #e9f1fb; } 
-            #table-pagos { table-layout: fixed; width: 100%; border-collapse: collapse; } 
-            #table-pagos th { position: relative; } 
-            .resizer { position: absolute; top: 0; right: -2px; width: 5px; cursor: col-resize; user-select: none; height: 100%; z-index: 1;} 
-            .resizer:hover { border-right: 2px solid #007bff; } 
-            .comprobante-enviado { color: green; font-size: 1.2rem; font-weight: bold; text-align: center; } 
-            #convenio-summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 15px; } 
-            #convenio-summary-grid > div { background-color: #f8f9fa; padding: 15px; border-radius: 8px; text-align: center; } 
-            #convenio-summary-grid > div > span { display: block; font-size: 1.4em; font-weight: bold; } 
-            .saldo-info { padding: 10px; border-radius: 5px; margin-top: 5px; font-weight: bold; text-align: center; } 
-            .saldo-convenio { background-color: #fff8e1; color: #f57f17; } 
-            .saldo-favor { background-color: #e8f5e9; color: #2e7d32; }
-        </style>
-        <div style="display:flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;"><h2>Gastos Comunes</h2></div>
-        <div style="display: flex; flex-wrap: wrap; gap: 24px; align-items: stretch;">
-            <section class="widget" style="flex: 1; min-width: 350px; display: flex; flex-direction: column; justify-content: space-between;">
-                <div>
-                    <h4 style="margin-top:0;">Filtros de Búsqueda</h4>
-                    <div style="display: flex; flex-wrap: wrap; gap: 20px; margin-bottom: 20px;">
-                        <div style="flex: 1; min-width: 150px;">
-                            <label for="filtroParcela"><b>N° Parcela:</b></label>
-                            <input list="lista-parcelas" id="filtroParcela" placeholder="1-26..." style="width:100%;">
-                            <datalist id="lista-parcelas">${Array.from({ length: 26 }, (_, i) => `<option value="${i + 1}"></option>`).join('')}</datalist>
-                        </div>
-                        <div style="flex: 1; min-width: 150px;">
-                            <label for="filtroAnio"><b>Año:</b></label>
-                            <input type="number" id="filtroAnio" value="${new Date().getFullYear()}" style="width:100%;">
-                        </div>
-                    </div>
-                </div>
-                <div style="margin-top: auto; display: flex; flex-direction: column; align-items: flex-start; gap: 10px;">
-                    <button id="btnAbrirModalGasto" class="btn">Agregar Gasto Común</button>
-                    <button id="btnAbrirModalComprobante" class="btn secondary">Enviar Comprobante</button>
-                </div>
-            </section>
-            <section class="widget" style="flex: 2; min-width: 450px;"><h4 style="margin-top:0;">Configuración de TIMC</h4><div style="display: flex; align-items: flex-end; gap: 16px; margin-bottom: 20px;"><div style="min-width: 120px;"><label for="inputTMC"><b>TIMC (%)</b></label><input type="number" id="inputTMC" step="0.1" placeholder="Ej: 25"></div><div><label for="selectMesTMC"><b>Mes</b></label><select id="selectMesTMC" style="padding: 11px 10px;">${MESES.map((m, i) => `<option value="${i + 1}">${m}</option>`).join('')}</select></div><button id="btnGuardarTMC" class="btn">Guardar en Sheet</button></div><div id="timc-display"><h5 style="margin-top:0; margin-bottom: 10px;">TIMC Guardado para el año seleccionado:</h5><div id="timc-list-horizontal" style="display: flex; flex-wrap: wrap; gap: 15px; background: #e9f1fb; padding: 12px; border-radius: 8px;"></div></div></section>
-        </div>
-        <section id="widget-convenio" class="widget" style="display:none; margin-top: 2rem;">
-            <h3 style="margin-top:0;">Estado de Convenio de Pago</h3>
-            <div id="convenio-summary-grid"></div>
-            <h4 style="margin-top: 1.5rem;">Historial de Abonos (Año Seleccionado)</h4>
-            <div class="table-container"><table class="table"><thead id="thead-abonos"></thead><tbody id="tbody-abonos"></tbody></table></div>
-        </section>
-        <section id="detalle-gastos" style="margin-top: 2rem;"><h3>Detalle de Pagos Registrados</h3><div class="table-container"><table id="table-pagos" class="table"><thead id="thead-gastos"></thead><tbody id="tbody-gastos"></tbody></table></div></section>
-        
-        <div id="modalGC" class="modal" style="display:none;">
-            <div class="modal-content large">
-                <h3>Agregar Gasto Común</h3>
-                <form id="formGastoComun">
                     <div class="form-grid">
                         <div>
                             <label>N° Parcela</label>
@@ -620,676 +395,757 @@ snippet_1: // ==================================================================
         
         <div id="modalConvenio" class="modal" style="display:none;">
             <div class="modal-content">
-                <h3 style="margin...
-
-selectedRelevantSnippets:
-snippet_1: // ================================================================================= // ===== GASTOS_COMUNES.JS - CÓDIGO COMPLETO Y FINAL (CON TODAS LAS CORRECCIONES) ===== // ================================================================================= // Constantes globales para el módulo const MESES = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"]; const ENCABEZADOS_PAGOS = [ 'ID_Pago', 'Nombre_Residente', 'N_Parcela', 'Valor_Gasto_Comun', 'Periodo', 'Fecha_Vencimiento', 'Monto_Pagado', 'Saldo_Pendiente_o_a_favor', 'Interes', 'TIMC', 'Multa_1/4', 'Meses_Inpagos', 'Deuda_Total', 'Fecha_Pago', 'Metodo_Pago', 'Estado', 'ID_Comprobante_Drive', 'Abono_Convenio', 'Comprobante_Enviado', 'Descripcion_Deuda', 'Descripcion_Pago', 'Saldo_Favor_Usado' ]; async function cargarGastosComunes() { limpiarMainContent(); mostrarSpinner(); // Variables locales que estarán disponibles para todas las funciones internas let residentes = []; let pagosGC_obj = []; let timcData = {}; let pagoSeleccionadoParaEnviar = null; try { const [residentes_data, pagosGC_raw, timcs_raw] = await Promise.all([ obtenerResidentes(), obtenerPagosGC(), obtenerTIMCs() ]); residentes = residentes_data || []; pagosGC_obj = (pagosGC_raw || []).map((fila, index) => { let obj = {}; ENCABEZADOS_PAGOS.forEach((encabezado, i) => { obj[encabezado] = fila[i]; }); if (obj.Periodo) { const anioMatch = obj.Periodo.toString().match(/\d{4}/); obj.anio = anioMatch ? parseInt(anioMatch[0]) : null; } obj.rowNum = index + 2; return obj; }).filter(p => p.N_Parcela); (timcs_raw || []).forEach(fila => { const [anio, mes, valor] = fila; if (!timcData[anio]) timcData[anio] = {}; timcData[anio][mes] = parseFloat(valor); }); } catch (e) { ocultarSpinner(); mostrarMensaje('Error al cargar datos de Gastos Comunes: ' + e.message, 'error'); return; } // ======================================================= // FUNCIONES DE AYUDA (DEFINIDAS DENTRO PARA TENER ACCESO A LAS VARIABLES) // ======================================================= function formatearPeriodo(periodo) { if (!periodo) return 'N/A'; const matchAnio = periodo.toString().match(/\d{4}/); const anio = matchAnio ? parseInt(matchAnio[0]) : null; const matchMes = MESES.findIndex(m => periodo.toLowerCase().includes(m.toLowerCase())); if (anio && matchMes !== -1) { return `${MESES[matchMes]} ${anio}`; } const match = periodo.toString().match(/^(\d{4})-(\d{1,2})$/); if (match) { const anio = parseInt(match[1]); const mesIndex = parseInt(match[2]) - 1; if (mesIndex >= 0 && mesIndex < 12) { return `${MESES[mesIndex]} ${anio}`; } } return periodo; } function actualizarVistaPreviaComprobante(pago) { pagoSeleccionadoParaEnviar = pago; const parcela = document.getElementById('inputNParcelaComprobante').value; const asuntoInput = document.getElementById('inputAsuntoComprobante'); const cuerpoDiv = document.getElementById('divCuerpoComprobante'); const allResidentsForParcela = residentes.filter(r => String(r[3]) === String(parcela)); const residentNames = allResidentsForParcela.map(r => r[1]).join(' y '); const representativeResident = allResidentsForParcela.find(r => r[9] && r[9].trim().toUpperCase() === 'SI') || allResidentsForParcela[0]; if (!representativeResident) { cuerpoDiv.innerHTML = `<span style="color: #dc3545;">Error: No se pudo encontrar un residente representativo.</span>`; return; } const aEnviar = {...representativeResident}; aEnviar[1] = residentNames; const periodoFormateado = formatearPeriodo(pago.Periodo); asuntoInput.value = `Comprobante pago Gasto Común ${periodoFormateado} Parcela ${parcela}`; cuerpoDiv.innerHTML = crearCuerpoCorreo(pago, aEnviar); } function crearCuerpoCorreo(pago, residente) { const nombreResidente = residente[1]; const periodoFormateado = formatearPeriodo(pago.Periodo); const montoPagado = parseFloat(pago.Monto_Pagado || 0); const saldoFavorUsado = parseFloat(pago.Saldo_Favor_Usado || 0); const abonoConvenio = parseFloat(pago.Abono_Convenio || 0); const montoTotalAbonadoGC = montoPagado + saldoFavorUsado; const valorGC = parseFloat(pago.Valor_Gasto_Comun || 0); const interes = parseFloat(pago.Interes || 0); const multa = parseFloat(pago['Multa_1/4'] || 0); const deudaDelPeriodo = valorGC + interes + multa; const saldoTransaccion = montoTotalAbonadoGC - deudaDelPeriodo; // ▼ INICIO: CÓDIGO MODIFICADO ▼ // Se crea una variable para el resultado final, que será más clara. let resultadoHtml; if (saldoTransaccion >= 0) { // El período está pagado. resultadoHtml = ` <tr style="font-weight:bold; border-top:2px solid #2e7d32;"> <td style="padding:10px 0; color:#2e7d32; font-size:1.1em;">Estado del Período:</td> <td style="padding:10px 0; text-align:right; color:#2e7d32; font-size:1.1em;">PAGADO</td> </tr> `; // Solo se muestra el saldo a favor si es mayor que cero. if (saldoTransaccion > 0) { resultadoHtml += ` <tr> <td style="padding:5px 0;">Saldo a favor generado en esta transacción:</td> <td style="padding:5px 0; text-align:right; font-weight:bold;">$${saldoTransaccion.toLocaleString('es-CL')}</td> </tr> `; } } else { // El período queda con deuda. resultadoHtml = ` <tr style="font-weight:bold; border-top:2px solid #cccccc;"> <td style="padding:10px 0; color:#d32f2f;">Saldo pendiente del Período:</td> <td style="padding:10px 0; text-align:right; color:#d32f2f;">$${Math.abs(saldoTransaccion).toLocaleString('es-CL')}</td> </tr> `; } // ▲ FIN: CÓDIGO MODIFICADO ▲ return ` <!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><title>Comprobante de Pago</title></head> <body style="margin:0;padding:0;background-color:#f4f4f4;font-family:Arial,sans-serif;"> <table align="center" border="0" cellpadding="0" cellspacing="0" width="600" style="border-collapse:collapse;background-color:#ffffff;margin:20px auto;border:1px solid #dddddd;"> <tr><td align="center" bgcolor="#2a7ca3" style="padding:20px;color:#ffffff;"><h2 style="margin:0;">Comprobante de Pago</h2><p style="margin:5px 0 0;">Condominio Los Molles</p></td></tr> <tr><td style="padding:25px 20px;"> <p>Estimado(a) <strong>${nombreResidente}</strong>,</p> <p>Confirmamos la recepción de su pago para el período <strong>${periodoFormateado}</strong>. A continuación el detalle:</p> <h4 style="color:#333;margin-bottom:5px;margin-top:15px;border-bottom:1px solid #eee;padding-bottom:5px;">Detalle Deuda del Período</h4> <table width="100%" cellpadding="4" cellspacing="0" style="border-collapse:collapse;font-size:14px;"> <tr><td style="padding:5px 0;">Gasto Común Ordinario:</td><td style="padding:5px 0;text-align:right;">$${valorGC.toLocaleString('es-CL')}</td></tr> <tr><td style="padding:5px 0;">Intereses por mora:</td><td style="padding:5px 0;text-align:right;">$${interes.toLocaleString('es-CL')}</td></tr> <tr><td style="padding:5px 0;">Multas del período:</td><td style="padding:5px 0;text-align:right;">$${multa.toLocaleString('es-CL')}</td></tr> <tr style="font-weight:bold;border-top:1px solid #dddddd;"><td style="padding:8px 0;">Deuda Total del Período:</td><td style="padding:8px 0;text-align:right;">$${deudaDelPeriodo.toLocaleString('es-CL')}</td></tr> </table> <h4 style="color:#333;margin-bottom:5px;margin-top:15px;border-bottom:1px solid #eee;padding-bottom:5px;">Detalle de su Pago</h4> <table width="100%" cellpadding="4" cellspacing="0" style="border-collapse:collapse;font-size:14px;"> <tr><td style="padding:8px 0;">Monto Pagado (transferencia/efectivo):</td><td style="padding:8px 0;text-align:right;">$${montoPagado.toLocaleString('es-CL')}</td></tr> ${abonoConvenio > 0 ? `<tr><td style="padding:8px 0;">Abono a Convenio de Deuda:</td><td style="padding:8px 0;text-align:right;">$${abonoConvenio.toLocaleString('es-CL')}</td></tr>` : ''} <tr><td style="padding:8px 0;">Saldo a Favor Utilizado:</td><td style="padding:8px 0;text-align:right;">$${saldoFavorUsado.toLocaleString('es-CL')}</td></tr> <tr style="font-weight:bold;"><td style="padding:8px 0;border-top:1px solid #eeeeee;">Total Abonado al Período (G.C.):</td><td style="padding:8px 0;text-align:right;border-top:1px solid #eeeeee;">$${montoTotalAbonadoGC.toLocaleString('es-CL')}</td></tr> ${resultadoHtml} </table> <hr style="border:0;border-top:1px solid #eeeeee;margin-top:20px;"> <p>Gracias por su compromiso.</p><p style="margin-top:20px;">Atentamente,<br><strong>Alex Thiele</strong><br>Administrador</p> </td></tr> <tr><td bgcolor="#f4f4f4" style="text-align:center;padding:15px;font-size:12px;color:#777777;">Este es un correo electrónico generado automáticamente.</td></tr> </table> </body></html>`;
-}
-
-    async function guardarConvenio(nParcela, datosConvenio) {
-      mostrarSpinner();
-      try {
-        await gapi.client.request({
-          'path': `https://script.googleapis.com/v1/scripts/${SCRIPT_ID}:run`,
-          'method': 'POST',
-          'body': {
-            'function': 'guardarConvenio_GS',
-            'parameters': [nParcela, datosConvenio]
-          }
-        });
-        // Recargar los datos para reflejar los cambios
-        await cargarGastosComunes();
-        // Forzar el filtro para ver la parcela actualizada
-        document.getElementById('filtroParcela').value = nParcela;
-        filtrarYRenderizar();
-        mostrarMensaje('Convenio guardado y deudas anteriores congeladas con éxito.', 'success');
-      } catch (err) {
-        const errorMessage = err.result?.error?.message || err.message || 'Error desconocido.';
-        mostrarMensaje(`Error al guardar el convenio: ${errorMessage}`, 'error');
-      } finally {
-        ocultarSpinner();
-      }
-    }
-
-    async function enviarAcuerdoConvenio(residente, datosConvenio) {
-        const emailResidente = residente[5];
-        if (!emailResidente || !emailResidente.includes('@')) {
-            mostrarMensaje('El residente no tiene un correo electrónico válido registrado.', 'error');
-            return;
-        }
-        const confirmacion = confirm(`¿Está seguro que desea enviar el correo de acuerdo de convenio de pago a ${residente[1]} (${emailResidente})?`);
-        if (!confirmacion) return;
-        mostrarSpinner();
-        try {
-            await gapi.client.request({
-                'path': `https://script.googleapis.com/v1/scripts/${SCRIPT_ID}:run`,
-                'method': 'POST',
-                'body': {
-                    'function': 'enviarCorreoConvenio_GS',
-                    'parameters': [residente, datosConvenio]
-                }
-            });
-            mostrarMensaje('Correo de acuerdo de convenio enviado exitosamente.', 'success');
-        } catch (err) {
-            const errorMessage = err.result?.error?.message || err.message || 'Error desconocido.';
-            mostrarMensaje(`Error al enviar el correo de convenio: ${errorMessage}`, 'error');
-        } finally {
-            ocultarSpinner();
-        }
-    }
-
-    async function formalizarConvenio(nParcela, nombreResidente) {
-        const instruccion = `Para formalizar el convenio de la parcela ${nParcela} (${nombreResidente}), por favor, pegue aquí el enlace permanente del correo de aceptación del residente.\n\nPara obtener el enlace en Gmail:\n1. Abra el correo de aceptación.\n2. Haga clic en los tres puntos (Más opciones).\n3. Seleccione "Imprimir".\n4. En la ventana de impresión, copie la URL de la barra de direcciones del navegador.`;
-        const urlConvenio = prompt(instruccion, "");
-
-        if (urlConvenio === null) return; // El usuario canceló
-        if (urlConvenio.trim() === "" || !urlConvenio.startsWith("http")) {
-            alert("El enlace proporcionado no es válido. Por favor, inténtelo de nuevo.");
-            return;
-        }
-
-        mostrarSpinner();
-        try {
-            await gapi.client.request({
-                'path': `https://script.googleapis.com/v1/scripts/${SCRIPT_ID}:run`,
-                'method': 'POST',
-                'body': {
-                    'function': 'formalizarConvenio_GS',
-                    'parameters': [nParcela, urlConvenio]
-                }
-            });
-            
-            pagosGC_obj.forEach(pago => {
-                if (String(pago.N_Parcela) === String(nParcela) && pago.Estado === 'Moroso') {
-                    pago.Estado = 'En Convenio';
-                }
-            });
-
-            filtrarYRenderizar();
-            mostrarMensaje(`Convenio formalizado para la parcela ${nParcela}. Las deudas anteriores han sido marcadas como "En Convenio".`, 'success');
-
-        } catch (err) {
-            const errorMessage = err.result?.error?.message || err.message || 'Error desconocido.';
-            mostrarMensaje(`Error al formalizar el convenio: ${errorMessage}`, 'error');
-        } finally {
-            ocultarSpinner();
-        }
-    }
-    
-    // =======================================================
-    // RENDERIZADO DEL HTML PRINCIPAL
-    // =======================================================
-
-    const main = document.getElementById('main-content');
-    main.innerHTML = `
-        <style>
-            .estado-pagado { background-color: #198754; color: white; } 
-            .estado-moroso { background-color: #dc3545; color: white; } 
-            .estado-abono { background-color: #ffc107; color: #333; } 
-            .estado-en-convenio { background-color: #0dcaf0; color: #000; }
-            .fila-clicable:hover { background-color: #e9f1fb; cursor: pointer; } 
-            #detalle-pago-grid { display: grid; grid-template-columns: auto 1fr; gap: 10px 20px; align-items: center;} 
-            #detalle-pago-grid b { grid-column: 1; text-align: right; } 
-            #detalle-pago-grid span { grid-column: 2; text-align: left; word-break: break-all; } 
-            .suggestion-item { padding: 8px 12px; cursor: pointer; } 
-            .suggestion-item:hover { background-color: #e9f1fb; } 
-            #table-pagos { table-layout: fixed; width: 100%; border-collapse: collapse; } 
-            #table-pagos th { position: relative; } 
-            .resizer { position: absolute; top: 0; right: -2px; width: 5px; cursor: col-resize; user-select: none; height: 100%; z-index: 1;} 
-            .resizer:hover { border-right: 2px solid #007bff; } 
-            .comprobante-enviado { color: green; font-size: 1.2rem; font-weight: bold; text-align: center; } 
-            #convenio-summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 15px; } 
-            #convenio-summary-grid > div { background-color: #f8f9fa; padding: 15px; border-radius: 8px; text-align: center; } 
-            #convenio-summary-grid > div > span { display: block; font-size: 1.4em; font-weight: bold; } 
-            .saldo-info { padding: 10px; border-radius: 5px; margin-top: 5px; font-weight: bold; text-align: center; } 
-            .saldo-convenio { background-color: #fff8e1; color: #f57f17; } 
-            .saldo-favor { background-color: #e8f5e9; color: #2e7d32; }
-        </style>
-        <div style="display:flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;"><h2>Gastos Comunes</h2></div>
-        <div style="display: flex; flex-wrap: wrap; gap: 24px; align-items: stretch;">
-            <section class="widget" style="flex: 1; min-width: 350px; display: flex; flex-direction: column; justify-content: space-between;">
-                <div>
-                    <h4 style="margin-top:0;">Filtros de Búsqueda</h4>
-                    <div style="display: flex; flex-wrap: wrap; gap: 20px; margin-bottom: 20px;">
-                        <div style="flex: 1; min-width: 150px;">
-                            <label for="filtroParcela"><b>N° Parcela:</b></label>
-                            <input list="lista-parcelas" id="filtroParcela" placeholder="1-26..." style="width:100%;">
-                            <datalist id="lista-parcelas">${Array.from({ length: 26 }, (_, i) => `<option value="${i + 1}"></option>`).join('')}</datalist>
-                        </div>
-                        <div style="flex: 1; min-width: 150px;">
-                            <label for="filtroAnio"><b>Año:</b></label>
-                            <input type="number" id="filtroAnio" value="${new Date().getFullYear()}" style="width:100%;">
-                        </div>
+                <h3 style="margin-top:0;">Administrar Convenio de Pago</h3>
+                <form id="formConvenio">
+                    <input type="hidden" id="convenioNParcela">
+                    <div>
+                        <label>Deuda Total a convenir (CLP)</label>
+                        <input type="number" id="convenioDeudaTotal" required>
                     </div>
-                </div>
-                <div style="margin-top: auto; display: flex; flex-direction: column; align-items: flex-start; gap: 10px;">
-                    <button id="btnAbrirModalGasto" class="btn">Agregar Gasto Común</button>
-                    <button id="btnAbrirModalComprobante" class="btn secondary">Enviar Comprobante</button>
-                </div>
-            </section>
-            <section class="widget" style="flex: 2; min-width: 450px;"><h4 style="margin-top:0;">Configuración de TIMC</h4><div style="display: flex; align-items: flex-end; gap: 16px; margin-bottom: 20px;"><div style="min-width: 120px;"><label for="inputTMC"><b>TIMC (%)</b></label><input type="number" id="inputTMC" step="0.1" placeholder="Ej: 25"></div><div><label for="selectMesTMC"><b>Mes</b></label><select id="selectMesTMC" style="padding: 11px 10px;">${MESES.map((m, i) => `<option value="${i + 1}">${m}</option>`).join('')}</select></div><button id="btnGuardarTMC" class="btn">Guardar en Sheet</button></div><div id="timc-display"><h5 style="margin-top:0; margin-bottom: 10px;">TIMC Guardado para el año seleccionado:</h5><div id="timc-list-horizontal" style="display: flex; flex-wrap: wrap; gap: 15px; background: #e9f1fb; padding: 12px; border-radius: 8px;"></div></div></section>
-        </div>
-        <section id="widget-convenio" class="widget" style="display:none; margin-top: 2rem;">
-            <h3 style="margin-top:0;">Estado de Convenio de Pago</h3>
-            <div id="convenio-summary-grid"></div>
-            <h4 style="margin-top: 1.5rem;">Historial de Abonos (Año Seleccionado)</h4>
-            <div class="table-container"><table class="table"><thead id="thead-abonos"></thead><tbody id="tbody-abonos"></tbody></table></div>
-        </section>
-        <section id="detalle-gastos" style="margin-top: 2rem;"><h3>Detalle de Pagos Registrados</h3><div class="table-container"><table id="table-pagos" class="table"><thead id="thead-gastos"></thead><tbody id="tbody-gastos"></tbody></table></div></section>
-        
-        <div id="modalGC" class="modal" style="display:none;">
-            <div class="modal-content large">
-                <h3>Agregar Gasto Común</h3>
-                <form id="formGastoComun">
-                    <div class="row">
-                        <div class="col-md-6">
-                            <label>Fecha de Emisión</label>
-                            <input type="date" name="Fecha_Vencimiento" required>
-                        </div>
-                        <div class="col-md-6">
-                            <label>Período del Gasto Común</label>
-                            <input type="month" name="Periodo" required>
-                        </div>
-                    </div>
-                    <div class="row">
-                        <div class="col-md-6">
-                            <label>N° Parcela</label>
-                            <input type="number" name="N_Parcela" id="inputNParcela" min="1" max="26" required>
-                        </div>
-                        <div class="col-md-6">
-                            <label>Valor Gasto Común</label>
-                            <input type="number" name="Valor_Gasto_Comun" min="0" step="1" required>
-                        </div>
-                    </div>
-                    <div class="row">
-                        <div class="col-md-6">
-                            <label>Monto Pagado</label>
-                            <input type="number" name="Monto_Pagado" min="0" step="1" required>
-                        </div>
-                        <div class="col-md-6">
-                            <label>Multa</label>
-                            <input type="number" name="Multa_1/4" min="0" step="1" value="0">
-                        </div>
-                    </div>
-                    <div class="row">
-                        <div class="col-md-6">
-                            <label>Interes</label>
-                            <input type="number" name="Interes" min="0" step="1" value="0">
-                        </div>
-                    </div>
-                    <div style="width: 100%; margin-top: 20px; padding-top: 15px; border-top: 1px solid #ddd;">
-                        <label>Descripción / Nota del Pago (Opcional)</label>
-                        <textarea name="Descripcion_Pago" rows="2" placeholder="Ej: Pago parcial, solicitud de uso de saldo a favor, etc."></textarea>
-                    </div>
-                    <div style="text-align: right; margin-top: 20px;">
-                        <button class="btn secondary" type="button" id="btnCerrarModal">Cancelar</button>
-                        <button class="btn" type="submit">Guardar Gasto</button>
-                    </div>
-                </form>
-            </div>
-        </div>
-        
-        <div id="modalComprobante" class="modal" style="display:none;">
-            <div class="modal-content large">
-                <h3>Enviar Comprobante por Correo</h3>
-                <form id="formEnviarComprobante" style="display:flex; flex-direction:column; gap:15px;"><div style="display:flex; gap: 15px; flex-wrap: wrap;"><div style="flex: 1; min-width: 120px;"><label><b>N° Parcela</b></label><input type="number" id="inputNParcelaComprobante" min="1" max="26" required style="width:100%;"></div><div style="flex: 2; min-width: 200px;"><label><b>Residente(s)</b></label><input type="text" id="inputNombreResidenteComprobante" readonly style="width:100%; background:#eee;"></div></div><div id="periodo-selector-container" style="display: none;"><label><b>Seleccione el Comprobante</b></label><select id="selectPeriodoComprobante" style="width:100%; padding: 11px 10px;"></select></div><div><label><b>Email(s) Destinatario</b></label><input type="email" id="inputEmailComprobante" readonly style="width:100%; background:#eee;"></div><div><label><b>Asunto</b></label><input type="text" id="inputAsuntoComprobante" readonly style="width:100%; background:#eee;"></div><div><label><b>Previsualización del Correo</b></label><div id="divCuerpoComprobante" style="width:100%; height: 250px; background:#f8f9fa; border: 1px solid #ccc; border-radius: 4px; padding: 10px; overflow-y: auto;"><span style="color: #6c757d;">Ingrese un N° de Parcela para generar la previsualización.</span></div></div><div style="text-align: right; margin-top: 10px;"><button class="btn secondary" type="button" id="btnCerrarModalComprobante">Cancelar</button><button class="btn" type="submit">Enviar Correo</button></div></form>
-            </div>
-        </div>
-        <div id="modalDetallePago" class="modal" style="display:none;">
-            <div class="modal-content">
-                <h3 style="margin-top:0;">Detalle Completo del Registro</h3>
-                <div id="contenidoDetallePago" style="margin-bottom: 20px;"></div>
-                <div style="text-align: right;"><button id="btnCerrarModalDetalle" class="btn secondary">Cerrar</button></div>
-            </div>
-        </div>
-        
-        <div id="modalConvenio" class="modal" style="display:none;">
-            <div class="modal-content">
-                <h3 style="margin...
-
-selectedRelevantSnippets:
-snippet_1: // ================================================================================= // ===== GASTOS_COMUNES.JS - CÓDIGO COMPLETO Y FINAL (CON TODAS LAS CORRECCIONES) ===== // ================================================================================= // Constantes globales para el módulo const MESES = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"]; const ENCABEZADOS_PAGOS = [ 'ID_Pago', 'Nombre_Residente', 'N_Parcela', 'Valor_Gasto_Comun', 'Periodo', 'Fecha_Vencimiento', 'Monto_Pagado', 'Saldo_Pendiente_o_a_favor', 'Interes', 'TIMC', 'Multa_1/4', 'Meses_Inpagos', 'Deuda_Total', 'Fecha_Pago', 'Metodo_Pago', 'Estado', 'ID_Comprobante_Drive', 'Abono_Convenio', 'Comprobante_Enviado', 'Descripcion_Deuda', 'Descripcion_Pago', 'Saldo_Favor_Usado' ]; async function cargarGastosComunes() { limpiarMainContent(); mostrarSpinner(); // Variables locales que estarán disponibles para todas las funciones internas let residentes = []; let pagosGC_obj = []; let timcData = {}; let pagoSeleccionadoParaEnviar = null; try { const [residentes_data, pagosGC_raw, timcs_raw] = await Promise.all([ obtenerResidentes(), obtenerPagosGC(), obtenerTIMCs() ]); residentes = residentes_data || []; pagosGC_obj = (pagosGC_raw || []).map((fila, index) => { let obj = {}; ENCABEZADOS_PAGOS.forEach((encabezado, i) => { obj[encabezado] = fila[i]; }); if (obj.Periodo) { const anioMatch = obj.Periodo.toString().match(/\d{4}/); obj.anio = anioMatch ? parseInt(anioMatch[0]) : null; } obj.rowNum = index + 2; return obj; }).filter(p => p.N_Parcela); (timcs_raw || []).forEach(fila => { const [anio, mes, valor] = fila; if (!timcData[anio]) timcData[anio] = {}; timcData[anio][mes] = parseFloat(valor); }); } catch (e) { ocultarSpinner(); mostrarMensaje('Error al cargar datos de Gastos Comunes: ' + e.message, 'error'); return; } // ======================================================= // FUNCIONES DE AYUDA (DEFINIDAS DENTRO PARA TENER ACCESO A LAS VARIABLES) // ======================================================= function formatearPeriodo(periodo) { if (!periodo) return 'N/A'; const matchAnio = periodo.toString().match(/\d{4}/); const anio = matchAnio ? parseInt(matchAnio[0]) : null; const matchMes = MESES.findIndex(m => periodo.toLowerCase().includes(m.toLowerCase())); if (anio && matchMes !== -1) { return `${MESES[matchMes]} ${anio}`; } const match = periodo.toString().match(/^(\d{4})-(\d{1,2})$/); if (match) { const anio = parseInt(match[1]); const mesIndex = parseInt(match[2]) - 1; if (mesIndex >= 0 && mesIndex < 12) { return `${MESES[mesIndex]} ${anio}`; } } return periodo; } function actualizarVistaPreviaComprobante(pago) { pagoSeleccionadoParaEnviar = pago; const parcela = document.getElementById('inputNParcelaComprobante').value; const asuntoInput = document.getElementById('inputAsuntoComprobante'); const cuerpoDiv = document.getElementById('divCuerpoComprobante'); const allResidentsForParcela = residentes.filter(r => String(r[3]) === String(parcela)); const residentNames = allResidentsForParcela.map(r => r[1]).join(' y '); const representativeResident = allResidentsForParcela.find(r => r[9] && r[9].trim().toUpperCase() === 'SI') || allResidentsForParcela[0]; if (!representativeResident) { cuerpoDiv.innerHTML = `<span style="color: #dc3545;">Error: No se pudo encontrar un residente representativo.</span>`; return; } const aEnviar = {...representativeResident}; aEnviar[1] = residentNames; const periodoFormateado = formatearPeriodo(pago.Periodo); asuntoInput.value = `Comprobante pago Gasto Común ${periodoFormateado} Parcela ${parcela}`; cuerpoDiv.innerHTML = crearCuerpoCorreo(pago, aEnviar); } function crearCuerpoCorreo(pago, residente) { const nombreResidente = residente[1]; const periodoFormateado = formatearPeriodo(pago.Periodo); const montoPagado = parseFloat(pago.Monto_Pagado || 0); const saldoFavorUsado = parseFloat(pago.Saldo_Favor_Usado || 0); const abonoConvenio = parseFloat(pago.Abono_Convenio || 0); const montoTotalAbonadoGC = montoPagado + saldoFavorUsado; const valorGC = parseFloat(pago.Valor_Gasto_Comun || 0); const interes = parseFloat(pago.Interes || 0); const multa = parseFloat(pago['Multa_1/4'] || 0); const deudaDelPeriodo = valorGC + interes + multa; const saldoTransaccion = montoTotalAbonadoGC - deudaDelPeriodo; // ▼ INICIO: CÓDIGO MODIFICADO ▼ // Se crea una variable para el resultado final, que será más clara. let resultadoHtml; if (saldoTransaccion >= 0) { // El período está pagado. resultadoHtml = ` <tr style="font-weight:bold; border-top:2px solid #2e7d32;"> <td style="padding:10px 0; color:#2e7d32; font-size:1.1em;">Estado del Período:</td> <td style="padding:10px 0; text-align:right; color:#2e7d32; font-size:1.1em;">PAGADO</td> </tr> `; // Solo se muestra el saldo a favor si es mayor que cero. if (saldoTransaccion > 0) { resultadoHtml += ` <tr> <td style="padding:5px 0;">Saldo a favor generado en esta transacción:</td> <td style="padding:5px 0; text-align:right; font-weight:bold;">$${saldoTransaccion.toLocaleString('es-CL')}</td> </tr> `; } } else { // El período queda con deuda. resultadoHtml = ` <tr style="font-weight:bold; border-top:2px solid #cccccc;"> <td style="padding:10px 0; color:#d32f2f;">Saldo pendiente del Período:</td> <td style="padding:10px 0; text-align:right; color:#d32f2f;">$${Math.abs(saldoTransaccion).toLocaleString('es-CL')}</td> </tr> `; } // ▲ FIN: CÓDIGO MODIFICADO ▲ return ` <!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><title>Comprobante de Pago</title></head> <body style="margin:0;padding:0;background-color:#f4f4f4;font-family:Arial,sans-serif;"> <table align="center" border="0" cellpadding="0" cellspacing="0" width="600" style="border-collapse:collapse;background-color:#ffffff;margin:20px auto;border:1px solid #dddddd;"> <tr><td align="center" bgcolor="#2a7ca3" style="padding:20px;color:#ffffff;"><h2 style="margin:0;">Comprobante de Pago</h2><p style="margin:5px 0 0;">Condominio Los Molles</p></td></tr> <tr><td style="padding:25px 20px;"> <p>Estimado(a) <strong>${nombreResidente}</strong>,</p> <p>Confirmamos la recepción de su pago para el período <strong>${periodoFormateado}</strong>. A continuación el detalle:</p> <h4 style="color:#333;margin-bottom:5px;margin-top:15px;border-bottom:1px solid #eee;padding-bottom:5px;">Detalle Deuda del Período</h4> <table width="100%" cellpadding="4" cellspacing="0" style="border-collapse:collapse;font-size:14px;"> <tr><td style="padding:5px 0;">Gasto Común Ordinario:</td><td style="padding:5px 0;text-align:right;">$${valorGC.toLocaleString('es-CL')}</td></tr> <tr><td style="padding:5px 0;">Intereses por mora:</td><td style="padding:5px 0;text-align:right;">$${interes.toLocaleString('es-CL')}</td></tr> <tr><td style="padding:5px 0;">Multas del período:</td><td style="padding:5px 0;text-align:right;">$${multa.toLocaleString('es-CL')}</td></tr> <tr style="font-weight:bold;border-top:1px solid #dddddd;"><td style="padding:8px 0;">Deuda Total del Período:</td><td style="padding:8px 0;text-align:right;">$${deudaDelPeriodo.toLocaleString('es-CL')}</td></tr> </table> <h4 style="color:#333;margin-bottom:5px;margin-top:15px;border-bottom:1px solid #eee;padding-bottom:5px;">Detalle de su Pago</h4> <table width="100%" cellpadding="4" cellspacing="0" style="border-collapse:collapse;font-size:14px;"> <tr><td style="padding:8px 0;">Monto Pagado (transferencia/efectivo):</td><td style="padding:8px 0;text-align:right;">$${montoPagado.toLocaleString('es-CL')}</td></tr> ${abonoConvenio > 0 ? `<tr><td style="padding:8px 0;">Abono a Convenio de Deuda:</td><td style="padding:8px 0;text-align:right;">$${abonoConvenio.toLocaleString('es-CL')}</td></tr>` : ''} <tr><td style="padding:8px 0;">Saldo a Favor Utilizado:</td><td style="padding:8px 0;text-align:right;">$${saldoFavorUsado.toLocaleString('es-CL')}</td></tr> <tr style="font-weight:bold;"><td style="padding:8px 0;border-top:1px solid #eeeeee;">Total Abonado al Período (G.C.):</td><td style="padding:8px 0;text-align:right;border-top:1px solid #eeeeee;">$${montoTotalAbonadoGC.toLocaleString('es-CL')}</td></tr> ${resultadoHtml} </table> <hr style="border:0;border-top:1px solid #eeeeee;margin-top:20px;"> <p>Gracias por su compromiso.</p><p style="margin-top:20px;">Atentamente,<br><strong>Alex Thiele</strong><br>Administrador</p> </td></tr> <tr><td bgcolor="#f4f4f4" style="text-align:center;padding:15px;font-size:12px;color:#777777;">Este es un correo electrónico generado automáticamente.</td></tr> </table> </body></html>`;
-}
-
-    async function guardarConvenio(nParcela, datosConvenio) {
-      mostrarSpinner();
-      try {
-        await gapi.client.request({
-          'path': `https://script.googleapis.com/v1/scripts/${SCRIPT_ID}:run`,
-          'method': 'POST',
-          'body': {
-            'function': 'guardarConvenio_GS',
-            'parameters': [nParcela, datosConvenio]
-          }
-        });
-        // Recargar los datos para reflejar los cambios
-        await cargarGastosComunes();
-        // Forzar el filtro para ver la parcela actualizada
-        document.getElementById('filtroParcela').value = nParcela;
-        filtrarYRenderizar();
-        mostrarMensaje('Convenio guardado y deudas anteriores congeladas con éxito.', 'success');
-      } catch (err) {
-        const errorMessage = err.result?.error?.message || err.message || 'Error desconocido.';
-        mostrarMensaje(`Error al guardar el convenio: ${errorMessage}`, 'error');
-      } finally {
-        ocultarSpinner();
-      }
-    }
-
-    async function enviarAcuerdoConvenio(residente, datosConvenio) {
-        const emailResidente = residente[5];
-        if (!emailResidente || !emailResidente.includes('@')) {
-            mostrarMensaje('El residente no tiene un correo electrónico válido registrado.', 'error');
-            return;
-        }
-        const confirmacion = confirm(`¿Está seguro que desea enviar el correo de acuerdo de convenio de pago a ${residente[1]} (${emailResidente})?`);
-        if (!confirmacion) return;
-        mostrarSpinner();
-        try {
-            await gapi.client.request({
-                'path': `https://script.googleapis.com/v1/scripts/${SCRIPT_ID}:run`,
-                'method': 'POST',
-                'body': {
-                    'function': 'enviarCorreoConvenio_GS',
-                    'parameters': [residente, datosConvenio]
-                }
-            });
-            mostrarMensaje('Correo de acuerdo de convenio enviado exitosamente.', 'success');
-        } catch (err) {
-            const errorMessage = err.result?.error?.message || err.message || 'Error desconocido.';
-            mostrarMensaje(`Error al enviar el correo de convenio: ${errorMessage}`, 'error');
-        } finally {
-            ocultarSpinner();
-        }
-    }
-
-    async function formalizarConvenio(nParcela, nombreResidente) {
-        const instruccion = `Para formalizar el convenio de la parcela ${nParcela} (${nombreResidente}), por favor, pegue aquí el enlace permanente del correo de aceptación del residente.\n\nPara obtener el enlace en Gmail:\n1. Abra el correo de aceptación.\n2. Haga clic en los tres puntos (Más opciones).\n3. Seleccione "Imprimir".\n4. En la ventana de impresión, copie la URL de la barra de direcciones del navegador.`;
-        const urlConvenio = prompt(instruccion, "");
-
-        if (urlConvenio === null) return; // El usuario canceló
-        if (urlConvenio.trim() === "" || !urlConvenio.startsWith("http")) {
-            alert("El enlace proporcionado no es válido. Por favor, inténtelo de nuevo.");
-            return;
-        }
-
-        mostrarSpinner();
-        try {
-            await gapi.client.request({
-                'path': `https://script.googleapis.com/v1/scripts/${SCRIPT_ID}:run`,
-                'method': 'POST',
-                'body': {
-                    'function': 'formalizarConvenio_GS',
-                    'parameters': [nParcela, urlConvenio]
-                }
-            });
-            
-            pagosGC_obj.forEach(pago => {
-                if (String(pago.N_Parcela) === String(nParcela) && pago.Estado === 'Moroso') {
-                    pago.Estado = 'En Convenio';
-                }
-            });
-
-            filtrarYRenderizar();
-            mostrarMensaje(`Convenio formalizado para la parcela ${nParcela}. Las deudas anteriores han sido marcadas como "En Convenio".`, 'success');
-
-        } catch (err) {
-            const errorMessage = err.result?.error?.message || err.message || 'Error desconocido.';
-            mostrarMensaje(`Error al formalizar el convenio: ${errorMessage}`, 'error');
-        } finally {
-            ocultarSpinner();
-        }
-    }
-    
-    // =======================================================
-    // RENDERIZADO DEL HTML PRINCIPAL
-    // =======================================================
-
-    const main = document.getElementById('main-content');
-    main.innerHTML = `
-        <style>
-            .estado-pagado { background-color: #198754; color: white; } 
-            .estado-moroso { background-color: #dc3545; color: white; } 
-            .estado-abono { background-color: #ffc107; color: #333; } 
-            .estado-en-convenio { background-color: #0dcaf0; color: #000; }
-            .fila-clicable:hover { background-color: #e9f1fb; cursor: pointer; } 
-            #detalle-pago-grid { display: grid; grid-template-columns: auto 1fr; gap: 10px 20px; align-items: center;} 
-            #detalle-pago-grid b { grid-column: 1; text-align: right; } 
-            #detalle-pago-grid span { grid-column: 2; text-align: left; word-break: break-all; } 
-            .suggestion-item { padding: 8px 12px; cursor: pointer; } 
-            .suggestion-item:hover { background-color: #e9f1fb; } 
-            #table-pagos { table-layout: fixed; width: 100%; border-collapse: collapse; } 
-            #table-pagos th { position: relative; } 
-            .resizer { position: absolute; top: 0; right: -2px; width: 5px; cursor: col-resize; user-select: none; height: 100%; z-index: 1;} 
-            .resizer:hover { border-right: 2px solid #007bff; } 
-            .comprobante-enviado { color: green; font-size: 1.2rem; font-weight: bold; text-align: center; } 
-            #convenio-summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 15px; } 
-            #convenio-summary-grid > div { background-color: #f8f9fa; padding: 15px; border-radius: 8px; text-align: center; } 
-            #convenio-summary-grid > div > span { display: block; font-size: 1.4em; font-weight: bold; } 
-            .saldo-info { padding: 10px; border-radius: 5px; margin-top: 5px; font-weight: bold; text-align: center; } 
-            .saldo-convenio { background-color: #fff8e1; color: #f57f17; } 
-            .saldo-favor { background-color: #e8f5e9; color: #2e7d32; }
-        </style>
-        <div style="display:flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;"><h2>Gastos Comunes</h2></div>
-        <div style="display: flex; flex-wrap: wrap; gap: 24px; align-items: stretch;">
-            <section class="widget" style="flex: 1; min-width: 350px; display: flex; flex-direction: column; justify-content: space-between;">
-                <div>
-                    <h4 style="margin-top:0;">Filtros de Búsqueda</h4>
-                    <div style="display: flex; flex-wrap: wrap; gap: 20px; margin-bottom: 20px;">
-                        <div style="flex: 1; min-width: 150px;">
-                            <label for="filtroParcela"><b>N° Parcela:</b></label>
-                            <input list="lista-parcelas" id="filtroParcela" placeholder="1-26..." style="width:100%;">
-                            <datalist id="lista-parcelas">${Array.from({ length: 26 }, (_, i) => `<option value="${i + 1}"></option>`).join('')}</datalist>
-                        </div>
-                        <div style="flex: 1; min-width: 150px;">
-                            <label for="filtroAnio"><b>Año:</b></label>
-                            <input type="number" id="filtroAnio" value="${new Date().getFullYear()}" style="width:100%;">
-                        </div>
-                    </div>
-                </div>
-                <div style="margin-top: auto; display: flex; flex-direction: column; align-items: flex-start; gap: 10px;">
-                    <button id="btnAbrirModalGasto" class="btn">Agregar Gasto Común</button>
-                    <button id="btnAbrirModalComprobante" class="btn secondary">Enviar Comprobante</button>
-                </div>
-            </section>
-            <section class="widget" style="flex: 2; min-width: 450px;"><h4 style="margin-top:0;">Configuración de TIMC</h4><div style="display: flex; align-items: flex-end; gap: 16px; margin-bottom: 20px;"><div style="min-width: 120px;"><label for="inputTMC"><b>TIMC (%)</b></label><input type="number" id="inputTMC" step="0.1" placeholder="Ej: 25"></div><div><label for="selectMesTMC"><b>Mes</b></label><select id="selectMesTMC" style="padding: 11px 10px;">${MESES.map((m, i) => `<option value="${i + 1}">${m}</option>`).join('')}</select></div><button id="btnGuardarTMC" class="btn">Guardar en Sheet</button></div><div id="timc-display"><h5 style="margin-top:0; margin-bottom: 10px;">TIMC Guardado para el año seleccionado:</h5><div id="timc-list-horizontal" style="display: flex; flex-wrap: wrap; gap: 15px; background: #e9f1fb; padding: 12px; border-radius: 8px;"></div></div></section>
-        </div>
-        <section id="widget-convenio" class="widget" style="display:none; margin-top: 2rem;">
-            <h3 style="margin-top:0;">Estado de Convenio de Pago</h3>
-            <div id="convenio-summary-grid"></div>
-            <h4 style="margin-top: 1.5rem;">Historial de Abonos (Año Seleccionado)</h4>
-            <div class="table-container"><table class="table"><thead id="thead-abonos"></thead><tbody id="tbody-abonos"></tbody></table></div>
-        </section>
-        <section id="detalle-gastos" style="margin-top: 2rem;"><h3>Detalle de Pagos Registrados</h3><div class="table-container"><table id="table-pagos" class="table"><thead id="thead-gastos"></thead><tbody id="tbody-gastos"></tbody></table></div></section>
-        
-        <div id="modalGC" class="modal" style="display:none;">
-            <div class="modal-content large">
-                <h3>Agregar Gasto Común</h3>
-                <form id="formGastoComun">
-                    <div class="row">
-                        <div class="col-md-6">
-                            <label>Fecha de Emisión</label>
-                            <input type="date" name="Fecha_Vencimiento" required>
-                        </div>
-                        <div class="col-md-6">
-                            <label>Período del Gasto Común</label>
-                            <input type="month" name="Periodo" required>
-                        </div>
-                    </div>
-                    <div class="row">
-                        <div class="col-md-6">
-                            <label>N° Parcela</label>
-                            <input type="number" name="N_Parcela" id="inputNParcela" min="1" max="26" required>
-                        </div>
-                        <div class="col-md-6">
-                            <label>Valor Gasto Común</label>
-                            <input type="number" name="Valor_Gasto_Comun" min="0" step="1" required>
-                        </div>
-                    </div>
-                    <div class="row">
-                        <div class="col-md-6">
-                            <label>Monto Pagado</label>
-                            <input type="number" name="Monto_Pagado" min="0" step="1" required>
-                        </div>
-                        <div class="col-md-6">
-                            <label>Multa</label>
-                            <input type="number" name="Multa_1/4" min="0" step="1" value="0">
-                        </div>
-                    </div>
-                    <div class="row">
-                        <div class="col-md-6">
-                            <label>Interes</label>
-                            <input type="number" name="Interes" min="0" step="1" value="0">
-                        </div>
-                    </div>
-                    <div style="width: 100%; margin-top: 20px; padding-top: 15px; border-top: 1px solid #ddd;">
-                        <label>Descripción / Nota del Pago (Opcional)</label>
-                        <textarea name="Descripcion_Pago" rows="2" placeholder="Ej: Pago parcial, solicitud de uso de saldo a favor, etc."></textarea>
-                    </div>
-                    <div style="text-align: right; margin-top: 20px;">
-                        <button class="btn secondary" type="button" id="btnCerrarModal">Cancelar</button>
-                        <button class="btn" type="submit">Guardar Gasto</button>
-                    </div>
-                </form>
-            </div>
-        </div>
-        
-        <div id="modalComprobante" class="modal" style="display:none;">
-            <div class="modal-content large">
-                <h3>Enviar Comprobante por Correo</h3>
-                <form id="formEnviarComprobante" style="display:flex; flex-direction:column; gap:15px;"><div style="display:flex; gap: 15px; flex-wrap: wrap;"><div style="flex: 1; min-width: 120px;"><label><b>N° Parcela</b></label><input type="number" id="inputNParcelaComprobante" min="1" max="26" required style="width:100%;"></div><div style="flex: 2; min-width: 200px;"><label><b>Residente(s)</b></label><input type="text" id="inputNombreResidenteComprobante" readonly style="width:100%; background:#eee;"></div></div><div id="periodo-selector-container" style="display: none;"><label><b>Seleccione el Comprobante</b></label><select id="selectPeriodoComprobante" style="width:100%; padding: 11px 10px;"></select></div><div><label><b>Email(s) Destinatario</b></label><input type="email" id="inputEmailComprobante" readonly style="width:100%; background:#eee;"></div><div><label><b>Asunto</b></label><input type="text" id="inputAsuntoComprobante" readonly style="width:100%; background:#eee;"></div><div><label><b>Previsualización del Correo</b></label><div id="divCuerpoComprobante" style="width:100%; height: 250px; background:#f8f9fa; border: 1px solid #ccc; border-radius: 4px; padding: 10px; overflow-y: auto;"><span style="color: #6c757d;">Ingrese un N° de Parcela para generar la previsualización.</span></div></div><div style="text-align: right; margin-top: 10px;"><button class="btn secondary" type="button" id="btnCerrarModalComprobante">Cancelar</button><button class="btn" type="submit">Enviar Correo</button></div></form>
-            </div>
-        </div>
-        <div id="modalDetallePago" class="modal" style="display:none;">
-            <div class="modal-content">
-                <h3 style="margin-top:0;">Detalle Completo del Registro</h3>
-                <div id="contenidoDetallePago" style="margin-bottom: 20px;"></div>
-                <div style="text-align: right;"><button id="btnCerrarModalDetalle" class="btn secondary">Cerrar</button></div>
-            </div>
-        </div>
-        
-        <div id="modalConvenio" class="modal" style="display:none;">
-            <div class="modal-content">
-                <h3 style="margin...
-
-selectedRelevantSnippets:
-snippet_1: // ================================================================================= // ===== GASTOS_COMUNES.JS - CÓDIGO COMPLETO Y FINAL (CON TODAS LAS CORRECCIONES) ===== // ================================================================================= // Constantes globales para el módulo const MESES = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"]; const ENCABEZADOS_PAGOS = [ 'ID_Pago', 'Nombre_Residente', 'N_Parcela', 'Valor_Gasto_Comun', 'Periodo', 'Fecha_Vencimiento', 'Monto_Pagado', 'Saldo_Pendiente_o_a_favor', 'Interes', 'TIMC', 'Multa_1/4', 'Meses_Inpagos', 'Deuda_Total', 'Fecha_Pago', 'Metodo_Pago', 'Estado', 'ID_Comprobante_Drive', 'Abono_Convenio', 'Comprobante_Enviado', 'Descripcion_Deuda', 'Descripcion_Pago', 'Saldo_Favor_Usado' ]; async function cargarGastosComunes() { limpiarMainContent(); mostrarSpinner(); // Variables locales que estarán disponibles para todas las funciones internas let residentes = []; let pagosGC_obj = []; let timcData = {}; let pagoSeleccionadoParaEnviar = null; try { const [residentes_data, pagosGC_raw, timcs_raw] = await Promise.all([ obtenerResidentes(), obtenerPagosGC(), obtenerTIMCs() ]); residentes = residentes_data || []; pagosGC_obj = (pagosGC_raw || []).map((fila, index) => { let obj = {}; ENCABEZADOS_PAGOS.forEach((encabezado, i) => { obj[encabezado] = fila[i]; }); if (obj.Periodo) { const anioMatch = obj.Periodo.toString().match(/\d{4}/); obj.anio = anioMatch ? parseInt(anioMatch[0]) : null; } obj.rowNum = index + 2; return obj; }).filter(p => p.N_Parcela); (timcs_raw || []).forEach(fila => { const [anio, mes, valor] = fila; if (!timcData[anio]) timcData[anio] = {}; timcData[anio][mes] = parseFloat(valor); }); } catch (e) { ocultarSpinner(); mostrarMensaje('Error al cargar datos de Gastos Comunes: ' + e.message, 'error'); return; } // ======================================================= // FUNCIONES DE AYUDA (DEFINIDAS DENTRO PARA TENER ACCESO A LAS VARIABLES) // ======================================================= function formatearPeriodo(periodo) { if (!periodo) return 'N/A'; const matchAnio = periodo.toString().match(/\d{4}/); const anio = matchAnio ? parseInt(matchAnio[0]) : null; const matchMes = MESES.findIndex(m => periodo.toLowerCase().includes(m.toLowerCase())); if (anio && matchMes !== -1) { return `${MESES[matchMes]} ${anio}`; } const match = periodo.toString().match(/^(\d{4})-(\d{1,2})$/); if (match) { const anio = parseInt(match[1]); const mesIndex = parseInt(match[2]) - 1; if (mesIndex >= 0 && mesIndex < 12) { return `${MESES[mesIndex]} ${anio}`; } } return periodo; } function actualizarVistaPreviaComprobante(pago) { pagoSeleccionadoParaEnviar = pago; const parcela = document.getElementById('inputNParcelaComprobante').value; const asuntoInput = document.getElementById('inputAsuntoComprobante'); const cuerpoDiv = document.getElementById('divCuerpoComprobante'); const allResidentsForParcela = residentes.filter(r => String(r[3]) === String(parcela)); const residentNames = allResidentsForParcela.map(r => r[1]).join(' y '); const representativeResident = allResidentsForParcela.find(r => r[9] && r[9].trim().toUpperCase() === 'SI') || allResidentsForParcela[0]; if (!representativeResident) { cuerpoDiv.innerHTML = `<span style="color: #dc3545;">Error: No se pudo encontrar un residente representativo.</span>`; return; } const aEnviar = {...representativeResident}; aEnviar[1] = residentNames; const periodoFormateado = formatearPeriodo(pago.Periodo); asuntoInput.value = `Comprobante pago Gasto Común ${periodoFormateado} Parcela ${parcela}`; cuerpoDiv.innerHTML = crearCuerpoCorreo(pago, aEnviar); } function crearCuerpoCorreo(pago, residente) { const nombreResidente = residente[1]; const periodoFormateado = formatearPeriodo(pago.Periodo); const montoPagado = parseFloat(pago.Monto_Pagado || 0); const saldoFavorUsado = parseFloat(pago.Saldo_Favor_Usado || 0); const abonoConvenio = parseFloat(pago.Abono_Convenio || 0); const montoTotalAbonadoGC = montoPagado + saldoFavorUsado; const valorGC = parseFloat(pago.Valor_Gasto_Comun || 0); const interes = parseFloat(pago.Interes || 0); const multa = parseFloat(pago['Multa_1/4'] || 0); const deudaDelPeriodo = valorGC + interes + multa; const saldoTransaccion = montoTotalAbonadoGC - deudaDelPeriodo; // ▼ INICIO: CÓDIGO MODIFICADO ▼ // Se crea una variable para el resultado final, que será más clara. let resultadoHtml; if (saldoTransaccion >= 0) { // El período está pagado. resultadoHtml = ` <tr style="font-weight:bold; border-top:2px solid #2e7d32;"> <td style="padding:10px 0; color:#2e7d32; font-size:1.1em;">Estado del Período:</td> <td style="padding:10px 0; text-align:right; color:#2e7d32; font-size:1.1em;">PAGADO</td> </tr> `; // Solo se muestra el saldo a favor si es mayor que cero. if (saldoTransaccion > 0) { resultadoHtml += ` <tr> <td style="padding:5px 0;">Saldo a favor generado en esta transacción:</td> <td style="padding:5px 0; text-align:right; font-weight:bold;">$${saldoTransaccion.toLocaleString('es-CL')}</td> </tr> `; } } else { // El período queda con deuda. resultadoHtml = ` <tr style="font-weight:bold; border-top:2px solid #cccccc;"> <td style="padding:10px 0; color:#d32f2f;">Saldo pendiente del Período:</td> <td style="padding:10px 0; text-align:right; color:#d32f2f;">$${Math.abs(saldoTransaccion).toLocaleString('es-CL')}</td> </tr> `; } // ▲ FIN: CÓDIGO MODIFICADO ▲ return ` <!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><title>Comprobante de Pago</title></head> <body style="margin:0;padding:0;background-color:#f4f4f4;font-family:Arial,sans-serif;"> <table align="center" border="0" cellpadding="0" cellspacing="0" width="600" style="border-collapse:collapse;background-color:#ffffff;margin:20px auto;border:1px solid #dddddd;"> <tr><td align="center" bgcolor="#2a7ca3" style="padding:20px;color:#ffffff;"><h2 style="margin:0;">Comprobante de Pago</h2><p style="margin:5px 0 0;">Condominio Los Molles</p></td></tr> <tr><td style="padding:25px 20px;"> <p>Estimado(a) <strong>${nombreResidente}</strong>,</p> <p>Confirmamos la recepción de su pago para el período <strong>${periodoFormateado}</strong>. A continuación el detalle:</p> <h4 style="color:#333;margin-bottom:5px;margin-top:15px;border-bottom:1px solid #eee;padding-bottom:5px;">Detalle Deuda del Período</h4> <table width="100%" cellpadding="4" cellspacing="0" style="border-collapse:collapse;font-size:14px;"> <tr><td style="padding:5px 0;">Gasto Común Ordinario:</td><td style="padding:5px 0;text-align:right;">$${valorGC.toLocaleString('es-CL')}</td></tr> <tr><td style="padding:5px 0;">Intereses por mora:</td><td style="padding:5px 0;text-align:right;">$${interes.toLocaleString('es-CL')}</td></tr> <tr><td style="padding:5px 0;">Multas del período:</td><td style="padding:5px 0;text-align:right;">$${multa.toLocaleString('es-CL')}</td></tr> <tr style="font-weight:bold;border-top:1px solid #dddddd;"><td style="padding:8px 0;">Deuda Total del Período:</td><td style="padding:8px 0;text-align:right;">$${deudaDelPeriodo.toLocaleString('es-CL')}</td></tr> </table> <h4 style="color:#333;margin-bottom:5px;margin-top:15px;border-bottom:1px solid #eee;padding-bottom:5px;">Detalle de su Pago</h4> <table width="100%" cellpadding="4" cellspacing="0" style="border-collapse:collapse;font-size:14px;"> <tr><td style="padding:8px 0;">Monto Pagado (transferencia/efectivo):</td><td style="padding:8px 0;text-align:right;">$${montoPagado.toLocaleString('es-CL')}</td></tr> ${abonoConvenio > 0 ? `<tr><td style="padding:8px 0;">Abono a Convenio de Deuda:</td><td style="padding:8px 0;text-align:right;">$${abonoConvenio.toLocaleString('es-CL')}</td></tr>` : ''} <tr><td style="padding:8px 0;">Saldo a Favor Utilizado:</td><td style="padding:8px 0;text-align:right;">$${saldoFavorUsado.toLocaleString('es-CL')}</td></tr> <tr style="font-weight:bold;"><td style="padding:8px 0;border-top:1px solid #eeeeee;">Total Abonado al Período (G.C.):</td><td style="padding:8px 0;text-align:right;border-top:1px solid #eeeeee;">$${montoTotalAbonadoGC.toLocaleString('es-CL')}</td></tr> ${resultadoHtml} </table> <hr style="border:0;border-top:1px solid #eeeeee;margin-top:20px;"> <p>Gracias por su compromiso.</p><p style="margin-top:20px;">Atentamente,<br><strong>Alex Thiele</strong><br>Administrador</p> </td></tr> <tr><td bgcolor="#f4f4f4" style="text-align:center;padding:15px;font-size:12px;color:#777777;">Este es un correo electrónico generado automáticamente.</td></tr> </table> </body></html>`;
-}
-
-    async function guardarConvenio(nParcela, datosConvenio) {
-      mostrarSpinner();
-      try {
-        await gapi.client.request({
-          'path': `https://script.googleapis.com/v1/scripts/${SCRIPT_ID}:run`,
-          'method': 'POST',
-          'body': {
-            'function': 'guardarConvenio_GS',
-            'parameters': [nParcela, datosConvenio]
-          }
-        });
-        // Recargar los datos para reflejar los cambios
-        await cargarGastosComunes();
-        // Forzar el filtro para ver la parcela actualizada
-        document.getElementById('filtroParcela').value = nParcela;
-        filtrarYRenderizar();
-        mostrarMensaje('Convenio guardado y deudas anteriores congeladas con éxito.', 'success');
-      } catch (err) {
-        const errorMessage = err.result?.error?.message || err.message || 'Error desconocido.';
-        mostrarMensaje(`Error al guardar el convenio: ${errorMessage}`, 'error');
-      } finally {
-        ocultarSpinner();
-      }
-    }
-
-    async function enviarAcuerdoConvenio(residente, datosConvenio) {
-        const emailResidente = residente[5];
-        if (!emailResidente || !emailResidente.includes('@')) {
-            mostrarMensaje('El residente no tiene un correo electrónico válido registrado.', 'error');
-            return;
-        }
-        const confirmacion = confirm(`¿Está seguro que desea enviar el correo de acuerdo de convenio de pago a ${residente[1]} (${emailResidente})?`);
-        if (!confirmacion) return;
-        mostrarSpinner();
-        try {
-            await gapi.client.request({
-                'path': `https://script.googleapis.com/v1/scripts/${SCRIPT_ID}:run`,
-                'method': 'POST',
-                'body': {
-                    'function': 'enviarCorreoConvenio_GS',
-                    'parameters': [residente, datosConvenio]
-                }
-            });
-            mostrarMensaje('Correo de acuerdo de convenio enviado exitosamente.', 'success');
-        } catch (err) {
-            const errorMessage = err.result?.error?.message || err.message || 'Error desconocido.';
-            mostrarMensaje(`Error al enviar el correo de convenio: ${errorMessage}`, 'error');
-        } finally {
-            ocultarSpinner();
-        }
-    }
-
-    async function formalizarConvenio(nParcela, nombreResidente) {
-        const instruccion = `Para formalizar el convenio de la parcela ${nParcela} (${nombreResidente}), por favor, pegue aquí el enlace permanente del correo de aceptación del residente.\n\nPara obtener el enlace en Gmail:\n1. Abra el correo de aceptación.\n2. Haga clic en los tres puntos (Más opciones).\n3. Seleccione "Imprimir".\n4. En la ventana de impresión, copie la URL de la barra de direcciones del navegador.`;
-        const urlConvenio = prompt(instruccion, "");
-
-        if (urlConvenio === null) return; // El usuario canceló
-        if (urlConvenio.trim() === "" || !urlConvenio.startsWith("http")) {
-            alert("El enlace proporcionado no es válido. Por favor, inténtelo de nuevo.");
-            return;
-        }
-
-        mostrarSpinner();
-        try {
-            await gapi.client.request({
-                'path': `https://script.googleapis.com/v1/scripts/${SCRIPT_ID}:run`,
-                'method': 'POST',
-                'body': {
-                    'function': 'formalizarConvenio_GS',
-                    'parameters': [nParcela, urlConvenio]
-                }
-            });
-            
-            pagosGC_obj.forEach(pago => {
-                if (String(pago.N_Parcela) === String(nParcela) && pago.Estado === 'Moroso') {
-                    pago.Estado = 'En Convenio';
-                }
-            });
-
-            filtrarYRenderizar();
-            mostrarMensaje(`Convenio formalizado para la parcela ${nParcela}. Las deudas anteriores han sido marcadas como "En Convenio".`, 'success');
-
-        } catch (err) {
-            const errorMessage = err.result?.error?.message || err.message || 'Error desconocido.';
-            mostrarMensaje(`Error al formalizar el convenio: ${errorMessage}`, 'error');
-        } finally {
-            ocultarSpinner();
-        }
-    }
-    
-    // =======================================================
-    // RENDERIZADO DEL HTML PRINCIPAL
-    // =======================================================
-
-    const main = document.getElementById('main-content');
-    main.innerHTML = `
-        <style>
-            .estado-pagado { background-color: #198754; color: white; } 
-            .estado-moroso { background-color: #dc3545; color: white; } 
-            .estado-abono { background-color: #ffc107; color: #333; } 
-            .estado-en-convenio { background-color: #0dcaf0; color: #000; }
-            .fila-clicable:hover { background-color: #e9f1fb; cursor: pointer; } 
-            #detalle-pago-grid { display: grid; grid-template-columns: auto 1fr; gap: 10px 20px; align-items: center;} 
-            #detalle-pago-grid b { grid-column: 1; text-align: right; } 
-            #detalle-pago-grid span { grid-column: 2; text-align: left; word-break: break-all; } 
-            .suggestion-item { padding: 8px 12px; cursor: pointer; } 
-            .suggestion-item:hover { background-color: #e9f1fb; } 
-            #table-pagos { table-layout: fixed; width: 100%; border-collapse: collapse; } 
-            #table-pagos th { position: relative; } 
-            .resizer { position: absolute; top: 0; right: -2px; width: 5px; cursor: col-resize; user-select: none; height: 100%; z-index: 1;} 
-            .resizer:hover { border-right: 2px solid #007bff; } 
-            .comprobante-enviado { color: green; font-size: 1.2rem; font-weight: bold; text-align: center; } 
-            #convenio-summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 15px; } 
-            #convenio-summary-grid > div { background-color: #f8f9fa; padding: 15px; border-radius: 8px; text-align: center; } 
-            #convenio-summary-grid > div > span { display: block; font-size: 1.4em; font-weight: bold; } 
-            .saldo-info { padding: 10px; border-radius: 5px; margin-top: 5px; font-weight: bold; text-align: center; } 
-            .saldo-convenio { background-color: #fff8e1; color: #f57f17; } 
-            .saldo-favor { background-color: #e8f5e9; color: #2e7d32; }
-        </style>
-        <div style="display:flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;"><h2>Gastos Comunes</h2></div>
-        <div style="display: flex; flex-wrap: wrap; gap: 24px; align-items: stretch;">
-            <section class="widget" style="flex: 1; min-width: 350px; display: flex; flex-direction: column; justify-content: space-between;">
-                <div>
-                    <h4 style="margin-top:0;">Filtros de Búsqueda</h4>
-                    <div style="display: flex; flex-wrap: wrap; gap: 20px; margin-bottom: 20px;">
-                        <div style="flex: 1; min-width: 150px;">
-                            <label for="filtroParcela"><b>N° Parcela:</b></label>
-                            <input list="lista-parcelas" id="filtroParcela" placeholder="1-26..." style="width:100%;">
-                            <datalist id="lista-parcelas">${Array.from({ length: 26 }, (_, i) => `<option value="${i + 1}"></option>`).join('')}</datalist>
-                        </div>
-                        <div style="flex: 1; min-width: 150px;">
-                            <label for="filtroAnio"><b>Año:</b></label>
-                            <input type="number" id="filtroAnio" value="${new Date().getFullYear()}" style="width:100%;">
-                        </div>
-                    </div>
-                </div>
-                <div style="margin-top: auto; display: flex; flex-direction: column; align-items: flex-start; gap: 10px;">
-                    <button id="btnAbrirModalGasto" class="btn">Agregar Gasto Común</button>
-                    <button id="btnAbrirModalComprobante" class="btn secondary">Enviar Comprobante</button>
-                </div>
-            </section>
-            <section class="widget" style="flex: 2; min-width: 450px;"><h4 style="margin-top:0;">Configuración de TIMC</h4><div style="display: flex; align-items: flex-end; gap: 16px; margin-bottom: 20px;"><div style="min-width: 120px;"><label for="inputTMC"><b>TIMC (%)</b></label><input type="number" id="inputTMC" step="0.1" placeholder="Ej: 25"></div><div><label for="selectMesTMC"><b>Mes</b></label><select id="selectMesTMC" style="padding: 11px 10px;">${MESES.map((m, i) => `<option value="${i + 1}">${m}</option>`).join('')}</select></div><button id="btnGuardarTMC" class="btn">Guardar en Sheet</button></div><div id="timc-display"><h5 style="margin-top:0; margin-bottom: 10px;">TIMC Guardado para el año seleccionado:</h5><div id="timc-list-horizontal" style="display: flex; flex-wrap: wrap; gap: 15px; background: #e9f1fb; padding: 12px; border-radius: 8px;"></div></div></section>
-        </div>
-        <section id="widget-convenio" class="widget" style="display:none; margin-top: 2rem;">
-            <h3 style="margin-top:0;">Estado de Convenio de Pago</h3>
-            <div id="convenio-summary-grid"></div>
-            <h4 style="margin-top: 1.5rem;">Historial de Abonos (Año Seleccionado)</h4>
-            <div class="table-container"><table class="table"><thead id="thead-abonos"></thead><tbody id="tbody-abonos"></tbody></table></div>
-        </section>
-        <section id="detalle-gastos" style="margin-top: 2rem;"><h3>Detalle de Pagos Registrados</h3><div class="table-container"><table id="table-pagos" class="table"><thead id="thead-gastos"></thead><tbody id="tbody-gastos"></tbody></table></div></section>
-        
-        <div id="modalGC" class="modal" style="display:none;">
-            <div class="modal-content large">
-                <h3>Agregar Gasto Común</h3>
-                <form id="formGastoComun">
-                    <div class="form-grid">
+                    <div class="form-grid" style="margin-top:15px;">
                         <div>
-                            <label>N° Parcela</label>
-                            <input type="number" name="N_Parcela" id="inputNParcela" min="1" max="26" required>
-                            <div style="position: relative;">
-                                <label>Nombre Residente</label>
-                                <input type="text" name="Nombre_Residente" id="inputNombreResidente" autocomplete="off" required>
-                                <div id="nombre-suggestions" style="display: none; position: absolute; background-color: white; border: 1px solid #ccc; max-height: 150px; overflow-y: auto; width: 100%; z-index: 10;"></div>
-                            </div>
-                            <label>Valor Gasto Común</label>
-                            <input type="text" name="Valor_Gasto_Comun" id="inputValorGastoComun" readonly style="background:#eee;">
-                            <div id="saldo-convenio-info" class="saldo-info saldo-convenio" style="display:none;"></div>
-                            <div id="saldo-favor-info" class="saldo-info saldo-favor" style="display:none;"></div>
-                            <div style="display:flex; gap: 15px;">
-                                <div style="flex: 1;"><label>Mes que Paga (Período)</label><select name="Periodo" required>${MESES.map((m, i) => `<option value="${i}">${m}</option>`).join('')}</select></div>
-                                <div style="flex: 1;"><label>Año que Paga</label><input type="number" name="Anio_Periodo" id="inputAnioPeriodo" required></div>
-                            </div>
+                            <label>Nº de Cuotas</label>
+                            <input type="number" id="convenioCuotas" min="1" required>
                         </div>
-                        <div style="border-left: 1px solid #ddd; padding-left: 20px;">
-                            <label>Fecha de Pago</label>
-                            <input type="date" name="Fecha_Pago" required>
-                            <label>Monto Pagado G.C. (depósito/efectivo)</label>
-                            <input type="number" name="Monto_Pagado" min="0" step="1" required placeholder="CLP" value="0">
-                            <label>Usar Saldo a Favor</label>
-                            <input type="number" name="Saldo_Favor_Usado" min="0" step="1" placeholder="CLP" value="0">
-                            <label>Abono a Convenio (CLP)</label>
-                            <input type="number" name="Abono_Convenio" min="0" step="1" placeholder="CLP" value="0">
-                            <label>Método de Pago</label>
-                            <select name="Metodo_Pago" required><option value="Transferencia">Transferencia</option><option value="Efectivo">Efectivo</option></select>
+                        <div>
+                            <label>Valor de cada Cuota (CLP)</label>
+                            <input type="number" id="convenioValorCuota" readonly style="background:#eee;">
                         </div>
                     </div>
-                    <div style="width: 100%; margin-top: 20px; padding-top: 15px; border-top: 1px solid #ddd;">
-                        <label>Descripción / Nota del Pago (Opcional)</label>
-                        <textarea name="Descripcion_Pago" rows="2" placeholder="Ej: Pago parcial, solicitud de uso de saldo a favor, etc."></textarea>
-                        <label style="margin-top:15px;">Adjuntar Comprobante (Opcional)</label>
-                        <input type="file" name="Comprobante" accept=".pdf,.jpg,.jpeg,.png">
+                    <div style="margin-top:15px;">
+                        <label>Fecha de Inicio del Convenio</label>
+                        <input type="date" id="convenioFechaInicio" required>
                     </div>
                     <div style="text-align: right; margin-top: 20px;">
-                        <button class="btn secondary" type="button" id="btnCerrarModal">Cancelar</button>
-                        <button class="btn" type="submit">Guardar Gasto</button>
+                        <button class="btn secondary" type="button" id="btnCerrarModalConvenio">Cancelar</button>
+                        <button class="btn" type="submit">Guardar Convenio</button>
                     </div>
                 </form>
             </div>
         </div>
         
-        <div id="modalComprobante" class="modal" style="display:none;">
-            <div class="modal-content large">
-                <h3>Enviar Comprobante por Correo</h3>
-                <form id="formEnviarComprobante" style="display:flex; flex-direction:column; gap:15px;"><div style="display:flex; gap: 15px; flex-wrap: wrap;"><div style="flex: 1; min-width: 120px;"><label><b>N° Parcela</b></label><input type="number" id="inputNParcelaComprobante" min="1" max="26" required style="width:100%;"></div><div style="flex: 2; min-width: 200px;"><label><b>Residente(s)</b></label><input type="text" id="inputNombreResidenteComprobante" readonly style="width:100%; background:#eee;"></div></div><div id="periodo-selector-container" style="display: none;"><label><b>Seleccione el Comprobante</b></label><select id="selectPeriodoComprobante" style="width:100%; padding: 11px 10px;"></select></div><div><label><b>Email(s) Destinatario</b></label><input type="email" id="inputEmailComprobante" readonly style="width:100%; background:#eee;"></div><div><label><b>Asunto</b></label><input type="text" id="inputAsuntoComprobante" readonly style="width:100%; background:#eee;"></div><div><label><b>Previsualización del Correo</b></label><div id="divCuerpoComprobante" style="width:100%; height: 250px; background:#f8f9fa; border: 1px solid #ccc; border-radius: 4px; padding: 10px; overflow-y: auto;"><span style="color: #6c757d;">Ingrese un N° de Parcela para generar la previsualización.</span></div></div><div style="text-align: right; margin-top: 10px;"><button class="btn secondary" type="button" id="btnCerrarModalComprobante">Cancelar</button><button class="btn" type="submit">Enviar Correo</button></div></form>
-            </div>
-        </div>
-        <div id="modalDetallePago" class="modal" style="display:none;">
+        <div id="modalAbonar" class="modal" style="display:none;">
             <div class="modal-content">
-                <h3 style="margin-top:0;">Detalle Completo del Registro</h3>
-                <div id="contenidoDetallePago" style="margin-bottom: 20px;"></div>
-                <div style="text-align: right;"><button id="btnCerrarModalDetalle" class="btn secondary">Cerrar</button></div>
+                <h3>Abonar a Deuda Existente</h3>
+                <form id="formAbonar">
+                    <input type="hidden" id="abonarIdPago">
+                    <div>
+                        <label>Período</label>
+                        <input type="text" id="abonarPeriodo" readonly>
+                    </div>
+                    <div>
+                        <label>Deuda Pendiente</label>
+                        <input type="text" id="abonarDeudaPendiente" readonly>
+                    </div>
+                    <div>
+                        <label>Monto a Abonar (CLP)</label>
+                        <input type="number" id="abonarMonto" min="0" step="1" required>
+                    </div>
+                    <div>
+                        <label>Fecha de Pago</label>
+                        <input type="date" id="abonarFechaPago" required>
+                    </div>
+                    <div>
+                        <label>Método de Pago</label>
+                        <select id="abonarMetodoPago" required>
+                            <option value="Transferencia">Transferencia</option>
+                            <option value="Efectivo">Efectivo</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label>Descripción (Opcional)</label>
+                        <textarea id="abonarDescripcion" rows="2" placeholder="Ej: Abono a intereses y multas"></textarea>
+                    </div>
+                    <div style="text-align: right; margin-top: 20px;">
+                        <button class="btn secondary" type="button" id="btnCerrarModalAbonar">Cancelar</button>
+                        <button class="btn" type="submit">Registrar Abono</button>
+                    </div>
+                </form>
             </div>
         </div>
+        `;
+
+    // =======================================================
+    // DEFINICIÓN DE LÓGICA Y RENDERIZADO DE TABLAS
+    // =======================================================
+    
+    const tbodyGastos = document.getElementById('tbody-gastos');
+    const theadGastos = document.getElementById('thead-gastos');
+
+    function aplicarAnchosGuardados(table) {
+        const savedWidthsJSON = localStorage.getItem('tablaPagosColumnWidths');
+        if (savedWidthsJSON) {
+            try {
+                const savedWidths = JSON.parse(savedWidthsJSON);
+                const headers = table.querySelectorAll('th');
+                headers.forEach((header, index) => {
+                    if (savedWidths[index]) {
+                        header.style.width = savedWidths[index];
+                    }
+                });
+            } catch (e) {
+                console.error("Error al parsear anchos guardados:", e);
+                localStorage.removeItem('tablaPagosColumnWidths');
+            }
+        }
+    }
+
+    function hacerColumnasRedimensionables(table) {
+        const headers = Array.from(table.querySelectorAll('th'));
+        headers.forEach(header => {
+            const resizer = document.createElement('div');
+            resizer.className = 'resizer';
+            header.appendChild(resizer);
+            
+            const onMouseDown = (e) => {
+                e.preventDefault();
+                const startX = e.pageX;
+                const startWidth = header.offsetWidth;
+                const onMouseMove = (e) => {
+                    const newWidth = startWidth + (e.pageX - startX);
+                    if (newWidth > 50) {
+                        header.style.width = `${newWidth}px`;
+                    }
+                };
+                const onMouseUp = () => {
+                    window.removeEventListener('mousemove', onMouseMove);
+                    window.removeEventListener('mouseup', onMouseUp);
+                    const currentHeaders = Array.from(table.querySelectorAll('th'));
+                    const widths = currentHeaders.map(h => h.style.width || '');
+                    localStorage.setItem('tablaPagosColumnWidths', JSON.stringify(widths));
+                };
+                window.addEventListener('mousemove', onMouseMove);
+                window.addEventListener('mouseup', onMouseUp);
+            };
+            resizer.addEventListener('mousedown', onMouseDown);
+        });
+    }
+
+    function renderizarTablaGeneral(datos) {
+        document.getElementById('widget-convenio').style.display = 'none';
+        document.querySelector('#detalle-gastos h3').textContent = 'Detalle de Pagos Registrados';
+        theadGastos.innerHTML = `<tr><th>Residente</th><th>Parcela</th><th>Período</th><th>Monto Pagado G.C.</th><th>Abono Convenio</th><th>Deuda Pendiente G.C.</th><th>Fecha Pago</th><th>Estado</th><th>Comprobante</th><th>Acciones</th></tr>`;
+        tbodyGastos.innerHTML = '';
+        if (!datos || datos.length === 0) { tbodyGastos.innerHTML = `<tr><td colspan="10" style="text-align:center; padding:20px;">No hay registros para el año seleccionado.</td></tr>`; return; }
+        datos.sort((a,b) => (b.Fecha_Pago ? new Date(b.Fecha_Pago.replace(/-/g,'/')) : 0) - (a.Fecha_Pago ? new Date(a.Fecha_Pago.replace(/-/g,'/')) : 0));
+        datos.forEach(pago => {
+            const estadoClass = (pago.Estado || 'pendiente').toLowerCase().replace(/ /g, '-');
+            const tr = document.createElement('tr');
+            tr.dataset.idPago = pago.ID_Pago;
+            tr.classList.add('fila-clicable');
+            const abonoConvenio = parseFloat(pago.Abono_Convenio || 0);
+            const comprobanteEnviado = pago.Comprobante_Enviado === 'SI' ? '<span class="comprobante-enviado">✓</span>' : '';
+            
+            // Botón para abonar a deudas existentes
+            let abonarButton = '';
+            if (pago.Estado !== 'Pagado' && parseFloat(pago.Deuda_Total || 0) > 0) {
+                abonarButton = `<button class="btn small abonar-btn" data-id="${pago.ID_Pago}">Abonar</button>`;
+            }
+
+            tr.innerHTML = `
+                <td>${pago.Nombre_Residente || 'N/A'}</td>
+                <td>${pago.N_Parcela}</td>
+                <td>${formatearPeriodo(pago.Periodo) || 'N/A'}</td>
+                <td>$${parseFloat(pago.Monto_Pagado || 0).toLocaleString('es-CL')}</td>
+                <td>$${abonoConvenio.toLocaleString('es-CL')}</td>
+                <td style="font-weight:bold; color: red;">$${parseFloat(pago.Deuda_Total || 0).toLocaleString('es-CL')}</td>
+                <td>${pago.Fecha_Pago ? new Date(pago.Fecha_Pago.replace(/-/g, '/')).toLocaleDateString('es-CL', {timeZone:'UTC'}) : '---'}</td>
+                <td><span class="estado-tag estado-${estadoClass}">${pago.Estado || 'Pendiente'}</span></td>
+                <td>${comprobanteEnviado}</td>
+                <td>${abonarButton}</td>
+            `;
+            tbodyGastos.appendChild(tr);
+        });
+        const tabla = document.getElementById('table-pagos');
+        aplicarAnchosGuardados(tabla);
+        hacerColumnasRedimensionables(tabla);
+        configurarAbonos(); // Configurar eventos para los botones de abonar
+    }
+
+    function renderizarTablaResidente(parcela, anio) {
+        const residente = residentes.find(r => String(r[3]) === String(parcela));
+        if (!residente) {
+            document.getElementById('widget-convenio').style.display = 'none';
+            tbodyGastos.innerHTML = `<tr><td colspan="12">No se encontró residente.</td></tr>`;
+            return;
+        }
+
+        const widgetConvenio = document.getElementById('widget-convenio');
+        // 1. La verificación ahora es más robusta: ignora mayúsculas/minúsculas y espacios.
+        const convenioActivo = (residente[15] || '').trim().toUpperCase() === 'SI';
         
-        <div id="modalConvenio" class="modal" style="display:none;">
-            <div class="modal-content">
-                <h3 style="margin...
+        if (convenioActivo) {
+            widgetConvenio.style.display = 'block';
+            
+            const deudaConvenioInicial = parseFloat(residente[19] || 0); // Columna T
+            const totalAbonado = pagosGC_obj
+                .filter(p => String(p.N_Parcela) === String(parcela))
+                .reduce((sum, pago) => sum + parseFloat(pago.Abono_Convenio || 0), 0);
+            
+            const saldoActualConvenio = deudaConvenioInicial - totalAbonado;
+
+            document.getElementById('convenio-summary-grid').innerHTML = `
+                <div>Deuda Original Convenio<span style="color: #dc3545;">$${deudaConvenioInicial.toLocaleString('es-CL')}</span></div>
+                <div>Total Abonado<span style="color: #198754;">$${totalAbonado.toLocaleString('es-CL')}</span></div>
+                <div>Saldo Convenio<span style="color: #ffc107;">$${saldoActualConvenio.toLocaleString('es-CL')}</span></div>
+                <div style="grid-column: 1 / -1; margin-top: 10px; display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
+                    <button id="btnAdministrarConvenio" class="btn small">Administrar Convenio</button>
+                    <button id="btnEnviarCorreoConvenio" class="btn secondary small">Enviar Acuerdo por Correo</button>
+                    <button id="btnFormalizarConvenio" class="btn small">Formalizar con Respaldo</button>
+                </div>
+            `;
+
+            document.getElementById('btnAdministrarConvenio').addEventListener('click', () => abrirModalConvenio(parcela, residente));
+            document.getElementById('btnEnviarCorreoConvenio').addEventListener('click', () => {
+                const datosConvenio = {
+                    deudaInicial: parseFloat(residente[19] || 0),
+                    cuotas: parseInt(residente[16] || 0),
+                    valorCuota: parseFloat(residente[17] || 0),
+                    fechaInicio: residente[18] || ''
+                };
+                enviarAcuerdoConvenio(residente, datosConvenio);
+            });
+            document.getElementById('btnFormalizarConvenio').addEventListener('click', () => formalizarConvenio(parcela, residente[1]));
+            
+            const abonosDelAnio = pagosGC_obj.filter(p => String(p.N_Parcela) === String(parcela) && p.anio == anio && parseFloat(p.Abono_Convenio || 0) > 0);
+            document.getElementById('thead-abonos').innerHTML = `<tr><th>Fecha de Pago</th><th>Monto Abonado</th><th>Comprobante</th></tr>`;
+            const tbodyAbonos = document.getElementById('tbody-abonos');
+            tbodyAbonos.innerHTML = '';
+            if(abonosDelAnio.length > 0) {
+                abonosDelAnio.forEach(abono => {
+                    const linkComprobante = abono.ID_Comprobante_Drive ? `<a href="${abono.ID_Comprobante_Drive}" target="_blank" class="btn small">Ver</a>` : 'N/A';
+                    tbodyAbonos.innerHTML += `<tr><td>${new Date(abono.Fecha_Pago.replace(/-/g, '/')).toLocaleDateString('es-CL', {timeZone:'UTC'})}</td><td>$${parseFloat(abono.Abono_Convenio).toLocaleString('es-CL')}</td><td>${linkComprobante}</td></tr>`;
+                });
+            } else {
+                tbodyAbonos.innerHTML = `<tr><td colspan="3" style="text-align: center;">No hay abonos registrados para este año.</td></tr>`;
+            }
+
+            document.querySelector('#detalle-gastos h3').textContent = 'Deudas de Gastos Comunes';
+            const deudasPorConvenio = pagosGC_obj.filter(pago => String(pago.N_Parcela) === String(parcela) && (pago.Estado === 'Moroso' || pago.Estado === 'En Convenio'));
+
+            if (deudasPorConvenio.length > 0) {
+                theadGastos.innerHTML = `<tr><th>ID</th><th>Período</th><th>Valor G.C.</th><th>Intereses</th><th>Multas</th><th>Deuda Total</th><th>Meses Inpagos</th><th>Estado</th></tr>`;
+                tbodyGastos.innerHTML = deudasPorConvenio.map(pago => {
+                    const estadoClass = (pago.Estado || 'pendiente').toLowerCase().replace(/ /g, '-');
+                    return `<tr class="fila-clicable" data-id-pago="${pago.ID_Pago}">
+                        <td>${pago.ID_Pago}</td>
+                        <td>${formatearPeriodo(pago.Periodo)}</td>
+                        <td>$${parseFloat(pago.Valor_Gasto_Comun || 0).toLocaleString('es-CL')}</td>
+                        <td>$${parseFloat(pago.Interes || 0).toLocaleString('es-CL')}</td>
+                        <td>$${parseFloat(pago['Multa_1/4'] || 0).toLocaleString('es-CL')}</td>
+                        <td style="font-weight: bold; color: #d32f2f;">$${parseFloat(pago.Deuda_Total || 0).toLocaleString('es-CL')}</td>
+                        <td>${pago.Meses_Inpagos || '0'}</td>
+                        <td><span class="estado-tag estado-${estadoClass}">${pago.Estado}</span></td>
+                    </tr>`;
+                }).join('');
+            } else {
+                theadGastos.innerHTML = `<tr><th>ID</th><th>Período</th><th>Valor G.C.</th><th>Intereses</th><th>Multas</th><th>Deuda Total</th><th>Meses Inpagos</th><th>Estado</th></tr>`;
+                tbodyGastos.innerHTML = `<tr><td colspan="8" style="text-align: center;">El residente no presenta deudas fuera del convenio de pago.</td></tr>`;
+            }
+
+        } else { // El residente no tiene convenio
+            widgetConvenio.style.display = 'none';
+            document.querySelector('#detalle-gastos h3').textContent = 'Detalle de Pagos Registrados';
+            
+            const pagosFiltrados = pagosGC_obj.filter(pago => String(pago.N_Parcela) === String(parcela) && pago.anio == anio);
+            renderizarTablaGeneral(pagosFiltrados);
+        }
+    }
+
+    function mostrarDetallePago(pago) {
+        const modal = document.getElementById('modalDetallePago');
+        const contenido = document.getElementById('contenidoDetallePago');
+        const estadoClass = (pago.Estado || 'pendiente').toLowerCase().replace(/ /g, '-');
+        
+        contenido.innerHTML = `
+            <div id="detalle-pago-grid">
+                <b>ID de Pago:</b><span>${pago.ID_Pago}</span>
+                <b>Residente:</b><span>${pago.Nombre_Residente}</span>
+                <b>N° de Parcela:</b><span>${pago.N_Parcela}</span>
+                <b>Período:</b><span>${formatearPeriodo(pago.Periodo)}</span>
+                <b>Valor Gasto Común:</b><span>$${parseFloat(pago.Valor_Gasto_Comun || 0).toLocaleString('es-CL')}</span>
+                <b>Intereses:</b><span>$${parseFloat(pago.Interes || 0).toLocaleString('es-CL')}</span>
+                <b>Multas:</b><span>$${parseFloat(pago['Multa_1/4'] || 0).toLocaleString('es-CL')}</span>
+                <b>Monto Pagado:</b><span>$${parseFloat(pago.Monto_Pagado || 0).toLocaleString('es-CL')}</span>
+                <b>Saldo a Favor Usado:</b><span>$${parseFloat(pago.Saldo_Favor_Usado || 0).toLocaleString('es-CL')}</span>
+                <b>Abono a Convenio:</b><span>$${parseFloat(pago.Abono_Convenio || 0).toLocaleString('es-CL')}</span>
+                <b>Fecha de Pago:</b><span>${pago.Fecha_Pago ? new Date(pago.Fecha_Pago.replace(/-/g, '/')).toLocaleDateString('es-CL', {timeZone:'UTC'}) : '---'}</span>
+                <b>Método de Pago:</b><span>${pago.Metodo_Pago || 'N/A'}</span>
+                <b>Estado:</b><span><span class="estado-tag estado-${estadoClass}">${pago.Estado || 'Pendiente'}</span></span>
+                <b>Comprobante Drive:</b><span>${pago.ID_Comprobante_Drive ? `<a href="${pago.ID_Comprobante_Drive}" target="_blank">Ver Comprobante</a>` : 'No adjunto'}</span>
+                <b>Descripción:</b><span>${pago.Descripcion_Pago || 'Sin descripción'}</span>
+                <b>Saldo Pendiente/A Favor:</b><span>$${parseFloat(pago.Saldo_Pendiente_o_a_favor || 0).toLocaleString('es-CL')}</span>
+                <b>Meses Inpagos:</b><span>${pago.Meses_Inpagos || '0'}</span>
+                <b>Deuda Total:</b><span>$${parseFloat(pago.Deuda_Total || 0).toLocaleString('es-CL')}</span>
+            </div>
+        `;
+        modal.style.display = 'flex';
+    }
+
+    function configurarAbonos() {
+        document.querySelectorAll('.abonar-btn').forEach(button => {
+            button.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const idPago = e.target.dataset.id;
+                const pago = pagosGC_obj.find(p => p.ID_Pago === idPago);
+                if (pago) {
+                    abrirModalAbonar(pago);
+                }
+            });
+        });
+    }
+
+    function abrirModalAbonar(pago) {
+        document.getElementById('abonarIdPago').value = pago.ID_Pago;
+        document.getElementById('abonarPeriodo').value = formatearPeriodo(pago.Periodo);
+        const deudaPendiente = parseFloat(pago.Deuda_Total || 0);
+        document.getElementById('abonarDeudaPendiente').value = `$${deudaPendiente.toLocaleString('es-CL')}`;
+        document.getElementById('abonarMonto').value = ''; // Limpiar el campo
+        document.getElementById('modalAbonar').style.display = 'flex';
+    }
+    
+    // =======================================================
+    // DEFINICIÓN DE LÓGICA DE EVENTOS Y CÁLCULOS
+    // =======================================================
+
+    function filtrarYRenderizar() {
+        const parcela = document.getElementById('filtroParcela').value;
+        const anio = document.getElementById('filtroAnio').value;
+        if (parcela) {
+            renderizarTablaResidente(parcela, anio);
+        } else {
+            const pagosFiltrados = pagosGC_obj.filter(pago => !anio || (pago.anio && pago.anio == anio));
+            renderizarTablaGeneral(pagosFiltrados);
+        }
+    }
+
+    function actualizarVistaTIMC() {
+        const anioSeleccionado = document.getElementById('filtroAnio').value;
+        const timcList = document.getElementById('timc-list-horizontal');
+        timcList.innerHTML = '';
+        const anioData = timcData[anioSeleccionado] || {};
+        if (Object.keys(anioData).length === 0) {
+            timcList.innerHTML = '<span style="color:#6c757d;">No hay valores de TIMC guardados para este año.</span>';
+            return;
+        }
+
+        MESES.forEach((mes, index) => {
+            const valor = anioData[index + 1];
+            if (valor) {
+                const div = document.createElement('div');
+                div.style.whiteSpace = 'nowrap';
+                div.innerHTML = `<b style="color:#2a7ca3;">${mes}:</b> ${valor}%`;
+                timcList.appendChild(div);
+            }
+        });
+    }
+
+    function calcularValorCuota() {
+        const deuda = parseFloat(document.getElementById('convenioDeudaTotal').value);
+        const cuotas = parseInt(document.getElementById('convenioCuotas').value);
+        if (deuda > 0 && cuotas > 0) {
+            const valorCuota = deuda / cuotas;
+            document.getElementById('convenioValorCuota').value = Math.round(valorCuota);
+        } else {
+            document.getElementById('convenioValorCuota').value = 0;
+        }
+    }
+
+    function abrirModalConvenio(nParcela, residente) {
+        document.getElementById('convenioNParcela').value = nParcela;
+        const deudaTotal = pagosGC_obj
+            .filter(p => String(p.N_Parcela) === String(nParcela) && p.Estado === 'Moroso')
+            .reduce((sum, p) => sum + parseFloat(p.Deuda_Total || 0), 0);
+        
+        document.getElementById('convenioDeudaTotal').value = deudaTotal;
+        document.getElementById('convenioCuotas').value = '';
+        document.getElementById('convenioValorCuota').value = '';
+
+        const residenteConvenio = residentes.find(r => String(r[3]) === String(nParcela));
+        if ((residenteConvenio[15] || '').trim().toUpperCase() === 'SI') {
+            document.getElementById('convenioDeudaTotal').value = parseFloat(residenteConvenio[19] || 0);
+            document.getElementById('convenioCuotas').value = parseInt(residenteConvenio[16] || 0);
+            document.getElementById('convenioValorCuota').value = parseFloat(residenteConvenio[17] || 0);
+            document.getElementById('convenioFechaInicio').value = residenteConvenio[18] || '';
+        }
+        
+        document.getElementById('modalConvenio').style.display = 'flex';
+        calcularValorCuota();
+    }
+    
+    function limpiarYActualizarModalGC() {
+        document.getElementById('formGastoComun').reset();
+        document.getElementById('inputNombreResidente').value = '';
+        document.getElementById('inputNParcela').value = '';
+        document.getElementById('inputValorGastoComun').value = '';
+        document.getElementById('saldo-convenio-info').style.display = 'none';
+        document.getElementById('saldo-favor-info').style.display = 'none';
+    }
+
+    function abrirModalGC() {
+        limpiarYActualizarModalGC();
+        document.getElementById('modalGC').style.display = 'flex';
+        document.getElementById('inputAnioPeriodo').value = new Date().getFullYear();
+        document.querySelector('input[name="Fecha_Pago"]').valueAsDate = new Date();
+    }
+
+    function abrirModalComprobante() {
+        const modalComprobante = document.getElementById('modalComprobante');
+        modalComprobante.style.display = 'flex';
+        document.getElementById('inputNParcelaComprobante').value = '';
+        document.getElementById('inputNombreResidenteComprobante').value = '';
+        document.getElementById('inputEmailComprobante').value = '';
+        document.getElementById('selectPeriodoComprobante').innerHTML = '';
+        document.getElementById('periodo-selector-container').style.display = 'none';
+        document.getElementById('divCuerpoComprobante').innerHTML = `<span style="color: #6c757d;">Ingrese un N° de Parcela para generar la previsualización.</span>`;
+    }
+
+    // =======================================================
+    // EVENTOS Y LÓGICA PRINCIPAL
+    // =======================================================
+
+    document.getElementById('filtroParcela').addEventListener('input', () => {
+        filtrarYRenderizar();
+    });
+
+    document.getElementById('filtroAnio').addEventListener('input', () => {
+        filtrarYRenderizar();
+        actualizarVistaTIMC();
+    });
+
+    document.getElementById('tbody-gastos').addEventListener('click', (e) => {
+        const tr = e.target.closest('tr');
+        if (tr && tr.dataset.idPago && !e.target.classList.contains('abonar-btn')) {
+            const pago = pagosGC_obj.find(p => p.ID_Pago === tr.dataset.idPago);
+            if (pago) {
+                mostrarDetallePago(pago);
+            }
+        }
+    });
+
+    document.getElementById('btnAbrirModalGasto').addEventListener('click', abrirModalGC);
+    document.getElementById('btnAbrirModalComprobante').addEventListener('click', abrirModalComprobante);
+    
+    // Manejo del formulario para agregar gasto común
+    document.getElementById('formGastoComun').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        mostrarSpinner();
+        const form = e.target;
+        const formData = new FormData(form);
+        const data = Object.fromEntries(formData.entries());
+
+        const residente = residentes.find(r => String(r[3]) === data.N_Parcela);
+        if (!residente) {
+            mostrarMensaje('Error: No se encontró un residente para la parcela ingresada.', 'error');
+            ocultarSpinner();
+            return;
+        }
+
+        const montoPagado = parseFloat(data.Monto_Pagado || 0);
+        const saldoFavorUsado = parseFloat(data.Saldo_Favor_Usado || 0);
+        const abonoConvenio = parseFloat(data.Abono_Convenio || 0);
+        const montoTotalAbonado = montoPagado + saldoFavorUsado;
+        const valorGC = parseFloat(data.Valor_Gasto_Comun || 0);
+        
+        let saldoPendiente = 0;
+        let saldoAFavor = 0;
+        if (montoTotalAbonado >= valorGC) {
+            saldoAFavor = montoTotalAbonado - valorGC;
+        } else {
+            saldoPendiente = valorGC - montoTotalAbonado;
+        }
+
+        const datosAEnviar = {
+            id_pago: `GC${Date.now()}`,
+            nombre_residente: data.Nombre_Residente,
+            n_parcela: parseInt(data.N_Parcela),
+            valor_gasto_comun: valorGC,
+            periodo: `${data.Anio_Periodo}-${parseInt(data.Periodo) + 1}`,
+            fecha_vencimiento: 'N/A',
+            monto_pagado: montoPagado,
+            saldo_pendiente_o_a_favor: saldoAFavor - saldoPendiente,
+            interes: 0,
+            timc: 0,
+            multa: 0,
+            meses_inpagos: 0,
+            deuda_total: saldoPendiente,
+            fecha_pago: data.Fecha_Pago,
+            metodo_pago: data.Metodo_Pago,
+            estado: saldoPendiente > 0 ? 'Moroso' : 'Pagado',
+            abono_convenio: abonoConvenio,
+            descripcion_pago: data.Descripcion_Pago,
+            saldo_favor_usado: saldoFavorUsado
+        };
+        
+        try {
+            let fileId = '';
+            const comprobanteFile = formData.get('Comprobante');
+            if (comprobanteFile && comprobanteFile.size > 0) {
+                fileId = await subirArchivoAGDrive(comprobanteFile);
+                mostrarMensaje('Comprobante subido a Google Drive.', 'success');
+            }
+            datosAEnviar.id_comprobante_drive = fileId;
+            
+            await gapi.client.request({
+                'path': `https://script.googleapis.com/v1/scripts/${SCRIPT_ID}:run`,
+                'method': 'POST',
+                'body': {
+                    'function': 'agregarGastoComun_GS',
+                    'parameters': [datosAEnviar]
+                }
+            });
+
+            // Recargar los datos para reflejar los cambios
+            await cargarGastosComunes();
+            document.getElementById('modalGC').style.display = 'none';
+            mostrarMensaje('Gasto común registrado con éxito.', 'success');
+
+        } catch (err) {
+            const errorMessage = err.result?.error?.message || err.message || 'Error desconocido.';
+            mostrarMensaje(`Error al guardar el gasto: ${errorMessage}`, 'error');
+        } finally {
+            ocultarSpinner();
+        }
+    });
+
+    document.getElementById('formAbonar').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        mostrarSpinner();
+        const idPago = document.getElementById('abonarIdPago').value;
+        const montoAbono = parseFloat(document.getElementById('abonarMonto').value);
+        const fechaPago = document.getElementById('abonarFechaPago').value;
+        const metodoPago = document.getElementById('abonarMetodoPago').value;
+        const descripcion = document.getElementById('abonarDescripcion').value;
+
+        try {
+            await gapi.client.request({
+                'path': `https://script.googleapis.com/v1/scripts/${SCRIPT_ID}:run`,
+                'method': 'POST',
+                'body': {
+                    'function': 'abonarDeuda_GS',
+                    'parameters': [idPago, montoAbono, fechaPago, metodoPago, descripcion]
+                }
+            });
+            // Recargar los datos para reflejar los cambios
+            await cargarGastosComunes();
+            document.getElementById('modalAbonar').style.display = 'none';
+            mostrarMensaje('Abono registrado con éxito.', 'success');
+        } catch (err) {
+            const errorMessage = err.result?.error?.message || err.message || 'Error desconocido.';
+            mostrarMensaje(`Error al registrar el abono: ${errorMessage}`, 'error');
+        } finally {
+            ocultarSpinner();
+        }
+    });
+
+    // Lógica para el modal de comprobantes
+    document.getElementById('inputNParcelaComprobante').addEventListener('input', (e) => {
+        const nParcela = e.target.value;
+        const selectPeriodo = document.getElementById('selectPeriodoComprobante');
+        const residente = residentes.find(r => String(r[3]) === String(nParcela));
+        
+        selectPeriodo.innerHTML = '';
+        document.getElementById('inputNombreResidenteComprobante').value = residente ? residente[1] : '';
+        document.getElementById('inputEmailComprobante').value = residente ? residente[5] : '';
+        document.getElementById('periodo-selector-container').style.display = 'none';
+        
+        if (nParcela) {
+            const pagosResidente = pagosGC_obj.filter(p => String(p.N_Parcela) === String(nParcela) && p.Estado === 'Pagado');
+            if (pagosResidente.length > 0) {
+                document.getElementById('periodo-selector-container').style.display = 'block';
+                const opciones = pagosResidente.map(pago => {
+                    return `<option value="${pago.ID_Pago}">${formatearPeriodo(pago.Periodo)} - $${parseFloat(pago.Monto_Pagado || 0).toLocaleString('es-CL')}</option>`;
+                });
+                selectPeriodo.innerHTML = `<option value="">--- Seleccione un período ---</option>${opciones.join('')}`;
+            } else {
+                document.getElementById('divCuerpoComprobante').innerHTML = `<span style="color: #6c757d;">No se encontraron pagos en estado "Pagado" para esta parcela.</span>`;
+            }
+        }
+    });
+
+    document.getElementById('selectPeriodoComprobante').addEventListener('change', (e) => {
+        const idPago = e.target.value;
+        if (idPago) {
+            const pago = pagosGC_obj.find(p => p.ID_Pago === idPago);
+            if (pago) {
+                actualizarVistaPreviaComprobante(pago);
+            }
+        } else {
+             document.getElementById('divCuerpoComprobante').innerHTML = `<span style="color: #6c757d;">Seleccione un período para generar la previsualización.</span>`;
+        }
+    });
+
+    document.getElementById('formEnviarComprobante').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        if (!pagoSeleccionadoParaEnviar) {
+            mostrarMensaje('Debe seleccionar un comprobante para enviar.', 'error');
+            return;
+        }
+
+        const emailResidente = document.getElementById('inputEmailComprobante').value;
+        if (!emailResidente || !emailResidente.includes('@')) {
+            mostrarMensaje('El residente no tiene un correo electrónico válido registrado.', 'error');
+            return;
+        }
+        
+        mostrarSpinner();
+        try {
+            await gapi.client.request({
+                'path': `https://script.googleapis.com/v1/scripts/${SCRIPT_ID}:run`,
+                'method': 'POST',
+                'body': {
+                    'function': 'enviarComprobante_GS',
+                    'parameters': [pagoSeleccionadoParaEnviar]
+                }
+            });
+            await cargarGastosComunes(); // Recargar datos para actualizar estado
+            document.getElementById('modalComprobante').style.display = 'none';
+            mostrarMensaje('Comprobante enviado exitosamente.', 'success');
+        } catch (err) {
+            const errorMessage = err.result?.error?.message || err.message || 'Error desconocido.';
+            mostrarMensaje(`Error al enviar el comprobante: ${errorMessage}`, 'error');
+        } finally {
+            ocultarSpinner();
+        }
+    });
+
+    document.getElementById('inputNParcela').addEventListener('input', (e) => {
+        const parcela = e.target.value;
+        const residente = residentes.find(r => String(r[3]) === String(parcela));
+        const valorGCInput = document.getElementById('inputValorGastoComun');
+        const saldoConvenioInfo = document.getElementById('saldo-convenio-info');
+        const saldoFavorInfo = document.getElementById('saldo-favor-info');
+        
+        if (residente) {
+            document.getElementById('inputNombreResidente').value = residente[1];
+            valorGCInput.value = parseFloat(residente[8] || 0).toFixed(0);
+            
+            // Actualizar saldos de convenio y a favor
+            const saldoConvenio = parseFloat(residente[19] || 0) - pagosGC_obj.filter(p => String(p.N_Parcela) === String(parcela)).reduce((sum, pago) => sum + parseFloat(pago.Abono_Convenio || 0), 0);
+            const saldoFavor = pagosGC_obj.filter(p => String(p.N_Parcela) === String(parcela) && p.Estado === 'Pagado' && parseFloat(p.Saldo_Pendiente_o_a_favor || 0) > 0).reduce((sum, pago) => sum + parseFloat(pago.Saldo_Pendiente_o_a_favor || 0), 0);
+            
+            if (saldoConvenio > 0) {
+                saldoConvenioInfo.textContent = `Saldo Convenio: $${saldoConvenio.toLocaleString('es-CL')}`;
+                saldoConvenioInfo.style.display = 'block';
+            } else {
+                saldoConvenioInfo.style.display = 'none';
+            }
+            if (saldoFavor > 0) {
+                saldoFavorInfo.textContent = `Saldo a Favor: $${saldoFavor.toLocaleString('es-CL')}`;
+                saldoFavorInfo.style.display = 'block';
+            } else {
+                saldoFavorInfo.style.display = 'none';
+            }
+        } else {
+            document.getElementById('inputNombreResidente').value = '';
+            valorGCInput.value = '';
+            saldoConvenioInfo.style.display = 'none';
+            saldoFavorInfo.style.display = 'none';
+        }
+    });
+    
+    // Autocompletado de nombre del residente
+    document.getElementById('inputNombreResidente').addEventListener('input', (e) => {
+        const query = e.target.value.toLowerCase();
+        const suggestionsDiv = document.getElementById('nombre-suggestions');
+        suggestionsDiv.innerHTML = '';
+        if (query.length > 0) {
+            const matches = residentes.filter(r => r[1].toLowerCase().includes(query)).slice(0, 5);
+            if (matches.length > 0) {
+                suggestionsDiv.style.display = 'block';
+                matches.forEach(residente => {
+                    const item = document.createElement('div');
+                    item.className = 'suggestion-item';
+                    item.textContent = `${residente[1]} (Parcela ${residente[3]})`;
+                    item.addEventListener('click', () => {
+                        document.getElementById('inputNombreResidente').value = residente[1];
+                        document.getElementById('inputNParcela').value = residente[3];
+                        document.getElementById('inputNParcela').dispatchEvent(new Event('input'));
+                        suggestionsDiv.style.display = 'none';
+                    });
+                    suggestionsDiv.appendChild(item);
+                });
+            } else {
+                suggestionsDiv.style.display = 'none';
+            }
+        } else {
+            suggestionsDiv.style.display = 'none';
+        }
+    });
+
+    document.getElementById('btnGuardarTMC').addEventListener('click', async () => {
+        const inputTMC = document.getElementById('inputTMC');
+        const selectMes = document.getElementById('selectMesTMC');
+        const anio = document.getElementById('filtroAnio').value;
+        const valor = parseFloat(inputTMC.value);
+        const mes = parseInt(selectMes.value);
+
+        if (isNaN(valor) || valor < 0 || !anio) {
+            mostrarMensaje('Por favor, ingrese un valor de TIMC y un año válidos.', 'warning');
+            return;
+        }
+
+        mostrarSpinner();
+        try {
+            await gapi.client.request({
+                'path': `https://script.googleapis.com/v1/scripts/${SCRIPT_ID}:run`,
+                'method': 'POST',
+                'body': {
+                    'function': 'guardarTIMC_GS',
+                    'parameters': [anio, mes, valor]
+                }
+            });
+            timcData[anio] = timcData[anio] || {};
+            timcData[anio][mes] = valor;
+            actualizarVistaTIMC();
+            mostrarMensaje('TIMC guardado con éxito.', 'success');
+        } catch (err) {
+            const errorMessage = err.result?.error?.message || err.message || 'Error desconocido.';
+            mostrarMensaje(`Error al guardar TIMC: ${errorMessage}`, 'error');
+        } finally {
+            ocultarSpinner();
+        }
+    });
+
+    // Cerrar modales
+    document.getElementById('btnCerrarModal').addEventListener('click', () => {
+        document.getElementById('modalGC').style.display = 'none';
+    });
+    document.getElementById('btnCerrarModalComprobante').addEventListener('click', () => {
+        document.getElementById('modalComprobante').style.display = 'none';
+    });
+    document.getElementById('btnCerrarModalAbonar').addEventListener('click', () => {
+        document.getElementById('modalAbonar').style.display = 'none';
+    });
+    document.getElementById('btnCerrarModalDetalle').addEventListener('click', () => {
+        document.getElementById('modalDetallePago').style.display = 'none';
+    });
+    
+    document.getElementById('btnCerrarModalConvenio').addEventListener('click', () => {
+        document.getElementById('modalConvenio').style.display = 'none';
+    });
+
+    document.getElementById('convenioDeudaTotal').addEventListener('input', calcularValorCuota);
+    document.getElementById('convenioCuotas').addEventListener('input', calcularValorCuota);
+
+    document.getElementById('formConvenio').addEventListener('submit', (e) => {
+        e.preventDefault();
+        const nParcela = document.getElementById('convenioNParcela').value;
+        const datosConvenio = {
+            deuda: parseFloat(document.getElementById('convenioDeudaTotal').value),
+            cuotas: parseInt(document.getElementById('convenioCuotas').value),
+            valorCuota: parseFloat(document.getElementById('convenioValorCuota').value),
+            fechaInicio: document.getElementById('convenioFechaInicio').value
+        };
+        document.getElementById('modalConvenio').style.display = 'none';
+        guardarConvenio(nParcela, datosConvenio);
+    });
+
+    // =======================================================
+    // EJECUCIÓN INICIAL
+    // =======================================================
+
+    filtrarYRenderizar();
+    actualizarVistaTIMC();
+    ocultarSpinner();
+}
