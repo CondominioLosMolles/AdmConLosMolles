@@ -572,6 +572,8 @@ async function guardarConvenio(evt) {
   N_Cuotas: nCuotas,
   Fecha_Inicio: firstYMD
 };
+    // Esta función ahora llamará a tu lógica completa en Google Sheets
+await callAppsScript("crearConvenio", datosParaCrear);
 
     mostrarMensaje && mostrarMensaje(`Convenio ${idConvenio} creado con éxito.`, "success");
 
