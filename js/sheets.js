@@ -363,27 +363,13 @@ async function actualizarPagoGC(datos) {
     }
 }
 
-async function actualizarSaldoFavorResidente(rowNumber, nuevoSaldo) {
+aasync function actualizarSaldoFavorResidente(rowNumber, nuevoSaldo) {
     if (rowNumber < 2) throw new Error("Número de fila inválido para actualizar el saldo a favor.");
-
     try {
-        const response = await gapi.client.request({
-            'path': `https://script.googleapis.com/v1/scripts/${SCRIPT_ID}:run`,
-            'method': 'POST',
-            'body': {
-                'function': 'actualizarSaldoFavorResidente_GS',
-                'parameters': [rowNumber, nuevoSaldo]
-            }
-        });
-
-        const result = response.result;
-        if (result.error) {
-            throw new Error(result.error.details || 'Error en el script de Google al actualizar saldo a favor.');
-        }
-        return result.response?.result;
-
+        const result = await llamarAPI('actualizarSaldoFavorResidente_GS', [rowNumber, nuevoSaldo]);
+        return result;
     } catch (err) {
-        const errorMessage = err.result?.error?.message || err.message || 'Error desconocido.';
+        const errorMessage = err.message || 'Error desconocido.';
         console.error('Error al llamar a actualizarSaldoFavorResidente_GS:', errorMessage);
         throw new Error(`Error del cliente al actualizar saldo a favor: ${errorMessage}`);
     }
@@ -791,23 +777,10 @@ async function agregarComunicacion(datos) {
 // ===============================================================
 async function enviarCorreo(destinatario, asunto, cuerpo) {
   try {
-    const response = await gapi.client.request({
-      'path': `https://script.googleapis.com/v1/scripts/${SCRIPT_ID}:run`,
-      'method': 'POST',
-      'body': {
-        'function': 'enviarCorreoComprobante_GS',
-        'parameters': [destinatario, asunto, cuerpo]
-      }
-    });
-
-    const result = response.result;
-    if (result.error) {
-      throw new Error(result.error.details || 'Error en el script de Google para enviar correo.');
-    }
-    return result.response?.result;
-
+    const result = await llamarAPI('enviarCorreoComprobante_GS', [destinatario, asunto, cuerpo]);
+    return result;
   } catch (err) {
-    const errorMessage = err.result?.error?.message || err.message || 'Error desconocido.';
+    const errorMessage = err.message || 'Error desconocido.';
     console.error('Error al llamar a enviarCorreoComprobante_GS:', errorMessage);
     throw new Error(`Error del cliente al enviar correo: ${errorMessage}`);
   }
