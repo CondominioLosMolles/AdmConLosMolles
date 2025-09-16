@@ -219,6 +219,9 @@ h2, h3, h4 {
 .modal .modal-content.large {
     max-width: 750px;
 }
+#modalDetallePago .modal-content {
+    max-width: 650px;
+}
 @keyframes modalFadeIn {
   from { transform: translateY(-30px); opacity: 0; }
   to { transform: translateY(0); opacity: 1; }
