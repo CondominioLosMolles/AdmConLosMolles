@@ -93,11 +93,14 @@ function ocultarModalGlobal() {
 
 // js/utils.js
 
+// js/utils.js
+
 async function llamarAPI(functionName, parameters = []) {
-    // ▼▼▼ USA EL ID QUE ACABAS DE ENCONTRAR AQUÍ ▼▼▼
+    // ▼▼▼ CAMBIO 1: Usa el ID de SCRIPT que copiaste en el Paso 1 ▼▼▼
     const SCRIPT_ID = "AKfycbx9qaJJhJEqwdH01y79DcCX3g0wptlTgPm5GhvYB6HLtAZTSo9SiGZT3eB2QNp1Aqb25w"; 
     
     try {
+        // ▼▼▼ CAMBIO 2: Volvemos a necesitar el token de autorización ▼▼▼
         const token = gapi.auth.getToken().access_token;
 
         const res = await gapi.client.request({
@@ -108,20 +111,25 @@ async function llamarAPI(functionName, parameters = []) {
                 'Content-Type': 'application/json'
             },
             'body': {
+                // ▼▼▼ CAMBIO 3: El cuerpo debe usar "function", no "functionName" ▼▼▼
                 'function': functionName,
                 'parameters': parameters
             }
         });
 
-        // ... el resto de la función como te la pasé antes ...
         const result = res.result;
+
         if (result.error) {
-            const errorMessage = result.error.details?.[0]?.errorMessage || result.error.message || 'Error en script.';
+            console.error('Error devuelto por la API:', result.error);
+            // La respuesta de error de esta API está en result.error.details
+            const errorMessage = result.error.details && result.error.details[0] ? result.error.details[0].errorMessage : (result.error.message || 'Error en el script de Google.');
             throw new Error(errorMessage);
         }
+
         return result.response.result;
 
     } catch (error) {
+        // El error de red o de la API será capturado aquí
         console.error(`Error llamando a la función '${functionName}':`, error);
         throw error.result ? new Error(error.result.error.message) : error;
     }
