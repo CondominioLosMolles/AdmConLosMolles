@@ -97,7 +97,7 @@ function ocultarModalGlobal() {
 
 async function llamarAPI(functionName, parameters = []) {
     // ▼▼▼ CAMBIO 1: Usa el ID de SCRIPT que copiaste en el Paso 1 ▼▼▼
-    const SCRIPT_ID = "AKfycbx9qaJJhJEqwdH01y79DcCX3g0wptlTgPm5GhvYB6HLtAZTSo9SiGZT3eB2QNp1Aqb25w"; 
+    const SCRIPT_ID = "1_L-6dcZ_ZniuQGJNjI-Ozn9azbUQUofWFRahh4Vhm34gRGCJfR8Xf96h"; 
     
     try {
         // ▼▼▼ CAMBIO 2: Volvemos a necesitar el token de autorización ▼▼▼
