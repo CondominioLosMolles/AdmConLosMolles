@@ -144,9 +144,13 @@ async function cargarContabilidad() {
     const main = document.getElementById('main-content');
     const fechaSaldoInicial = config.Fecha_Saldo_Inicial ? new Date(config.Fecha_Saldo_Inicial.replace(/-/g, '/')).toLocaleDateString('es-CL') : 'No establecida';
 
-    // ▼▼▼ INICIO: CÓDIGO HTML MODIFICADO ▼▼▼
-    // Se actualiza el modal de "Agregar Otro Ingreso" para que sea completo, incluyendo el campo para adjuntar archivos.
-  main.innerHTML = `
+    // ***** INICIO DE LA MODIFICACIÓN *****
+    // 1. Limpiamos el valor del saldo que viene de la hoja de cálculo
+    // para quitarle los símbolos '$' y los puntos '.'
+    const valorSaldoLimpio = String(config.Saldo_Inicial_Caja || '0').replace(/\$|\./g, '').replace(/,/g, '.');
+    // ***** FIN DE LA MODIFICACIÓN *****
+
+    main.innerHTML = `
     <style>
       /* ESTILOS PARA CORREGIR EL MODAL */
       .modal {
@@ -209,7 +213,7 @@ async function cargarContabilidad() {
             <div style="display:flex; flex-wrap:wrap; gap:20px; align-items:flex-end;">
                 <div>
                     <label><b>Saldo Inicial de Caja</b></label>
-                    <input type="number" id="inputSaldoInicial" value="${parseFloat(config.Saldo_Inicial_Caja || 0)}" disabled>
+                    <input type="number" id="inputSaldoInicial" value="${parseFloat(valorSaldoLimpio)}" disabled>
                 </div>
                 <div>
                     <label><b>Fecha de Saldo</b></label>
@@ -364,11 +368,10 @@ async function cargarContabilidad() {
       </div>
     </div>
   `;
-    // ▲▲▲ FIN: CÓDIGO HTML MODIFICADO ▲▲▲
 
     let chartIngresosInstance = null;
     let chartEgresosInstance = null;
-
+    
     // ▼▼▼ INICIO: CÓDIGO DE RENDERIZADO MODIFICADO ▼▼▼
     // Se actualiza la función para incluir la columna y los datos del comprobante en la tabla de ingresos.
     function renderizarContabilidad(pagos, egresos, ingresosExtra, saldoInicialGlobal) {
