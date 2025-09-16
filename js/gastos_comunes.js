@@ -801,6 +801,7 @@ main.innerHTML = `
     function configurarAbonos() {
         document.querySelectorAll('.abonar-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
+                e.stopPropagation();
                 const idPago = e.target.dataset.id;
                 const pago = pagosGC_obj.find(p => p.ID_Pago === idPago);
                 
