@@ -353,23 +353,11 @@ async function agregarPagoGC(datos) {
 
 async function actualizarPagoGC(datos) {
     try {
-        const response = await gapi.client.request({
-            'path': `https://script.googleapis.com/v1/scripts/${SCRIPT_ID}:run`,
-            'method': 'POST',
-            'body': {
-                'function': 'actualizarPagoGC_GS',
-                'parameters': [datos]
-            }
-        });
-
-        const result = response.result;
-        if (result.error) {
-            throw new Error(result.error.details || 'Error en el script de Google.');
-        }
-        return result.response?.result;
-
+        // Ahora usa la nueva función centralizada. ¡Más limpio y consistente!
+        const result = await llamarAPI('actualizarPagoGC_GS', [datos]);
+        return result;
     } catch (err) {
-        const errorMessage = err.result?.error?.message || err.message || 'Error desconocido.';
+        const errorMessage = err.message || 'Error desconocido.';
         console.error('Error al llamar a actualizarPagoGC_GS:', errorMessage);
         throw new Error(`Error del cliente al actualizar el pago: ${errorMessage}`);
     }
