@@ -87,19 +87,18 @@ function ocultarModalGlobal() {
  * @param {Array} parameters - Un array con los parámetros para la función del script.
  * @returns {Promise<any>} - La respuesta del script.
  */
+// js/utils.js
+
 async function llamarAPI(functionName, parameters = []) {
-    // URL configurada correctamente
     const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwWRzyPYBrP5FFYXdrH5BYgWZHx8qEdblAXWWH-9b8qPJb6vEcCmRi0jzVyi8NElAVIeQ/exec";
 
-    // El bloque "if" de seguridad ha sido eliminado.
-
     try {
-        const token = gapi.auth.getToken().access_token;
         const res = await fetch(SCRIPT_URL, {
             method: 'POST',
+            // Se eliminó el "mode: 'no-cors'" para poder leer la respuesta.
+            // Se eliminó el encabezado 'Authorization' que causaba el problema de CORS preflight.
             headers: {
                 'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
             },
             body: JSON.stringify({
                 functionName: functionName,
@@ -119,6 +118,7 @@ async function llamarAPI(functionName, parameters = []) {
             throw new Error(jsonResponse.error.message || 'Ocurrió un error en el script de Google.');
         }
 
+        // Ajuste para devolver correctamente el resultado anidado
         return jsonResponse.response;
 
     } catch (error) {
