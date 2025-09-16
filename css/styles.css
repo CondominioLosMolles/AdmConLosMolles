@@ -117,10 +117,10 @@ body {
   background: linear-gradient(90deg,#4e91f9 70%,#2a7ca3 100%);
   color: #fff;
   border: none;
-  padding: 5px 10px;
+  padding: 6px 14px;
   border-radius: 6px;
   cursor: pointer;
-  font-size: 0.85em;
+  font-size: 0.9em;
   font-weight: 600;
   margin-right: 8px;
   box-shadow: 0 1px 4px #4e91f930;
