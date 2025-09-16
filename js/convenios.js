@@ -530,7 +530,7 @@ async function guardarConvenio(evt) {
       Fecha_Inicio: firstYMD
     };
 
-    const URL_DE_TU_SCRIPT = "https://script.google.com/macros/s/AKfycbz11bl-UBhekl0nv6njh63W04tu_-luAABFqgjtWZEoHAipUJMpcVSMMIRcvePK_2aR9g/exec";
+    const URL_DE_TU_SCRIPT = "https://script.google.com/macros/s/AKfycbys4-1RQcpd-4vp6DWOvGDyDLL-rSGBLbc2lyEsZsGYuanWwdc5NolN9xqOuWrCo7jTTQ/exec";
 
     const response = await fetch(URL_DE_TU_SCRIPT, {
       method: 'POST',
@@ -755,7 +755,7 @@ async function enviarComprobanteCuota(cuotaId, nParcela, convenioId) {
 // EN TU ARCHIVO convenios.js
 async function enviarCorreo(destinatario, asunto, cuerpoHtml) {
   // 1. URL de tu script (ya la tienes bien)
-  const URL_DE_TU_SCRIPT = "https://script.google.com/macros/s/AKfycbz11bl-UBhekl0nv6njh63W04tu_-luAABFqgjtWZEoHAipUJMpcVSMMIRcvePK_2aR9g/exec";
+  const URL_DE_TU_SCRIPT = "https://script.google.com/macros/s/AKfycbys4-1RQcpd-4vp6DWOvGDyDLL-rSGBLbc2lyEsZsGYuanWwdc5NolN9xqOuWrCo7jTTQ/exec";
 
   // 2. ===== LA CONDICIÓN CORREGIDA =====
   // Ahora solo verifica que la URL no esté vacía.
