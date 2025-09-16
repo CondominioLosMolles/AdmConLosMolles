@@ -206,6 +206,16 @@ h2, h3, h4 {
     width: 100%;
     animation: modalFadeIn 0.25s ease-out;
 }
+.modal-content {
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 8px 32px rgba(78, 145, 249, 0.3);
+    padding: 32px 36px;
+    min-width: 300px; /* Ancho mínimo para evitar que se colapse */
+    max-width: 500px; /* Ancho máximo estándar */
+    width: 90%;       /* Ancho responsive para pantallas pequeñas */
+    animation: modalFadeIn 0.25s ease-out;
+}
 .modal .modal-content.large {
     max-width: 750px;
 }
