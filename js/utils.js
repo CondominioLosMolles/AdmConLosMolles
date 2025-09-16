@@ -91,40 +91,39 @@ function ocultarModalGlobal() {
 
 // js/utils.js
 
-async function llamarAPI(functionName, parameters = []) {
-    // La URL es la de tu última implementación, la de la captura es diferente, usa la tuya.
-    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzAvbmAAPEyYxs434Bgs6UG7ywaB3ZoLScU0Yne6AodmS_rsDtHhWGLlnEUlfSqJnRSDQ/exec";
+// js/utils.js
 
+async function llamarAPI(functionName, parameters = []) {
+    // ▼▼▼ USA EL ID QUE ACABAS DE ENCONTRAR AQUÍ ▼▼▼
+    const SCRIPT_ID = "AKfycbx9qaJJhJEqwdH01y79DcCX3g0wptlTgPm5GhvYB6HLtAZTSo9SiGZT3eB2QNp1Aqb25w"; 
+    
     try {
-        const res = await fetch(SCRIPT_URL, {
-            method: 'POST',
-            headers: {
-                // ✅ CAMBIO CLAVE: Hacemos que la solicitud parezca más simple.
-                'Content-Type': 'text/plain;charset=utf-8', 
+        const token = gapi.auth.getToken().access_token;
+
+        const res = await gapi.client.request({
+            'path': `https://script.googleapis.com/v1/scripts/${SCRIPT_ID}:run`,
+            'method': 'POST',
+            'headers': {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
             },
-            body: JSON.stringify({
-                functionName: functionName,
-                parameters: parameters
-            }),
+            'body': {
+                'function': functionName,
+                'parameters': parameters
+            }
         });
 
-        if (!res.ok) {
-            const errorBody = await res.text();
-            throw new Error(`Error en la respuesta del servidor (HTTP ${res.status}): ${errorBody}`);
+        // ... el resto de la función como te la pasé antes ...
+        const result = res.result;
+        if (result.error) {
+            const errorMessage = result.error.details?.[0]?.errorMessage || result.error.message || 'Error en script.';
+            throw new Error(errorMessage);
         }
-
-        const jsonResponse = await res.json();
-
-        if (jsonResponse.error) {
-            console.error('Error devuelto por la API:', jsonResponse.error);
-            throw new Error(jsonResponse.error.message || 'Ocurrió un error en el script de Google.');
-        }
-
-        return jsonResponse.response;
+        return result.response.result;
 
     } catch (error) {
         console.error(`Error llamando a la función '${functionName}':`, error);
-        throw error;
+        throw error.result ? new Error(error.result.error.message) : error;
     }
 }
 // ========================================================
