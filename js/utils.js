@@ -93,7 +93,7 @@ function ocultarModalGlobal() {
 
 async function llamarAPI(functionName, parameters = []) {
     // La URL es la de tu última implementación, la de la captura es diferente, usa la tuya.
-    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwWRzyPYBrP5FFYXdrH5BYgWZHx8qEdblAXWWH-9b8qPJb6vEcCmRi0jzVyi8NElAVIeQ/exec";
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzAvbmAAPEyYxs434Bgs6UG7ywaB3ZoLScU0Yne6AodmS_rsDtHhWGLlnEUlfSqJnRSDQ/exec";
 
     try {
         const res = await fetch(SCRIPT_URL, {
