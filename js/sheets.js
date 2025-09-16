@@ -363,7 +363,7 @@ async function actualizarPagoGC(datos) {
     }
 }
 
-aasync function actualizarSaldoFavorResidente(rowNumber, nuevoSaldo) {
+async function actualizarSaldoFavorResidente(rowNumber, nuevoSaldo) {
     if (rowNumber < 2) throw new Error("Número de fila inválido para actualizar el saldo a favor.");
     try {
         const result = await llamarAPI('actualizarSaldoFavorResidente_GS', [rowNumber, nuevoSaldo]);
