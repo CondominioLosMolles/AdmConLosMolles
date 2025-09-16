@@ -353,7 +353,6 @@ async function agregarPagoGC(datos) {
 
 async function actualizarPagoGC(datos) {
     try {
-        // Ahora usa la nueva función centralizada. ¡Más limpio y consistente!
         const result = await llamarAPI('actualizarPagoGC_GS', [datos]);
         return result;
     } catch (err) {
