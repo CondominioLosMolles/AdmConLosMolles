@@ -144,10 +144,9 @@ async function cargarContabilidad() {
     const main = document.getElementById('main-content');
     const fechaSaldoInicial = config.Fecha_Saldo_Inicial ? new Date(config.Fecha_Saldo_Inicial.replace(/-/g, '/')).toLocaleDateString('es-CL') : 'No establecida';
 
-    // ***** INICIO DE LA MODIFICACIÓN *****
-    // 1. Limpiamos el valor del saldo que viene de la hoja de cálculo
-    // para quitarle los símbolos '$' y los puntos '.'
-    const valorSaldoLimpio = String(config.Saldo_Inicial_Caja || '0').replace(/\$|\./g, '').replace(/,/g, '.');
+    // ***** INICIO DE LA MODIFICACIÓN (VERSIÓN 2) *****
+    // 1. Esta nueva versión elimina TODOS los símbolos que no son dígitos.
+    const valorSaldoLimpio = String(config.Saldo_Inicial_Caja || '0').replace(/\$|\.|,/g, '');
     // ***** FIN DE LA MODIFICACIÓN *****
 
     main.innerHTML = `
