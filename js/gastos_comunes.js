@@ -53,6 +53,7 @@ async function cargarGastosComunes() {
         mostrarMensaje('Error al cargar datos de Gastos Comunes: ' + e.message, 'error');
         return;
     }
+
     // =======================================================
     // FUNCIONES DE AYUDA (DEFINIDAS DENTRO PARA TENER ACCESO A LAS VARIABLES)
     // =======================================================
@@ -272,10 +273,6 @@ async function cargarGastosComunes() {
 // RENDERIZADO DEL HTML PRINCIPAL
 // =======================================================
 
-// =======================================================
-// RENDERIZADO DEL HTML PRINCIPAL
-// =======================================================
-
 const main = document.getElementById('main-content');
 main.innerHTML = `
     <style>
@@ -321,6 +318,7 @@ main.innerHTML = `
             max-width: 800px;
             overflow-y: auto;
         }
+        .btn.warning { background-color: #ffc107; color: #000; }
     </style>
     <div style="display:flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;"><h2>Gastos Comunes</h2></div>
     <div style="display: flex; flex-wrap: wrap; gap: 24px; align-items: stretch;">
@@ -339,10 +337,12 @@ main.innerHTML = `
                     </div>
                 </div>
             </div>
-            <div style="margin-top: auto; display: flex; flex-direction: column; align-items: flex-start; gap: 10px;">
+            <div style="margin-top: auto; display: flex; flex-wrap: wrap; align-items: flex-start; gap: 10px;">
                 <button id="btnAbrirModalGasto" class="btn">Agregar Gasto Común</button>
                 <button id="btnAbrirModalComprobante" class="btn secondary">Enviar Comprobante</button>
-                <button id="btnActualizarMora" class="btn warning">Actualizar Mora</button> </div>
+                
+                <button id="btnActualizarMora" class="btn warning">Actualizar Mora</button>
+                
             </div>
         </section>
         <section class="widget" style="flex: 2; min-width: 450px;"><h4 style="margin-top:0;">Configuración de TIMC</h4><div style="display: flex; align-items: flex-end; gap: 16px; margin-bottom: 20px;"><div style="min-width: 120px;"><label for="inputTMC"><b>TIMC (%)</b></label><input type="number" id="inputTMC" step="0.1" placeholder="Ej: 25"></div><div><label for="selectMesTMC"><b>Mes</b></label><select id="selectMesTMC" style="padding: 11px 10px;">${MESES.map((m, i) => `<option value="${i + 1}">${m}</option>`).join('')}</select></div><button id="btnGuardarTMC" class="btn">Guardar en Sheet</button></div><div id="timc-display"><h5 style="margin-top:0; margin-bottom: 10px;">TIMC Guardado para el año seleccionado:</h5><div id="timc-list-horizontal" style="display: flex; flex-wrap: wrap; gap: 15px; background: #e9f1fb; padding: 12px; border-radius: 8px;"></div></div></section>
@@ -895,6 +895,40 @@ main.innerHTML = `
     // =======================================================
     // ASIGNACIÓN DE EVENTOS (EVENT LISTENERS)
     // =======================================================
+
+    // ▼▼▼ AQUÍ SE AGREGA LA LÓGICA DEL BOTÓN NUEVO ▼▼▼
+    document.getElementById('btnActualizarMora').addEventListener('click', async () => {
+        const confirmacion = confirm("¿Estás seguro de que deseas ejecutar el proceso de actualización de mora?\nEsto generará y actualizará los registros de deuda para todos los residentes.");
+        
+        if (!confirmacion) {
+            return; // El usuario canceló la operación
+        }
+
+        mostrarSpinner();
+        try {
+            const response = await gapi.client.script.run({
+                'scriptId': SCRIPT_ID,
+                'resource': {
+                    'function': 'generarRegistrosDeMora'
+                }
+            });
+
+            if (response.result) {
+                mostrarMensaje(response.result, 'success');
+                // Recargamos los datos para ver los cambios inmediatamente
+                await cargarGastosComunes();
+            } else {
+                 // Si la ejecución tiene un error del lado del servidor
+                if(response.error) throw new Error(response.error.message);
+            }
+
+        } catch (err) {
+            const errorMessage = err.result?.error?.message || err.message || 'Error desconocido.';
+            mostrarMensaje(`Error al actualizar la mora: ${errorMessage}`, 'error');
+        } finally {
+            ocultarSpinner();
+        }
+    });
 
     document.getElementById('btnGuardarTMC').addEventListener('click', async () => {
         if (typeof guardarTIMC !== 'function') return mostrarMensaje('Error: La función "guardarTIMC" no se encontró en sheets.js.', 'error');
