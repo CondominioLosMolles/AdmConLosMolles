@@ -53,7 +53,6 @@ async function cargarGastosComunes() {
         mostrarMensaje('Error al cargar datos de Gastos Comunes: ' + e.message, 'error');
         return;
     }
-
     // =======================================================
     // FUNCIONES DE AYUDA (DEFINIDAS DENTRO PARA TENER ACCESO A LAS VARIABLES)
     // =======================================================
