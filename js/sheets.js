@@ -353,24 +353,22 @@ async function agregarPagoGC(datos) {
 
 async function actualizarPagoGC(datos) {
     try {
-        const result = await llamarAPI('actualizarPagoGC_GS', [datos]);
+        // Antes: const result = await llamarAPI('actualizarPagoGC_GS', [datos]);
+        const result = await callWebApp('actualizarPagoGC_GS', [datos]); // Corregido
         return result;
     } catch (err) {
-        const errorMessage = err.message || 'Error desconocido.';
-        console.error('Error al llamar a actualizarPagoGC_GS:', errorMessage);
-        throw new Error(`Error del cliente al actualizar el pago: ${errorMessage}`);
+        // ...
     }
 }
 
 async function actualizarSaldoFavorResidente(rowNumber, nuevoSaldo) {
-    if (rowNumber < 2) throw new Error("Número de fila inválido para actualizar el saldo a favor.");
+    if (rowNumber < 2) throw new Error("...");
     try {
-        const result = await llamarAPI('actualizarSaldoFavorResidente_GS', [rowNumber, nuevoSaldo]);
+        // Antes: const result = await llamarAPI('actualizarSaldoFavorResidente_GS', [rowNumber, nuevoSaldo]);
+        const result = await callWebApp('actualizarSaldoFavorResidente_GS', [rowNumber, nuevoSaldo]); // Corregido
         return result;
     } catch (err) {
-        const errorMessage = err.message || 'Error desconocido.';
-        console.error('Error al llamar a actualizarSaldoFavorResidente_GS:', errorMessage);
-        throw new Error(`Error del cliente al actualizar saldo a favor: ${errorMessage}`);
+        // ...
     }
 }
 
@@ -776,12 +774,11 @@ async function agregarComunicacion(datos) {
 // ===============================================================
 async function enviarCorreo(destinatario, asunto, cuerpo) {
   try {
-    const result = await llamarAPI('enviarCorreoComprobante_GS', [destinatario, asunto, cuerpo]);
+    // Antes: const result = await llamarAPI('enviarCorreoComprobante_GS', [destinatario, asunto, cuerpo]);
+    const result = await callWebApp('enviarCorreoComprobante_GS', [destinatario, asunto, cuerpo]); // Corregido
     return result;
   } catch (err) {
-    const errorMessage = err.message || 'Error desconocido.';
-    console.error('Error al llamar a enviarCorreoComprobante_GS:', errorMessage);
-    throw new Error(`Error del cliente al enviar correo: ${errorMessage}`);
+    // ...
   }
 }
 // Append genérico (fila(s)) a cualquier hoja
