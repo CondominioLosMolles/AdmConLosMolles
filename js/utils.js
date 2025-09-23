@@ -77,61 +77,47 @@ function ocultarModalGlobal() {
     }
 }
 
-// =====================================================================================
-// ===== PEGA ESTA FUNCIÓN COMPLETA AL FINAL DE TU ARCHIVO js/utils.js ==============
-// =====================================================================================
-
 /**
- * Función central para comunicarse con la API de Google Apps Script.
+ * Función central para comunicarse con el script de Google desplegado como Web App.
  * @param {string} functionName - El nombre de la función a ejecutar en el script de Google.
  * @param {Array} parameters - Un array con los parámetros para la función del script.
  * @returns {Promise<any>} - La respuesta del script.
  */
-// js/utils.js
+async function callWebApp(functionName, parameters = []) {
+    // ▼▼▼ ¡IMPORTANTE! ▼▼▼
+    // Esta debe ser la URL de tu SCRIPT terminada en "/exec".
+    // La que tenías en sheets.js parece ser una URL de script, no de despliegue.
+    // Ve a Google Apps Script > Implementar > Gestionar implementaciones y copia la URL de la "Aplicación web".
+    const WEB_APP_URL = "https://script.google.com/macros/s/.../exec"; // <-- PEGA AQUÍ LA URL DE TU WEB APP
 
-// js/utils.js
-
-// js/utils.js
-
-// js/utils.js
-
-async function llamarAPI(functionName, parameters = []) {
-    // ▼▼▼ CAMBIO 1: Usa el ID de SCRIPT que copiaste en el Paso 1 ▼▼▼
-    const SCRIPT_ID = "1_L-6dcZ_ZniuQGJNjI-Ozn9azbUQUofWFRahh4Vhm34gRGCJfR8Xf96h"; 
-    
     try {
-        // ▼▼▼ CAMBIO 2: Volvemos a necesitar el token de autorización ▼▼▼
-        const token = gapi.auth.getToken().access_token;
-
-        const res = await gapi.client.request({
-            'path': `https://script.googleapis.com/v1/scripts/${SCRIPT_ID}:run`,
-            'method': 'POST',
-            'headers': {
-                'Authorization': `Bearer ${token}`,
-                'Content-Type': 'application/json'
+        const response = await fetch(WEB_APP_URL, {
+            method: 'POST',
+            mode: 'cors',
+            headers: {
+                'Content-Type': 'text/plain;charset=utf-8',
             },
-            'body': {
-                // ▼▼▼ CAMBIO 3: El cuerpo debe usar "function", no "functionName" ▼▼▼
-                'function': functionName,
-                'parameters': parameters
-            }
+            // El cuerpo de la solicitud se envía como texto plano JSON
+            body: JSON.stringify({
+                functionName: functionName,
+                parameters: parameters
+            })
         });
 
-        const result = res.result;
+        const result = await response.json();
 
-        if (result.error) {
-            console.error('Error devuelto por la API:', result.error);
-            // La respuesta de error de esta API está en result.error.details
-            const errorMessage = result.error.details && result.error.details[0] ? result.error.details[0].errorMessage : (result.error.message || 'Error en el script de Google.');
-            throw new Error(errorMessage);
+        if (result.status === 'error') {
+            // Si el script devolvió un error, lo lanzamos para que sea capturado
+            throw new Error(result.error.message || 'Error desconocido en el servidor.');
         }
-
-        return result.response.result;
+        
+        // Si todo fue exitoso, devolvemos la respuesta
+        return result.response;
 
     } catch (error) {
-        // El error de red o de la API será capturado aquí
-        console.error(`Error llamando a la función '${functionName}':`, error);
-        throw error.result ? new Error(error.result.error.message) : error;
+        console.error(`Error al llamar a la función '${functionName}':`, error);
+        // Volvemos a lanzar el error para que la función que llamó originalmente pueda manejarlo
+        throw error;
     }
 }
 // ========================================================
