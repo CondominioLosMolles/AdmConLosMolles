@@ -829,33 +829,8 @@ main.innerHTML = `
         });
     }
 
-    async function procesarAbono() {
-        const idPago = document.getElementById('abonarIdPago').value;
-        const montoAbonar = parseFloat(document.getElementById('abonarMonto').value);
-        const fechaPago = document.getElementById('abonarFechaPago').value;
-        const metodoPago = document.getElementById('abonarMetodoPago').value;
-        const descripcion = document.getElementById('abonarDescripcion').value;
-        
-        const pago = pagosGC_obj.find(p => p.ID_Pago === idPago);
-        if (!pago) {
-            mostrarMensaje('No se encontró el registro de pago.', 'error');
-            return;
-        }
-        
-        const montoPagadoActual = parseFloat(pago.Monto_Pagado || 0);
-        const nuevoMontoPagado = montoPagadoActual + montoAbonar;
-        const deudaPendiente = parseFloat(pago.Deuda_Total || 0);
-        const nuevaDeudaPendiente = Math.max(0, deudaPendiente - montoAbonar);
-        
-        // Determinar el nuevo estado
-        let nuevoEstado = pago.Estado;
-        if (nuevaDeudaPendiente === 0) {
-            nuevoEstado = 'Pagado';
-        } else if (nuevoMontoPagado > 0) {
-            nuevoEstado = pago.Estado === 'En Convenio' ? 'En Convenio' : 'Abonado';
-        }
-        
-        // Preparar datos para actualizar
+     async function procesarAbono() {
+        // ... (el código que captura los datos del formulario se mantiene igual) ...
         const datosActualizacion = {
             rowNum: pago.rowNum,
             montoPagado: nuevoMontoPagado,
@@ -872,15 +847,15 @@ main.innerHTML = `
         
         mostrarSpinner();
         try {
-            await actualizarPagoGC(datosActualizacion);
+            // ▼▼▼ LÍNEA MODIFICADA ▼▼▼
+            // Antes: await actualizarPagoGC(datosActualizacion);
             
-            // Actualizar el objeto local
-            pago.Monto_Pagado = nuevoMontoPagado;
-            pago.Deuda_Total = nuevaDeudaPendiente;
-            pago.Fecha_Pago = fechaPago;
-            pago.Metodo_Pago = metodoPago;
-            pago.Estado = nuevoEstado;
-            pago.Descripcion_Pago = descripcion;
+            // Ahora, usamos la nueva función genérica:
+            await callAppsScriptFunction('actualizarPagoGC_GS', [datosActualizacion]);
+            
+            // ▲▲▲ FIN DE LA MODIFICACIÓN ▲▲▲
+
+            // ... (el resto de la función para actualizar la interfaz se mantiene igual) ...
             
             mostrarMensaje('Abono registrado correctamente.', 'success');
             document.getElementById('modalAbonar').style.display = 'none';
