@@ -450,7 +450,7 @@ main.innerHTML = `
     </div>
     
     <div id="modalAbonar" class="modal" style="display:none;">
-        <div class="modal-content">
+    <div class="modal-content large">  <h3>Abonar a Deuda Existente</h3>
             <h3>Abonar a Deuda Existente</h3>
             <form id="formAbonar">
                 <input type="hidden" id="abonarIdPago">
