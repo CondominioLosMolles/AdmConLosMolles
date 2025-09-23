@@ -88,7 +88,7 @@ async function callWebApp(functionName, parameters = []) {
     // Esta debe ser la URL de tu SCRIPT terminada en "/exec".
     // La que tenías en sheets.js parece ser una URL de script, no de despliegue.
     // Ve a Google Apps Script > Implementar > Gestionar implementaciones y copia la URL de la "Aplicación web".
-    const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwODYlgzl_LAxRbHw9HD9dHpvu7RN7VLbDbXl_ypfwpRnVXCsmX4LjivxEFLzgVtIXm2Q/exec"; // <-- PEGA AQUÍ LA URL DE TU WEB APP
+    const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbxyGNLFKsGF1JANPLcDP-85tYkAe7oAqZ2jiHZdU_9iToFVq9xmoXWpxJuoIMFifNJoQA/exec"; // <-- PEGA AQUÍ LA URL DE TU WEB APP
 
     try {
         const response = await fetch(WEB_APP_URL, {
