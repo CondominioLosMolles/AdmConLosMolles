@@ -3,17 +3,27 @@ async function cargarDashboard() {
   limpiarMainContent();
   mostrarSpinner();
   
-  // Agrega una variable "multas" y una función "obtenerMultas()"
-  let residentes = [], pagos = [], egresos = [], tareas = [], config = {}, ingresosExtra = [], multas = []; // <-- MODIFICADO
+  // Agrega una variable "cuotasConvenio" y una función "obtenerCuotasConvenio()"
+  let residentes = [], pagos = [], egresos = [], tareas = [], config = {}, ingresosExtra = [], multas = [], cuotasConvenio = []; // <-- MODIFICADO
   try {
-    const [residentesData, pagosData, egresosData, tareasData, configData, ingresosExtraData, multasData] = await Promise.all([ // <-- MODIFICADO
+    const [
+        residentesData, 
+        pagosData, 
+        egresosData, 
+        tareasData, 
+        configData, 
+        ingresosExtraData, 
+        multasData,
+        cuotasConvenioData // <-- NUEVO
+    ] = await Promise.all([ 
         obtenerResidentes(),
         obtenerPagosGC(),
         obtenerEgresos(),
         obtenerTareas(), 
         obtenerConfiguracion(),
         obtenerIngresosExtra(),
-        obtenerMultas() // <-- NUEVO: Llama a la función para obtener las multas
+        obtenerMultas(),
+        obtenerCuotasConvenio() // <-- NUEVO: Llama a la función para obtener las cuotas de convenio
     ]);
     residentes = residentesData || [];
     pagos = pagosData || [];
@@ -21,7 +31,8 @@ async function cargarDashboard() {
     tareas = tareasData || [];
     config = configData || {};
     ingresosExtra = ingresosExtraData || [];
-    multas = multasData || []; // <-- MODIFICADO
+    multas = multasData || []; 
+    cuotasConvenio = cuotasConvenioData || []; // <-- NUEVO
   } catch (e) {
     ocultarSpinner();
     mostrarMensaje('Error al cargar datos del dashboard: ' + e.message, 'error');
@@ -31,17 +42,15 @@ async function cargarDashboard() {
   // --- CÁLCULOS PRINCIPALES ---
   
   // Calcula el total de cada fuente de ingreso por separado
-    // Se ha ajustado el nombre para que coincida con tu hoja de cálculo: "Saldo_Inicial_Caja"
   const textoSaldo = config['Saldo_Inicial_Caja'] || '0'; 
-
-  // Esta línea limpia el valor (quita '$', '.' y otros símbolos) para convertirlo en número.
   const saldoInicial = Number(String(textoSaldo).replace(/\D/g, ''));
   const totalIngresosGC = pagos.reduce((a,b) => a + Number(b[6]||0) + Number(b[17]||0), 0);
   const totalIngresosExtra = ingresosExtra.reduce((a,b) => a + Number(b[3]||0), 0);
-  const totalMultas = multas.reduce((a,b) => a + Number(b[4]||0), 0); // <-- NUEVO: Suma la columna E (índice 4) de la hoja Multas.
+  const totalMultas = multas.reduce((a,b) => a + Number(b[4]||0), 0);
+  const totalCuotasConvenio = cuotasConvenio.reduce((a,b) => a + Number(b[6]||0), 0); // <-- NUEVO: Suma la columna G (índice 6) de la hoja Cuotas_Convenio.
 
   // Suma todos los ingresos en una sola variable
-  const totalIngresos = saldoInicial + totalIngresosGC + totalIngresosExtra + totalMultas; // <-- MODIFICADO
+  const totalIngresos = saldoInicial + totalIngresosGC + totalIngresosExtra + totalMultas + totalCuotasConvenio; // <-- MODIFICADO
 
   const totalEgresos = egresos.reduce((a,b) => a + Number(b[6]||0), 0);
   const saldoCaja = totalIngresos - totalEgresos;
