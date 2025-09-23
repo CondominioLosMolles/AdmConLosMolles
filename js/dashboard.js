@@ -45,7 +45,9 @@ async function cargarDashboard() {
   const textoSaldo = config['Saldo_Inicial_Caja'] || '0'; 
   const saldoInicial = Number(String(textoSaldo).replace(/\D/g, '')); // Hoja Configuracion, columna B
 
-  const totalIngresosGC = pagos.reduce((a,b) => a + Number(b[6]||0), 0); // Hoja Pagos_GC, columna G
+  // MODIFICACIÓN: Se añade la suma de la columna R (índice 17) de la hoja Pagos_GC
+  const totalIngresosGC = pagos.reduce((a,b) => a + Number(b[6]||0) + Number(b[17]||0), 0); // Hoja Pagos_GC, columna G + R
+  
   const totalIngresosExtra = ingresosExtra.reduce((a,b) => a + Number(b[3]||0), 0); // Hoja Ingresos_Extra, columna D
   const totalCuotasConvenio = cuotasConvenio.reduce((a,b) => a + Number(b[6]||0), 0); // Hoja Cuotas_Convenio, columna G
   const totalSaldoFavor = residentes.reduce((a,b) => a + Number(b[13]||0), 0); // Hoja Residentes, columna N
