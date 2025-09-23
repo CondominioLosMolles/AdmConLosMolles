@@ -3,8 +3,8 @@ async function cargarDashboard() {
   limpiarMainContent();
   mostrarSpinner();
   
-  // Agrega una variable "cuotasConvenio" y una función "obtenerCuotasConvenio()"
-  let residentes = [], pagos = [], egresos = [], tareas = [], config = {}, ingresosExtra = [], multas = [], cuotasConvenio = []; // <-- MODIFICADO
+  // Se mantiene la variable "cuotasConvenio" y se añade la función "obtenerCuotasConvenio()"
+  let residentes = [], pagos = [], egresos = [], tareas = [], config = {}, ingresosExtra = [], multas = [], cuotasConvenio = [];
   try {
     const [
         residentesData, 
@@ -14,7 +14,7 @@ async function cargarDashboard() {
         configData, 
         ingresosExtraData, 
         multasData,
-        cuotasConvenioData // <-- NUEVO
+        cuotasConvenioData
     ] = await Promise.all([ 
         obtenerResidentes(),
         obtenerPagosGC(),
@@ -23,7 +23,7 @@ async function cargarDashboard() {
         obtenerConfiguracion(),
         obtenerIngresosExtra(),
         obtenerMultas(),
-        obtenerCuotasConvenio() // <-- NUEVO: Llama a la función para obtener las cuotas de convenio
+        obtenerCuotasConvenio()
     ]);
     residentes = residentesData || [];
     pagos = pagosData || [];
@@ -32,28 +32,30 @@ async function cargarDashboard() {
     config = configData || {};
     ingresosExtra = ingresosExtraData || [];
     multas = multasData || []; 
-    cuotasConvenio = cuotasConvenioData || []; // <-- NUEVO
+    cuotasConvenio = cuotasConvenioData || [];
   } catch (e) {
     ocultarSpinner();
     mostrarMensaje('Error al cargar datos del dashboard: ' + e.message, 'error');
     return;
   }
 
-  // --- CÁLCULOS PRINCIPALES ---
+  // --- CÁLCULOS PRINCIPALES (CORREGIDOS) ---
   
-  // Calcula el total de cada fuente de ingreso por separado
+  // 1. Calcula el total de cada fuente de ingreso según tus requisitos.
   const textoSaldo = config['Saldo_Inicial_Caja'] || '0'; 
-  const saldoInicial = Number(String(textoSaldo).replace(/\D/g, ''));
-  const totalIngresosGC = pagos.reduce((a,b) => a + Number(b[6]||0) + Number(b[17]||0), 0);
-  const totalIngresosExtra = ingresosExtra.reduce((a,b) => a + Number(b[3]||0), 0);
-  const totalMultas = multas.reduce((a,b) => a + Number(b[4]||0), 0);
-  const totalCuotasConvenio = cuotasConvenio.reduce((a,b) => a + Number(b[6]||0), 0); // <-- NUEVO: Suma la columna G (índice 6) de la hoja Cuotas_Convenio.
+  const saldoInicial = Number(String(textoSaldo).replace(/\D/g, '')); // Hoja Configuracion, columna B
 
-  // Suma todos los ingresos en una sola variable
-  const totalIngresos = saldoInicial + totalIngresosGC + totalIngresosExtra + totalMultas + totalCuotasConvenio; // <-- MODIFICADO
+  const totalIngresosGC = pagos.reduce((a,b) => a + Number(b[6]||0), 0); // Hoja Pagos_GC, columna G
+  const totalIngresosExtra = ingresosExtra.reduce((a,b) => a + Number(b[3]||0), 0); // Hoja Ingresos_Extra, columna D
+  const totalCuotasConvenio = cuotasConvenio.reduce((a,b) => a + Number(b[6]||0), 0); // Hoja Cuotas_Convenio, columna G
+  const totalSaldoFavor = residentes.reduce((a,b) => a + Number(b[13]||0), 0); // Hoja Residentes, columna N
 
+  // 2. Suma todos los ingresos en una sola variable para "Ingresos Acumulados".
+  const totalIngresos = saldoInicial + totalIngresosGC + totalIngresosExtra + totalCuotasConvenio + totalSaldoFavor;
+
+  // 3. Calcula los egresos y el "Saldo de Caja" final.
   const totalEgresos = egresos.reduce((a,b) => a + Number(b[6]||0), 0);
-  const saldoCaja = totalIngresos - totalEgresos;
+  const saldoCaja = totalIngresos - totalEgresos; // Ingresos Acumulados - Egresos Acumulados
 
   // --- CÁLCULOS SECUNDARIOS (Sin cambios en esta sección) ---
   const morososData = {};
