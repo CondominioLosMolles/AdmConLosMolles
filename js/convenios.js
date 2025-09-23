@@ -75,6 +75,8 @@ async function cargarConvenios() {
   const el = document.getElementById("main-content");
   if (!el) return;
 
+  // El innerHTML ahora contiene el nuevo modal con las opciones para
+  // convenios 'simples' y 'personalizados'.
   el.innerHTML = `
     <div class="card shadow-sm">
       <div class="card-header d-flex justify-content-between align-items-center">
@@ -127,50 +129,74 @@ async function cargarConvenios() {
       </div>
     </div>
 
-    <!-- MODAL NUEVO CONVENIO -->
     <div class="modal fade" id="modalNuevoConvenio" tabindex="-1" aria-hidden="true">
-      <div class="modal-dialog modal-lg"><div class="modal-content">
-        <div class="modal-header">
-          <h5 class="modal-title">Crear nuevo convenio</h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-        </div>
-        <div class="modal-body">
-          <form id="formNuevoConvenio" novalidate>
-            <div class="row g-3">
-              <div class="col-md-6">
-                <label class="form-label">Residente (Parcela)</label>
-                <select id="convenioResidente" class="form-select" required>
-                  <option value="">Cargando…</option>
-                </select>
+      <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title">Crear nuevo convenio</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+          </div>
+          <div class="modal-body">
+            <form id="formNuevoConvenio" novalidate>
+              <div class="row g-3 mb-3">
+                <div class="col-md-6">
+                  <label class="form-label">Residente (Parcela)</label>
+                  <select id="convenioResidente" class="form-select" required></select>
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label">Deuda Total a convenir ($)</label>
+                  <input type="number" id="convenioDeudaTotal" class="form-control" min="1" required>
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label">Fecha 1er vencimiento</label>
+                  <input type="date" id="convenioFechaInicio" class="form-control" required>
+                </div>
               </div>
-              <div class="col-md-6">
-                <label class="form-label">Deuda Total ($)</label>
-                <input type="number" id="convenioDeudaTotal" class="form-control" min="1" required>
-              </div>
-              <div class="col-md-6">
-                <label class="form-label">Número de cuotas</label>
-                <input type="number" id="convenioCuotas" class="form-control" min="1" max="120" required>
-              </div>
-              <div class="col-md-6">
-                <label class="form-label">Fecha 1er vencimiento</label>
-                <input type="date" id="convenioFechaInicio" class="form-control" required>
-              </div>
-            </div>
 
-            <div class="alert alert-info mt-3" id="resumenCalculoCuota">
-              Ingrese los datos para calcular el valor de la cuota.
-            </div>
+              <div class="mb-3">
+                <label class="form-label">Tipo de Plan de Pagos</label>
+                <div class="form-check">
+                  <input class="form-check-input" type="radio" name="tipoConvenio" id="tipoSimple" value="simple" checked>
+                  <label class="form-check-label" for="tipoSimple">Simple (cuotas fijas)</label>
+                </div>
+                <div class="form-check">
+                  <input class="form-check-input" type="radio" name="tipoConvenio" id="tipoPersonalizado" value="personalizado">
+                  <label class="form-check-label" for="tipoPersonalizado">Personalizado (cuotas variables por período)</label>
+                </div>
+              </div>
 
-            <div class="text-end">
-              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-              <button type="submit" class="btn btn-primary">Guardar</button>
-            </div>
-          </form>
+              <div id="configuracionSimple">
+                <div class="row">
+                  <div class="col-md-6">
+                    <label class="form-label">Número de cuotas</label>
+                    <input type="number" id="convenioCuotas" class="form-control" min="1" max="120">
+                  </div>
+                </div>
+              </div>
+
+              <div id="configuracionPersonalizada" class="d-none">
+                <h6>Definir Etapas del Plan de Pagos</h6>
+                <div id="tramosDePagoContainer">
+                  </div>
+                <button type="button" id="btnAgregarTramo" class="btn btn-sm btn-outline-secondary mt-2">
+                  <i class="fas fa-plus me-1"></i> Agregar Etapa
+                </button>
+              </div>
+
+              <div class="alert alert-info mt-3" id="resumenCalculoCuota">
+                Seleccione el tipo de plan para continuar.
+              </div>
+
+              <div class="text-end mt-4">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="submit" class="btn btn-primary">Guardar Convenio</button>
+              </div>
+            </form>
+          </div>
         </div>
-      </div></div>
+      </div>
     </div>
 
-    <!-- MODAL DETALLE -->
     <div class="modal fade" id="modalDetalleConvenio" tabindex="-1" aria-hidden="true">
       <div class="modal-dialog modal-xl"><div class="modal-content">
         <div class="modal-header">
@@ -182,22 +208,166 @@ async function cargarConvenios() {
     </div>
   `;
 
-  // Instanciar modales y listeners
+  // --- Instanciar modales y listeners ---
   modalNuevoConvenio   = new bootstrap.Modal(document.getElementById("modalNuevoConvenio"),   {backdrop:true, keyboard:true});
   modalDetalleConvenio = new bootstrap.Modal(document.getElementById("modalDetalleConvenio"), {backdrop:true, keyboard:true});
 
+  // Listeners generales de la página
   document.getElementById("btnAbrirModalNuevoConvenio").addEventListener("click", abrirModalNuevoConvenio);
   document.getElementById("filtroBusquedaConvenio").addEventListener("input", aplicarFiltrosConvenios);
   document.getElementById("filtroEstadoConvenio").addEventListener("change", aplicarFiltrosConvenios);
-
-  ["convenioDeudaTotal","convenioCuotas"].forEach(id=>{
-    const el = document.getElementById(id);
-    el && el.addEventListener("input", calcularValorCuotaPreview);
-  });
-
+  
+  // Listener para el formulario de guardado
   document.getElementById("formNuevoConvenio").addEventListener("submit", guardarConvenio);
 
+  // --- NUEVOS LISTENERS PARA EL MODAL DINÁMICO ---
+  // Se usan delegados de eventos para que funcionen con los elementos que se crean/destruyen
+  
+  // Escucha cambios en los radio buttons y campos de cálculo
+  document.getElementById('modalNuevoConvenio').addEventListener('change', function(e) {
+      if (e.target.name === 'tipoConvenio') {
+          actualizarVistaTipoConvenio();
+      }
+  });
+
+  // Escucha cuando se escribe en los inputs para actualizar el resumen
+  document.getElementById('modalNuevoConvenio').addEventListener('input', function(e) {
+      if (e.target.classList.contains('monto-tramo') || e.target.classList.contains('meses-tramo') || e.target.id === 'convenioDeudaTotal' || e.target.id === 'convenioCuotas') {
+          actualizarResumenPlan();
+      }
+  });
+
+  // Escucha los clics para agregar o quitar tramos
+  document.getElementById('modalNuevoConvenio').addEventListener('click', function(e) {
+      if (e.target.id === 'btnAgregarTramo') {
+          agregarTramoDePago();
+      }
+      if (e.target.closest('.btn-remover-tramo')) {
+          e.target.closest('.tramo-pago').remove();
+          actualizarResumenPlan();
+      }
+  });
+
+  // Carga los datos iniciales
   await cargarDatosIniciales();
+}
+// --- NUEVAS FUNCIONES PARA EL MODAL DE CONVENIO PERSONALIZADO ---
+
+// Se ejecuta cuando el DOM está listo
+document.addEventListener('DOMContentLoaded', () => {
+    // Es importante delegar los eventos, ya que el modal se añade dinámicamente
+    document.body.addEventListener('change', function(e) {
+        if (e.target.name === 'tipoConvenio') {
+            actualizarVistaTipoConvenio();
+        }
+        if (e.target.closest('#configuracionPersonalizada')) {
+            actualizarResumenPlan();
+        }
+    });
+
+    document.body.addEventListener('input', function(e) {
+        if (e.target.id === 'convenioCuotas' || e.target.id === 'convenioDeudaTotal') {
+            actualizarResumenPlan();
+        }
+    });
+
+    document.body.addEventListener('click', function(e) {
+        if (e.target.id === 'btnAgregarTramo') {
+            agregarTramoDePago();
+        }
+        if (e.target.classList.contains('btn-remover-tramo')) {
+            e.target.closest('.tramo-pago').remove();
+            actualizarResumenPlan();
+        }
+    });
+});
+
+
+function actualizarVistaTipoConvenio() {
+    const tipo = document.querySelector('input[name="tipoConvenio"]:checked').value;
+    const divSimple = document.getElementById('configuracionSimple');
+    const divPersonalizado = document.getElementById('configuracionPersonalizada');
+
+    if (tipo === 'simple') {
+        divSimple.classList.remove('d-none');
+        divPersonalizado.classList.add('d-none');
+        document.getElementById('convenioCuotas').required = true;
+    } else {
+        divSimple.classList.add('d-none');
+        divPersonalizado.classList.remove('d-none');
+        document.getElementById('convenioCuotas').required = false;
+        if (!document.querySelector('.tramo-pago')) {
+             agregarTramoDePago(); // Agrega el primer tramo automáticamente
+        }
+    }
+    actualizarResumenPlan();
+}
+
+function agregarTramoDePago() {
+    const container = document.getElementById('tramosDePagoContainer');
+    const index = container.children.length;
+    const div = document.createElement('div');
+    div.className = 'row g-2 mb-2 align-items-center tramo-pago';
+    div.innerHTML = `
+        <div class="col-md-5">
+            <label class="form-label small">Monto mensual ($)</label>
+            <input type="number" class="form-control form-control-sm monto-tramo" placeholder="Ej: 50000" required>
+        </div>
+        <div class="col-md-5">
+            <label class="form-label small">Cantidad de meses</label>
+            <input type="number" class="form-control form-control-sm meses-tramo" placeholder="Ej: 12" required>
+        </div>
+        <div class="col-md-2 text-end pt-4">
+            <button type="button" class="btn btn-sm btn-outline-danger btn-remover-tramo">&times;</button>
+        </div>
+    `;
+    container.appendChild(div);
+}
+
+function actualizarResumenPlan() {
+    const deudaTotal = Number(document.getElementById('convenioDeudaTotal').value) || 0;
+    const tipo = document.querySelector('input[name="tipoConvenio"]:checked').value;
+    const resumenDiv = document.getElementById('resumenCalculoCuota');
+    
+    let resumenHtml = '';
+
+    if (tipo === 'simple') {
+        const nCuotas = Number(document.getElementById('convenioCuotas').value) || 0;
+        if (deudaTotal > 0 && nCuotas > 0) {
+            const valorCuota = Math.round(deudaTotal / nCuotas);
+            resumenHtml = `Se generarán <strong>${nCuotas} cuotas fijas</strong> de <strong>$${valorCuota.toLocaleString('es-CL')}</strong> cada una.`;
+        } else {
+            resumenHtml = 'Ingrese la deuda y el número de cuotas.';
+        }
+    } else { // Personalizado
+        const tramos = document.querySelectorAll('.tramo-pago');
+        let totalMesesPlan = 0;
+        let totalMontoPlan = 0;
+
+        tramos.forEach(tramo => {
+            const monto = Number(tramo.querySelector('.monto-tramo').value) || 0;
+            const meses = Number(tramo.querySelector('.meses-tramo').value) || 0;
+            if (monto > 0 && meses > 0) {
+                totalMesesPlan += meses;
+                totalMontoPlan += monto * meses;
+            }
+        });
+        
+        const diferencia = deudaTotal - totalMontoPlan;
+        const colorDiferencia = diferencia === 0 ? 'text-success' : 'text-danger';
+
+        resumenHtml = `
+            <strong>Resumen del Plan Personalizado:</strong><br>
+            - Total de cuotas: <strong>${totalMesesPlan}</strong><br>
+            - Monto total del plan: <strong>$${totalMontoPlan.toLocaleString('es-CL')}</strong><br>
+            - Diferencia con la deuda: <strong class="${colorDiferencia}">$${diferencia.toLocaleString('es-CL')}</strong>
+        `;
+        if (diferencia !== 0) {
+            resumenHtml += `<br><small class="text-danger">El monto total del plan debe ser igual a la deuda.</small>`;
+        }
+    }
+    
+    resumenDiv.innerHTML = resumenHtml;
 }
 
 // =================================================================
@@ -502,35 +672,83 @@ function abrirModalDetalle(idConvenio) {
 //  GUARDAR CONVENIO (corrige el redondeo y mantiene fechas estables)
 // ======================================================================
 
-// EN TU ARCHIVO convenios.js (TU CÓDIGO ORIGINAL Y CORRECTO)
+// EN TU ARCHIVO convenios.js (CÓDIGO ACTUALIZADO)
 async function guardarConvenio(evt) {
   evt.preventDefault();
-  if (!confirm("¿Crear este convenio?")) return;
-
+  
+  const deudaTotal = Number(document.getElementById("convenioDeudaTotal").value);
+  const tipo = document.querySelector('input[name="tipoConvenio"]:checked').value;
+  let datosParaCrear = {};
+  
+  // 1. VALIDACIÓN Y CONSTRUCCIÓN DE DATOS SEGÚN EL TIPO DE CONVENIO
   try {
-    showSpinner && showSpinner();
+    const nParcela = (document.getElementById("convenioResidente").value || "").trim();
+    const firstYMD = document.getElementById("convenioFechaInicio").value;
 
-    const nParcela  = (document.getElementById("convenioResidente").value || "").trim();
-    const deuda     = Number(document.getElementById("convenioDeudaTotal").value);
-    const nCuotas   = Number(document.getElementById("convenioCuotas").value);
-    const firstYMD  = document.getElementById("convenioFechaInicio").value;
-
-    if (!/^\d+$/.test(nParcela)) throw new Error("Ingresa un N° de parcela válido (solo números).");
+    // Validaciones comunes
+    if (!/^\d+$/.test(nParcela)) throw new Error("Ingresa un N° de parcela válido.");
     if (!(residentesData || []).some(r => String(r?.[3]).trim() === nParcela)) {
       throw new Error(`La parcela ${nParcela} no existe en la hoja "Residentes".`);
     }
-    if (!deuda || deuda <= 0)  throw new Error("Deuda total inválida.");
-    if (!nCuotas || nCuotas <= 0) throw new Error("Número de cuotas inválido.");
+    if (!deudaTotal || deudaTotal <= 0) throw new Error("La deuda total es inválida.");
     if (!firstYMD) throw new Error("Selecciona la fecha de inicio.");
 
-    const datosParaCrear = {
-      N_Parcela: nParcela,
-      Deuda_Original: deuda,
-      N_Cuotas: nCuotas,
-      Fecha_Inicio: firstYMD
-    };
+    // Construye el payload según el tipo de convenio seleccionado
+    if (tipo === 'simple') {
+        const nCuotas = Number(document.getElementById("convenioCuotas").value);
+        if (!nCuotas || nCuotas <= 0) throw new Error("El número de cuotas es inválido para un plan simple.");
+        
+        datosParaCrear = {
+            tipo: 'simple', // Enviamos el tipo para que el backend sepa cómo actuar
+            N_Parcela: nParcela,
+            Deuda_Original: deudaTotal,
+            N_Cuotas: nCuotas,
+            Fecha_Inicio: firstYMD
+        };
 
-    const URL_DE_TU_SCRIPT = "https://script.google.com/macros/s/AKfycbwODYlgzl_LAxRbHw9HD9dHpvu7RN7VLbDbXl_ypfwpRnVXCsmX4LjivxEFLzgVtIXm2Q/exec";
+    } else { // Si es 'personalizado'
+        const tramos = document.querySelectorAll('.tramo-pago');
+        if (tramos.length === 0) throw new Error("Debes definir al menos una etapa para el plan personalizado.");
+        
+        const planDePagos = [];
+        let totalMontoPlan = 0;
+        
+        tramos.forEach(tramo => {
+            const monto = Number(tramo.querySelector('.monto-tramo').value);
+            const meses = Number(tramo.querySelector('.meses-tramo').value);
+            if (monto > 0 && meses > 0) {
+                planDePagos.push({ monto, meses });
+                totalMontoPlan += monto * meses;
+            }
+        });
+
+        if (planDePagos.length === 0) throw new Error("Las etapas del plan personalizado no son válidas.");
+        
+        // Se permite una pequeña diferencia (ej. 1 peso) por errores de redondeo
+        if (Math.abs(deudaTotal - totalMontoPlan) > 1) { 
+            throw new Error(`El total del plan ($${totalMontoPlan.toLocaleString('es-CL')}) no coincide con la deuda total ($${deudaTotal.toLocaleString('es-CL')}).`);
+        }
+        
+        datosParaCrear = {
+            tipo: 'personalizado', // Enviamos el tipo
+            N_Parcela: nParcela,
+            Deuda_Original: deudaTotal, // La deuda real para el registro principal
+            Fecha_Inicio: firstYMD,
+            Plan_De_Pagos: planDePagos // El array con las etapas del plan
+        };
+    }
+    
+    if (!confirm("¿Está seguro que desea crear este convenio?")) return;
+
+  } catch(e) {
+      mostrarMensaje && mostrarMensaje(e.message, "error");
+      return; // Detiene la ejecución si hay un error de validación
+  }
+
+  // 2. ENVÍO DE DATOS AL BACKEND (Esta parte no cambia)
+  try {
+    showSpinner && showSpinner();
+    const URL_DE_TU_SCRIPT = "https://script.google.com/macros/s/AKfycbxyGNLFKsGF1JANPLcDP-85tYkAe7oAqZ2jiHZdU_9iToFVq9xmoXWpxJuoIMFifNJoQA/exec";
 
     const response = await fetch(URL_DE_TU_SCRIPT, {
       method: 'POST',
@@ -538,20 +756,19 @@ async function guardarConvenio(evt) {
       headers: { 'Content-Type': 'text/plain;charset=utf-8' },
       body: JSON.stringify({
         functionName: 'crearConvenio',
-        parameters: [datosParaCrear]
+        parameters: [datosParaCrear] // Aquí se envía el objeto que construimos antes
       })
     });
 
     const result = await response.json();
-
     if (result.status === 'error') {
       throw new Error(result.error.message || "Ocurrió un error en el servidor.");
     }
-
+    
     mostrarMensaje && mostrarMensaje("Convenio creado con éxito.", "success");
-
     await cargarDatosIniciales();
     modalNuevoConvenio.hide();
+
   } catch (e) {
     console.error(e);
     mostrarMensaje && mostrarMensaje(e.message || "Error al guardar el convenio.", "error");
@@ -755,7 +972,7 @@ async function enviarComprobanteCuota(cuotaId, nParcela, convenioId) {
 // EN TU ARCHIVO convenios.js
 async function enviarCorreo(destinatario, asunto, cuerpoHtml) {
   // 1. URL de tu script (ya la tienes bien)
-  const URL_DE_TU_SCRIPT = "https://script.google.com/macros/s/AKfycbwODYlgzl_LAxRbHw9HD9dHpvu7RN7VLbDbXl_ypfwpRnVXCsmX4LjivxEFLzgVtIXm2Q/exec";
+  const URL_DE_TU_SCRIPT = "https://script.google.com/macros/s/AKfycbxyGNLFKsGF1JANPLcDP-85tYkAe7oAqZ2jiHZdU_9iToFVq9xmoXWpxJuoIMFifNJoQA/exec";
 
   // 2. ===== LA CONDICIÓN CORREGIDA =====
   // Ahora solo verifica que la URL no esté vacía.
