@@ -449,8 +449,8 @@ main.innerHTML = `
         </div>
     </div>
     
-    <div id="modalAbonar" class="modal" style="display:none;">
-    <div class="modal-content large">  <h3>Abonar a Deuda Existente</h3>
+ <div id="modalAbonar" class="modal" style="display:none;">
+    <div class="modal-content large">
             <h3>Abonar a Deuda Existente</h3>
             <form id="formAbonar">
                 <input type="hidden" id="abonarIdPago">
@@ -829,43 +829,74 @@ main.innerHTML = `
         });
     }
 
-     async function procesarAbono() {
-        // ... (el código que captura los datos del formulario se mantiene igual) ...
-        const datosActualizacion = {
-            rowNum: pago.rowNum,
-            montoPagado: nuevoMontoPagado,
-            saldo: nuevoMontoPagado - (parseFloat(pago.Valor_Gasto_Comun || 0) + parseFloat(pago.Interes || 0) + parseFloat(pago['Multa_1/4'] || 0)),
-            deudaTotal: nuevaDeudaPendiente,
-            fechaPago: fechaPago,
-            metodoPago: metodoPago,
-            estado: nuevoEstado,
-            idComprobante: pago.ID_Comprobante_Drive,
-            abonoConvenio: pago.Abono_Convenio,
-            descripcionPago: descripcion,
-            saldoFavorUsado: pago.Saldo_Favor_Usado
-        };
-        
-        mostrarSpinner();
-        try {
-            // ▼▼▼ LÍNEA MODIFICADA ▼▼▼
-            // Antes: await actualizarPagoGC(datosActualizacion);
-            
-            // Ahora, usamos la nueva función genérica:
-            await callAppsScriptFunction('actualizarPagoGC_GS', [datosActualizacion]);
-            
-            // ▲▲▲ FIN DE LA MODIFICACIÓN ▲▲▲
-
-            // ... (el resto de la función para actualizar la interfaz se mantiene igual) ...
-            
-            mostrarMensaje('Abono registrado correctamente.', 'success');
-            document.getElementById('modalAbonar').style.display = 'none';
-            filtrarYRenderizar();
-        } catch (err) {
-            mostrarMensaje('Error al registrar el abono: ' + err.message, 'error');
-        } finally {
-            ocultarSpinner();
-        }
+    async function procesarAbono() {
+    // --- INICIO: SE RESTAURA ESTE BLOQUE DE CÓDIGO ---
+    const idPago = document.getElementById('abonarIdPago').value;
+    const montoAbonar = parseFloat(document.getElementById('abonarMonto').value);
+    const fechaPago = document.getElementById('abonarFechaPago').value;
+    const metodoPago = document.getElementById('abonarMetodoPago').value;
+    const descripcion = document.getElementById('abonarDescripcion').value;
+    
+    // Busca el registro del pago original en la memoria
+    const pago = pagosGC_obj.find(p => p.ID_Pago === idPago);
+    if (!pago) {
+        mostrarMensaje('No se encontró el registro de pago original.', 'error');
+        return;
     }
+    
+    // Calcula los nuevos valores
+    const montoPagadoActual = parseFloat(pago.Monto_Pagado || 0);
+    const nuevoMontoPagado = montoPagadoActual + montoAbonar;
+    const deudaPendiente = parseFloat(pago.Deuda_Total || 0);
+    const nuevaDeudaPendiente = Math.max(0, deudaPendiente - montoAbonar);
+    
+    // Determina el nuevo estado del pago
+    let nuevoEstado = pago.Estado;
+    if (nuevaDeudaPendiente === 0) {
+        nuevoEstado = 'Pagado';
+    } else if (nuevoMontoPagado > 0) {
+        nuevoEstado = pago.Estado === 'En Convenio' ? 'En Convenio' : 'Abonado';
+    }
+    // --- FIN: SE RESTAURA ESTE BLOQUE DE CÓDIGO ---
+
+    // Prepara el objeto con todos los datos para enviar a Google Sheets
+    const datosActualizacion = {
+        rowNum: pago.rowNum,
+        montoPagado: nuevoMontoPagado,
+        saldo: nuevoMontoPagado - (parseFloat(pago.Valor_Gasto_Comun || 0) + parseFloat(pago.Interes || 0) + parseFloat(pago['Multa_1/4'] || 0)),
+        deudaTotal: nuevaDeudaPendiente,
+        fechaPago: fechaPago,
+        metodoPago: metodoPago,
+        estado: nuevoEstado,
+        idComprobante: pago.ID_Comprobante_Drive,
+        abonoConvenio: pago.Abono_Convenio,
+        descripcionPago: descripcion,
+        saldoFavorUsado: pago.Saldo_Favor_Usado
+    };
+    
+    mostrarSpinner();
+    try {
+        // Llama a la función del backend usando el helper 'callWebApp'
+        await callWebApp('actualizarPagoGC_GS', [datosActualizacion]);
+        
+        // Actualiza los datos localmente para que la tabla se refresque al instante
+        pago.Monto_Pagado = nuevoMontoPagado;
+        pago.Deuda_Total = nuevaDeudaPendiente;
+        pago.Fecha_Pago = fechaPago;
+        pago.Metodo_Pago = metodoPago;
+        pago.Estado = nuevoEstado;
+        pago.Descripcion_Pago = descripcion;
+        
+        mostrarMensaje('Abono registrado correctamente.', 'success');
+        document.getElementById('modalAbonar').style.display = 'none';
+        filtrarYRenderizar();
+
+    } catch (err) {
+        mostrarMensaje('Error al registrar el abono: ' + err.message, 'error');
+    } finally {
+        ocultarSpinner();
+    }
+}
 
     // =======================================================
     // ASIGNACIÓN DE EVENTOS (EVENT LISTENERS)
