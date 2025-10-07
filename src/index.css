@@ -1,0 +1,171 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 222.2 84% 4.9%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 222.2 84% 4.9%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 222.2 84% 4.9%;
+
+    --primary: 221.2 83.2% 53.9%;
+    --primary-foreground: 210 20% 98%;
+
+    --secondary: 210 40% 96.1%;
+    --secondary-foreground: 222.2 47.4% 11.2%;
+
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+
+    --accent: 210 40% 96.1%;
+    --accent-foreground: 222.2 47.4% 11.2%;
+
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 20% 98%;
+
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 221.2 83.2% 53.9%;
+
+    --radius: 0.5rem;
+  }
+
+  .dark {
+    --background: 222.2 84% 4.9%;
+    --foreground: 210 20% 98%;
+
+    --card: 222.2 84% 4.9%;
+    --card-foreground: 210 20% 98%;
+
+    --popover: 222.2 84% 4.9%;
+    --popover-foreground: 210 20% 98%;
+
+    --primary: 217.2 91.2% 59.8%;
+    --primary-foreground: 222.2 47.4% 11.2%;
+
+    --secondary: 217.2 32.6% 17.5%;
+    --secondary-foreground: 210 20% 98%;
+
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
+
+    --accent: 217.2 32.6% 17.5%;
+    --accent-foreground: 210 20% 98%;
+
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 20% 98%;
+
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: 217.2 91.2% 59.8%;
+  }
+}
+
+@layer base {
+  * {
+    border-color: hsl(var(--border));
+  }
+  body {
+    background-color: hsl(var(--background));
+    color: hsl(var(--foreground));
+  }
+}
+
+/* Estilos Neumorphism */
+.neumorphic-card {
+  background: #e0e0e0;
+  border-radius: 20px;
+  box-shadow: 9px 9px 16px #a3b1c6, -9px -9px 16px #ffffff;
+  padding: 20px;
+}
+
+.neumorphic-button {
+  background: #e0e0e0;
+  border-radius: 10px;
+  box-shadow: 6px 6px 12px #a3b1c6, -6px -6px 12px #ffffff;
+  padding: 10px 20px;
+  transition: all 0.2s ease-in-out;
+}
+
+.neumorphic-button:hover {
+  box-shadow: 3px 3px 6px #a3b1c6, -3px -3px 6px #ffffff;
+}
+
+.neumorphic-button:active {
+  box-shadow: inset 3px 3px 6px #a3b1c6, inset -3px -3px 6px #ffffff;
+}
+
+.neumorphic-input {
+  background: #e0e0e0;
+  border-radius: 10px;
+  box-shadow: inset 5px 5px 10px #a3b1c6, inset -5px -5px 10px #ffffff;
+  padding: 10px;
+  border: none;
+  outline: none;
+}
+
+.neumorphic-sidebar {
+  background: #e0e0e0;
+  box-shadow: 9px 9px 16px #a3b1c6, -9px -9px 16px #ffffff;
+}
+
+.neumorphic-header {
+  background: #e0e0e0;
+  box-shadow: 9px 9px 16px #a3b1c6, -9px -9px 16px #ffffff;
+}
+
+.neumorphic-icon {
+  color: #6b7280; /* gray-500 */
+}
+
+.neumorphic-icon:hover {
+  color: #4b5563; /* gray-700 */
+}
+
+.neumorphic-text {
+  color: #374151; /* gray-700 */
+}
+
+.neumorphic-badge {
+  background: #e0e0e0;
+  border-radius: 10px;
+  box-shadow: 3px 3px 6px #a3b1c6, -3px -3px 6px #ffffff;
+  padding: 5px 10px;
+  color: #ef4444; /* red-500 */
+  font-weight: bold;
+}
+
+/* Animaciones */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fadeIn {
+  animation: fadeIn 0.5s ease-out forwards;
+}
+
+@keyframes slideInLeft {
+  from { transform: translateX(-100%); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
+.animate-slideInLeft {
+  animation: slideInLeft 0.5s ease-out forwards;
+}
+
+@keyframes pulseShadow {
+  0% { box-shadow: 0 0 0 0 rgba(0, 0, 0, 0.2); }
+  70% { box-shadow: 0 0 0 10px rgba(0, 0, 0, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(0, 0, 0, 0); }
+}
+
+.animate-pulseShadow {
+  animation: pulseShadow 2s infinite;
+}
+
