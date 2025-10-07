@@ -116,7 +116,7 @@ const Dashboard = () => {
   const totalResidentes = residentes.length;
   const pagosAlDia = pagos.filter(p => p.Estado === 'Pagado').length;
   const conveniosActivos = convenios.filter(c => c.Estado === 'Activo').length;
-  const deudaTotal = residentes.reduce((total, r) => total + (parseFloat(r.Saldo_Convenio_Actual) || 0), 0);
+  const deudaTotal = (residentes || []).reduce((total, r) => total + (parseFloat(r.Saldo_Convenio_Actual) || 0), 0);
 
   const stats = [
     { title: 'Total Residentes', value: totalResidentes.toString(), icon: Users, color: 'blue', loading: loadingResidentes },
