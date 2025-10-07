@@ -114,8 +114,8 @@ const Dashboard = () => {
 
   // Calcular estadísticas dinámicas
   const totalResidentes = residentes.length;
-  const pagosAlDia = pagos.filter(p => p.Estado === 'Pagado').length;
-  const conveniosActivos = convenios.filter(c => c.Estado === 'Activo').length;
+  const pagosAlDia = (pagos || []).filter(p => p.Estado === 'Pagado').length;
+  const conveniosActivos = (convenios || []).filter(c => c.Estado === 'Activo').length;
   const deudaTotal = (residentes || []).reduce((total, r) => total + (parseFloat(r.Saldo_Convenio_Actual) || 0), 0);
 
   const stats = [
@@ -126,13 +126,13 @@ const Dashboard = () => {
   ]
 
   // Últimos pagos (filtrar los más recientes)
-  const ultimosPagos = pagos
+  const ultimosPagos = (pagos || [])
     .filter(p => p.Estado === 'Pagado')
     .sort((a, b) => new Date(b.Fecha_Pago) - new Date(a.Fecha_Pago))
     .slice(0, 3);
 
   // Convenios pendientes
-  const conveniosPendientes = convenios
+  const conveniosPendientes = (convenios || [])
     .filter(c => c.Estado === 'Activo')
     .slice(0, 3);
 
@@ -272,7 +272,7 @@ const Residentes = () => {
   const { residentes, isLoading, error, cargarResidentes } = useResidentes();
   const [searchTerm, setSearchTerm] = useState('');
   
-  const residentesFiltrados = residentes.filter(residente =>
+  const residentesFiltrados = (residentes || []).filter(residente =>
     residente.Nombre_Completo?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     residente.N_Parcela?.toString().includes(searchTerm)
   );
@@ -391,9 +391,9 @@ const PagosGC = () => {
   const { pagos, isLoading, error } = usePagosGC();
 
   // Calcular estadísticas
-  const pagosMes = pagos.filter(p => p.Estado === 'Pagado').length;
-  const pendientes = pagos.filter(p => p.Estado === 'Pendiente').length;
-  const morosos = pagos.filter(p => p.Estado === 'Moroso').length;
+  const pagosMes = (pagos || []).filter(p => p.Estado === 'Pagado').length;
+  const pendientes = (pagos || []).filter(p => p.Estado === 'Pendiente').length;
+  const morosos = (pagos || []).filter(p => p.Estado === 'Moroso').length;
 
   const statsCards = [
     { title: 'Pagos del Mes', value: pagosMes, icon: CheckCircle, color: 'green' },
