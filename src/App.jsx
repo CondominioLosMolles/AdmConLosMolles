@@ -112,12 +112,10 @@ const Dashboard = () => {
   const { pagos, isLoading: loadingPagos } = usePagosGC();
   const { convenios, isLoading: loadingConvenios } = useConvenios();
 
-  // Calcular estadísticas dinámicas
+  // CORRECCIÓN: Verificar si son arrays antes de usar .length, .filter, o .reduce
   const totalResidentes = Array.isArray(residentes) ? residentes.length : 0;
-  const pagosAlDia = (pagos || []).filter(p => p.Estado === 'Pagado').length;
-  const conveniosActivos = (convenios || []).filter(c => c.Estado === 'Activo').length;
-  
-  // CORRECCIÓN: Usamos Array.isArray() para asegurar que "residentes" es un array antes de usar .reduce()
+  const pagosAlDia = Array.isArray(pagos) ? pagos.filter(p => p.Estado === 'Pagado').length : 0;
+  const conveniosActivos = Array.isArray(convenios) ? convenios.filter(c => c.Estado === 'Activo').length : 0;
   const deudaTotal = Array.isArray(residentes)
     ? residentes.reduce((total, r) => total + (parseFloat(r.Saldo_Convenio_Actual) || 0), 0)
     : 0;
@@ -129,16 +127,19 @@ const Dashboard = () => {
     { title: 'Deuda Total', value: `$${deudaTotal.toLocaleString()}`, icon: AlertTriangle, color: 'red', loading: loadingResidentes },
   ]
 
-  // Últimos pagos (filtrar los más recientes)
-  const ultimosPagos = (pagos || [])
-    .filter(p => p.Estado === 'Pagado')
-    .sort((a, b) => new Date(b.Fecha_Pago) - new Date(a.Fecha_Pago))
-    .slice(0, 3);
+  // CORRECCIÓN: Verificar si son arrays antes de usar .filter y .sort
+  const ultimosPagos = Array.isArray(pagos)
+    ? pagos
+      .filter(p => p.Estado === 'Pagado')
+      .sort((a, b) => new Date(b.Fecha_Pago) - new Date(a.Fecha_Pago))
+      .slice(0, 3)
+    : [];
 
-  // Convenios pendientes
-  const conveniosPendientes = (convenios || [])
-    .filter(c => c.Estado === 'Activo')
-    .slice(0, 3);
+  const conveniosPendientes = Array.isArray(convenios)
+    ? convenios
+      .filter(c => c.Estado === 'Activo')
+      .slice(0, 3)
+    : [];
 
   return (
     <div className="space-y-8 fade-in-up">
@@ -276,10 +277,10 @@ const Residentes = () => {
   const { residentes, isLoading, error, cargarResidentes } = useResidentes();
   const [searchTerm, setSearchTerm] = useState('');
 
-  const residentesFiltrados = (residentes || []).filter(residente =>
+  const residentesFiltrados = Array.isArray(residentes) ? residentes.filter(residente =>
     residente.Nombre_Completo?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     residente.N_Parcela?.toString().includes(searchTerm)
-  );
+  ) : [];
 
   return (
     <div className="space-y-8 fade-in-up">
@@ -394,10 +395,10 @@ const Residentes = () => {
 const PagosGC = () => {
   const { pagos, isLoading, error } = usePagosGC();
 
-  // Calcular estadísticas
-  const pagosMes = (pagos || []).filter(p => p.Estado === 'Pagado').length;
-  const pendientes = (pagos || []).filter(p => p.Estado === 'Pendiente').length;
-  const morosos = (pagos || []).filter(p => p.Estado === 'Moroso').length;
+  // CORRECCIÓN: Verificar si 'pagos' es un array antes de usar .filter
+  const pagosMes = Array.isArray(pagos) ? pagos.filter(p => p.Estado === 'Pagado').length : 0;
+  const pendientes = Array.isArray(pagos) ? pagos.filter(p => p.Estado === 'Pendiente').length : 0;
+  const morosos = Array.isArray(pagos) ? pagos.filter(p => p.Estado === 'Moroso').length : 0;
 
   const statsCards = [
     { title: 'Pagos del Mes', value: pagosMes, icon: CheckCircle, color: 'green' },
@@ -455,7 +456,7 @@ const PagosGC = () => {
               <p className="text-red-600 font-semibold text-lg mb-2">Error al cargar pagos</p>
               <p className="text-gray-500 text-sm">{error}</p>
             </div>
-          ) : pagos.length > 0 ? (
+          ) : Array.isArray(pagos) && pagos.length > 0 ? (
             <div className="space-y-4">
               {pagos.slice(0, 10).map((pago, index) => (
                 <div key={index} className="neumorphic-list-item p-6 stagger-animation" style={{ animationDelay: `${index * 0.05}s` }}>
