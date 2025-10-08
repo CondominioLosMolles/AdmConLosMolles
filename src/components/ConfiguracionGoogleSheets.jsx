@@ -127,7 +127,7 @@ const ConfiguracionGoogleSheets = () => {
             <Input
               id="webAppURL"
               type="url"
-              placeholder="https://script.google.com/macros/s/AKfycbwGWsfdHdZNNZD7tBNklHjneSxCoidtgrvTlwKZLMdj1qpzPvpUZgZqLAEvtAhFiYRI8g/exec"
+              placeholder="https://script.google.com/macros/s/AKfycbxmThGoKgy2TJTlx0l6YzQKka198GrCVPgKvIXWhEDUx06AbcTJfKYMAuRvY9eIF2Vojg/exec"
               value={webAppURL}
               onChange={(e) => setWebAppURL(e.target.value)}
               className="font-mono text-sm"
