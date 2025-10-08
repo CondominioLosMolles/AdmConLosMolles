@@ -50,7 +50,7 @@ class GoogleSheetsService {
         throw new Error(result.error.message);
       }
 
-      return result.response === null || result.response === undefined ? [] : result.response;
+      return result.data === null || result.data === undefined ? [] : result.data;
     } catch (error) {
       console.error('Error calling Google Script:', error);
       throw error;
