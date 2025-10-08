@@ -50,7 +50,7 @@ class GoogleSheetsService {
         throw new Error(result.error.message);
       }
 
-      return Array.isArray(result.response) ? result.response : [];
+      return result.response === null || result.response === undefined ? [] : result.response;
     } catch (error) {
       console.error('Error calling Google Script:', error);
       throw error;
@@ -73,7 +73,7 @@ class GoogleSheetsService {
 
       const result = await response.json();
       if (result.status === 'success') {
-        return Array.isArray(result.data) ? result.data : [];
+        return result.data === null || result.data === undefined ? [] : result.data;
       } else {
         throw new Error(result.message);
       }
