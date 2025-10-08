@@ -54,7 +54,7 @@ export const useResidentes = () => {
     setError(null);
     try {
       const data = await googleSheetsService.obtenerResidentes();
-      setResidentes(data);
+      setResidentes(Array.isArray(data) ? data : []);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -117,7 +117,7 @@ export const usePagosGC = () => {
     setError(null);
     try {
       const data = await googleSheetsService.obtenerPagosGC();
-      setPagos(data);
+      setPagos(Array.isArray(data) ? data : []);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -212,8 +212,8 @@ export const useConvenios = () => {
     try {
       const dataConvenios = await googleSheetsService.obtenerConvenios();
       const dataCuotas = await googleSheetsService.obtenerCuotasConvenio();
-      setConvenios(dataConvenios);
-      setCuotas(dataCuotas);
+      setConvenios(Array.isArray(dataConvenios) ? dataConvenios : []);
+      setCuotas(Array.isArray(dataCuotas) ? dataCuotas : []);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -277,7 +277,7 @@ export const useEgresos = () => {
     setError(null);
     try {
       const data = await googleSheetsService.obtenerEgresos();
-      setEgresos(data);
+      setEgresos(Array.isArray(data) ? data : []);
     } catch (err) {
       setError(err.message);
     } finally {
