@@ -4,14 +4,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge.jsx'
 import { Input } from '@/components/ui/input.jsx'
 import { Label } from '@/components/ui/label.jsx'
-import { 
-  Home, 
-  Users, 
-  CreditCard, 
-  FileText, 
-  DollarSign, 
-  TrendingUp, 
-  MessageSquare, 
+import {
+  Home,
+  Users,
+  CreditCard,
+  FileText,
+  DollarSign,
+  TrendingUp,
+  MessageSquare,
   Settings,
   Building2,
   Calendar,
@@ -37,7 +37,7 @@ import { useGoogleSheets, useResidentes, usePagosGC, useConvenios } from './hook
 // Componente de Navegación Lateral
 const Sidebar = ({ activeModule, setActiveModule }) => {
   const { isConfigured } = useGoogleSheets();
-  
+
   const modules = [
     { id: 'dashboard', name: 'Dashboard', icon: Home },
     { id: 'residentes', name: 'Residentes', icon: Users },
@@ -68,12 +68,12 @@ const Sidebar = ({ activeModule, setActiveModule }) => {
           </div>
         )}
       </div>
-      
+
       <nav className="space-y-3">
         {modules.map((module, index) => {
           const Icon = module.icon
           const isDisabled = !isConfigured && module.id !== 'configuracion'
-          
+
           return (
             <button
               key={module.id}
@@ -90,7 +90,7 @@ const Sidebar = ({ activeModule, setActiveModule }) => {
           )
         })}
       </nav>
-      
+
       {!isConfigured && (
         <div className="neumorphic-card mt-6 p-4 bg-gradient-to-br from-yellow-50 to-orange-50 fade-in-up">
           <div className="flex items-center space-x-2 mb-2">
@@ -113,10 +113,14 @@ const Dashboard = () => {
   const { convenios, isLoading: loadingConvenios } = useConvenios();
 
   // Calcular estadísticas dinámicas
-  const totalResidentes = residentes.length;
+  const totalResidentes = Array.isArray(residentes) ? residentes.length : 0;
   const pagosAlDia = (pagos || []).filter(p => p.Estado === 'Pagado').length;
   const conveniosActivos = (convenios || []).filter(c => c.Estado === 'Activo').length;
-  const deudaTotal = (residentes || []).reduce((total, r) => total + (parseFloat(r.Saldo_Convenio_Actual) || 0), 0);
+  
+  // CORRECCIÓN: Usamos Array.isArray() para asegurar que "residentes" es un array antes de usar .reduce()
+  const deudaTotal = Array.isArray(residentes)
+    ? residentes.reduce((total, r) => total + (parseFloat(r.Saldo_Convenio_Actual) || 0), 0)
+    : 0;
 
   const stats = [
     { title: 'Total Residentes', value: totalResidentes.toString(), icon: Users, color: 'blue', loading: loadingResidentes },
@@ -271,7 +275,7 @@ const Dashboard = () => {
 const Residentes = () => {
   const { residentes, isLoading, error, cargarResidentes } = useResidentes();
   const [searchTerm, setSearchTerm] = useState('');
-  
+
   const residentesFiltrados = (residentes || []).filter(residente =>
     residente.Nombre_Completo?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     residente.N_Parcela?.toString().includes(searchTerm)
@@ -315,7 +319,7 @@ const Residentes = () => {
             </div>
           </div>
         </div>
-        
+
         <div className="p-6">
           {isLoading ? (
             <div className="space-y-4">
@@ -328,8 +332,8 @@ const Residentes = () => {
               <AlertTriangle className="h-16 w-16 text-red-400 mx-auto mb-4 floating-animation" />
               <p className="text-red-600 font-semibold text-lg mb-2">Error al cargar residentes</p>
               <p className="text-gray-500 text-sm mb-6">{error}</p>
-              <button 
-                onClick={cargarResidentes} 
+              <button
+                onClick={cargarResidentes}
                 className="neumorphic-button px-6 py-3 text-blue-600 font-medium interactive-element"
               >
                 Reintentar
@@ -468,8 +472,8 @@ const PagosGC = () => {
                     <div className="text-right space-y-2">
                       <p className="font-bold text-gray-900 text-xl">${pago.Monto_Pagado?.toLocaleString()}</p>
                       <div className={`neumorphic-badge ${
-                        pago.Estado === 'Pagado' ? 'success' : 
-                        pago.Estado === 'Pendiente' ? 'warning' : 
+                        pago.Estado === 'Pagado' ? 'success' :
+                        pago.Estado === 'Pendiente' ? 'warning' :
                         'error'
                       } px-3 py-1`}>
                         {pago.Estado}
